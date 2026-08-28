@@ -1,7 +1,7 @@
 /**
  * ArtEdu 第一版数据库结构说明。
  *
- * D1 使用 SQLite 语法。真正执行数据库变更时，使用 migrations/ 下的迁移文件；
+ * 正式环境使用 PostgreSQL。真正执行数据库变更时，使用 migrations/ 下的迁移文件；
  * 这里集中记录表的用途，方便后端代码和新人理解数据模型。
  */
 export const tables = {

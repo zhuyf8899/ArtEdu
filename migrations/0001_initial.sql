@@ -1,11 +1,9 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS departments (
   id TEXT PRIMARY KEY,
   code TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   parent_id TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (parent_id) REFERENCES departments(id) ON DELETE SET NULL
 );
 
@@ -13,7 +11,7 @@ CREATE TABLE IF NOT EXISTS roles (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   description TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -24,8 +22,8 @@ CREATE TABLE IF NOT EXISTS users (
   department_id TEXT,
   status TEXT NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'disabled', 'pending')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
 );
 
@@ -35,8 +33,8 @@ CREATE TABLE IF NOT EXISTS user_identities (
   provider TEXT NOT NULL CHECK (provider IN ('local', 'school_sso')),
   external_subject TEXT NOT NULL,
   password_hash TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (provider, external_subject),
   UNIQUE (user_id, provider),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -46,7 +44,7 @@ CREATE TABLE IF NOT EXISTS user_identities (
 CREATE TABLE IF NOT EXISTS user_roles (
   user_id TEXT NOT NULL,
   role_id TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, role_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
@@ -59,13 +57,13 @@ CREATE TABLE IF NOT EXISTS courses (
   category TEXT,
   difficulty TEXT CHECK (difficulty IN ('beginner', 'intermediate', 'advanced')),
   cover_asset_key TEXT,
-  is_featured INTEGER NOT NULL DEFAULT 0 CHECK (is_featured IN (0, 1)),
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
   featured_rank INTEGER,
   status TEXT NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft', 'published', 'archived')),
   created_by TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -88,10 +86,9 @@ CREATE TABLE IF NOT EXISTS course_resources (
   sort_order INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft', 'published', 'archived')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-  FOREIGN KEY (lesson_id) REFERENCES course_lessons(id) ON DELETE SET NULL,
   CHECK (storage_key IS NOT NULL OR external_url IS NOT NULL)
 );
 
@@ -115,10 +112,14 @@ CREATE TABLE IF NOT EXISTS course_lessons (
   estimated_minutes INTEGER,
   status TEXT NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft', 'published', 'archived')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
+
+ALTER TABLE course_resources
+  ADD CONSTRAINT fk_course_resources_lesson
+  FOREIGN KEY (lesson_id) REFERENCES course_lessons(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS learning_progress (
   user_id TEXT NOT NULL,
@@ -129,8 +130,8 @@ CREATE TABLE IF NOT EXISTS learning_progress (
     CHECK (progress_percent BETWEEN 0 AND 100),
   watched_seconds INTEGER NOT NULL DEFAULT 0,
   last_position_seconds INTEGER NOT NULL DEFAULT 0,
-  completed_at TEXT,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, lesson_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (lesson_id) REFERENCES course_lessons(id) ON DELETE CASCADE
@@ -144,13 +145,13 @@ CREATE TABLE IF NOT EXISTS workflows (
   entry_type TEXT NOT NULL DEFAULT 'chat'
     CHECK (entry_type IN ('chat', 'workbench', 'external_tool')),
   entry_url TEXT,
-  is_featured INTEGER NOT NULL DEFAULT 0 CHECK (is_featured IN (0, 1)),
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
   featured_rank INTEGER,
   status TEXT NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft', 'published', 'archived')),
   created_by TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -158,11 +159,11 @@ CREATE TABLE IF NOT EXISTS workflow_versions (
   id TEXT PRIMARY KEY,
   workflow_id TEXT NOT NULL,
   version_number INTEGER NOT NULL,
-  definition_json TEXT,
+  definition_json JSONB,
   prompt_template TEXT,
-  published_at TEXT,
+  published_at TIMESTAMPTZ,
   created_by TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (workflow_id, version_number),
   FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
@@ -175,13 +176,13 @@ CREATE TABLE IF NOT EXISTS tools (
   category TEXT,
   tool_type TEXT NOT NULL CHECK (tool_type IN ('internal', 'external', 'embedded')),
   entry_url TEXT,
-  is_featured INTEGER NOT NULL DEFAULT 0 CHECK (is_featured IN (0, 1)),
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
   featured_rank INTEGER,
   status TEXT NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft', 'published', 'archived')),
   created_by TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -199,7 +200,7 @@ CREATE TABLE IF NOT EXISTS model_providers (
   name TEXT NOT NULL UNIQUE,
   provider_type TEXT NOT NULL CHECK (provider_type IN ('domestic', 'international', 'school')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS model_configs (
@@ -207,11 +208,11 @@ CREATE TABLE IF NOT EXISTS model_configs (
   provider_id TEXT NOT NULL,
   display_name TEXT NOT NULL,
   model_identifier TEXT NOT NULL,
-  capabilities_json TEXT NOT NULL DEFAULT '[]',
+  capabilities_json JSONB NOT NULL DEFAULT '[]'::jsonb,
   secret_ref TEXT,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (provider_id, model_identifier),
   FOREIGN KEY (provider_id) REFERENCES model_providers(id) ON DELETE RESTRICT
 );
@@ -222,13 +223,13 @@ CREATE TABLE IF NOT EXISTS works (
   title TEXT NOT NULL,
   summary TEXT,
   discipline TEXT,
-  is_featured INTEGER NOT NULL DEFAULT 0 CHECK (is_featured IN (0, 1)),
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
   featured_rank INTEGER,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('draft', 'pending', 'approved', 'rejected', 'archived')),
-  published_at TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  published_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE RESTRICT
 );
 
@@ -236,7 +237,7 @@ CREATE TABLE IF NOT EXISTS tags (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   slug TEXT NOT NULL UNIQUE,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS books (
@@ -250,10 +251,10 @@ CREATE TABLE IF NOT EXISTS books (
   external_url TEXT,
   status TEXT NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft', 'published', 'archived')),
-  is_featured INTEGER NOT NULL DEFAULT 0 CHECK (is_featured IN (0, 1)),
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
   featured_rank INTEGER,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS work_tags (
@@ -310,7 +311,7 @@ CREATE TABLE IF NOT EXISTS work_assets (
   moderation_status TEXT NOT NULL DEFAULT 'pending'
     CHECK (moderation_status IN ('pending', 'approved', 'rejected')),
   sort_order INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (work_id) REFERENCES works(id) ON DELETE CASCADE
 );
 
@@ -332,8 +333,8 @@ CREATE TABLE IF NOT EXISTS comments (
   content TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'published'
     CHECK (status IN ('published', 'hidden', 'deleted')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (work_id) REFERENCES works(id) ON DELETE CASCADE,
   FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE RESTRICT,
   FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
@@ -342,7 +343,7 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE TABLE IF NOT EXISTS work_likes (
   work_id TEXT NOT NULL,
   user_id TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (work_id, user_id),
   FOREIGN KEY (work_id) REFERENCES works(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -351,7 +352,7 @@ CREATE TABLE IF NOT EXISTS work_likes (
 CREATE TABLE IF NOT EXISTS work_favorites (
   work_id TEXT NOT NULL,
   user_id TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (work_id, user_id),
   FOREIGN KEY (work_id) REFERENCES works(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -366,8 +367,8 @@ CREATE TABLE IF NOT EXISTS conversations (
     CHECK (conversation_type IN ('teaching', 'design', 'generation')),
   title TEXT,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL,
   FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE SET NULL
@@ -379,7 +380,7 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
   sender_type TEXT NOT NULL CHECK (sender_type IN ('user', 'assistant', 'system')),
   content TEXT NOT NULL,
   model_config_id TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
   FOREIGN KEY (model_config_id) REFERENCES model_configs(id) ON DELETE SET NULL
 );
@@ -399,7 +400,7 @@ CREATE TABLE IF NOT EXISTS message_attachments (
   mime_type TEXT NOT NULL,
   storage_key TEXT NOT NULL,
   file_size INTEGER,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (message_id) REFERENCES conversation_messages(id) ON DELETE CASCADE
 );
 
@@ -409,9 +410,9 @@ CREATE TABLE IF NOT EXISTS user_usage_limits (
   capability TEXT NOT NULL,
   period_type TEXT NOT NULL CHECK (period_type IN ('daily', 'monthly', 'total')),
   limit_value INTEGER NOT NULL CHECK (limit_value >= 0),
-  enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (user_id, capability, period_type),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -427,7 +428,7 @@ CREATE TABLE IF NOT EXISTS usage_records (
   output_units INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL CHECK (status IN ('success', 'failed', 'blocked')),
   error_code TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
   FOREIGN KEY (model_config_id) REFERENCES model_configs(id) ON DELETE SET NULL,
   FOREIGN KEY (tool_id) REFERENCES tools(id) ON DELETE SET NULL
@@ -442,13 +443,13 @@ CREATE TABLE IF NOT EXISTS generation_jobs (
   model_config_id TEXT,
   job_type TEXT NOT NULL CHECK (job_type IN ('image', 'video', 'webpage', 'pattern', 'document', 'knowledge_graph')),
   prompt TEXT NOT NULL,
-  parameters_json TEXT NOT NULL DEFAULT '{}',
+  parameters_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   status TEXT NOT NULL DEFAULT 'queued'
     CHECK (status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')),
   error_message TEXT,
-  started_at TEXT,
-  completed_at TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE SET NULL,
   FOREIGN KEY (workflow_version_id) REFERENCES workflow_versions(id) ON DELETE SET NULL,
@@ -463,7 +464,7 @@ CREATE TABLE IF NOT EXISTS generation_outputs (
   mime_type TEXT NOT NULL,
   file_size INTEGER,
   preview_key TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (job_id) REFERENCES generation_jobs(id) ON DELETE CASCADE
 );
 
@@ -474,7 +475,7 @@ CREATE TABLE IF NOT EXISTS audit_records (
   reviewer_id TEXT,
   action TEXT NOT NULL CHECK (action IN ('submit', 'approve', 'reject', 'archive')),
   reason TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -485,7 +486,7 @@ CREATE TABLE IF NOT EXISTS asset_moderation_records (
   reviewer_id TEXT,
   result TEXT NOT NULL CHECK (result IN ('approved', 'rejected', 'manual_review')),
   reason TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
