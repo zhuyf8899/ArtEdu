@@ -21,6 +21,7 @@ export const tables = {
   modelProviders: '模型供应商',
   modelConfigs: '可启用的模型配置，不保存真实密钥',
   works: '学生或老师发布的案例作品',
+  workGenerationJobs: '作品与生成任务的来源关联',
   workAssets: '作品图片、视频等文件的存储元数据',
   workWorkflows: '作品与工作流的多对多关系',
   tags: '课程、作品、工作流和工具的筛选标签',

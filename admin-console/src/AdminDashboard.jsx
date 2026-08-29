@@ -42,29 +42,31 @@ function AppLogo() {
   return <div className="brand"><div className="brand__mark">A</div><div><strong>AIGC 管理台</strong><span>清华美院 AI 实验场</span></div></div>;
 }
 
-function Sidebar({ section, onSectionChange, open, onClose, pendingCount }) {
+function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items, actor, onBack }) {
   return <>
     {open && <button className="scrim" aria-label="关闭菜单" onClick={onClose} />}
     <aside className={`sidebar ${open ? "is-open" : ""}`}>
       <div className="sidebar__top"><AppLogo /><button className="icon-button sidebar__close" onClick={onClose} aria-label="关闭导航"><X size={20} weight="bold" /></button></div>
       <div className="sidebar__eyebrow">// ADMIN CONSOLE</div>
       <nav className="side-nav" aria-label="管理员导航">
-        {navItems.map((item, index) => { const Icon = item.icon; return <button key={item.id} className={section === item.id ? "is-active" : ""} onClick={() => { onSectionChange(item.id); onClose(); }}><span className="side-nav__index">0{index + 1}</span><Icon size={20} weight={section === item.id ? "fill" : "regular"} /><span>{item.label}</span>{item.id === "reviews" && <b>{pendingCount}</b>}</button>; })}
+        {items.map((item, index) => { const Icon = item.icon; return <button key={item.id} className={section === item.id ? "is-active" : ""} onClick={() => { onSectionChange(item.id); onClose(); }}><span className="side-nav__index">0{index + 1}</span><Icon size={20} weight={section === item.id ? "fill" : "regular"} /><span>{item.label}</span>{item.id === "reviews" && <b>{pendingCount}</b>}</button>; })}
       </nav>
+      <button className="sidebar__back" onClick={onBack}>← 返回 ArtEdu 测试站</button>
       <div className="sidebar__notice"><div className="sidebar__notice-label"><Sparkle size={15} weight="fill" /> 系统状态</div><strong>所有模型服务正常</strong><div className="status-line"><span /> 8 个模型在线</div></div>
-      <div className="sidebar__account"><div className="avatar avatar--light">管</div><div><strong>平台管理员</strong><span>admin@aigc.edu.cn</span></div><CaretDown size={16} weight="bold" /></div>
+      <div className="sidebar__account"><div className="avatar avatar--light">{actor?.shortName?.slice(0, 1) ?? "管"}</div><div><strong>{actor?.shortName ?? "平台管理员"}</strong><span>{actor?.roleLabel ?? "管理员"}</span></div><CaretDown size={16} weight="bold" /></div>
     </aside>
   </>;
 }
 
-function Topbar({ section, onOpenMenu }) {
+function Topbar({ section, onOpenMenu, actor, onBack }) {
   const titles = { overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], reviews: ["作品审核", "审核用户提交到资源库的作品与案例"] };
   return <header className="topbar">
     <button className="icon-button menu-button" onClick={onOpenMenu} aria-label="打开导航"><List size={22} weight="bold" /></button>
     <div className="topbar__title"><p>// CONTROL CENTER</p><div><strong>{titles[section][0]}</strong><span>{titles[section][1]}</span></div></div>
+    <button className="topbar__back" onClick={onBack}>← ArtEdu</button>
     <label className="global-search"><MagnifyingGlass size={18} weight="bold" /><input aria-label="全局搜索" placeholder="搜索用户、作品或任务……" /><kbd>⌘ K</kbd></label>
     <button className="topbar__alert" aria-label="通知"><Bell size={21} weight="bold" /><span>3</span></button>
-    <div className="topbar__admin"><div className="avatar">管</div><div><strong>管理员</strong><span>超级管理员</span></div></div>
+    <div className="topbar__admin"><div className="avatar">{actor?.shortName?.slice(0, 1) ?? "管"}</div><div><strong>{actor?.shortName ?? "管理员"}</strong><span>{actor?.roleLabel ?? "超级管理员"}</span></div></div>
   </header>;
 }
 
@@ -133,12 +135,14 @@ function ReviewDrawer({ review, onClose, onDecision }) {
 
 function Toast({ message }) { return message ? <div className="toast" role="status"><Check size={18} weight="bold" /><span>{message}</span></div> : null; }
 
-export function AdminDashboard() {
-  const [section, setSection] = useState("overview"); const [sidebarOpen, setSidebarOpen] = useState(false); const [users, setUsers] = useState(initialUsers); const [reviews, setReviews] = useState(initialReviews); const [quotaUser, setQuotaUser] = useState(null); const [selectedReview, setSelectedReview] = useState(null); const [toast, setToast] = useState("");
+export function AdminDashboard({ actor, onBack }) {
+  const operatorOnly = actor?.role === "operator";
+  const availableNavItems = operatorOnly ? navItems.filter((item) => item.id === "reviews") : navItems;
+  const [section, setSection] = useState(operatorOnly ? "reviews" : "overview"); const [sidebarOpen, setSidebarOpen] = useState(false); const [users, setUsers] = useState(initialUsers); const [reviews, setReviews] = useState(initialReviews); const [quotaUser, setQuotaUser] = useState(null); const [selectedReview, setSelectedReview] = useState(null); const [toast, setToast] = useState("");
   const showToast = (message) => { setToast(message); window.setTimeout(() => setToast(""), 2600); };
-  useEffect(() => { Promise.allSettled([getAdminUsers(), getAdminReviews()]).then(([userResult, reviewResult]) => { if (userResult.status === "fulfilled") setUsers(userResult.value.items); if (reviewResult.status === "fulfilled") setReviews(reviewResult.value.items); }); }, []);
+  useEffect(() => { Promise.allSettled([operatorOnly ? Promise.resolve(null) : getAdminUsers(), getAdminReviews()]).then(([userResult, reviewResult]) => { if (userResult.status === "fulfilled" && userResult.value) setUsers(userResult.value.items); if (reviewResult.status === "fulfilled") setReviews(reviewResult.value.items); }); }, [operatorOnly]);
   const saveQuota = async (id, values) => { try { const updated = await updateUserQuota(id, values); setUsers((current) => current.map((user) => user.id === id ? updated : user)); setQuotaUser(null); showToast("API 额度策略已更新"); } catch (error) { showToast(error.message); } };
   const toggleUserStatus = async (target) => { const status = target.status === "suspended" ? "active" : "suspended"; try { const updated = await updateUserStatus(target.id, status); setUsers((current) => current.map((user) => user.id === target.id ? updated : user)); showToast(status === "active" ? "用户账户已重新启用" : "用户账户已停用"); } catch (error) { showToast(error.message); } };
   const decideReview = async (id, status, note) => { try { const updated = await reviewSubmission(id, { status, note }); setReviews((current) => current.map((item) => item.id === id ? updated : item)); setSelectedReview(null); showToast(status === "approved" ? "作品已通过并发布到资源库" : "作品已驳回并退回作者修改"); } catch (error) { showToast(error.message); } };
-  return <div className="admin-shell"><Sidebar section={section} onSectionChange={setSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} /><div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} /><main>{section === "overview" && <Overview users={users} reviews={reviews} onNavigate={setSection} onEditQuota={setQuotaUser} />}{section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} />}{section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}</main></div><QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} /><ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} /><Toast message={toast} /></div>;
+  return <div className="admin-shell"><Sidebar section={section} onSectionChange={setSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} /><div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} /><main>{section === "overview" && <Overview users={users} reviews={reviews} onNavigate={setSection} onEditQuota={setQuotaUser} />}{section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} />}{section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}</main></div><QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} /><ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} /><Toast message={toast} /></div>;
 }

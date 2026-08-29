@@ -2,9 +2,21 @@
 // stay independent from the API implementation chosen by the database team.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
+let currentTestUserId = window.localStorage.getItem("artedu-test-user-id") || "";
+
+export function setTestActor(userId) {
+  currentTestUserId = userId;
+  if (userId) window.localStorage.setItem("artedu-test-user-id", userId);
+  else window.localStorage.removeItem("artedu-test-user-id");
+}
+
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(currentTestUserId ? { "x-user-id": currentTestUserId } : {}),
+      ...options.headers,
+    },
     ...options,
   });
 
@@ -17,6 +29,13 @@ async function request(path, options = {}) {
 
 export const getAdminUsers = () => request("/admin/users");
 export const getAdminReviews = () => request("/admin/reviews");
+export const getCurrentUser = () => request("/auth/me");
+export const getPortalHome = () => request("/portal/home");
+
+export const createGenerationJob = (input) => request("/generation-jobs", {
+  method: "POST",
+  body: JSON.stringify(input),
+});
 
 export const updateUserQuota = (userId, quota) => request(`/admin/users/${userId}/quota`, {
   method: "PUT",
