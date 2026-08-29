@@ -34,7 +34,7 @@ cd ..
 npm run db:prepare
 ```
 
-`.env.example` 中只允许出现本地演示配置。真实数据库密码、模型密钥和学校认证凭据不得提交到 Git。
+`.env.example` 中只允许出现本地演示配置。真实数据库密码、模型密钥和学校认证凭据不得提交到 Git。`ENABLE_DEVELOPMENT_AUTH=true` 仅供本地演示身份切换，生产环境会拒绝启动该开关。
 
 ## 启动
 

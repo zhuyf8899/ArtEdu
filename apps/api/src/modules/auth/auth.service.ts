@@ -23,12 +23,10 @@ export class AuthService {
   constructor(private readonly database: DatabaseService) {}
 
   async getActor(request: FastifyRequest): Promise<Actor> {
-    const headerValue = request.headers["x-user-id"];
-    const headerUserId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
-    const userId = headerUserId ?? this.getDevelopmentFallbackUserId();
+    const userId = this.getDevelopmentUserId(request);
 
     if (!userId) {
-      throw new UnauthorizedException("缺少登录会话。接入学校 SSO 前，本地开发可传入 x-user-id 请求头。");
+      throw new UnauthorizedException("缺少登录会话。请通过学校 SSO 登录。");
     }
 
     const result = await this.database.query<ActorRow>(`
@@ -64,7 +62,13 @@ export class AuthService {
     }
   }
 
-  private getDevelopmentFallbackUserId() {
-    return process.env.NODE_ENV === "production" ? undefined : process.env.DEV_ADMIN_USER_ID;
+  private getDevelopmentUserId(request: FastifyRequest) {
+    if (process.env.ENABLE_DEVELOPMENT_AUTH !== "true" || process.env.NODE_ENV === "production") {
+      return undefined;
+    }
+
+    const headerValue = request.headers["x-user-id"];
+    const headerUserId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+    return headerUserId ?? process.env.DEV_ADMIN_USER_ID;
   }
 }
