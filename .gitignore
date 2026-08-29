@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.env
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+src/generated/prisma/
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
+
+
+/src/generated/prisma
