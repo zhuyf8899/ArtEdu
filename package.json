@@ -1,0 +1,19 @@
+{
+  "name": "artedu",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:web": "cd admin-console && npm run dev",
+    "dev:worker": "cd apps/api && npm run worker",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:migrate": "cd apps/api && npm run db:migrate",
+    "db:seed": "cd apps/api && npm run db:seed",
+    "db:prepare": "npm run db:up && npm run db:migrate && npm run db:seed",
+    "check": "npm run check:api && npm run check:web",
+    "check:api": "cd apps/api && npm run typecheck",
+    "check:web": "cd admin-console && npm run build && npm run test:sites"
+  }
+}
