@@ -61,8 +61,7 @@ export function TestLogin({ accounts, onSelect }) {
   </main>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin }) {
-  const [section, setSection] = useState("home");
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", onNavigate = () => {} }) {
   const [data, setData] = useState(fallbackData);
   const [isLive, setIsLive] = useState(false);
   const [toast, setToast] = useState("");
@@ -93,11 +92,12 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin }) {
   };
 
   const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区" }[section];
+  const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community" }[nextSection] ?? "/");
 
   return <div className="portal-shell">
     <header className="portal-topbar">
-      <button className="portal-brand" onClick={() => setSection("home")}><span>A</span><strong>ArtEdu</strong></button>
-      <nav className="portal-nav" aria-label="主导航">{navItems.map(([id, label, Icon]) => <button key={id} className={section === id ? "is-active" : ""} onClick={() => setSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
+      <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
+      <nav className="portal-nav" aria-label="主导航">{navItems.map(([id, label, Icon]) => <button key={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "已连接 API" : "演示数据"}</span><button className="account-switch" onClick={onSwitchAccount}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button></div>
     </header>
 
@@ -106,14 +106,14 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin }) {
 
       {section === "home" && <>
         <section className="portal-hero">
-          <div><span className="hero-hello">你好，{account.shortName}</span><h2>从一节课开始，<br /><em>把想法变成作品。</em></h2><p>今天可以继续学习、进入工作流，或者从案例中找到下一次创作的起点。</p><div className="hero-actions"><button className="portal-primary" onClick={() => setSection("courses")}><PlayCircle size={19} weight="fill" />继续学习</button><button className="portal-secondary" onClick={() => setSection("studio")}><Sparkle size={18} weight="bold" />开始创作</button></div></div>
+          <div><span className="hero-hello">你好，{account.shortName}</span><h2>从一节课开始，<br /><em>把想法变成作品。</em></h2><p>今天可以继续学习、进入工作流，或者从案例中找到下一次创作的起点。</p><div className="hero-actions"><button className="portal-primary" onClick={() => navigateSection("courses")}><PlayCircle size={19} weight="fill" />继续学习</button><button className="portal-secondary" onClick={() => navigateSection("studio")}><Sparkle size={18} weight="bold" />开始创作</button></div></div>
           <div className="hero-orbit"><span className="orbit-center"><Brain size={38} weight="thin" /></span><i className="orbit-dot orbit-dot--one" /><i className="orbit-dot orbit-dot--two" /><i className="orbit-dot orbit-dot--three" /><div className="orbit-label orbit-label--one">教学</div><div className="orbit-label orbit-label--two">设计</div><div className="orbit-label orbit-label--three">社区</div></div>
         </section>
-        <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse?.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse?.progressPercent ?? 0}%` }} /></div><b>{nextCourse?.progressPercent ?? 0}%</b><button onClick={() => setSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section>
-        <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => setSection("studio")} />
-        <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课件与课程知识提问，生成学习路径。" onClick={() => showToast("教学对话模块已预留，下一步接入课程知识库。")} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => setSection("community")} /></section>
+        <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse?.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse?.progressPercent ?? 0}%` }} /></div><b>{nextCourse?.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section>
+        <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => navigateSection("studio")} />
+        <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课件与课程知识提问，生成学习路径。" onClick={() => showToast("教学对话模块已预留，下一步接入课程知识库。")} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
         <SectionHeading eyebrow="// FEATURED WORKFLOWS" title="精选工作流" />
-        <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => setSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section>
+        <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section>
       </>}
 
       {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><section className="course-grid">{data.courses.map((course, index) => <article className="course-card" key={course.id}><div className={`course-cover course-cover--${index % 3}`}><BookOpenText size={32} weight="thin" /><span>{course.category}</span></div><div className="course-card__content"><small>{course.lessonCount ?? 6} 个课时</small><h3>{course.title}</h3><p>{course.summary}</p><div className="course-card__footer"><div><i><b style={{ width: `${course.progressPercent ?? 0}%` }} /></i><span>{course.progressPercent ?? 0}%</span></div><button onClick={() => showToast("课程详情页将复用当前课程数据与学习进度表。")}><ArrowRight size={18} weight="bold" /></button></div></div></article>)}</section></>}

@@ -1,28 +1,78 @@
 # ArtEdu
 
-清华美院 AI 艺术教育平台。
+清华美院 AI 艺术教育平台。第一阶段工程框架已完成，当前仓库可以在本地同时运行 PostgreSQL、NestJS API、生成任务 Worker 和 React 测试门户/管理后台。
 
-## 数据库基础层
+## 当前已实现
 
-当前数据库采用 PostgreSQL 作为正式环境的结构化数据存储。数据库设计和迁移文件已经放在：
+- PostgreSQL 数据模型、版本化迁移、演示种子数据和 Docker Compose。
+- NestJS + Fastify API，包含开发身份回退、角色权限、输入校验、事务和审计记录。
+- 首页聚合、生成任务排队与查询基础接口。
+- 管理端用户查询、日/月/并发额度调整、账户启停和作品审核接口。
+- React 测试门户与管理后台，支持学生、教师、运营和管理员四种演示身份。
+- 根目录统一启动/检查命令，以及 GitHub Actions CI。
 
-- `db/schema.ts`：数据表用途说明
-- `migrations/0001_initial.sql`：第一版建表和索引
-- `seed/seed.sql`：本地开发使用的演示数据
+本阶段不包含学校 SSO、真实大模型调用、对象存储或完整课程/工作流/作品业务。详细边界见 [`docs/framework.md`](docs/framework.md)，接口状态见 [`docs/api-contracts.md`](docs/api-contracts.md)。
 
-第一版覆盖用户与学校身份、角色与院系、课程/课时/资源/学习进度、教学对话、工作流和工具、模型配置与调用额度、作品社区（标签、评论、点赞、收藏）、书籍推荐、生成任务、文件元数据和审核记录。
+## 环境要求
 
-图片、视频、PDF、Word、PPT 等真实文件后续放入学校提供的 S3 兼容对象存储；数据库只保存文件名称、类型、地址和关联关系。
+- Node.js 22
+- npm 10+
+- Docker Desktop（用于本地 PostgreSQL 16）
 
-当前还没有接入真实登录和线上数据库资源。后续会先补最小后端 API，再把前端页面从写死的演示数据逐步切换到数据库数据。
-
-## 本地 PostgreSQL 验证
-
-已提供 `docker-compose.yml`，供开发环境启动 PostgreSQL 16。安装 Docker Desktop 后，在项目根目录运行：
+## 首次安装
 
 ```powershell
-docker compose up -d
-docker compose exec postgres psql -U artedu -d artedu -c "SELECT COUNT(*) FROM users;"
+cd apps/api
+Copy-Item .env.example .env
+npm ci
+
+cd ../../admin-console
+Copy-Item .env.example .env.local
+npm ci
+
+cd ..
+npm run db:prepare
 ```
 
-容器第一次启动时会依次执行 `migrations/0001_initial.sql` 与 `seed/seed.sql`。`.env.example` 只包含本地演示连接串；真实密码应由部署环境的密钥管理服务提供，不能提交到 Git。
+`.env.example` 中只允许出现本地演示配置。真实数据库密码、模型密钥和学校认证凭据不得提交到 Git。
+
+## 启动
+
+在仓库根目录执行：
+
+```powershell
+npm run dev
+```
+
+启动后可访问：
+
+| 服务 | 地址 |
+| --- | --- |
+| 测试门户与管理后台 | `http://localhost:4173` |
+| API | `http://localhost:4000/api` |
+| 健康检查 | `http://localhost:4000/api/health` |
+
+前端首先显示演示身份选择页。选择管理员后可进入 `/admin`，选择教师或运营可验证对应的权限范围。
+
+## 验证
+
+```powershell
+npm run check
+```
+
+该命令执行 API TypeScript 类型检查、前端生产构建和静态站点 Worker 测试。PR 和推送到 `main` 时，GitHub Actions 会执行相同检查。
+
+## 主要目录
+
+```text
+admin-console/       React 测试门户与管理后台
+apps/api/            NestJS API 与生成任务 Worker
+migrations/          PostgreSQL 版本化迁移
+seed/                本地演示数据
+docs/                框架边界与 API 契约
+scripts/dev.mjs      多进程本地启动入口
+```
+
+## 数据与文件边界
+
+PostgreSQL 保存用户、权限、课程、工作流、额度、任务、作品状态、审计信息和对象存储键。图片、视频、PDF 等二进制文件后续进入学校提供的 S3 兼容对象存储，不直接写入数据库。
