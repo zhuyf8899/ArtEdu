@@ -1,0 +1,20 @@
+{
+  "name": "aigc-art-platform",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "admin-console"
+  ],
+  "scripts": {
+    "dev": "concurrently -n API,WEB,ADMIN -c yellow,cyan,green \"npm run dev -w @aigc/api\" \"npm run dev -w @aigc/web\" \"npm run dev -w admin-console\"",
+    "dev:api": "npm run dev -w @aigc/api",
+    "dev:web": "npm run dev -w @aigc/web",
+    "dev:admin": "npm run dev -w admin-console",
+    "build": "npm run build -w @aigc/api && npm run build -w @aigc/web && npm run build -w admin-console",
+    "check": "npm run check -w @aigc/api && npm run build -w @aigc/api && npm run build -w @aigc/web && npm run test:sites -w @aigc/web && npm run build -w admin-console && npm run test:sites -w admin-console"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

@@ -76,3 +76,9 @@ scripts/dev.mjs      多进程本地启动入口
 ## 数据与文件边界
 
 PostgreSQL 保存用户、权限、课程、工作流、额度、任务、作品状态、审计信息和对象存储键。图片、视频、PDF 等二进制文件后续进入学校提供的 S3 兼容对象存储，不直接写入数据库。
+
+## 课程资源业务参考实现
+
+`feat/course-resource-business` 分支增加了一个不侵入主框架的可运行参考实现，位于 [`prototypes/course-resource-mvp`](prototypes/course-resource-mvp)。它覆盖课程/学习项目 CMS、发布审核、用户选课与进度、工作流创作成果绑定和课程统计。
+
+该目录用于业务验收和迁移对照，不代表主工程的最终技术实现。迁移边界、接口清单和模块映射请先阅读 [`docs/course-resource-business-integration.md`](docs/course-resource-business-integration.md)。
