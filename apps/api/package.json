@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "start": "tsx src/main.ts",
-    "worker": "tsx src/worker.ts",
+    "build": "tsc",
+    "dev": "node --watch --require ts-node/register src/main.ts",
+    "start": "npm run build && node dist/main.js",
+    "worker": "npm run build && node dist/worker.js",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed.ts",
     "typecheck": "tsc --noEmit"
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/node": "^22.13.10",
     "@types/pg": "^8.11.11",
+    "ts-node": "^10.9.2",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }
