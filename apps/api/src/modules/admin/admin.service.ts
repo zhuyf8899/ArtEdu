@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { ADMIN_MANAGEMENT_ROLES, REVIEW_ROLES } from "../../common/constants";
+import { ADMIN_MANAGEMENT_ROLES, PLATFORM_ADMIN_ROLES, REVIEW_ROLES } from "../../common/constants";
 import { AuthService, type Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import type { QuotaInput, ReviewDecisionInput } from "./admin.contracts";
@@ -35,14 +35,14 @@ export class AdminService {
   }
 
   async updateQuota(actor: Actor, userId: string, quota: QuotaInput) {
-    this.authService.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
+    this.authService.requireAnyRole(actor, PLATFORM_ADMIN_ROLES);
     if (!await this.repository.getUser(userId)) throw new NotFoundException("用户不存在");
     await this.repository.updateQuota(userId, quota, actor.id);
     return this.repository.getUser(userId);
   }
 
   async updateAccountStatus(actor: Actor, userId: string, status: "active" | "suspended") {
-    this.authService.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
+    this.authService.requireAnyRole(actor, PLATFORM_ADMIN_ROLES);
     if (!await this.repository.getUser(userId)) throw new NotFoundException("用户不存在");
     await this.repository.updateAccountStatus(userId, status === "suspended" ? "disabled" : "active", actor.id);
     return this.repository.getUser(userId);

@@ -1,10 +1,12 @@
 // Backend integration boundary. Keep endpoint changes here so the UI components
 // stay independent from the API implementation chosen by the database team.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+const demoAuthEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_AUTH === "true";
 
-let currentTestUserId = window.localStorage.getItem("artedu-test-user-id") || "";
+let currentTestUserId = demoAuthEnabled ? window.localStorage.getItem("artedu-test-user-id") || "" : "";
 
 export function setTestActor(userId) {
+  if (!demoAuthEnabled) return;
   currentTestUserId = userId;
   if (userId) window.localStorage.setItem("artedu-test-user-id", userId);
   else window.localStorage.removeItem("artedu-test-user-id");

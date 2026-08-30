@@ -12,7 +12,7 @@ import { ContentService } from "./content.service";
 export class ContentController {
   constructor(@Inject(AuthService) private readonly auth: AuthService, @Inject(ContentService) private readonly content: ContentService) {}
 
-  @Get("courses") listCourses(@Query() query: unknown) { return this.content.listCourses(parseInput(pageSchema, query)); }
+  @Get("courses") async listCourses(@Query() query: unknown, @Req() req: FastifyRequest) { await this.actor(req); return this.content.listCourses(parseInput(pageSchema, query)); }
   @Get("courses/:courseId") getCourse(@Param("courseId") id: string, @Req() req: FastifyRequest) { return this.content.getCourse(id, this.auth.getActor(req)); }
   @Post("courses") async createCourse(@Body() body: unknown, @Req() req: FastifyRequest) { return this.content.createCourse(await this.actor(req), parseInput(courseInputSchema, body)); }
   @Patch("courses/:courseId") async updateCourse(@Param("courseId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.updateCourse(await this.actor(req), id, parseInput(courseInputSchema.partial(), body)); }
@@ -23,8 +23,8 @@ export class ContentController {
   @Patch("resources/:resourceId") async updateResource(@Param("resourceId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.updateResource(await this.actor(req), id, parseInput(resourcePatchSchema, body)); }
   @Patch("lessons/:lessonId/progress") async progress(@Param("lessonId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.updateProgress(await this.actor(req), id, parseInput(progressSchema, body)); }
 
-  @Get("workflows") listWorkflows(@Query() query: unknown) { return this.content.listWorkflows(parseInput(pageSchema, query)); }
-  @Get("workflows/:workflowId") getWorkflow(@Param("workflowId") id: string) { return this.content.getWorkflow(id); }
+  @Get("workflows") async listWorkflows(@Query() query: unknown, @Req() req: FastifyRequest) { await this.actor(req); return this.content.listWorkflows(parseInput(pageSchema, query)); }
+  @Get("workflows/:workflowId") async getWorkflow(@Param("workflowId") id: string, @Req() req: FastifyRequest) { await this.actor(req); return this.content.getWorkflow(id); }
   @Post("workflows") async createWorkflow(@Body() body: unknown, @Req() req: FastifyRequest) { return this.content.createWorkflow(await this.actor(req), parseInput(workflowInputSchema, body)); }
   @Patch("workflows/:workflowId") async updateWorkflow(@Param("workflowId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.updateWorkflow(await this.actor(req), id, parseInput(workflowInputSchema.partial(), body)); }
   @Patch("workflows/:workflowId/status") async updateWorkflowStatus(@Param("workflowId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.updateStatus(await this.actor(req), "workflows", id, parseInput(statusSchema, body).status); }
@@ -38,14 +38,14 @@ export class ContentController {
   }
   @Patch("works/:workId") async updateWork(@Param("workId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.updateWork(await this.actor(req), id, parseInput(workInputSchema.partial(), body)); }
   @Patch("works/:workId/status") async updateWorkStatus(@Param("workId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.updateWorkStatus(await this.actor(req), id, parseInput(statusSchema, body).status); }
-  @Get("works/:workId/comments") getComments(@Param("workId") id: string) { return this.content.listComments(id); }
+  @Get("works/:workId/comments") getComments(@Param("workId") id: string, @Req() req: FastifyRequest) { return this.content.listComments(this.auth.getActor(req), id); }
   @Post("works/:workId/comments") async comment(@Param("workId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.addComment(await this.actor(req), id, parseInput(commentSchema, body)); }
   @Post("works/:workId/like") async like(@Param("workId") id: string, @Req() req: FastifyRequest) { return this.content.toggleReaction(await this.actor(req), id, "like"); }
   @Post("works/:workId/favorite") async favorite(@Param("workId") id: string, @Req() req: FastifyRequest) { return this.content.toggleReaction(await this.actor(req), id, "favorite"); }
 
-  @Get("search") search(@Query() query: unknown) { return this.content.search(parseInput(pageSchema, query)); }
+  @Get("search") async search(@Query() query: unknown, @Req() req: FastifyRequest) { await this.actor(req); return this.content.search(parseInput(pageSchema, query)); }
 
-  @Get("tools") listTools(@Query() query: unknown) { return this.content.listTools(parseInput(pageSchema, query)); }
+  @Get("tools") async listTools(@Query() query: unknown, @Req() req: FastifyRequest) { await this.actor(req); return this.content.listTools(parseInput(pageSchema, query)); }
   @Post("tools") async createTool(@Body() body: unknown, @Req() req: FastifyRequest) { return this.content.createTool(await this.actor(req), parseInput(toolInputSchema, body)); }
   @Patch("tools/:toolId") async updateTool(@Param("toolId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.updateTool(await this.actor(req), id, parseInput(toolInputSchema.partial(), body)); }
   @Patch("tools/:toolId/status") async updateToolStatus(@Param("toolId") id: string, @Body() body: unknown, @Req() req: FastifyRequest) { return this.content.updateStatus(await this.actor(req), "tools", id, parseInput(statusSchema, body).status); }

@@ -1,5 +1,30 @@
 import { z } from "zod";
 
+function isSafeHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+const externalUrlSchema = z.string().trim().max(1000).refine(isSafeHttpUrl, "仅允许无凭据的 http(s) 链接");
+const entryUrlSchema = z.string().trim().max(1000).refine(
+  (value) => (value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/\\")) || isSafeHttpUrl(value),
+  "仅允许站内路径或无凭据的 http(s) 链接",
+);
+const storageKeySchema = z.string().trim().min(1).max(1000).refine(
+  (value) => !value.startsWith("/") && !value.includes("\\") && !/[\u0000-\u001F\u007F]/.test(value)
+    && value.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== ".."),
+  "存储键必须是无绝对路径、无上级目录的对象存储相对路径",
+);
+const fileNameSchema = z.string().trim().min(1).max(255).refine(
+  (value) => !/[\\/\u0000-\u001F\u007F]/.test(value),
+  "文件名不能包含路径分隔符或控制字符",
+);
+const mimeTypeSchema = z.string().trim().max(120).regex(/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/, "MIME 类型格式不合法");
+
 export const pageSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
@@ -14,7 +39,7 @@ export const courseInputSchema = z.object({
   summary: z.string().trim().max(2000).optional(),
   category: z.string().trim().max(100).optional(),
   difficulty: z.enum(["beginner", "intermediate", "advanced"]).optional(),
-  coverAssetKey: z.string().trim().max(500).optional(),
+  coverAssetKey: storageKeySchema.optional(),
   status: z.enum(["draft", "published", "archived"]).default("draft"),
 });
 
@@ -31,14 +56,14 @@ const resourceFieldsSchema = z.object({
   title: z.string().trim().min(1).max(200),
   resourceType: z.enum(["pdf", "video", "word", "ppt", "book", "link", "other"]),
   lessonId: z.string().trim().optional(),
-  storageKey: z.string().trim().max(1000).optional(),
-  externalUrl: z.string().url().optional(),
-  fileName: z.string().trim().max(255).optional(),
-  mimeType: z.string().trim().max(120).optional(),
+  storageKey: storageKeySchema.optional(),
+  externalUrl: externalUrlSchema.optional(),
+  fileName: fileNameSchema.optional(),
+  mimeType: mimeTypeSchema.optional(),
   fileSize: z.number().int().min(0).optional(),
   transcriptText: z.string().optional(),
   sourceName: z.string().trim().max(200).optional(),
-  sourceUrl: z.string().url().optional(),
+  sourceUrl: externalUrlSchema.optional(),
   copyrightNote: z.string().trim().max(1000).optional(),
   sortOrder: z.number().int().min(0).default(0),
   status: z.enum(["draft", "published", "archived"]).default("draft"),
@@ -55,7 +80,7 @@ export const workflowInputSchema = z.object({
   description: z.string().trim().max(2000).optional(),
   category: z.string().trim().max(100).optional(),
   entryType: z.enum(["chat", "workbench", "external_tool"]).default("chat"),
-  entryUrl: z.string().trim().max(1000).optional(),
+  entryUrl: entryUrlSchema.optional(),
   status: z.enum(["draft", "published", "archived"]).default("draft"),
 });
 
@@ -69,7 +94,7 @@ export const toolInputSchema = z.object({
   description: z.string().trim().max(2000).optional(),
   category: z.string().trim().max(100).optional(),
   toolType: z.enum(["internal", "external", "embedded"]),
-  entryUrl: z.string().trim().max(1000).optional(),
+  entryUrl: entryUrlSchema.optional(),
   status: z.enum(["draft", "published", "archived"]).default("draft"),
 });
 
@@ -81,14 +106,17 @@ export const workInputSchema = z.object({
   title: z.string().trim().min(1).max(200),
   summary: z.string().trim().max(3000).optional(),
   discipline: z.string().trim().max(100).optional(),
-  workflowIds: z.array(z.string().trim().min(1)).max(20).default([]),
+  workflowIds: z.array(z.string().trim().min(1)).max(20).refine(
+    (ids) => new Set(ids).size === ids.length,
+    "工作流不能重复引用",
+  ).default([]),
   assets: z.array(z.object({
-    fileName: z.string().trim().min(1).max(255),
-    mimeType: z.string().trim().min(1).max(120),
-    storageKey: z.string().trim().min(1).max(1000),
+    fileName: fileNameSchema,
+    mimeType: mimeTypeSchema,
+    storageKey: storageKeySchema,
     fileSize: z.number().int().min(0).optional(),
     assetType: z.enum(["image", "video", "document", "other"]).default("image"),
-    thumbnailKey: z.string().trim().max(1000).optional(),
+    thumbnailKey: storageKeySchema.optional(),
     altText: z.string().trim().max(500).optional(),
     sortOrder: z.number().int().min(0).default(0),
   })).max(50).default([]),
