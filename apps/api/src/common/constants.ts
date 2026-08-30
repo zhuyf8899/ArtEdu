@@ -1,4 +1,5 @@
 export const ADMIN_MANAGEMENT_ROLES = ["admin", "teacher"] as const;
+export const PLATFORM_ADMIN_ROLES = ["admin"] as const;
 export const REVIEW_ROLES = ["admin", "operator", "teacher"] as const;
 export const COURSE_REVIEW_ROLES = ["admin", "operator"] as const;
 

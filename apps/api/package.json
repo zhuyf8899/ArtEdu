@@ -9,6 +9,7 @@
     "worker": "npm run build && node dist/worker.js",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed.ts",
+    "test:security": "tsx --test src/common/security.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

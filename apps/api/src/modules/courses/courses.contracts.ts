@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+const storageKeySchema = z.string().trim().min(1).max(500).refine(
+  (value) => !value.startsWith("/") && !value.includes("\\") && !/[\u0000-\u001F\u007F]/.test(value)
+    && value.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== ".."),
+  "存储键必须是无绝对路径、无上级目录的对象存储相对路径",
+);
+
 export const listCoursesQuerySchema = z.object({
   query: z.string().trim().max(80).optional(),
   category: z.string().trim().max(40).optional(),
@@ -22,7 +28,7 @@ export const createCourseSchema = z.object({
   summary: z.string().trim().max(2000).optional().default(""),
   category: z.string().trim().min(1).max(40),
   difficulty: z.enum(["beginner", "intermediate", "advanced"]).default("beginner"),
-  coverAssetKey: z.string().trim().max(500).nullable().optional(),
+  coverAssetKey: storageKeySchema.nullable().optional(),
   isFeatured: z.boolean().default(false),
   lessons: z.array(lessonSchema).max(100).default([]),
 });

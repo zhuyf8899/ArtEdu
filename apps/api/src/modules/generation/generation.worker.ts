@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../database/database.service";
+import { getEnvironment } from "../../common/environment";
 
 interface ClaimedJob {
   id: string;
@@ -23,6 +24,10 @@ export class GenerationWorkerService {
   constructor(private readonly database: DatabaseService) {}
 
   async processOnce() {
+    if (!getEnvironment().modelExecutionEnabled) {
+      this.logger.warn("模型执行服务未配置，worker 跳过领取任务");
+      return false;
+    }
     const job = await this.database.transaction((client) => this.claimNextJob(client));
     if (!job) return false;
 

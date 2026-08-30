@@ -1,6 +1,7 @@
-import { ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
+import { getEnvironment } from "../../common/environment";
 import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import type { CreateGenerationJobInput } from "./generation.contracts";
@@ -23,19 +24,42 @@ export class GenerationService {
   ) {}
 
   async createJob(actor: Actor, input: CreateGenerationJobInput) {
+    if (!getEnvironment().modelExecutionEnabled) {
+      throw new ServiceUnavailableException("模型执行服务尚未配置，暂不接受生成任务");
+    }
     return this.database.transaction(async (client) => {
       // 同一用户的任务创建串行化，防止多标签页同时绕过额度检查。
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [actor.id]);
+      await this.validateReferences(client, actor, input);
       const quota = await this.getQuotaSnapshot(client, actor.id);
       this.assertQuotaAvailable(quota);
       return this.repository.createQueuedJob(client, actor.id, input);
     });
   }
 
+  private async validateReferences(client: PoolClient, actor: Actor, input: CreateGenerationJobInput) {
+    if (input.conversationId) {
+      const conversation = await client.query("SELECT id FROM conversations WHERE id = $1 AND user_id = $2", [input.conversationId, actor.id]);
+      if (!conversation.rowCount) throw new ForbiddenException("无权使用该对话创建生成任务");
+    }
+    if (input.workflowVersionId) {
+      const version = await client.query(`SELECT version.id FROM workflow_versions version JOIN workflows workflow ON workflow.id = version.workflow_id WHERE version.id = $1 AND workflow.status = 'published' AND version.published_at IS NOT NULL`, [input.workflowVersionId]);
+      if (!version.rowCount) throw new NotFoundException("可用工作流版本不存在");
+    }
+    if (input.toolId) {
+      const tool = await client.query("SELECT id FROM tools WHERE id = $1 AND status = 'published'", [input.toolId]);
+      if (!tool.rowCount) throw new NotFoundException("可用工具不存在");
+    }
+    if (input.modelConfigId) {
+      const model = await client.query("SELECT id FROM model_configs WHERE id = $1 AND status = 'active'", [input.modelConfigId]);
+      if (!model.rowCount) throw new NotFoundException("可用模型配置不存在");
+    }
+  }
+
   async getJob(actor: Actor, jobId: string) {
     const job = await this.repository.getById(jobId);
     if (!job) throw new NotFoundException("生成任务不存在");
-    const canReadAllJobs = actor.roles.some((role) => ["admin", "operator", "teacher"].includes(role));
+    const canReadAllJobs = actor.roles.some((role) => ["admin", "teacher"].includes(role));
     if (job.userId !== actor.id && !canReadAllJobs) throw new ForbiddenException("无权查看此生成任务");
     return job;
   }

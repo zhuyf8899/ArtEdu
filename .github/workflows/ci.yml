@@ -19,4 +19,7 @@ jobs:
             admin-console/package-lock.json
       - run: cd apps/api && npm ci
       - run: cd admin-console && npm ci
+      - run: cd apps/api && npm audit --omit=dev --audit-level=high
+      - run: cd admin-console && npm audit --omit=dev --audit-level=high
+      - run: cd apps/api && npm run test:security
       - run: npm run check

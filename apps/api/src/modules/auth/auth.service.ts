@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
+import { getEnvironment } from "../../common/environment";
 import { DatabaseService } from "../database/database.service";
 
 export interface Actor {
@@ -23,6 +24,8 @@ export class AuthService {
   constructor(private readonly database: DatabaseService) {}
 
   async getActor(request: FastifyRequest): Promise<Actor> {
+    const cachedActor = (request as FastifyRequest & { actor?: Actor }).actor;
+    if (cachedActor) return cachedActor;
     const userId = this.getDevelopmentUserId(request);
 
     if (!userId) {
@@ -47,13 +50,15 @@ export class AuthService {
     if (!user) throw new UnauthorizedException("登录用户不存在");
     if (user.status !== "active") throw new ForbiddenException("当前账户不可用");
 
-    return {
+    const actor = {
       id: user.id,
       username: user.username,
       displayName: user.display_name,
       accountStatus: user.status,
       roles: user.roles ?? [],
     };
+    (request as FastifyRequest & { actor?: Actor }).actor = actor;
+    return actor;
   }
 
   requireAnyRole(actor: Actor, allowedRoles: readonly string[]) {
@@ -63,12 +68,12 @@ export class AuthService {
   }
 
   private getDevelopmentUserId(request: FastifyRequest) {
-    if (process.env.ENABLE_DEVELOPMENT_AUTH !== "true" || process.env.NODE_ENV === "production") {
+    if (process.env.ENABLE_DEVELOPMENT_AUTH !== "true" || getEnvironment().nodeEnv !== "development") {
       return undefined;
     }
 
     const headerValue = request.headers["x-user-id"];
     const headerUserId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
-    return headerUserId ?? process.env.DEV_ADMIN_USER_ID;
+    return headerUserId;
   }
 }
