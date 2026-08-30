@@ -5,6 +5,7 @@ import {
   Palette, PlayCircle, Plus, RocketLaunch, Sparkle, Stack, UsersThree,
 } from "@phosphor-icons/react";
 import { createGenerationJob, getPortalHome } from "./services/adminApi.js";
+import { LearningLibrary } from "./LearningLibrary.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 
 const fallbackData = {
@@ -116,7 +117,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section>
       </>}
 
-      {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><section className="course-grid">{data.courses.map((course, index) => <article className="course-card" key={course.id}><div className={`course-cover course-cover--${index % 3}`}><BookOpenText size={32} weight="thin" /><span>{course.category}</span></div><div className="course-card__content"><small>{course.lessonCount ?? 6} 个课时</small><h3>{course.title}</h3><p>{course.summary}</p><div className="course-card__footer"><div><i><b style={{ width: `${course.progressPercent ?? 0}%` }} /></i><span>{course.progressPercent ?? 0}%</span></div><button onClick={() => showToast("课程详情页将复用当前课程数据与学习进度表。")}><ArrowRight size={18} weight="bold" /></button></div></div></article>)}</section></>}
+      {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary fallbackCourses={data.courses} onNotice={showToast} /></>}
 
       {section === "studio" && <><SectionHeading eyebrow="// CREATE WITH AI" title="设计工作台" /><section className="studio-grid"><StudioCard icon={Lightbulb} label="多轮引导" title="网页创作助手" text="通过几轮提问明确内容、结构与风格，再生成页面方案。" action="开始对话" onClick={() => startGeneration("webpage", "为美术学院 AI 课程设计一个明快、可浏览作品的活动介绍页面。")} /><StudioCard icon={ImageSquare} label="即时生成" title="UI / 图标生成" text="从一句提示词开始，在创作过程中继续与 AI 教练对话。" action="生成草稿" accent onClick={() => startGeneration("image", "为校园导视系统生成一组圆角线性图标，统一线宽，包含教学楼、食堂、运动场。")} /><StudioCard icon={CirclesThreePlus} label="节点工作台" title="图案生成实验室" text="用可视化节点串联图案处理流程，把专业技能封装为可复用模块。" action="打开画布" onClick={() => startGeneration("pattern", "将传统云纹与植物标本结构重组为可无限延展的现代纹样。")} /></section><section className="studio-tip"><Sparkle size={20} weight="fill" /><div><strong>测试提示</strong><span>启动 API 与 worker 后，点击任意创作卡片会写入真实的生成任务队列。</span></div></section></>}
 

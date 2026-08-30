@@ -31,6 +31,26 @@ export const getAdminUsers = () => request("/admin/users");
 export const getAdminReviews = () => request("/admin/reviews");
 export const getCurrentUser = () => request("/auth/me");
 export const getPortalHome = () => request("/portal/home");
+export const getCourses = (query = "") => request(`/courses${query ? `?query=${encodeURIComponent(query)}` : ""}`);
+export const getCourse = (courseId) => request(`/courses/${courseId}`);
+export const enrollCourse = (courseId) => request(`/courses/${courseId}/enroll`, { method: "POST" });
+export const updateLessonProgress = (courseId, lessonId, progressPercent) => request(`/courses/${courseId}/lessons/${lessonId}/progress`, {
+  method: "PUT",
+  body: JSON.stringify({ progressPercent }),
+});
+export const getMyLearning = () => request("/me/learning-progress");
+
+export const getAdminCourses = () => request("/admin/courses");
+export const createAdminCourse = (input) => request("/admin/courses", {
+  method: "POST",
+  body: JSON.stringify(input),
+});
+export const submitCourseReview = (courseId) => request(`/admin/courses/${courseId}/submit-review`, { method: "POST" });
+export const getCourseReviews = () => request("/admin/course-reviews");
+export const decideCourseReview = (reviewId, decision) => request(`/admin/course-reviews/${reviewId}/decision`, {
+  method: "POST",
+  body: JSON.stringify(decision),
+});
 
 export const createGenerationJob = (input) => request("/generation-jobs", {
   method: "POST",
