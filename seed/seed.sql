@@ -24,17 +24,20 @@ INSERT INTO courses
   (id, slug, title, summary, category, difficulty, is_featured, featured_rank, status, created_by, estimated_minutes, published_at)
 VALUES
   ('course-ai-design-foundation', 'ai-design-foundation', 'AI 辅助设计思维与方法', '从灵感到方案，理解 AI 在设计流程中的作用。', '设计基础', 'beginner', TRUE, 1, 'published', 'user-teacher-demo', 45, CURRENT_TIMESTAMP),
-  ('course-traditional-pattern', 'traditional-pattern', '传统纹样的当代表达', '从传统视觉元素中提取结构并完成现代转译。', '视觉设计', 'intermediate', FALSE, NULL, 'published', 'user-teacher-demo', 50, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING;
+  ('course-traditional-pattern', 'traditional-pattern', '传统纹样的当代表达', '从传统视觉元素中提取结构并完成现代转译。', '视觉设计', 'intermediate', FALSE, NULL, 'published', 'user-teacher-demo', 50, CURRENT_TIMESTAMP),
+  ('course-vibe-gallery', 'vibe-coding-art-gallery', '用 Vibe Coding 构建数字作品展', '从内容结构、界面节奏到交互实现，完成一个可浏览的线上艺术展。', '交互设计', 'intermediate', TRUE, 3, 'published', 'user-teacher-demo', 60, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING;
 
 INSERT INTO course_instructors (course_id, user_id) VALUES
   ('course-ai-design-foundation', 'user-teacher-demo'),
-  ('course-traditional-pattern', 'user-teacher-demo') ON CONFLICT DO NOTHING;
+  ('course-traditional-pattern', 'user-teacher-demo'),
+  ('course-vibe-gallery', 'user-teacher-demo') ON CONFLICT DO NOTHING;
 
 INSERT INTO course_lessons
   (id, course_id, title, summary, sort_order, estimated_minutes, status)
 VALUES
   ('lesson-ai-design-01', 'course-ai-design-foundation', '认识生成式 AI', '理解模型从输入到输出的基本过程。', 1, 45, 'published'),
-  ('lesson-pattern-01', 'course-traditional-pattern', '提取传统纹样结构', '观察纹样的骨架、重复与节奏。', 1, 50, 'published') ON CONFLICT DO NOTHING;
+  ('lesson-pattern-01', 'course-traditional-pattern', '提取传统纹样结构', '观察纹样的骨架、重复与节奏。', 1, 50, 'published'),
+  ('lesson-vibe-gallery-01', 'course-vibe-gallery', '从内容清单生成可运行画廊', '用自然语言定义页面结构、筛选交互与视觉节奏。', 1, 60, 'published') ON CONFLICT DO NOTHING;
 
 INSERT INTO learning_progress
   (user_id, lesson_id, status, progress_percent, watched_seconds, last_position_seconds)

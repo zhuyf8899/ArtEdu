@@ -2,16 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
-  Palette, PlayCircle, Plus, RocketLaunch, Sparkle, Stack, UsersThree,
+  Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree,
 } from "@phosphor-icons/react";
 import { createGenerationJob, getPortalHome } from "./services/adminApi.js";
+import { AiCreationConsole } from "./AiCreationConsole.jsx";
 import { LearningLibrary } from "./LearningLibrary.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 
 const fallbackData = {
   courses: [
-    { id: "course-ai-design-foundation", title: "AI 辅助设计思维与方法", summary: "从灵感到方案，理解 AI 在设计流程中的作用。", category: "设计基础", progressPercent: 62, lessonCount: 8 },
-    { id: "course-traditional-pattern", title: "传统纹样的当代表达", summary: "从传统视觉元素中提取结构并完成现代转译。", category: "视觉设计", progressPercent: 0, lessonCount: 6 },
+    { id: "course-ai-design-foundation", title: "AI 辅助设计思维与方法", summary: "从灵感到方案，理解 AI 在设计流程中的作用。", category: "设计基础", method: "UI 创作", author: "周可老师", tools: ["GPT-4o", "Figma"], progressPercent: 62, lessonCount: 8 },
+    { id: "course-traditional-pattern", title: "传统纹样的当代表达", summary: "从传统视觉元素中提取结构并完成现代转译。", category: "视觉设计", method: "图案生成", author: "林知夏老师", tools: ["FLUX.1", "Midjourney"], progressPercent: 0, lessonCount: 6 },
+    { id: "course-vibe-gallery", title: "用 Vibe Coding 构建数字作品展", summary: "从内容结构、界面节奏到交互实现，完成一个可浏览的线上艺术展。", category: "交互设计", method: "Vibe Coding", author: "陈明远老师", tools: ["Claude 4", "VS Code"], progressPercent: 0, lessonCount: 5 },
   ],
   workflows: [
     { id: "workflow-case-analysis", name: "案例分析工作流", description: "通过多轮提问拆解作品的目标、结构与设计方法。", category: "案例教学", entryType: "chat" },
@@ -83,14 +85,17 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     setToast(message);
     window.setTimeout(() => setToast(""), 3000);
   };
-  const startGeneration = async (jobType, prompt) => {
+  const startGeneration = async (jobType, prompt, parameters = {}) => {
     try {
-      const job = await createGenerationJob({ jobType, prompt, parameters: { source: "integrated-test-site" } });
+      const job = await createGenerationJob({ jobType, prompt, parameters: { source: "integrated-test-site", ...parameters } });
       showToast(`任务已创建：${job.id.slice(0, 8)}…，可在后端任务队列中查看。`);
+      return job;
     } catch (error) {
       showToast(isLive ? error.message : "当前展示为离线演示数据；启动 API 后即可创建真实任务。");
+      return null;
     }
   };
+  const createFromConversation = ({ jobType, prompt, parameters }) => startGeneration(jobType, prompt, parameters);
 
   const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community" }[nextSection] ?? "/");
@@ -99,17 +104,15 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
       <nav className="portal-nav" aria-label="主导航">{navItems.map(([id, label, Icon]) => <button key={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
+      {canEnterAdmin(account) && <button className="portal-console-shortcut" onClick={onEnterAdmin}>管理后台 <ArrowRight size={15} weight="bold" /></button>}
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "已连接 API" : "演示数据"}</span><button className="account-switch" onClick={onSwitchAccount}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button></div>
     </header>
 
-    <main className="portal-main">
-      <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>
+    <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}`}>
+      {section !== "home" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
-        <section className="portal-hero">
-          <div><span className="hero-hello">你好，{account.shortName}</span><h2>从一节课开始，<br /><em>把想法变成作品。</em></h2><p>今天可以继续学习、进入工作流，或者从案例中找到下一次创作的起点。</p><div className="hero-actions"><button className="portal-primary" onClick={() => navigateSection("courses")}><PlayCircle size={19} weight="fill" />继续学习</button><button className="portal-secondary" onClick={() => navigateSection("studio")}><Sparkle size={18} weight="bold" />开始创作</button></div></div>
-          <div className="hero-orbit"><span className="orbit-center"><Brain size={38} weight="thin" /></span><i className="orbit-dot orbit-dot--one" /><i className="orbit-dot orbit-dot--two" /><i className="orbit-dot orbit-dot--three" /><div className="orbit-label orbit-label--one">教学</div><div className="orbit-label orbit-label--two">设计</div><div className="orbit-label orbit-label--three">社区</div></div>
-        </section>
+        <AiCreationConsole account={account} onCreate={createFromConversation} />
         <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse?.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse?.progressPercent ?? 0}%` }} /></div><b>{nextCourse?.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section>
         <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => navigateSection("studio")} />
         <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课件与课程知识提问，生成学习路径。" onClick={() => showToast("教学对话模块已预留，下一步接入课程知识库。")} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
