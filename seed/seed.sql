@@ -21,10 +21,10 @@ INSERT INTO user_roles (user_id, role_id) VALUES
   ('user-student-demo', 'role-student') ON CONFLICT DO NOTHING;
 
 INSERT INTO courses
-  (id, title, summary, category, difficulty, is_featured, featured_rank, status, created_by)
+  (id, slug, title, summary, category, difficulty, is_featured, featured_rank, status, created_by, estimated_minutes, published_at)
 VALUES
-  ('course-ai-design-foundation', 'AI 辅助设计思维与方法', '从灵感到方案，理解 AI 在设计流程中的作用。', '设计基础', 'beginner', TRUE, 1, 'published', 'user-teacher-demo'),
-  ('course-traditional-pattern', '传统纹样的当代表达', '从传统视觉元素中提取结构并完成现代转译。', '视觉设计', 'intermediate', FALSE, NULL, 'published', 'user-teacher-demo') ON CONFLICT DO NOTHING;
+  ('course-ai-design-foundation', 'ai-design-foundation', 'AI 辅助设计思维与方法', '从灵感到方案，理解 AI 在设计流程中的作用。', '设计基础', 'beginner', TRUE, 1, 'published', 'user-teacher-demo', 45, CURRENT_TIMESTAMP),
+  ('course-traditional-pattern', 'traditional-pattern', '传统纹样的当代表达', '从传统视觉元素中提取结构并完成现代转译。', '视觉设计', 'intermediate', FALSE, NULL, 'published', 'user-teacher-demo', 50, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING;
 
 INSERT INTO course_instructors (course_id, user_id) VALUES
   ('course-ai-design-foundation', 'user-teacher-demo'),
@@ -40,6 +40,9 @@ INSERT INTO learning_progress
   (user_id, lesson_id, status, progress_percent, watched_seconds, last_position_seconds)
 VALUES
   ('user-student-demo', 'lesson-ai-design-01', 'in_progress', 62, 1674, 1674) ON CONFLICT DO NOTHING;
+
+INSERT INTO course_enrollments (id, user_id, course_id, status) VALUES
+  ('enrollment-student-ai-design', 'user-student-demo', 'course-ai-design-foundation', 'in_progress') ON CONFLICT DO NOTHING;
 
 INSERT INTO workflows
   (id, name, description, category, entry_type, entry_url, status, created_by)

@@ -14,7 +14,10 @@ export const tables = {
   courseInstructors: '课程与讲师关系',
   courseLessons: '课程章节、课时和练习',
   courseResources: '课程中的 PDF、视频、Word、PPT 等资源元数据',
+  courseEnrollments: '用户选课记录与课程完成状态',
+  courseReviews: '课程发布审核记录与版本快照',
   learningProgress: '用户在各课时的学习进度',
+  learningGenerationOutputs: '课程课时与 AI 生成结果的学习留痕',
   workflows: '可被课程、案例引用的设计工作流',
   workflowVersions: '工作流版本、节点定义和提示词模板',
   tools: '自研、外部或嵌入式设计工具',
@@ -40,3 +43,4 @@ export const tables = {
 } as const;
 
 export const initialMigration = '0001_initial';
+export const latestMigration = '0003_course_resource_business';

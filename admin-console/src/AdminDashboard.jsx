@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, Bell, CaretDown, ChartBar, Check, Clock, Coins, Eye,
-  FileImage, Gauge, List, MagnifyingGlass, Robot, ShieldCheck,
+  BookOpenText, FileImage, Gauge, List, MagnifyingGlass, Robot, ShieldCheck,
   SlidersHorizontal, Sparkle, Users, Warning, X,
 } from "@phosphor-icons/react";
 import {
@@ -11,6 +11,7 @@ import {
   updateUserQuota,
   updateUserStatus,
 } from "./services/adminApi.js";
+import { AdminCourses } from "./AdminCourses.jsx";
 
 // DEMO FALLBACK: keeps the admin UI independently previewable when the API is offline.
 // Once GET /api/admin/users and /api/admin/reviews respond, server data replaces it.
@@ -33,6 +34,7 @@ const initialReviews = [
 const navItems = [
   { id: "overview", label: "总览", icon: ChartBar },
   { id: "users", label: "用户管理", icon: Users },
+  { id: "courses", label: "课程资源", icon: BookOpenText },
   { id: "reviews", label: "作品审核", icon: ShieldCheck },
 ];
 
@@ -59,7 +61,7 @@ function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items,
 }
 
 function Topbar({ section, onOpenMenu, actor, onBack }) {
-  const titles = { overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], reviews: ["作品审核", "审核用户提交到资源库的作品与案例"] };
+  const titles = { overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], courses: ["课程资源", "创建课程、配置课时并完成发布审核"], reviews: ["作品审核", "审核用户提交到资源库的作品与案例"] };
   return <header className="topbar">
     <button className="icon-button menu-button" onClick={onOpenMenu} aria-label="打开导航"><List size={22} weight="bold" /></button>
     <div className="topbar__title"><p>// CONTROL CENTER</p><div><strong>{titles[section][0]}</strong><span>{titles[section][1]}</span></div></div>
@@ -146,5 +148,5 @@ export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSe
   const saveQuota = async (id, values) => { try { const updated = await updateUserQuota(id, values); setUsers((current) => current.map((user) => user.id === id ? updated : user)); setQuotaUser(null); showToast("API 额度策略已更新"); } catch (error) { showToast(error.message); } };
   const toggleUserStatus = async (target) => { const status = target.status === "suspended" ? "active" : "suspended"; try { const updated = await updateUserStatus(target.id, status); setUsers((current) => current.map((user) => user.id === target.id ? updated : user)); showToast(status === "active" ? "用户账户已重新启用" : "用户账户已停用"); } catch (error) { showToast(error.message); } };
   const decideReview = async (id, status, note) => { try { const updated = await reviewSubmission(id, { status, note }); setReviews((current) => current.map((item) => item.id === id ? updated : item)); setSelectedReview(null); showToast(status === "approved" ? "作品已通过并发布到资源库" : "作品已驳回并退回作者修改"); } catch (error) { showToast(error.message); } };
-  return <div className="admin-shell"><Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} /><div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} /><main>{section === "overview" && <Overview users={users} reviews={reviews} onNavigate={changeSection} onEditQuota={setQuotaUser} />}{section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} />}{section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}</main></div><QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} /><ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} /><Toast message={toast} /></div>;
+  return <div className="admin-shell"><Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} /><div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} /><main>{section === "overview" && <Overview users={users} reviews={reviews} onNavigate={changeSection} onEditQuota={setQuotaUser} />}{section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} />}{section === "courses" && <AdminCourses showToast={showToast} />}{section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}</main></div><QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} /><ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} /><Toast message={toast} /></div>;
 }

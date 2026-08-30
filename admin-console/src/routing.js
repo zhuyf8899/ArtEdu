@@ -10,6 +10,7 @@ export const portalRoutes = {
 export const adminRoutes = {
   overview: "/admin",
   users: "/admin/users",
+  courses: "/admin/courses",
   reviews: "/admin/reviews",
 };
 

@@ -13,6 +13,7 @@
 | --- | --- | --- |
 | auth | 开发身份回退、读取角色 | `GET /api/auth/me` |
 | admin | 用户、额度、审核和总览 | `/api/admin/*` |
+| courses | 课程目录、选课、学习进度、课程 CMS 和发布审核 | `/api/courses/*`、`/api/admin/courses/*` |
 | generation | 额度检查、任务创建和任务查询 | `/api/generation-jobs` |
 | worker | 原子领取 queued 任务并更新任务状态 | `npm run worker` |
 
@@ -35,8 +36,10 @@ POST /generation-jobs
 
 `0002_backend_alignment.sql` 增加 `concurrent` 额度周期，扩展审计表以记录用户额度与启停操作，并创建 `work_generation_jobs`，用于让审核列表追溯模型名称和提示词。
 
+`0003_course_resource_business.sql` 增加课程版本与发布状态、课程审核、选课记录、工作流课时和学习生成成果关联，现有已发布课程会自动回填 slug、发布时间和总学习时长。
+
 ## 本地启动
 
-1. 用根目录 `docker-compose.yml` 启动 PostgreSQL，并执行 `0001_initial.sql`、`0002_backend_alignment.sql` 和种子数据。
+1. 用根目录 `docker-compose.yml` 启动 PostgreSQL，并按顺序执行 `0001_initial.sql`、`0002_backend_alignment.sql`、`0003_course_resource_business.sql` 和种子数据。
 2. 将 `apps/api/.env.example` 复制为 `apps/api/.env`，安装依赖后在 `apps/api` 执行 `npm run dev`。
 3. 仅当 `.env` 显式设置 `ENABLE_DEVELOPMENT_AUTH=true` 时，才可使用 `DEV_ADMIN_USER_ID` 或 `x-user-id: user-admin-demo`。生产环境会拒绝启动该开关；上线前必须接入学校 SSO。

@@ -18,6 +18,6 @@ export function App() {
   useEffect(() => { setTestActor(account?.id ?? ""); }, [account]);
 
   if (!account) return <TestLogin accounts={TEST_ACCOUNTS} onSelect={(nextAccount) => { setAccount(nextAccount); navigate("/"); }} />;
-  if (pathname.startsWith("/admin")) return <AdminDashboard actor={account} initialSection={adminSectionFromPath(pathname)} onNavigate={(section) => navigate({ overview: "/admin", users: "/admin/users", reviews: "/admin/reviews" }[section] ?? "/admin")} onBack={() => navigate("/")} />;
+  if (pathname.startsWith("/admin")) return <AdminDashboard actor={account} initialSection={adminSectionFromPath(pathname)} onNavigate={(section) => navigate({ overview: "/admin", users: "/admin/users", courses: "/admin/courses", reviews: "/admin/reviews" }[section] ?? "/admin")} onBack={() => navigate("/")} />;
   return <UserPortal account={account} section={sectionFromPath(pathname)} onNavigate={navigate} onSwitchAccount={() => { setAccount(null); navigate("/"); }} onEnterAdmin={() => navigate("/admin")} />;
 }
