@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../database/database.service";
@@ -20,7 +20,7 @@ interface ClaimedJob {
 export class GenerationWorkerService {
   private readonly logger = new Logger(GenerationWorkerService.name);
 
-  constructor(private readonly database: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
 
   async processOnce() {
     const job = await this.database.transaction((client) => this.claimNextJob(client));

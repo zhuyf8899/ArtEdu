@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { DatabaseService } from "../database/database.service";
 
@@ -20,7 +20,7 @@ interface ActorRow {
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
 
   async getActor(request: FastifyRequest): Promise<Actor> {
     const userId = this.getDevelopmentUserId(request);

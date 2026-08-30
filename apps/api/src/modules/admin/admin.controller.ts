@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
@@ -13,8 +13,8 @@ import { AdminService } from "./admin.service";
 @Controller("admin")
 export class AdminController {
   constructor(
-    private readonly adminService: AdminService,
-    private readonly authService: AuthService,
+    @Inject(AdminService) private readonly adminService: AdminService,
+    @Inject(AuthService) private readonly authService: AuthService,
   ) {}
 
   @Get("dashboard")

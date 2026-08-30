@@ -1,4 +1,4 @@
-import { ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
 import type { Actor } from "../auth/auth.service";
@@ -18,8 +18,8 @@ interface QuotaRow {
 @Injectable()
 export class GenerationService {
   constructor(
-    private readonly database: DatabaseService,
-    private readonly repository: GenerationRepository,
+    @Inject(DatabaseService) private readonly database: DatabaseService,
+    @Inject(GenerationRepository) private readonly repository: GenerationRepository,
   ) {}
 
   async createJob(actor: Actor, input: CreateGenerationJobInput) {

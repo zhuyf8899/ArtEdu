@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { ADMIN_MANAGEMENT_ROLES, REVIEW_ROLES } from "../../common/constants";
 import { AuthService, type Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
@@ -8,9 +8,9 @@ import { AdminRepository } from "./admin.repository";
 @Injectable()
 export class AdminService {
   constructor(
-    private readonly authService: AuthService,
-    private readonly database: DatabaseService,
-    private readonly repository: AdminRepository,
+    @Inject(AuthService) private readonly authService: AuthService,
+    @Inject(DatabaseService) private readonly database: DatabaseService,
+    @Inject(AdminRepository) private readonly repository: AdminRepository,
   ) {}
 
   async getDashboard(actor: Actor) {

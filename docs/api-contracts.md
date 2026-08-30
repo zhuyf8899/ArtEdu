@@ -7,9 +7,12 @@
 | health | `/health` | 已实现 | 存活检查 |
 | auth | `/auth` | 开发身份回退 | 学校 SSO、会话刷新、登出 |
 | portal | `/portal` | 首页聚合 | 首页卡片、全局搜索 |
-| courses | `/courses` | 仅数据库模型 | 课程、课时、资源、进度 |
-| workflows | `/workflows` | 仅数据库模型 | 工作流、版本、工具入口 |
-| works | `/works` | 仅数据库模型 | 投稿、详情、评论、点赞、收藏 |
+| courses | `/courses` | 已实现基础读写 | 课程、课时、资源、进度；文件上传适配器待接入 |
+| workflows | `/workflows` | 已实现基础读写 | 工作流、版本、工具入口；节点编辑器待接入 |
+| works | `/works` | 已实现投稿与社区基础接口 | 详情、素材元数据、评论、点赞、收藏；对象存储待接入 |
+| tools | `/tools` | 已实现列表查询 | 管理端增删改和工具健康检查 |
+| conversations | `/conversations` | 已实现持久化接口 | 模型回复、流式输出和课件引用 |
+| search | `/search` | 已实现基础字符串匹配 | 全文索引和推荐排序 |
 | admin | `/admin` | 用户、额度、审核 | 课程/资源/模型配置管理 |
 | generation-jobs | `/generation-jobs` | 排队和查询 | 模型执行、输出文件、取消与重试 |
 

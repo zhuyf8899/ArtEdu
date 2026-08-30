@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
 import type { Actor } from "../auth/auth.service";
 
@@ -29,7 +29,7 @@ interface WorkRow {
 
 @Injectable()
 export class PortalService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
 
   async getHome(actor: Actor) {
     const [courses, workflows, works] = await Promise.all([

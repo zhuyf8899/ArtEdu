@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../database/database.service";
@@ -30,7 +30,7 @@ interface GenerationJobRow {
 
 @Injectable()
 export class GenerationRepository {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
 
   async getById(jobId: string) {
     const result = await this.database.query<GenerationJobRow>(`

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
@@ -67,7 +67,7 @@ interface ReviewRow {
 
 @Injectable()
 export class AdminRepository {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
 
   async listUsers(): Promise<AdminUser[]> {
     const result = await this.database.query<UserRow>(`

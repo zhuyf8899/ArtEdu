@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
@@ -8,8 +8,8 @@ import { GenerationService } from "./generation.service";
 @Controller("generation-jobs")
 export class GenerationController {
   constructor(
-    private readonly authService: AuthService,
-    private readonly generationService: GenerationService,
+    @Inject(AuthService) private readonly authService: AuthService,
+    @Inject(GenerationService) private readonly generationService: GenerationService,
   ) {}
 
   @Post()

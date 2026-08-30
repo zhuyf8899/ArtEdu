@@ -6,8 +6,9 @@ services:
       POSTGRES_DB: artedu
       POSTGRES_USER: artedu
       POSTGRES_PASSWORD: artedu_dev_only
+    # 5432 is commonly occupied by another local PostgreSQL project.
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - artedu_postgres_data:/var/lib/postgresql/data
       - ./migrations/0001_initial.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro

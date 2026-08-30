@@ -15,6 +15,7 @@
 | admin | 用户、额度、审核和总览 | `/api/admin/*` |
 | generation | 额度检查、任务创建和任务查询 | `/api/generation-jobs` |
 | worker | 原子领取 queued 任务并更新任务状态 | `npm run worker` |
+| content | 课程、工作流、作品、互动、搜索和教学对话持久化 | `/api/courses/*`、`/api/workflows/*`、`/api/works/*`、`/api/search`、`/api/conversations/*` |
 
 ## 管理端状态映射
 

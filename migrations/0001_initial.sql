@@ -117,9 +117,19 @@ CREATE TABLE IF NOT EXISTS course_lessons (
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
 
-ALTER TABLE course_resources
-  ADD CONSTRAINT fk_course_resources_lesson
-  FOREIGN KEY (lesson_id) REFERENCES course_lessons(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_course_resources_lesson'
+      AND conrelid = 'course_resources'::regclass
+  ) THEN
+    ALTER TABLE course_resources
+      ADD CONSTRAINT fk_course_resources_lesson
+      FOREIGN KEY (lesson_id) REFERENCES course_lessons(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS learning_progress (
   user_id TEXT NOT NULL,
