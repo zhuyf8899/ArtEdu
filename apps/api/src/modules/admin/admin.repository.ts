@@ -33,6 +33,7 @@ export interface AdminReview {
   machineStatus: string;
   prompt: string;
   assets: number;
+  assetLinks: Array<{ id: string; fileName: string; mimeType: string; url: string }>;
   status: "pending" | "approved" | "rejected";
 }
 
@@ -62,6 +63,7 @@ interface ReviewRow {
   machine_status: string | null;
   prompt: string | null;
   assets: number | null;
+  asset_links: Array<{ id: string; fileName: string; mimeType: string; url: string }> | null;
   status: AdminReview["status"];
 }
 
@@ -184,6 +186,7 @@ export class AdminRepository {
         moderation.machine_status,
         job.prompt,
         asset_counts.assets,
+        asset_links.asset_links,
         w.status
       FROM works w
       JOIN users author ON author.id = w.author_id
@@ -200,6 +203,19 @@ export class AdminRepository {
       LEFT JOIN LATERAL (
         SELECT COUNT(*)::int AS assets FROM work_assets wa WHERE wa.work_id = w.id
       ) asset_counts ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(json_agg(json_build_object(
+          'id', wa.id,
+          'fileName', wa.file_name,
+          'mimeType', wa.mime_type,
+          'url', CASE
+            WHEN wa.storage_key IS NOT NULL THEN CONCAT('/api/works/', wa.work_id, '/assets/', wa.id, '/download')
+            ELSE wa.external_url
+          END
+        ) ORDER BY wa.sort_order, wa.created_at), '[]'::json) AS asset_links
+        FROM work_assets wa
+        WHERE wa.work_id = w.id
+      ) asset_links ON TRUE
       LEFT JOIN LATERAL (
         SELECT CASE
           WHEN BOOL_OR(amr.result = 'rejected') THEN '机器预审拒绝'
@@ -227,6 +243,7 @@ export class AdminRepository {
       machineStatus: row.machine_status ?? "待机器预审",
       prompt: row.prompt ?? "未记录生成提示词",
       assets: Number(row.assets ?? 0),
+      assetLinks: row.asset_links ?? [],
       status: row.status,
     }));
   }

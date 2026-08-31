@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { createReadStream } from "node:fs";
+import path from "node:path";
+import type { FastifyRequest } from "fastify";
 import type { PoolClient, QueryResultRow } from "pg";
 import { ADMIN_MANAGEMENT_ROLES, COURSE_REVIEW_ROLES } from "../../common/constants";
 import { AuthService, type Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
+import { getEnvironment } from "../../common/environment";
+import { storePrivateUpload } from "../studio/private-upload";
 import type {
   CourseReviewDecisionInput,
   CreateCourseInput,
@@ -57,6 +62,17 @@ interface ReviewRow extends QueryResultRow {
   reviewer_name: string | null;
   submitted_at: Date;
   decided_at: Date | null;
+}
+
+interface CourseResourceRow extends QueryResultRow {
+  id: string;
+  course_id: string;
+  title: string;
+  storage_key: string | null;
+  file_name: string | null;
+  mime_type: string | null;
+  status: string;
+  course_status: string;
 }
 
 @Injectable()
@@ -135,10 +151,9 @@ export class CoursesService {
         WHERE l.course_id = $2 AND l.status = 'published'
         ORDER BY l.sort_order, l.created_at
       `, [actor.id, courseId]),
-      this.database.query(`
-        SELECT id, lesson_id AS "lessonId", title, resource_type AS "resourceType",
-          storage_key AS "storageKey", external_url AS "externalUrl", file_name AS "fileName",
-          mime_type AS "mimeType", sort_order AS "sortOrder"
+      this.database.query<CourseResourceRow & { lesson_id: string | null; resource_type: string; external_url: string | null; sort_order: number }>(`
+        SELECT id, course_id, lesson_id, title, resource_type, storage_key, external_url, file_name,
+          mime_type, sort_order, status, 'published'::text AS course_status
         FROM course_resources
         WHERE course_id = $1 AND status = 'published'
         ORDER BY sort_order, created_at
@@ -158,7 +173,17 @@ export class CoursesService {
         progressPercent: lesson.progress_percent,
         progressStatus: lesson.progress_status,
       })),
-      resources: resources.rows,
+      resources: resources.rows.map((resource) => ({
+        id: resource.id,
+        lessonId: resource.lesson_id,
+        title: resource.title,
+        resourceType: resource.resource_type,
+        externalUrl: resource.external_url,
+        fileName: resource.file_name,
+        mimeType: resource.mime_type,
+        sortOrder: resource.sort_order,
+        downloadUrl: resource.storage_key ? `/api/courses/${courseId}/resources/${resource.id}/download` : null,
+      })),
     };
   }
 
@@ -248,6 +273,48 @@ export class CoursesService {
       ORDER BY c.updated_at DESC
     `, [admin, actor.id]);
     return { items: result.rows.map((row) => this.mapCourse(row)) };
+  }
+
+  async uploadResource(actor: Actor, courseId: string, request: FastifyRequest) {
+    if (!getEnvironment().fileUploadsEnabled) throw new ForbiddenException("文件上传未启用");
+    const course = await this.getOwnedCourse(actor, courseId);
+    if (!["draft", "rejected"].includes(course.status)) throw new ConflictException("只有草稿或已驳回课程可以上传资料");
+    const part = await request.file();
+    if (!part) throw new BadRequestException("请选择一个 PDF 文件");
+    const upload = await storePrivateUpload(part, getEnvironment().uploadRoot, ["application/pdf"]);
+    try {
+      const resource = await this.database.transaction(async (client) => {
+        const locked = await client.query<{ status: string; created_by: string | null }>("SELECT status,created_by FROM courses WHERE id=$1 FOR UPDATE", [courseId]);
+        if (!locked.rows[0]) throw new NotFoundException("课程不存在");
+        if (!actor.roles.includes("admin") && locked.rows[0].created_by !== actor.id) throw new ForbiddenException("只能管理自己创建的课程");
+        if (!["draft", "rejected"].includes(locked.rows[0].status)) throw new ConflictException("课程状态已变化，请刷新后重试");
+        const count = await client.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM course_resources WHERE course_id=$1", [courseId]);
+        if (count.rows[0].count >= 30) throw new BadRequestException("每门课程最多上传 30 个资料文件");
+        const id = `course-resource-${randomUUID()}`;
+        await client.query(`
+          INSERT INTO course_resources (id,course_id,title,resource_type,storage_key,external_url,file_name,mime_type,file_size,source_name,sort_order,status)
+          VALUES ($1,$2,$3,'pdf',$4,NULL,$5,$6,$7,$8,$9,'published')
+        `, [id, courseId, upload.fileName, upload.storageKey, upload.fileName, upload.mimeType, upload.sizeBytes, actor.displayName, count.rows[0].count]);
+        return { id, title: upload.fileName, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes };
+      });
+      return resource;
+    } catch (error) {
+      await import("node:fs/promises").then(({ rm }) => rm(path.join(getEnvironment().uploadRoot, upload.storageKey), { force: true }));
+      throw error;
+    }
+  }
+
+  async openResource(actor: Actor, courseId: string, resourceId: string) {
+    const result = await this.database.query<CourseResourceRow>(`
+      SELECT r.id,r.course_id,r.title,r.storage_key,r.file_name,r.mime_type,r.status,c.status AS course_status
+      FROM course_resources r JOIN courses c ON c.id=r.course_id
+      WHERE r.id=$1 AND r.course_id=$2
+    `, [resourceId, courseId]);
+    const resource = result.rows[0];
+    if (!resource || resource.status !== "published" || resource.course_status !== "published") throw new NotFoundException("课程资料不存在或尚未发布");
+    const storageKey = resource.storage_key;
+    if (!storageKey || !/^[a-f0-9-]{36}-[a-f0-9-]{36}$/i.test(storageKey) || resource.mime_type !== "application/pdf") throw new NotFoundException("课程资料存储记录无效");
+    return { fileName: resource.file_name ?? resource.title, mimeType: resource.mime_type, stream: createReadStream(path.join(getEnvironment().uploadRoot, storageKey)) };
   }
 
   async create(actor: Actor, input: CreateCourseInput) {

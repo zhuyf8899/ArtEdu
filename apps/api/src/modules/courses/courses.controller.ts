@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, Put, Query, Req } from "@nestjs/common";
-import type { FastifyRequest } from "fastify";
+import { Body, Controller, Get, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
 import {
@@ -53,6 +53,16 @@ export class CoursesController {
   async myLearning(@Req() request: FastifyRequest) {
     return this.courses.getMyLearning(await this.auth.getActor(request));
   }
+
+  @Get("courses/:courseId/resources/:resourceId/download")
+  async downloadResource(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("courseId") courseId: string, @Param("resourceId") resourceId: string) {
+    const resource = await this.courses.openResource(await this.auth.getActor(request), courseId, resourceId);
+    const encodedName = encodeURIComponent(resource.fileName).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
+    reply.header("Content-Type", resource.mimeType);
+    reply.header("Content-Disposition", `attachment; filename*=UTF-8''${encodedName}`);
+    reply.header("X-Content-Type-Options", "nosniff");
+    return resource.stream;
+  }
 }
 
 @Controller("admin")
@@ -94,5 +104,10 @@ export class AdminCoursesController {
       await this.auth.getActor(request), reviewId,
       parseInput(courseReviewDecisionSchema, body) as CourseReviewDecisionInput,
     );
+  }
+
+  @Post("courses/:courseId/resources")
+  async uploadResource(@Req() request: FastifyRequest, @Param("courseId") courseId: string) {
+    return this.courses.uploadResource(await this.auth.getActor(request), courseId, request);
   }
 }

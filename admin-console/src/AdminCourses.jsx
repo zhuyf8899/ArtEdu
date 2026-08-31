@@ -6,6 +6,7 @@ import {
   getAdminCourses,
   getCourseReviews,
   submitCourseReview,
+  uploadCourseResource,
 } from "./services/adminApi.js";
 
 const statusNames = {
@@ -46,6 +47,7 @@ export function AdminCourses({ showToast }) {
           <div className="course-admin-icon"><BookOpenText size={22} weight="bold" /></div>
           <div><span>{course.category} · {course.lessonCount} 个课时</span><strong>{course.title}</strong><small>{course.creatorName || "平台课程"} · 版本 {course.versionNumber}</small></div>
           <em className={`course-state course-state--${course.status}`}>{statusNames[course.status] ?? course.status}</em>
+          <label className="course-resource-upload"><input disabled={busy || !["draft", "rejected"].includes(course.status)} type="file" accept="application/pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) run(() => uploadCourseResource(course.id, file), "PDF 课程资料已安全上传"); event.target.value = ""; }} /><span>上传 PDF</span></label>
           <button disabled={busy || !["draft", "rejected"].includes(course.status)} onClick={() => run(() => submitCourseReview(course.id), "课程已提交发布审核")}>提交审核 <ArrowRight size={15} weight="bold" /></button>
         </div>)}
         {!courses.length && <div className="empty-state"><BookOpenText size={34} /><strong>尚无课程</strong><span>点击“新建课程”建立第一门正式课程。</span></div>}

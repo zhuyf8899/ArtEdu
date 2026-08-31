@@ -47,6 +47,11 @@ export const decideCourseReview = (reviewId, decision) => request(`/admin/course
   method: "POST",
   body: JSON.stringify(decision),
 });
+export const uploadCourseResource = (courseId, file) => {
+  const form = new FormData();
+  form.append("file", file);
+  return request(`/admin/courses/${courseId}/resources`, { method: "POST", body: form });
+};
 
 export const createGenerationJob = (input) => request("/generation-jobs", {
   method: "POST",
