@@ -6,12 +6,13 @@ import { CoursesModule } from "./modules/courses/courses.module";
 import { DatabaseModule } from "./modules/database/database.module";
 import { GenerationModule } from "./modules/generation/generation.module";
 import { HealthController } from "./modules/health/health.controller";
+import { LearningModule } from "./modules/learning/learning.module";
 import { PortalModule } from "./modules/portal/portal.module";
 import { StudioModule } from "./modules/studio/studio.module";
 import { AuthenticationGuard } from "./modules/auth/authentication.guard";
 
 @Module({
-  imports: [DatabaseModule, AuthModule, AdminModule, CoursesModule, GenerationModule, PortalModule, StudioModule],
+  imports: [DatabaseModule, AuthModule, AdminModule, CoursesModule, GenerationModule, LearningModule, PortalModule, StudioModule],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: AuthenticationGuard }],
 })

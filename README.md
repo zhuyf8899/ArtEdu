@@ -7,7 +7,7 @@
 - PostgreSQL 数据模型、版本化迁移、演示种子数据和 Docker Compose。
 - NestJS + Fastify API，包含开发身份回退、角色权限、输入校验、事务和审计记录。
 - 首页聚合、生成任务排队与查询基础接口。
-- 课程目录、课程详情、选课、课时进度和“我的学习”接口。
+- 课程目录、课程详情、选课、课时进度，以及完整的“我的学习”空间。
 - 管理端课程创建、课时配置、发布审核与课程上线流程。
 - 管理端用户查询、日/月/并发额度调整、账户启停和作品审核接口。
 - 工作流目录、版本发布、逐步执行和学习进度留痕。
@@ -51,7 +51,7 @@ npm run db:prepare
 
 Docker Compose 只负责 PostgreSQL 容器和数据卷；数据库结构必须由 `db:migrate` 统一管理，避免初始化脚本和版本化迁移重复执行。
 
-`.env.example` 中只允许出现本地演示配置。真实数据库密码、模型密钥和学校认证凭据不得提交到 Git。`ENABLE_LOCAL_AUTH=true` 仅供本地演示；生产环境会拒绝启动该开关，必须接入学校 SSO 或受管身份提供方。
+`.env.example` 中只允许出现本地演示配置。真实数据库密码、模型密钥和学校认证凭据不得提交到 Git。本地联调时可设置 `ENABLE_LOCAL_AUTH=true`，再通过 `auth:provision-local` 为指定演示用户配置临时密码；生产环境会拒绝本地认证开关，必须接入学校 SSO/OIDC 或受管身份提供方。
 
 ## 启动
 
@@ -69,7 +69,9 @@ npm run dev
 | API | `http://localhost:4000/api` |
 | 健康检查 | `http://localhost:4000/api/health` |
 
-前端首先显示演示身份选择页。选择管理员后可进入 `/admin`，选择教师或运营可验证对应的权限范围。
+前端首先显示受控的本地账号登录页。教师、运营和管理员账号可进入 `/admin`，学生账号仅能访问学习与创作空间。
+
+“我的学习”页面位于 `/my-learning`，提供学习首页、我的课程、学习计划、学习笔记、收藏案例和我的作品六个业务视图。学习计划与笔记会通过 API 持久化到 PostgreSQL；课程进度、收藏、作品和工作流记录来自现有业务数据，不使用静态占位数据。
 
 ## 验证
 
@@ -99,3 +101,7 @@ PostgreSQL 保存用户、权限、课程、工作流、额度、任务、作品
 主工程已经通过 `0003_course_resource_business.sql` 和 `apps/api/src/modules/courses` 接入第一阶段正式能力：课程 CMS、发布审核、用户选课、学习进度、工作流课时和生成结果关联。前端正式入口为 `/learning` 与 `/admin/courses`。
 
 [`prototypes/course-resource-mvp`](prototypes/course-resource-mvp) 继续保留为业务验收和迁移对照，不参与主工程构建。迁移边界、接口清单和模块映射见 [`docs/course-resource-business-integration.md`](docs/course-resource-business-integration.md)。
+
+## 我的学习业务
+
+“我的学习”由 `0007_learning_space_business.sql`、`apps/api/src/modules/learning` 和 `admin-console/src/MyLearning.jsx` 共同实现。它在课程进度之上聚合本周学习时长、待办任务、学习笔记、收藏案例、个人作品与工作流执行记录，并提供任务和笔记的增删改能力。视觉验收记录与桌面/窄屏对比证据见 [`design-qa.md`](design-qa.md)。

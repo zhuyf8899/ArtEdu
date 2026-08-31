@@ -5,6 +5,7 @@ export const portalRoutes = {
   courses: "/learning",
   studio: "/studio",
   community: "/community",
+  myLearning: "/my-learning",
 };
 
 export const adminRoutes = {
