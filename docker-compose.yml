@@ -7,13 +7,9 @@ services:
       POSTGRES_USER: artedu
       POSTGRES_PASSWORD: artedu_dev_only
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${ARTEDU_POSTGRES_PORT:-5432}:5432"
     volumes:
       - artedu_postgres_data:/var/lib/postgresql/data
-      - ./migrations/0001_initial.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
-      - ./migrations/0002_backend_alignment.sql:/docker-entrypoint-initdb.d/002_backend_alignment.sql:ro
-      - ./migrations/0003_course_resource_business.sql:/docker-entrypoint-initdb.d/003_course_resource_business.sql:ro
-      - ./seed/seed.sql:/docker-entrypoint-initdb.d/004_seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U artedu -d artedu"]
       interval: 5s

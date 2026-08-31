@@ -56,7 +56,12 @@ VALUES
 INSERT INTO workflow_versions
   (id, workflow_id, version_number, definition_json, prompt_template, published_at, created_by)
 VALUES
-  ('workflow-case-analysis-v1', 'workflow-case-analysis', 1, '{"steps":["observe","analyze","reflect"]}', '请从设计目标、视觉结构和创作方法分析这个案例。', CURRENT_TIMESTAMP, 'user-teacher-demo') ON CONFLICT DO NOTHING;
+  ('workflow-case-analysis-v1', 'workflow-case-analysis', 1, '{"steps":[{"id":"observe","title":"观察与记录","description":"先不评价作品，记录能够直接观察到的视觉事实。","instruction":"从构图、色彩、字体、材质和交互五个方面各写一条观察。","estimatedMinutes":8},{"id":"analyze","title":"结构分析","description":"分析视觉选择与设计目标之间的关系。","instruction":"选择三个关键设计决策，说明它们解决了什么问题。","estimatedMinutes":12},{"id":"reflect","title":"迁移与反思","description":"把案例方法转化为自己的创作策略。","instruction":"整理一份可复用的方法清单，并写出下一次创作要验证的假设。","estimatedMinutes":10}]}', '请从设计目标、视觉结构和创作方法分析这个案例。', CURRENT_TIMESTAMP, 'user-teacher-demo'),
+  ('workflow-image-draft-v1', 'workflow-image-draft', 1, '{"steps":[{"id":"brief","title":"定义创作意图","description":"明确受众、媒介和希望传达的感受。","instruction":"写出一句创作目标，并列出三个必须保留的视觉关键词。","estimatedMinutes":6},{"id":"references","title":"整理视觉参考","description":"把参考拆解为可描述的形式特征。","instruction":"记录色彩、构图、材质和节奏，不直接复制具体作品。","estimatedMinutes":10},{"id":"prompt","title":"编写生成提示","description":"将目标和形式特征组织成结构化提示词。","instruction":"依次写主体、场景、风格、材质、构图、色彩和限制条件。没有模型接口时可先保存提示词。","estimatedMinutes":10},{"id":"review","title":"评估与迭代","description":"使用统一标准检查结果并决定下一轮调整。","instruction":"从目标一致性、信息清晰度、原创性和可执行性四项进行评分。","estimatedMinutes":8}]}', '依据学习者输入的目标和形式关键词，协助组织结构化视觉生成提示。', CURRENT_TIMESTAMP, 'user-teacher-demo')
+ON CONFLICT (id) DO UPDATE SET
+  definition_json = EXCLUDED.definition_json,
+  prompt_template = EXCLUDED.prompt_template,
+  published_at = EXCLUDED.published_at;
 
 INSERT INTO tools
   (id, name, description, category, tool_type, entry_url, status, created_by)

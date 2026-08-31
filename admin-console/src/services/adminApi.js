@@ -15,7 +15,7 @@ export function setTestActor(userId) {
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
-      "Content-Type": "application/json",
+      ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(currentTestUserId ? { "x-user-id": currentTestUserId } : {}),
       ...options.headers,
     },
@@ -58,6 +58,32 @@ export const createGenerationJob = (input) => request("/generation-jobs", {
   method: "POST",
   body: JSON.stringify(input),
 });
+
+export const getWorkflows = (query = "") => request(`/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
+export const getWorkflow = (workflowId) => request(`/workflows/${workflowId}`);
+export const startWorkflowRun = (workflowId, context = {}) => request(`/workflows/${workflowId}/runs`, {
+  method: "POST",
+  body: JSON.stringify({ context }),
+});
+export const getMyWorkflowRuns = () => request("/me/workflow-runs");
+export const updateWorkflowRun = (runId, input) => request(`/workflow-runs/${runId}/progress`, {
+  method: "PATCH",
+  body: JSON.stringify(input),
+});
+
+export const getWorks = (query = "") => request(`/works${query ? `?query=${encodeURIComponent(query)}` : ""}`);
+export const getMyWorks = () => request("/me/works");
+export const getWork = (workId) => request(`/works/${workId}`);
+export const createWork = (input) => request("/works", {
+  method: "POST",
+  body: JSON.stringify(input),
+});
+export const submitWork = (workId) => request(`/works/${workId}/submit`, { method: "POST" });
+export const addWorkComment = (workId, content) => request(`/works/${workId}/comments`, {
+  method: "POST",
+  body: JSON.stringify({ content }),
+});
+export const toggleWorkReaction = (workId, reaction) => request(`/works/${workId}/${reaction}`, { method: "POST" });
 
 export const updateUserQuota = (userId, quota) => request(`/admin/users/${userId}/quota`, {
   method: "PUT",
