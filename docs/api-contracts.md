@@ -8,8 +8,8 @@
 | auth | `/auth` | 开发身份回退 | 学校 SSO、会话刷新、登出 |
 | portal | `/portal` | 首页聚合 | 首页卡片、全局搜索 |
 | courses | `/courses`、`/me/learning-progress` | 已实现第一阶段 | 资源上传、成果绑定查询 |
-| workflows | `/workflows` | 仅数据库模型 | 工作流、版本、工具入口 |
-| works | `/works` | 仅数据库模型 | 投稿、详情、评论、点赞、收藏 |
+| workflows | `/workflows`、`/workflow-runs` | 已实现第一阶段 | 模型步骤执行、成果自动采集 |
+| works | `/works`、`/me/works` | 已实现第一阶段 | 对象存储直传、媒体转码 |
 | admin | `/admin` | 用户、额度、作品审核、课程 CMS 与发布审核 | 资源上传、模型配置管理 |
 | generation-jobs | `/generation-jobs` | 排队和查询 | 模型执行、输出文件、取消与重试 |
 
@@ -39,3 +39,30 @@
 | POST | `/api/admin/courses/:courseId/submit-review` | 提交发布审核 |
 | GET | `/api/admin/course-reviews` | 查询课程发布审核队列 |
 | POST | `/api/admin/course-reviews/:reviewId/decision` | 通过并发布，或驳回课程 |
+
+## 工作流学习与执行
+
+| 方法 | 路径 | 权限与用途 |
+| --- | --- | --- |
+| GET | `/api/workflows`、`/api/workflows/:workflowId` | 查询已发布工作流和结构化步骤 |
+| POST | `/api/workflows` | 管理员/教师创建工作流草稿 |
+| POST | `/api/workflows/:workflowId/versions` | 创建版本，可选择立即发布 |
+| POST | `/api/workflows/:workflowId/runs` | 当前用户开始一次工作流执行 |
+| PATCH | `/api/workflow-runs/:runId/progress` | 完成、跳过步骤或记录笔记 |
+| GET | `/api/me/workflow-runs` | 查询当前用户的执行历史 |
+
+工作流步骤不依赖真实模型 API。需要生成内容的步骤先保存创作说明和进度，模型适配器上线后再将该步骤委派给生成任务队列。
+
+## 案例社区
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| GET | `/api/works`、`/api/works/:workId` | 查询已发布案例及详情 |
+| GET | `/api/me/works` | 查询当前用户草稿、审核中和已发布作品 |
+| POST | `/api/works` | 创建作品草稿并登记标签、工作流和资源 |
+| POST | `/api/works/:workId/submit` | 提交管理员审核 |
+| POST | `/api/works/:workId/comments` | 评论已发布案例 |
+| POST | `/api/works/:workId/like` | 点赞或取消点赞 |
+| POST | `/api/works/:workId/favorite` | 收藏或取消收藏 |
+
+当前作品资源支持安全的 HTTP(S) 外部地址，不由服务端抓取远程文件。接入学校对象存储后，资源地址将由上传签名接口生成。

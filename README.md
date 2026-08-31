@@ -10,10 +10,12 @@
 - 课程目录、课程详情、选课、课时进度和“我的学习”接口。
 - 管理端课程创建、课时配置、发布审核与课程上线流程。
 - 管理端用户查询、日/月/并发额度调整、账户启停和作品审核接口。
+- 工作流目录、版本发布、逐步执行和学习进度留痕。
+- 案例社区投稿、外部资源登记、审核发布、评论、点赞与收藏。
 - React 测试门户与管理后台，支持学生、教师、运营和管理员四种演示身份。
 - 根目录统一启动/检查命令，以及 GitHub Actions CI。
 
-本阶段不包含学校 SSO、真实大模型调用、对象存储上传或完整工作流/作品业务。详细边界见 [`docs/framework.md`](docs/framework.md)，接口状态见 [`docs/api-contracts.md`](docs/api-contracts.md)。
+本阶段不包含学校 SSO、真实大模型调用和对象存储文件直传。工作流与作品业务已可在不依赖模型 API 的情况下完整演示；作品暂以安全的 HTTP(S) 资源链接登记，接入对象存储后替换上传适配器。详细边界见 [`docs/framework.md`](docs/framework.md)，接口状态见 [`docs/api-contracts.md`](docs/api-contracts.md)。
 
 ## 环境要求
 
@@ -35,6 +37,8 @@ npm ci
 cd ..
 npm run db:prepare
 ```
+
+Docker Compose 只负责 PostgreSQL 容器和数据卷；数据库结构必须由 `db:migrate` 统一管理，避免初始化脚本和版本化迁移重复执行。
 
 `.env.example` 中只允许出现本地演示配置。真实数据库密码、模型密钥和学校认证凭据不得提交到 Git。`ENABLE_DEVELOPMENT_AUTH=true` 仅供本地演示身份切换，生产环境会拒绝启动该开关。
 

@@ -7,6 +7,8 @@ import {
 import { createGenerationJob, getPortalHome } from "./services/adminApi.js";
 import { AiCreationConsole } from "./AiCreationConsole.jsx";
 import { LearningLibrary } from "./LearningLibrary.jsx";
+import { WorkflowStudio } from "./WorkflowStudio.jsx";
+import { CommunityLibrary } from "./CommunityLibrary.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 
 const fallbackData = {
@@ -122,9 +124,9 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
       {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary fallbackCourses={data.courses} onNotice={showToast} /></>}
 
-      {section === "studio" && <><SectionHeading eyebrow="// CREATE WITH AI" title="设计工作台" /><section className="studio-grid"><StudioCard icon={Lightbulb} label="多轮引导" title="网页创作助手" text="通过几轮提问明确内容、结构与风格，再生成页面方案。" action="开始对话" onClick={() => startGeneration("webpage", "为美术学院 AI 课程设计一个明快、可浏览作品的活动介绍页面。")} /><StudioCard icon={ImageSquare} label="即时生成" title="UI / 图标生成" text="从一句提示词开始，在创作过程中继续与 AI 教练对话。" action="生成草稿" accent onClick={() => startGeneration("image", "为校园导视系统生成一组圆角线性图标，统一线宽，包含教学楼、食堂、运动场。")} /><StudioCard icon={CirclesThreePlus} label="节点工作台" title="图案生成实验室" text="用可视化节点串联图案处理流程，把专业技能封装为可复用模块。" action="打开画布" onClick={() => startGeneration("pattern", "将传统云纹与植物标本结构重组为可无限延展的现代纹样。")} /></section><section className="studio-tip"><Sparkle size={20} weight="fill" /><div><strong>测试提示</strong><span>启动 API 与 worker 后，点击任意创作卡片会写入真实的生成任务队列。</span></div></section></>}
+      {section === "studio" && <><SectionHeading eyebrow="// GUIDED CREATION" title="工作流学习与创作" /><WorkflowStudio fallbackWorkflows={data.workflows} onNotice={showToast} /></>}
 
-      {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" action="发布作品" onAction={() => showToast("作品发布表单将在作品与文件上传接口完成后接入。")} /><section className="work-grid">{data.works.map((work, index) => <article className="work-card" key={work.id}><div className={`work-preview work-preview--${index % 3}`}><span>{work.discipline}</span><Palette size={44} weight="thin" /></div><div><small>{work.author}</small><h3>{work.title}</h3><p>{work.summary}</p><button onClick={() => showToast("案例详情会连接作品、评论和同款工作流。")}>查看案例 <ArrowRight size={16} weight="bold" /></button></div></article>)}</section></>}
+      {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary fallbackWorks={data.works} onNotice={showToast} /></>}
     </main>
     {toast && <div className="portal-toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
   </div>;
