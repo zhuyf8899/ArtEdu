@@ -35,6 +35,25 @@ export const updateLessonProgress = (courseId, lessonId, progressPercent) => req
   body: JSON.stringify({ progressPercent }),
 });
 export const getMyLearning = () => request("/me/learning-progress");
+export const getLearningSpace = () => request("/me/learning-space");
+export const createLearningTask = (input) => request("/me/learning-space/tasks", {
+  method: "POST",
+  body: JSON.stringify(input),
+});
+export const updateLearningTask = (taskId, input) => request(`/me/learning-space/tasks/${taskId}`, {
+  method: "PATCH",
+  body: JSON.stringify(input),
+});
+export const deleteLearningTask = (taskId) => request(`/me/learning-space/tasks/${taskId}`, { method: "DELETE" });
+export const createLearningNote = (input) => request("/me/learning-space/notes", {
+  method: "POST",
+  body: JSON.stringify(input),
+});
+export const updateLearningNote = (noteId, input) => request(`/me/learning-space/notes/${noteId}`, {
+  method: "PATCH",
+  body: JSON.stringify(input),
+});
+export const deleteLearningNote = (noteId) => request(`/me/learning-space/notes/${noteId}`, { method: "DELETE" });
 
 export const getAdminCourses = () => request("/admin/courses");
 export const createAdminCourse = (input) => request("/admin/courses", {

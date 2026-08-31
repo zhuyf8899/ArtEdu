@@ -9,6 +9,7 @@ import { AiCreationConsole } from "./AiCreationConsole.jsx";
 import { LearningLibrary } from "./LearningLibrary.jsx";
 import { WorkflowStudio } from "./WorkflowStudio.jsx";
 import { CommunityLibrary } from "./CommunityLibrary.jsx";
+import { MyLearning } from "./MyLearning.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 
 const fallbackData = {
@@ -33,6 +34,7 @@ const navItems = [
   ["courses", "教学资源", GraduationCap],
   ["studio", "设计工作台", Palette],
   ["community", "案例社区", UsersThree],
+  ["myLearning", "我的学习", BookOpenText],
 ];
 
 function RolePill({ account }) {
@@ -112,8 +114,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   };
   const createFromConversation = ({ jobType, prompt, parameters }) => startGeneration(jobType, prompt, parameters);
 
-  const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区" }[section];
-  const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community" }[nextSection] ?? "/");
+  const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习" }[section];
+  const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning" }[nextSection] ?? "/");
 
   return <div className="portal-shell">
     <header className="portal-topbar">
@@ -124,7 +126,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     </header>
 
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}`}>
-      {section !== "home" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
+      {section !== "home" && section !== "myLearning" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
         <AiCreationConsole account={account} onCreate={createFromConversation} />
@@ -140,6 +142,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       {section === "studio" && <><SectionHeading eyebrow="// GUIDED CREATION" title="工作流学习与创作" /><WorkflowStudio fallbackWorkflows={data.workflows} onNotice={showToast} /></>}
 
       {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary fallbackWorks={data.works} onNotice={showToast} /></>}
+
+      {section === "myLearning" && <MyLearning account={account} onNavigate={onNavigate} onNotice={showToast} />}
     </main>
     {toast && <div className="portal-toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
   </div>;

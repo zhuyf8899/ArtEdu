@@ -42,10 +42,36 @@ VALUES
 INSERT INTO learning_progress
   (user_id, lesson_id, status, progress_percent, watched_seconds, last_position_seconds)
 VALUES
-  ('user-student-demo', 'lesson-ai-design-01', 'in_progress', 62, 1674, 1674) ON CONFLICT DO NOTHING;
+  ('user-student-demo', 'lesson-ai-design-01', 'in_progress', 62, 1674, 1674),
+  ('user-student-demo', 'lesson-pattern-01', 'in_progress', 45, 1320, 1320),
+  ('user-student-demo', 'lesson-vibe-gallery-01', 'in_progress', 30, 1080, 1080),
+  ('user-teacher-demo', 'lesson-ai-design-01', 'completed', 100, 2700, 2700),
+  ('user-teacher-demo', 'lesson-pattern-01', 'in_progress', 48, 1440, 1440),
+  ('user-teacher-demo', 'lesson-vibe-gallery-01', 'in_progress', 25, 900, 900) ON CONFLICT DO NOTHING;
 
 INSERT INTO course_enrollments (id, user_id, course_id, status) VALUES
-  ('enrollment-student-ai-design', 'user-student-demo', 'course-ai-design-foundation', 'in_progress') ON CONFLICT DO NOTHING;
+  ('enrollment-student-ai-design', 'user-student-demo', 'course-ai-design-foundation', 'in_progress'),
+  ('enrollment-student-pattern', 'user-student-demo', 'course-traditional-pattern', 'in_progress'),
+  ('enrollment-student-vibe', 'user-student-demo', 'course-vibe-gallery', 'in_progress'),
+  ('enrollment-teacher-ai-design', 'user-teacher-demo', 'course-ai-design-foundation', 'completed'),
+  ('enrollment-teacher-pattern', 'user-teacher-demo', 'course-traditional-pattern', 'in_progress'),
+  ('enrollment-teacher-vibe', 'user-teacher-demo', 'course-vibe-gallery', 'in_progress') ON CONFLICT DO NOTHING;
+
+INSERT INTO learning_tasks (id, user_id, title, task_type, target_id, due_date, status, sort_order, completed_at) VALUES
+  ('learning-task-student-01', 'user-student-demo', '学习 1 节 AI 设计课程', 'course', 'course-ai-design-foundation', CURRENT_DATE, 'completed', 1, CURRENT_TIMESTAMP),
+  ('learning-task-student-02', 'user-student-demo', '整理传统纹样观察记录', 'note', 'course-traditional-pattern', CURRENT_DATE, 'pending', 2, NULL),
+  ('learning-task-student-03', 'user-student-demo', '完成案例分析工作流', 'workflow', 'workflow-case-analysis', CURRENT_DATE + 1, 'pending', 3, NULL),
+  ('learning-task-teacher-01', 'user-teacher-demo', '复习图案生成课程', 'course', 'course-traditional-pattern', CURRENT_DATE, 'pending', 1, NULL),
+  ('learning-task-teacher-02', 'user-teacher-demo', '记录课程迭代要点', 'note', 'course-ai-design-foundation', CURRENT_DATE, 'completed', 2, CURRENT_TIMESTAMP),
+  ('learning-task-teacher-03', 'user-teacher-demo', '完成一次案例方法迁移', 'workflow', 'workflow-case-analysis', CURRENT_DATE + 1, 'pending', 3, NULL)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO learning_notes (id, user_id, course_id, lesson_id, title, content) VALUES
+  ('learning-note-student-01', 'user-student-demo', 'course-ai-design-foundation', 'lesson-ai-design-01', '生成式 AI 的设计边界', 'AI 可以加速发散，但最终的目标判断、信息取舍和审美决策仍需要由创作者完成。'),
+  ('learning-note-student-02', 'user-student-demo', 'course-traditional-pattern', 'lesson-pattern-01', '纹样结构观察', '先识别骨架与重复单元，再决定如何进行现代转译，避免只复制表面装饰。'),
+  ('learning-note-teacher-01', 'user-teacher-demo', 'course-ai-design-foundation', 'lesson-ai-design-01', 'AI 辅助教学记录', '将每次生成过程拆成目标、参数、结果和反思四个环节，便于学生复盘。'),
+  ('learning-note-teacher-02', 'user-teacher-demo', 'course-vibe-gallery', 'lesson-vibe-gallery-01', '网页创作检查表', '先确定内容层级，再搭建响应式结构，最后补充动效和生成内容。')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO workflows
   (id, name, description, category, entry_type, entry_url, status, created_by)
@@ -110,7 +136,8 @@ INSERT INTO work_likes (work_id, user_id) VALUES
   ('work-demo-cloud-pattern', 'user-teacher-demo') ON CONFLICT DO NOTHING;
 
 INSERT INTO work_favorites (work_id, user_id) VALUES
-  ('work-demo-cloud-pattern', 'user-student-demo') ON CONFLICT DO NOTHING;
+  ('work-demo-cloud-pattern', 'user-student-demo'),
+  ('work-demo-cloud-pattern', 'user-teacher-demo') ON CONFLICT DO NOTHING;
 
 INSERT INTO conversations
   (id, user_id, course_id, conversation_type, title)

@@ -8,6 +8,7 @@
 | auth | `/auth` | 开发身份回退 | 学校 SSO、会话刷新、登出 |
 | portal | `/portal` | 首页聚合 | 首页卡片、全局搜索 |
 | courses | `/courses`、`/me/learning-progress` | 已实现第一阶段 | 资源上传、成果绑定查询 |
+| learning | `/me/learning-space` | 已实现 | 学习首页聚合、任务与笔记管理 |
 | workflows | `/workflows`、`/workflow-runs` | 已实现第一阶段 | 模型步骤执行、成果自动采集 |
 | works | `/works`、`/me/works` | 已实现第一阶段 | 对象存储直传、媒体转码 |
 | admin | `/admin` | 用户、额度、作品审核、课程 CMS 与发布审核 | 资源上传、模型配置管理 |
@@ -29,6 +30,20 @@
 | POST | `/api/courses/:courseId/enroll` | 加入或重新加入课程 |
 | PUT | `/api/courses/:courseId/lessons/:lessonId/progress` | 保存课时进度，全部完成后自动完成课程 |
 | GET | `/api/me/learning-progress` | 查询当前用户已加入的课程 |
+
+## 我的学习空间
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| GET | `/api/me/learning-space` | 聚合课程进度、本周时长、今日任务、笔记、收藏、作品和工作流记录 |
+| POST | `/api/me/learning-space/tasks` | 新建当前用户的学习任务 |
+| PATCH | `/api/me/learning-space/tasks/:taskId` | 更新任务标题、日期、类型或完成状态 |
+| DELETE | `/api/me/learning-space/tasks/:taskId` | 删除当前用户的学习任务 |
+| POST | `/api/me/learning-space/notes` | 新建当前用户的课程/工作流学习笔记 |
+| PATCH | `/api/me/learning-space/notes/:noteId` | 更新笔记标题与正文 |
+| DELETE | `/api/me/learning-space/notes/:noteId` | 删除当前用户的学习笔记 |
+
+任务类型限定为 `course`、`workflow`、`review`、`note` 或 `custom`。任务和笔记只能由创建者读取及修改，所有写操作均经过输入校验并写入审计日志。
 
 ## 课程管理与发布审核
 
