@@ -248,6 +248,11 @@ export class AdminRepository {
     `, [workId, decision.status]);
     if (update.rowCount === 0) return false;
 
+    await client.query(
+      "UPDATE work_assets SET moderation_status = $2 WHERE work_id = $1",
+      [workId, decision.status === "approved" ? "approved" : "rejected"],
+    );
+
     await client.query(`
       INSERT INTO audit_records (id, target_type, target_id, reviewer_id, action, reason)
       VALUES ($1, 'work', $2, $3, $4, $5)

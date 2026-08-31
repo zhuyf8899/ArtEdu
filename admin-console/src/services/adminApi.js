@@ -1,22 +1,11 @@
-// Backend integration boundary. Keep endpoint changes here so the UI components
-// stay independent from the API implementation chosen by the database team.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
-const demoAuthEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_AUTH === "true";
-
-let currentTestUserId = demoAuthEnabled ? window.localStorage.getItem("artedu-test-user-id") || "" : "";
-
-export function setTestActor(userId) {
-  if (!demoAuthEnabled) return;
-  currentTestUserId = userId;
-  if (userId) window.localStorage.setItem("artedu-test-user-id", userId);
-  else window.localStorage.removeItem("artedu-test-user-id");
-}
 
 async function request(path, options = {}) {
+  const isFormData = options.body instanceof FormData;
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
     headers: {
-      ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...(currentTestUserId ? { "x-user-id": currentTestUserId } : {}),
+      ...(options.body !== undefined && !isFormData ? { "Content-Type": "application/json" } : {}),
       ...options.headers,
     },
     ...options,
@@ -32,6 +21,11 @@ async function request(path, options = {}) {
 export const getAdminUsers = () => request("/admin/users");
 export const getAdminReviews = () => request("/admin/reviews");
 export const getCurrentUser = () => request("/auth/me");
+export const loginLocal = (username, password) => request("/auth/login", {
+  method: "POST",
+  body: JSON.stringify({ username, password }),
+});
+export const logoutLocal = () => request("/auth/logout", { method: "POST" });
 export const getPortalHome = () => request("/portal/home");
 export const getCourses = (query = "") => request(`/courses${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getCourse = (courseId) => request(`/courses/${courseId}`);
@@ -79,6 +73,11 @@ export const createWork = (input) => request("/works", {
   body: JSON.stringify(input),
 });
 export const submitWork = (workId) => request(`/works/${workId}/submit`, { method: "POST" });
+export const uploadWorkAsset = (workId, file) => {
+  const form = new FormData();
+  form.append("file", file);
+  return request(`/works/${workId}/assets`, { method: "POST", body: form });
+};
 export const addWorkComment = (workId, content) => request(`/works/${workId}/comments`, {
   method: "POST",
   body: JSON.stringify({ content }),

@@ -326,6 +326,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .test-login__note { max-width: 420px; margin-top: 29px; padding: 13px; display: flex; gap: 10px; align-items: flex-start; color: #d8d8d8; background: #191919; border: 1px solid #454545; font-size: 10px; line-height: 1.55; }
 .test-login__note svg { flex: none; color: var(--lime); }
 .test-login__accounts { padding: clamp(30px, 5.5vw, 78px); display: flex; flex-direction: column; justify-content: center; }
+.local-login-form { display: grid; gap: 14px; margin-top: 24px; max-width: 440px; }
+.local-login-form label { display: grid; gap: 7px; font-size: 10px; font-weight: 700; }
+.local-login-form input { min-height: 46px; padding: 10px 12px; border: 1px solid var(--ink); background: #fff; font: inherit; }
+.local-login-form button { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: var(--ink); background: var(--lime); border: 1px solid var(--ink); font: inherit; font-weight: 700; }
+.local-login-form button:disabled { cursor: wait; opacity: .65; }
+.login-error { margin: 0; color: #a31414; font-size: 12px; }
 .account-panel__heading { display: flex; align-items: end; justify-content: space-between; padding-bottom: 15px; border-bottom: 2px solid var(--ink); }
 .account-panel__heading p { margin: 0 0 5px; color: var(--muted); font-size: 8px; font-weight: 700; letter-spacing: .16em; }
 .account-panel__heading h2 { margin: 0; font-size: clamp(27px, 3vw, 40px); letter-spacing: -.055em; }

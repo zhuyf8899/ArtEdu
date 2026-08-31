@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
-import type { FastifyRequest } from "fastify";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res } from "@nestjs/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
 import {
@@ -79,6 +79,21 @@ export class StudioController {
   @Post("works/:workId/submit")
   async submitWork(@Req() request: FastifyRequest, @Param("workId") workId: string) {
     return this.studio.submitWork(await this.auth.getActor(request), workId);
+  }
+
+  @Post("works/:workId/assets")
+  async uploadWorkAsset(@Req() request: FastifyRequest, @Param("workId") workId: string) {
+    return this.studio.uploadWorkAsset(await this.auth.getActor(request), workId, request);
+  }
+
+  @Get("works/:workId/assets/:assetId/download")
+  async downloadWorkAsset(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("workId") workId: string, @Param("assetId") assetId: string) {
+    const asset = await this.studio.openWorkAsset(await this.auth.getActor(request), workId, assetId);
+    const encodedName = encodeURIComponent(asset.fileName).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
+    reply.header("Content-Type", asset.mimeType);
+    reply.header("Content-Disposition", `attachment; filename*=UTF-8''${encodedName}`);
+    reply.header("X-Content-Type-Options", "nosniff");
+    return asset.stream;
   }
 
   @Post("works/:workId/comments")

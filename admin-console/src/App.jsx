@@ -6,21 +6,39 @@ import "@fontsource/noto-sans-sc/400.css";
 import "@fontsource/noto-sans-sc/700.css";
 import { useEffect, useState } from "react";
 import { AdminDashboard } from "./AdminDashboard.jsx";
-import { TestLogin, UserPortal } from "./Portal.jsx";
-import { setTestActor } from "./services/adminApi.js";
-import { TEST_ACCOUNTS } from "./testAccounts.js";
+import { LocalLogin, UserPortal } from "./Portal.jsx";
+import { getCurrentUser, loginLocal, logoutLocal } from "./services/adminApi.js";
+import { canEnterAdmin } from "./testAccounts.js";
 import { adminSectionFromPath, sectionFromPath, useAppRoute } from "./routing.js";
 
 export function App() {
-  const demoAuthEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_AUTH === "true";
-  const [account, setAccount] = useState(() => demoAuthEnabled ? TEST_ACCOUNTS.find((item) => item.id === window.localStorage.getItem("artedu-test-user-id")) ?? null : null);
+  const [account, setAccount] = useState(null);
+  const [ready, setReady] = useState(false);
   const { pathname, navigate } = useAppRoute();
 
-  useEffect(() => { setTestActor(account?.id ?? ""); }, [account]);
+  useEffect(() => {
+    getCurrentUser().then((actor) => setAccount(toPortalAccount(actor))).catch(() => setAccount(null)).finally(() => setReady(true));
+  }, []);
 
-  if (!account) return demoAuthEnabled
-    ? <TestLogin accounts={TEST_ACCOUNTS} onSelect={(nextAccount) => { setAccount(nextAccount); navigate("/"); }} />
-    : <main className="portal-empty"><h1>学校统一登录尚未配置</h1><p>生产环境不会提供本地测试身份。</p></main>;
+  const signIn = async (username, password) => {
+    const actor = await loginLocal(username, password);
+    setAccount(toPortalAccount(actor));
+    navigate("/");
+  };
+
+  const signOut = async () => {
+    try { await logoutLocal(); } finally { setAccount(null); navigate("/"); }
+  };
+
+  if (!ready) return <main className="portal-empty"><p>正在验证登录会话…</p></main>;
+  if (!account) return <LocalLogin onLogin={signIn} />;
+  if (pathname.startsWith("/admin") && !canEnterAdmin(account)) return <main className="portal-empty"><h1>无权访问管理后台</h1><p>请使用已授权的教师、运营或管理员账户登录。</p></main>;
   if (pathname.startsWith("/admin")) return <AdminDashboard actor={account} initialSection={adminSectionFromPath(pathname)} onNavigate={(section) => navigate({ overview: "/admin", users: "/admin/users", courses: "/admin/courses", reviews: "/admin/reviews" }[section] ?? "/admin")} onBack={() => navigate("/")} />;
-  return <UserPortal account={account} section={sectionFromPath(pathname)} onNavigate={navigate} onSwitchAccount={() => { setAccount(null); navigate("/"); }} onEnterAdmin={() => navigate("/admin")} />;
+  return <UserPortal account={account} section={sectionFromPath(pathname)} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
+}
+
+function toPortalAccount(actor) {
+  const role = ["admin", "operator", "teacher", "student"].find((value) => actor.roles?.includes(value)) ?? "student";
+  const display = { admin: ["平台管理员", "ink"], operator: ["运营审核", "orange"], teacher: ["教师", "lime"], student: ["学生", "purple"] }[role];
+  return { id: actor.id, name: actor.displayName, shortName: actor.displayName, role, roles: actor.roles ?? [], roleLabel: display[0], accent: display[1] };
 }

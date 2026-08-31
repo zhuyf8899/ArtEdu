@@ -3,6 +3,7 @@ import "dotenv/config";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
+import multipart from "@fastify/multipart";
 import { randomUUID } from "node:crypto";
 import { AppModule } from "./app.module";
 import { getEnvironment } from "./common/environment";
@@ -24,8 +25,24 @@ async function bootstrap() {
     credentials: true,
   });
 
+  if (environment.fileUploadsEnabled) {
+    await app.register(multipart, {
+      limits: { files: 1, fields: 0, parts: 1, fileSize: 10 * 1024 * 1024 },
+      throwFileSizeLimit: true,
+    });
+  }
+
   const fastify = app.getHttpAdapter().getInstance();
   fastify.addHook("onRequest", async (request, reply) => { reply.header("X-Request-ID", request.id); });
+  fastify.addHook("onRequest", async (request, reply) => {
+    const isWrite = !["GET", "HEAD", "OPTIONS"].includes(request.method);
+    const hasSession = request.headers.cookie?.includes("artedu_session=");
+    if (!isWrite || !hasSession) return;
+    const origin = request.headers.origin;
+    if (!origin || !environment.corsOrigins.includes(origin)) {
+      return reply.code(403).send({ statusCode: 403, message: "跨站写请求被拒绝", requestId: request.id });
+    }
+  });
   fastify.addHook("onRequest", apiRateLimitHook);
   fastify.addHook("onSend", async (_request, reply, payload) => {
     reply.header("Cache-Control", "no-store");

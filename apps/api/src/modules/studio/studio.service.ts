@@ -1,9 +1,14 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { createReadStream } from "node:fs";
+import path from "node:path";
+import type { FastifyRequest } from "fastify";
 import type { PoolClient } from "pg";
 import type { Actor } from "../auth/auth.service";
 import { AuthService } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
+import { getEnvironment } from "../../common/environment";
+import { storePrivateUpload } from "./private-upload";
 import type {
   CatalogQuery,
   WorkflowInput,
@@ -218,6 +223,54 @@ export class StudioService {
     return this.getWork(actor, workId);
   }
 
+  async uploadWorkAsset(actor: Actor, workId: string, request: FastifyRequest) {
+    const environment = getEnvironment();
+    if (!environment.fileUploadsEnabled) throw new ForbiddenException("文件上传未启用");
+    const current = await this.database.query<{ status: string; author_id: string; title: string }>("SELECT status,author_id,title FROM works WHERE id=$1", [workId]);
+    const work = current.rows[0];
+    if (!work) throw new NotFoundException("作品不存在");
+    if (work.author_id !== actor.id) throw new ForbiddenException("只能为自己的作品上传资源");
+    if (!["draft", "rejected"].includes(work.status)) throw new ConflictException("当前作品不能继续上传资源");
+    const part = await request.file();
+    if (!part) throw new BadRequestException("请选择一个文件");
+    const upload = await storePrivateUpload(part, environment.uploadRoot);
+    try {
+      const asset = await this.database.transaction(async (client) => {
+        const locked = await client.query<{ status: string; author_id: string }>("SELECT status,author_id FROM works WHERE id=$1 FOR UPDATE", [workId]);
+        if (!locked.rows[0] || locked.rows[0].author_id !== actor.id || !["draft", "rejected"].includes(locked.rows[0].status)) throw new ConflictException("作品状态已变化，请刷新后重试");
+        const count = await client.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM work_assets WHERE work_id=$1", [workId]);
+        if (count.rows[0].count >= 10) throw new BadRequestException("每个作品最多上传 10 个文件");
+        const id = `work-asset-${randomUUID()}`;
+        await client.query(`
+          INSERT INTO work_assets (id,work_id,file_name,mime_type,storage_key,external_url,file_size,sha256,asset_type,alt_text,sort_order,moderation_status)
+          VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,$8,$9,$10,'pending')
+        `, [id, workId, upload.fileName, upload.mimeType, upload.storageKey, upload.sizeBytes, upload.sha256, upload.assetType, work.title, count.rows[0].count]);
+        return { id, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes, status: "pending" };
+      });
+      return asset;
+    } catch (error) {
+      await import("node:fs/promises").then(({ rm }) => rm(path.join(environment.uploadRoot, upload.storageKey), { force: true }));
+      throw error;
+    }
+  }
+
+  async openWorkAsset(actor: Actor, workId: string, assetId: string) {
+    const result = await this.database.query<{ storage_key: string; file_name: string; mime_type: string; status: string; author_id: string; moderation_status: string }>(`
+      SELECT asset.storage_key,asset.file_name,asset.mime_type,asset.moderation_status,work.status,work.author_id
+      FROM work_assets asset JOIN works work ON work.id=asset.work_id
+      WHERE asset.id=$1 AND asset.work_id=$2
+    `, [assetId, workId]);
+    const asset = result.rows[0];
+    if (!asset) throw new NotFoundException("作品资源不存在");
+    const canReview = this.canReview(actor);
+    const canRead = asset.author_id === actor.id || canReview || (asset.status === "approved" && asset.moderation_status === "approved");
+    if (!canRead) throw new ForbiddenException("无权访问该文件");
+    const storageKey = asset.storage_key;
+    if (!/^[a-f0-9-]{36}-[a-f0-9-]{36}$/i.test(storageKey)) throw new NotFoundException("资源存储记录无效");
+    const filePath = path.join(getEnvironment().uploadRoot, storageKey);
+    return { fileName: asset.file_name, mimeType: asset.mime_type, stream: createReadStream(filePath) };
+  }
+
   async addComment(actor: Actor, workId: string, content: string) {
     await this.requireApprovedWork(workId);
     const id = `comment-${randomUUID()}`;
@@ -252,10 +305,6 @@ export class StudioService {
       if (workflows.rowCount !== input.workflowIds.length) throw new BadRequestException("引用的工作流不存在或尚未发布");
     }
     for (const workflowId of input.workflowIds) await client.query("INSERT INTO work_workflows (work_id,workflow_id) VALUES ($1,$2)", [workId, workflowId]);
-    for (const [index, asset] of input.assets.entries()) await client.query(`
-      INSERT INTO work_assets (id,work_id,file_name,mime_type,storage_key,external_url,asset_type,alt_text,sort_order)
-      VALUES ($1,$2,$3,$4,NULL,$5,$6,$7,$8)
-    `, [`work-asset-${randomUUID()}`, workId, asset.fileName, asset.mimeType, asset.externalUrl, asset.assetType, asset.altText ?? null, index]);
     for (const tagName of [...new Set(input.tagNames)]) {
       const slug = this.slugify(tagName);
       const tag = await client.query<{ id: string }>(`

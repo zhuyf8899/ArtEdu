@@ -1,11 +1,15 @@
 import { z } from "zod";
+import path from "node:path";
 
 const environmentSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   HOST: z.string().min(1).default("127.0.0.1"),
   CORS_ORIGIN: z.string().optional(),
-  ENABLE_DEVELOPMENT_AUTH: z.enum(["true", "false"]).default("false"),
+  ENABLE_LOCAL_AUTH: z.enum(["true", "false"]).default("false"),
+  LOCAL_SESSION_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+  ENABLE_FILE_UPLOADS: z.enum(["true", "false"]).default("false"),
+  UPLOAD_ROOT: z.string().trim().min(1).optional(),
   MODEL_EXECUTION_ENABLED: z.enum(["true", "false"]).default("false"),
 });
 
@@ -14,7 +18,10 @@ export interface Environment {
   port: number;
   host: string;
   corsOrigins: string[];
-  developmentAuthenticationEnabled: boolean;
+  localAuthenticationEnabled: boolean;
+  localSessionDays: number;
+  fileUploadsEnabled: boolean;
+  uploadRoot: string;
   modelExecutionEnabled: boolean;
 }
 
@@ -39,18 +46,14 @@ export function getEnvironment(): Environment {
     if (!/^https?:$/.test(url.protocol) || url.origin !== origin || url.username || url.password) {
       throw new Error(`CORS_ORIGIN 必须是无凭据的完整 HTTP(S) 来源: ${origin}`);
     }
+    if (parsed.NODE_ENV === "production" && url.protocol !== "https:") {
+      throw new Error(`生产环境 CORS_ORIGIN 必须使用 HTTPS: ${origin}`);
+    }
   }
 
-  if (parsed.NODE_ENV === "production" && parsed.ENABLE_DEVELOPMENT_AUTH === "true") {
-    throw new Error("生产环境禁止开启 ENABLE_DEVELOPMENT_AUTH");
-  }
-
-  if (parsed.ENABLE_DEVELOPMENT_AUTH === "true" && parsed.NODE_ENV !== "development") {
-    throw new Error("ENABLE_DEVELOPMENT_AUTH 只能在 development 环境启用");
-  }
-
-  if (parsed.ENABLE_DEVELOPMENT_AUTH === "true" && !isLoopbackHost(parsed.HOST)) {
-    throw new Error("启用开发身份认证时，HOST 必须为本机回环地址");
+  const uploadRoot = path.resolve(parsed.UPLOAD_ROOT ?? path.join(process.cwd(), "data", "uploads"));
+  if (parsed.NODE_ENV === "production" && parsed.ENABLE_FILE_UPLOADS === "true" && !parsed.UPLOAD_ROOT) {
+    throw new Error("生产环境启用文件上传时必须显式配置 UPLOAD_ROOT");
   }
 
   return {
@@ -58,11 +61,10 @@ export function getEnvironment(): Environment {
     port: parsed.PORT,
     host: parsed.HOST,
     corsOrigins: configuredCorsOrigins.length > 0 ? configuredCorsOrigins : ["http://localhost:4173"],
-    developmentAuthenticationEnabled: parsed.ENABLE_DEVELOPMENT_AUTH === "true",
+    localAuthenticationEnabled: parsed.ENABLE_LOCAL_AUTH === "true",
+    localSessionDays: parsed.LOCAL_SESSION_DAYS,
+    fileUploadsEnabled: parsed.ENABLE_FILE_UPLOADS === "true",
+    uploadRoot,
     modelExecutionEnabled: parsed.MODEL_EXECUTION_ENABLED === "true",
   };
-}
-
-function isLoopbackHost(host: string) {
-  return host === "localhost" || host === "::1" || /^127(?:\.\d{1,3}){3}$/.test(host);
 }

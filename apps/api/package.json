@@ -9,10 +9,13 @@
     "worker": "npm run build && node dist/worker.js",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed.ts",
-    "test:security": "tsx --test src/common/security.test.ts src/modules/studio/studio.contracts.test.ts",
+    "auth:provision-local": "tsx src/scripts/provision-local-user.ts",
+    "auth:generate-test-accounts": "tsx src/scripts/generate-test-accounts.ts",
+    "test:security": "tsx --test src/common/security.test.ts src/modules/auth/password.test.ts src/modules/studio/private-upload.test.ts src/modules/studio/studio.contracts.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fastify/multipart": "^10.1.1",
     "@nestjs/common": "^11.0.11",
     "@nestjs/core": "^11.0.11",
     "@nestjs/platform-fastify": "^11.0.11",

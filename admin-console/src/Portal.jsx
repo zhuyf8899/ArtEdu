@@ -44,24 +44,37 @@ function WorkflowGlyph({ entryType }) {
   return <span className="workflow-glyph"><Icon size={21} weight="bold" /></span>;
 }
 
-export function TestLogin({ accounts, onSelect }) {
+export function LocalLogin({ onLogin }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try { await onLogin(username, password); }
+    catch (reason) { setError(reason.message || "登录失败，请稍后再试"); }
+    finally { setSubmitting(false); }
+  };
+
   return <main className="test-login">
     <section className="test-login__intro">
       <div className="test-login__brand"><span>A</span><strong>ArtEdu</strong></div>
-      <p className="eyebrow">// INTEGRATED TEST SPACE</p>
-      <h1>一个入口，<br />测试所有角色。</h1>
-      <p>教学、创作、案例社区与管理工作台已合在同一套测试站中。选择下方账号即可进入。</p>
-      <div className="test-login__note"><LockKey size={17} weight="bold" /><span>测试账号对应数据库中的演示用户，不需要密码。</span></div>
+      <p className="eyebrow">// SECURE LOCAL ACCESS</p>
+      <h1>登录后进入<br />学习与创作空间。</h1>
+      <p>当前为受控的本地账号入口。学校单点登录接入后，将替换为统一认证入口。</p>
+      <div className="test-login__note"><LockKey size={17} weight="bold" /><span>密码不会保存在浏览器；登录会话仅使用 HttpOnly 安全 Cookie。</span></div>
     </section>
-    <section className="test-login__accounts" aria-label="选择测试账号">
-      <div className="account-panel__heading"><div><p>// TEST ACCOUNTS</p><h2>选择一个身份</h2></div><span>04 accounts</span></div>
-      <div className="account-cards">
-        {accounts.map((account, index) => <button className={`account-card account-card--${account.accent}`} key={account.id} onClick={() => onSelect(account)}>
-          <span className="account-card__number">0{index + 1}</span><RolePill account={account} />
-          <strong>{account.name}</strong><p>{account.description}</p>
-          <span className="account-card__enter">进入体验 <ArrowRight size={16} weight="bold" /></span>
-        </button>)}
-      </div>
+    <section className="test-login__accounts">
+      <div className="account-panel__heading"><div><p>// SIGN IN</p><h2>账号登录</h2></div></div>
+      <form className="local-login-form" onSubmit={submit}>
+        <label>账号<input autoComplete="username" required maxLength="120" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
+        <label>密码<input type="password" autoComplete="current-password" required minLength="1" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        {error && <p className="login-error" role="alert">{error}</p>}
+        <button disabled={submitting}>{submitting ? "正在验证…" : "安全登录"} <ArrowRight size={16} weight="bold" /></button>
+      </form>
     </section>
   </main>;
 }
