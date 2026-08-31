@@ -42,4 +42,4 @@ POST /generation-jobs
 
 1. 用根目录 `docker-compose.yml` 启动 PostgreSQL，并按顺序执行 `0001_initial.sql`、`0002_backend_alignment.sql`、`0003_course_resource_business.sql` 和种子数据。
 2. 将 `apps/api/.env.example` 复制为 `apps/api/.env`，安装依赖后在 `apps/api` 执行 `npm run dev`。
-3. 仅当 `.env` 显式设置 `ENABLE_DEVELOPMENT_AUTH=true` 时，才可使用 `DEV_ADMIN_USER_ID` 或 `x-user-id: user-admin-demo`。生产环境会拒绝启动该开关；上线前必须接入学校 SSO。
+3. 仅当 `.env` 显式设置 `ENABLE_LOCAL_AUTH=true` 时，才可使用本地账号密码登录。生产环境会拒绝启动该开关；上线前必须接入学校 SSO。

@@ -8,6 +8,7 @@ const environmentSchema = z.object({
   CORS_ORIGIN: z.string().optional(),
   ENABLE_LOCAL_AUTH: z.enum(["true", "false"]).default("false"),
   LOCAL_SESSION_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+  LOCAL_SESSION_IDLE_HOURS: z.coerce.number().int().min(1).max(24).default(12),
   ENABLE_FILE_UPLOADS: z.enum(["true", "false"]).default("false"),
   UPLOAD_ROOT: z.string().trim().min(1).optional(),
   MODEL_EXECUTION_ENABLED: z.enum(["true", "false"]).default("false"),
@@ -20,6 +21,7 @@ export interface Environment {
   corsOrigins: string[];
   localAuthenticationEnabled: boolean;
   localSessionDays: number;
+  localSessionIdleHours: number;
   fileUploadsEnabled: boolean;
   uploadRoot: string;
   modelExecutionEnabled: boolean;
@@ -34,6 +36,10 @@ export function getEnvironment(): Environment {
 
   if (parsed.NODE_ENV === "production" && configuredCorsOrigins.length === 0) {
     throw new Error("生产环境必须配置至少一个 CORS_ORIGIN");
+  }
+
+  if (parsed.NODE_ENV === "production" && parsed.ENABLE_LOCAL_AUTH === "true") {
+    throw new Error("生产环境禁止启用本地账号登录；请接入学校 SSO 或受管身份提供方");
   }
 
   for (const origin of configuredCorsOrigins) {
@@ -63,6 +69,7 @@ export function getEnvironment(): Environment {
     corsOrigins: configuredCorsOrigins.length > 0 ? configuredCorsOrigins : ["http://localhost:4173"],
     localAuthenticationEnabled: parsed.ENABLE_LOCAL_AUTH === "true",
     localSessionDays: parsed.LOCAL_SESSION_DAYS,
+    localSessionIdleHours: parsed.LOCAL_SESSION_IDLE_HOURS,
     fileUploadsEnabled: parsed.ENABLE_FILE_UPLOADS === "true",
     uploadRoot,
     modelExecutionEnabled: parsed.MODEL_EXECUTION_ENABLED === "true",
