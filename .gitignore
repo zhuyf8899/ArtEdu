@@ -211,6 +211,9 @@ node_modules/
 coverage/
 *.tsbuildinfo
 
+# ArtEdu local private-upload storage
+apps/api/data/
+
 # Ruff stuff:
 .ruff_cache/
 
