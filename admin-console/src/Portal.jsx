@@ -12,22 +12,7 @@ import { CommunityLibrary } from "./CommunityLibrary.jsx";
 import { MyLearning } from "./MyLearning.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 
-const fallbackData = {
-  courses: [
-    { id: "course-ai-design-foundation", title: "AI 辅助设计思维与方法", summary: "从灵感到方案，理解 AI 在设计流程中的作用。", category: "设计基础", method: "UI 创作", author: "周可老师", tools: ["GPT-4o", "Figma"], progressPercent: 62, lessonCount: 8 },
-    { id: "course-traditional-pattern", title: "传统纹样的当代表达", summary: "从传统视觉元素中提取结构并完成现代转译。", category: "视觉设计", method: "图案生成", author: "林知夏老师", tools: ["FLUX.1", "Midjourney"], progressPercent: 0, lessonCount: 6 },
-    { id: "course-vibe-gallery", title: "用 Vibe Coding 构建数字作品展", summary: "从内容结构、界面节奏到交互实现，完成一个可浏览的线上艺术展。", category: "交互设计", method: "Vibe Coding", author: "陈明远老师", tools: ["Claude 4", "VS Code"], progressPercent: 0, lessonCount: 5 },
-  ],
-  workflows: [
-    { id: "workflow-case-analysis", name: "案例分析工作流", description: "通过多轮提问拆解作品的目标、结构与设计方法。", category: "案例教学", entryType: "chat" },
-    { id: "workflow-image-draft", name: "图片生成工作流", description: "从文字描述开始生成可继续讨论的视觉草稿。", category: "视觉生成", entryType: "workbench" },
-    { id: "workflow-webpage", name: "网页创作助手", description: "先厘清页面结构，再输出可编辑的网页方案。", category: "网页生成", entryType: "chat" },
-  ],
-  works: [
-    { id: "work-demo-cloud-pattern", title: "云格新序：传统纹样的当代表达", summary: "从云纹、格栅与植物轮廓中提取结构特征，重新组织为当代视觉系统。", discipline: "视觉系统设计", author: "林知夏" },
-    { id: "work-demo-poster", title: "校园导视图标系统", summary: "为新生设计清晰、统一且可扩展的校园导视图标。", discipline: "视觉传达", author: "陈明远" },
-  ],
-};
+const emptyPortalData = { courses: [], workflows: [], works: [] };
 
 const navItems = [
   ["home", "首页", GridFour],
@@ -82,19 +67,23 @@ export function LocalLogin({ onLogin }) {
 }
 
 export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", onNavigate = () => {} }) {
-  const [data, setData] = useState(fallbackData);
+  const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [toast, setToast] = useState("");
 
   useEffect(() => {
     getPortalHome().then((payload) => {
       setData({
-        courses: payload.courses?.length ? payload.courses : fallbackData.courses,
-        workflows: payload.workflows?.length ? payload.workflows : fallbackData.workflows,
-        works: payload.works?.length ? payload.works : fallbackData.works,
+        courses: payload.courses ?? [],
+        workflows: payload.workflows ?? [],
+        works: payload.works ?? [],
       });
       setIsLive(true);
-    }).catch(() => setIsLive(false));
+    }).catch(() => {
+      setData(emptyPortalData);
+      setIsLive(false);
+      setToast("首页数据加载失败，请检查 API 服务");
+    });
   }, [account.id]);
 
   const nextCourse = useMemo(() => data.courses.find((course) => course.progressPercent > 0 && course.progressPercent < 100) ?? data.courses[0], [data.courses]);
@@ -108,7 +97,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       showToast(`任务已创建：${job.id.slice(0, 8)}…，可在后端任务队列中查看。`);
       return job;
     } catch (error) {
-      showToast(isLive ? error.message : "当前展示为离线演示数据；启动 API 后即可创建真实任务。");
+      showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。");
       return null;
     }
   };
@@ -122,7 +111,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
       <nav className="portal-nav" aria-label="主导航">{navItems.map(([id, label, Icon]) => <button key={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       {canEnterAdmin(account) && <button className="portal-console-shortcut" onClick={onEnterAdmin}>管理后台 <ArrowRight size={15} weight="bold" /></button>}
-      <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "已连接 API" : "演示数据"}</span><button className="account-switch" onClick={onSwitchAccount}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button></div>
+      <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "已连接 API" : "API 未连接"}</span><button className="account-switch" onClick={onSwitchAccount}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button></div>
     </header>
 
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}`}>
@@ -137,11 +126,11 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section>
       </>}
 
-      {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary fallbackCourses={data.courses} onNotice={showToast} /></>}
+      {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary onNotice={showToast} /></>}
 
-      {section === "studio" && <><SectionHeading eyebrow="// GUIDED CREATION" title="工作流学习与创作" /><WorkflowStudio fallbackWorkflows={data.workflows} onNotice={showToast} /></>}
+      {section === "studio" && <><SectionHeading eyebrow="// GUIDED CREATION" title="工作流学习与创作" /><WorkflowStudio onNotice={showToast} /></>}
 
-      {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary fallbackWorks={data.works} onNotice={showToast} /></>}
+      {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary onNotice={showToast} /></>}
 
       {section === "myLearning" && <MyLearning account={account} onNavigate={onNavigate} onNotice={showToast} />}
     </main>
