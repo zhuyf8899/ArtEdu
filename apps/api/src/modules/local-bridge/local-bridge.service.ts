@@ -17,8 +17,14 @@ export class LocalBridgeService {
   }
   async claim(authorization?: string) {
     const device = await this.authenticate(authorization);
-    await this.database.query("UPDATE local_bridge_devices SET last_seen_at=CURRENT_TIMESTAMP WHERE id=$1", [device.id]);
+    await this.touch(device.id);
     return this.agents.claimNextForLocalBridge(device.user_id);
+  }
+  async heartbeat(authorization?: string) { const device = await this.authenticate(authorization); await this.touch(device.id); return { ok: true, deviceId: device.id }; }
+  async status(actor: Actor) {
+    const result = await this.database.query<{ id: string; display_name: string; last_seen_at: Date | null }>("SELECT id,display_name,last_seen_at FROM local_bridge_devices WHERE user_id=$1 AND status='active' ORDER BY created_at DESC", [actor.id]);
+    const now = Date.now();
+    return { items: result.rows.map((row) => ({ id: row.id, displayName: row.display_name, lastSeenAt: row.last_seen_at?.toISOString() ?? null, status: row.last_seen_at && now - row.last_seen_at.getTime() <= 45_000 ? "online" : "offline" })) };
   }
   async complete(authorization: string | undefined, runId: string, input: { providerId: string; model: string; content: string }) {
     const device = await this.authenticate(authorization);
@@ -36,5 +42,6 @@ export class LocalBridgeService {
     if (!device || device.status !== "active") throw new ForbiddenException("本地 Bridge 未配对或已撤销");
     return device;
   }
+  private async touch(deviceId: string) { await this.database.query("UPDATE local_bridge_devices SET last_seen_at=CURRENT_TIMESTAMP WHERE id=$1", [deviceId]); }
   private hash(token: string) { return createHash("sha256").update(token).digest("base64url"); }
 }

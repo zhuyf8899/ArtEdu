@@ -30,6 +30,8 @@
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
 | POST | `/api/local-bridge/pair` | 已登录用户创建一次性 Bridge 令牌；云端仅存令牌哈希。 |
+| GET | `/api/local-bridge/status` | 当前用户读取 Bridge 在线/离线状态；45 秒未心跳视为离线。 |
+| POST | `/api/local-bridge/heartbeat` | Bridge 以令牌报告活跃状态。 |
 | POST | `/api/local-bridge/tasks/claim` | 本地 Bridge 使用 Bearer 令牌领取当前用户待执行任务。 |
 | POST | `/api/local-bridge/tasks/:runId/complete` | 本地回传已允许展示的结果、供应商 ID 和模型名。 |
 | POST | `/api/local-bridge/tasks/:runId/fail` | 本地回传不含密钥的失败原因。 |
