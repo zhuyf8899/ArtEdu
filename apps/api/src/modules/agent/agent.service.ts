@@ -90,6 +90,36 @@ export class AgentService {
     return this.getRunInternal(runId);
   }
 
+  async claimNextForLocalBridge(userId: string) {
+    const result = await this.database.query<RunRow>(`
+      WITH next_run AS (
+        SELECT id FROM agent_runs WHERE user_id=$1 AND status='waiting_user'
+        ORDER BY updated_at ASC FOR UPDATE SKIP LOCKED LIMIT 1
+      )
+      UPDATE agent_runs run SET status='running',updated_at=CURRENT_TIMESTAMP
+      FROM next_run WHERE run.id=next_run.id RETURNING run.*
+    `, [userId]);
+    return result.rows[0] ? this.mapRun(result.rows[0]) : null;
+  }
+
+  async completeFromLocalBridge(userId: string, runId: string, content: string, providerId: string, model: string) {
+    const run = await this.getOwnedRun(runId);
+    if (run.user_id !== userId || run.status !== "running") throw new ForbiddenException("本地 Bridge 无权回传该任务");
+    await this.appendToolCall(runId, "local_bridge.model_result", { providerId, model, secretTransferred: false }, { content, providerId, model });
+    const type = run.scenario === "webpage_generation" ? "webpage" : run.scenario === "pattern_generation" ? "pattern" : "brief";
+    await this.appendArtifact(runId, type, { content, providerId, model, generatedBy: "local-bridge" });
+    await this.appendAgentMessage(runId, content);
+    return this.completeRun(runId);
+  }
+
+  async failFromLocalBridge(userId: string, runId: string, reason: string) {
+    const run = await this.getOwnedRun(runId);
+    if (run.user_id !== userId || run.status !== "running") throw new ForbiddenException("本地 Bridge 无权回传该任务");
+    await this.appendToolCall(runId, "local_bridge.model_result", {}, { failed: true, reason });
+    await this.appendAgentMessage(runId, `本地模型调用未完成：${reason}`);
+    return this.failRun(runId, reason);
+  }
+
   async failRun(runId: string, reason: string) {
     await this.database.query(`UPDATE agent_runs SET status='failed',failure_reason=$2,updated_at=CURRENT_TIMESTAMP,completed_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='running'`, [runId, reason.slice(0, 1000)]);
     return this.getRunInternal(runId);

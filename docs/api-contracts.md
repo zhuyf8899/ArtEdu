@@ -25,6 +25,15 @@
 | GET | `/api/agent-runs/:runId` | 查询完整任务档案：消息、工具调用、成果、扫描结果及告警。 |
 | GET | `/api/admin/agent-alerts` | 管理员读取未处理的关键词安全告警。 |
 
+## Local Model Bridge
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| POST | `/api/local-bridge/pair` | 已登录用户创建一次性 Bridge 令牌；云端仅存令牌哈希。 |
+| POST | `/api/local-bridge/tasks/claim` | 本地 Bridge 使用 Bearer 令牌领取当前用户待执行任务。 |
+| POST | `/api/local-bridge/tasks/:runId/complete` | 本地回传已允许展示的结果、供应商 ID 和模型名。 |
+| POST | `/api/local-bridge/tasks/:runId/fail` | 本地回传不含密钥的失败原因。 |
+
 ## 约定
 
 - 需要分页的列表接口统一返回 `{ "items": [], "page": 1, "pageSize": 20, "total": 0 }`；当前小规模目录接口至少返回 `{ "items": [] }`。

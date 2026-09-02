@@ -11,7 +11,9 @@ Local Bridge runs on the user's device. It owns provider selection and API keys,
 ## Local two-step setup
 
 1. Select a provider preset (or an OpenAI-compatible custom endpoint), then choose a model.
-2. Prompt for the key separately, persist it in the local encrypted vault, then run a local connectivity test.
+2. Prompt for the key separately and persist it in the local AES-GCM encrypted vault. The vault key is derived from a passphrase that is never persisted.
+
+Run the local workflow with `npm run configure`, `npm run pair`, then `npm run run`. Current presets implement OpenAI-compatible chat endpoints; other provider protocols require dedicated local adapters before being offered as presets.
 
 ## Completion learning journal
 
