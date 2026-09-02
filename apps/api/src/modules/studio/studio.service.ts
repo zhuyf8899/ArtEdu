@@ -65,7 +65,7 @@ export class StudioService {
       ORDER BY w.is_featured DESC, w.featured_rank NULLS LAST, w.updated_at DESC
       LIMIT $${values.length - 1} OFFSET $${values.length}
     `, values);
-    return { items: result.rows.map(this.mapWorkflow), page: query.page, pageSize: query.pageSize };
+    return { items: result.rows.map((row) => this.mapWorkflow(row)), page: query.page, pageSize: query.pageSize };
   }
 
   async getWorkflow(workflowId: string) {
