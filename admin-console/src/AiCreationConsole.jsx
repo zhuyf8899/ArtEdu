@@ -73,17 +73,6 @@ export function AiCreationConsole({ account, onCreate }) {
     </div>
 
     <form className="ai-composer" onSubmit={submit}>
-      <div className="ai-methods" role="tablist" aria-label="AI 使用方法">
-        {CREATION_METHODS.map(({ id, label, eyebrow, Icon }) => <button
-          type="button"
-          role="tab"
-          aria-selected={methodId === id}
-          className={methodId === id ? "is-active" : ""}
-          key={id}
-          onClick={() => setMethodId(id)}
-        ><Icon size={17} weight="bold" /><span><strong>{label}</strong><small>{eyebrow}</small></span></button>)}
-      </div>
-
       <div className="ai-conversation">
         <div className="ai-message ai-message--assistant">
           <span><ChatCircleDots size={17} weight="bold" /></span>
@@ -114,11 +103,24 @@ export function AiCreationConsole({ account, onCreate }) {
             >{item.name}</button>)}
           </div>
         </div>
-        <div className="ai-composer__actions">
-          <button type="button" className="ai-attach" aria-label="添加参考文件" title="添加参考文件"><Paperclip size={18} weight="bold" /></button>
-          <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending}>
-            {sending ? "创建中" : `开始${method.label}`} <ArrowUpRight size={18} weight="bold" />
-          </button>
+        <div className="ai-composer__controls">
+          <div className="ai-methods" role="tablist" aria-label="AI 使用方法">
+            {CREATION_METHODS.map(({ id, label, eyebrow, Icon }) => <button
+              type="button"
+              role="tab"
+              aria-selected={methodId === id}
+              title={eyebrow}
+              className={methodId === id ? "is-active" : ""}
+              key={id}
+              onClick={() => setMethodId(id)}
+            ><Icon size={14} weight="bold" /><strong>{label}</strong></button>)}
+          </div>
+          <div className="ai-composer__actions">
+            <button type="button" className="ai-attach" aria-label="添加参考文件" title="添加参考文件"><Paperclip size={18} weight="bold" /></button>
+            <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending}>
+              {sending ? "创建中" : "开始创作"} <ArrowUpRight size={18} weight="bold" />
+            </button>
+          </div>
         </div>
       </div>
       <div className="ai-composer__status"><ImageSquare size={14} /> 当前身份：{account.shortName} · {method.label} · {model.name}</div>

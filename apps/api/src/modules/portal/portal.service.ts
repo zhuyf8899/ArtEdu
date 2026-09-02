@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
 import type { Actor } from "../auth/auth.service";
+import type { PortalSearchQuery } from "./portal.contracts";
 
 interface CourseRow {
   id: string;
@@ -25,6 +26,17 @@ interface WorkRow {
   summary: string | null;
   discipline: string | null;
   author: string;
+}
+
+interface SearchRow {
+  id: string;
+  title: string;
+  summary: string | null;
+  category: string | null;
+  author: string | null;
+  metadata: string | null;
+  tags: string[] | null;
+  updated_at: Date;
 }
 
 @Injectable()
@@ -90,6 +102,137 @@ export class PortalService {
         discipline: row.discipline ?? "案例作品",
         author: row.author,
       })),
+    };
+  }
+
+  async search(_actor: Actor, query: PortalSearchQuery) {
+    const pattern = `%${query.query}%`;
+    const tag = query.tag ?? null;
+    const limit = 24;
+    const include = (type: PortalSearchQuery["type"]) => query.type === "all" || query.type === type;
+
+    const [courses, workflows, works] = await Promise.all([
+      include("course") ? this.database.query<SearchRow>(`
+        SELECT c.id, c.title, c.summary, c.category, creator.display_name AS author,
+          c.difficulty AS metadata,
+          ARRAY_REMOVE(ARRAY_AGG(DISTINCT tag.name), NULL) AS tags,
+          c.updated_at
+        FROM courses c
+        LEFT JOIN users creator ON creator.id = c.created_by
+        LEFT JOIN course_tags relation ON relation.course_id = c.id
+        LEFT JOIN tags tag ON tag.id = relation.tag_id
+        WHERE c.status = 'published'
+          AND (
+            c.title ILIKE $1 OR COALESCE(c.summary, '') ILIKE $1 OR
+            COALESCE(c.category, '') ILIKE $1 OR COALESCE(creator.display_name, '') ILIKE $1 OR
+            EXISTS (
+              SELECT 1 FROM course_tags search_relation
+              JOIN tags search_tag ON search_tag.id = search_relation.tag_id
+              WHERE search_relation.course_id = c.id AND search_tag.name ILIKE $1
+            )
+          )
+          AND ($2::text IS NULL OR c.category = $2 OR c.difficulty = $2 OR EXISTS (
+            SELECT 1 FROM course_tags filter_relation
+            JOIN tags filter_tag ON filter_tag.id = filter_relation.tag_id
+            WHERE filter_relation.course_id = c.id AND filter_tag.name = $2
+          ))
+        GROUP BY c.id, creator.display_name
+        ORDER BY c.is_featured DESC, c.featured_rank NULLS LAST, c.updated_at DESC
+        LIMIT $3
+      `, [pattern, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
+      include("workflow") ? this.database.query<SearchRow>(`
+        SELECT workflow.id, workflow.name AS title, workflow.description AS summary,
+          workflow.category, creator.display_name AS author, workflow.entry_type AS metadata,
+          ARRAY_REMOVE(ARRAY_AGG(DISTINCT tag.name), NULL) AS tags,
+          workflow.updated_at
+        FROM workflows workflow
+        LEFT JOIN users creator ON creator.id = workflow.created_by
+        LEFT JOIN workflow_tags relation ON relation.workflow_id = workflow.id
+        LEFT JOIN tags tag ON tag.id = relation.tag_id
+        WHERE workflow.status = 'published'
+          AND (
+            workflow.name ILIKE $1 OR COALESCE(workflow.description, '') ILIKE $1 OR
+            COALESCE(workflow.category, '') ILIKE $1 OR COALESCE(creator.display_name, '') ILIKE $1 OR
+            EXISTS (
+              SELECT 1 FROM workflow_tags search_relation
+              JOIN tags search_tag ON search_tag.id = search_relation.tag_id
+              WHERE search_relation.workflow_id = workflow.id AND search_tag.name ILIKE $1
+            )
+          )
+          AND ($2::text IS NULL OR workflow.category = $2 OR workflow.entry_type = $2 OR EXISTS (
+            SELECT 1 FROM workflow_tags filter_relation
+            JOIN tags filter_tag ON filter_tag.id = filter_relation.tag_id
+            WHERE filter_relation.workflow_id = workflow.id AND filter_tag.name = $2
+          ))
+        GROUP BY workflow.id, creator.display_name
+        ORDER BY workflow.is_featured DESC, workflow.featured_rank NULLS LAST, workflow.updated_at DESC
+        LIMIT $3
+      `, [pattern, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
+      include("work") ? this.database.query<SearchRow>(`
+        SELECT work.id, work.title, work.summary, work.discipline AS category,
+          author.display_name AS author, NULL::text AS metadata,
+          ARRAY_REMOVE(ARRAY_AGG(DISTINCT tag.name), NULL) AS tags,
+          work.updated_at
+        FROM works work
+        JOIN users author ON author.id = work.author_id
+        LEFT JOIN work_tags relation ON relation.work_id = work.id
+        LEFT JOIN tags tag ON tag.id = relation.tag_id
+        WHERE work.status = 'approved'
+          AND (
+            work.title ILIKE $1 OR COALESCE(work.summary, '') ILIKE $1 OR
+            COALESCE(work.discipline, '') ILIKE $1 OR author.display_name ILIKE $1 OR
+            EXISTS (
+              SELECT 1 FROM work_tags search_relation
+              JOIN tags search_tag ON search_tag.id = search_relation.tag_id
+              WHERE search_relation.work_id = work.id AND search_tag.name ILIKE $1
+            )
+          )
+          AND ($2::text IS NULL OR work.discipline = $2 OR author.display_name = $2 OR EXISTS (
+            SELECT 1 FROM work_tags filter_relation
+            JOIN tags filter_tag ON filter_tag.id = filter_relation.tag_id
+            WHERE filter_relation.work_id = work.id AND filter_tag.name = $2
+          ))
+        GROUP BY work.id, author.display_name
+        ORDER BY work.is_featured DESC, work.featured_rank NULLS LAST, work.updated_at DESC
+        LIMIT $3
+      `, [pattern, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
+    ]);
+
+    const items = [
+      ...courses.rows.map((row) => this.mapSearchResult("course", row)),
+      ...workflows.rows.map((row) => this.mapSearchResult("workflow", row)),
+      ...works.rows.map((row) => this.mapSearchResult("work", row)),
+    ].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    const counts = {
+      all: items.length,
+      course: courses.rows.length,
+      workflow: workflows.rows.length,
+      work: works.rows.length,
+    };
+    const availableTags = [...new Set(items.flatMap((item) => item.tags))].sort((left, right) => left.localeCompare(right, "zh-CN"));
+
+    return { query: query.query, type: query.type, tag, counts, availableTags, items };
+  }
+
+  private mapSearchResult(type: "course" | "workflow" | "work", row: SearchRow) {
+    const typeLabel = { course: "教学资源", workflow: "工作流", work: "案例社区" }[type];
+    const metadataLabel = type === "course"
+      ? ({ beginner: "入门", intermediate: "进阶", advanced: "高级" }[row.metadata ?? ""] ?? row.metadata)
+      : type === "workflow"
+        ? ({ chat: "对话式", workbench: "工作台", external_tool: "外部工具" }[row.metadata ?? ""] ?? row.metadata)
+        : null;
+    const tags = [typeLabel, row.category, metadataLabel, ...(row.tags ?? [])].filter((value): value is string => Boolean(value));
+    return {
+      id: row.id,
+      type,
+      typeLabel,
+      title: row.title,
+      summary: row.summary ?? "",
+      category: row.category ?? "未分类",
+      author: row.author ?? "ArtEdu 教学团队",
+      tags: [...new Set(tags)],
+      route: { course: "/learning", workflow: "/studio", work: "/community" }[type],
+      updatedAt: row.updated_at.toISOString(),
     };
   }
 }

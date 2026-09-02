@@ -10,6 +10,7 @@ function getRequired(name: string) {
 }
 
 async function provision() {
+  if (process.env.NODE_ENV === "production") throw new Error("Refusing to provision local passwords in production.");
   const userId = getRequired("ARTEDU_LOCAL_USER_ID");
   const password = getRequired("ARTEDU_LOCAL_USER_PASSWORD");
   if (password.length < 12 || password.length > 128) throw new Error("ARTEDU_LOCAL_USER_PASSWORD must be 12-128 characters.");
