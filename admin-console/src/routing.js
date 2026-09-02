@@ -6,6 +6,7 @@ export const portalRoutes = {
   studio: "/studio",
   community: "/community",
   myLearning: "/my-learning",
+  search: "/search",
 };
 
 export const adminRoutes = {
@@ -32,20 +33,22 @@ export function adminSectionFromPath(pathname) {
 }
 
 export function useAppRoute() {
-  const [pathname, setPathname] = useState(() => normalizePath(window.location.pathname));
+  const [location, setLocation] = useState(() => ({ pathname: normalizePath(window.location.pathname), search: window.location.search }));
 
   useEffect(() => {
-    const updatePath = () => setPathname(normalizePath(window.location.pathname));
+    const updatePath = () => setLocation({ pathname: normalizePath(window.location.pathname), search: window.location.search });
     window.addEventListener("popstate", updatePath);
     return () => window.removeEventListener("popstate", updatePath);
   }, []);
 
   const navigate = useCallback((to) => {
-    const nextPath = normalizePath(to);
-    if (nextPath === window.location.pathname) return;
-    window.history.pushState({}, "", nextPath);
-    setPathname(nextPath);
+    const nextUrl = new URL(to, window.location.origin);
+    const nextPath = normalizePath(nextUrl.pathname);
+    if (`${nextPath}${nextUrl.search}` === `${window.location.pathname}${window.location.search}`) return;
+    window.history.pushState({}, "", `${nextPath}${nextUrl.search}`);
+    setLocation({ pathname: nextPath, search: nextUrl.search });
+    window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
 
-  return { pathname, navigate };
+  return { ...location, navigate };
 }

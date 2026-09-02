@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
-  Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree,
+  MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree,
 } from "@phosphor-icons/react";
 import { createGenerationJob, getPortalHome } from "./services/adminApi.js";
 import { AiCreationConsole } from "./AiCreationConsole.jsx";
@@ -10,6 +10,7 @@ import { LearningLibrary } from "./LearningLibrary.jsx";
 import { WorkflowStudio } from "./WorkflowStudio.jsx";
 import { CommunityLibrary } from "./CommunityLibrary.jsx";
 import { MyLearning } from "./MyLearning.jsx";
+import { SearchResults } from "./SearchResults.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 
 const emptyPortalData = { courses: [], workflows: [], works: [] };
@@ -66,7 +67,7 @@ export function LocalLogin({ onLogin }) {
   </main>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [toast, setToast] = useState("");
@@ -103,19 +104,21 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   };
   const createFromConversation = ({ jobType, prompt, parameters }) => startGeneration(jobType, prompt, parameters);
 
-  const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习" }[section];
+  const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning" }[nextSection] ?? "/");
+  const navigateSearch = (query) => onNavigate(`/search?query=${encodeURIComponent(query)}`);
 
   return <div className="portal-shell">
     <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
       <nav className="portal-nav" aria-label="主导航">{navItems.map(([id, label, Icon]) => <button key={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
+      <GlobalSearchForm value={searchQuery} onSearch={navigateSearch} />
       {canEnterAdmin(account) && <button className="portal-console-shortcut" onClick={onEnterAdmin}>管理后台 <ArrowRight size={15} weight="bold" /></button>}
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "已连接 API" : "API 未连接"}</span><button className="account-switch" onClick={onSwitchAccount}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button></div>
     </header>
 
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}`}>
-      {section !== "home" && section !== "myLearning" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
+      {section !== "home" && section !== "myLearning" && section !== "search" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
         <AiCreationConsole account={account} onCreate={createFromConversation} />
@@ -133,9 +136,21 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary onNotice={showToast} /></>}
 
       {section === "myLearning" && <MyLearning account={account} onNavigate={onNavigate} onNotice={showToast} />}
+
+      {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
     </main>
     {toast && <div className="portal-toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
   </div>;
+}
+
+function GlobalSearchForm({ value, onSearch }) {
+  const [query, setQuery] = useState(value);
+  useEffect(() => setQuery(value), [value]);
+  const submit = (event) => {
+    event.preventDefault();
+    if (query.trim()) onSearch(query.trim());
+  };
+  return <form className="portal-search" onSubmit={submit}><MagnifyingGlass size={16} weight="bold" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="搜索教学资源、工作流和案例" placeholder="搜索课程、工作流、案例…" /><button aria-label="提交搜索" disabled={!query.trim()}><ArrowRight size={15} weight="bold" /></button></form>;
 }
 
 function SectionHeading({ eyebrow, title, action, onAction }) {

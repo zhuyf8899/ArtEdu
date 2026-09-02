@@ -14,7 +14,7 @@ import { adminSectionFromPath, sectionFromPath, useAppRoute } from "./routing.js
 export function App() {
   const [account, setAccount] = useState(null);
   const [ready, setReady] = useState(false);
-  const { pathname, navigate } = useAppRoute();
+  const { pathname, search, navigate } = useAppRoute();
 
   useEffect(() => {
     getCurrentUser().then((actor) => setAccount(toPortalAccount(actor))).catch(() => setAccount(null)).finally(() => setReady(true));
@@ -34,7 +34,7 @@ export function App() {
   if (!account) return <LocalLogin onLogin={signIn} />;
   if (pathname.startsWith("/admin") && !canEnterAdmin(account)) return <main className="portal-empty"><h1>无权访问管理后台</h1><p>请使用已授权的教师、运营或管理员账户登录。</p></main>;
   if (pathname.startsWith("/admin")) return <AdminDashboard actor={account} initialSection={adminSectionFromPath(pathname)} onNavigate={(section) => navigate({ overview: "/admin", users: "/admin/users", courses: "/admin/courses", workflows: "/admin/workflows", reviews: "/admin/reviews" }[section] ?? "/admin")} onBack={() => navigate("/")} />;
-  return <UserPortal account={account} section={sectionFromPath(pathname)} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
+  return <UserPortal account={account} section={sectionFromPath(pathname)} searchQuery={new URLSearchParams(search).get("query") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
 }
 
 function toPortalAccount(actor) {
