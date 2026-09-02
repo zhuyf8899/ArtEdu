@@ -28,6 +28,11 @@ export const loginLocal = (username, password) => request("/auth/login", {
 });
 export const logoutLocal = () => request("/auth/logout", { method: "POST" });
 export const getPortalHome = () => request("/portal/home");
+export const searchPortal = (query, type = "all", tag = "") => {
+  const params = new URLSearchParams({ query, type });
+  if (tag) params.set("tag", tag);
+  return request(`/portal/search?${params.toString()}`);
+};
 export const getCourses = (query = "") => request(`/courses${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getCourse = (courseId) => request(`/courses/${courseId}`);
 export const enrollCourse = (courseId) => request(`/courses/${courseId}/enroll`, { method: "POST" });
