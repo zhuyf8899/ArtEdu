@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../database/database.service";
 import { getEnvironment } from "../../common/environment";
+import { ModelRegistry } from "./model-registry";
 
 interface ClaimedJob {
   id: string;
@@ -10,6 +11,7 @@ interface ClaimedJob {
   model_config_id: string | null;
   job_type: string;
   prompt: string;
+  parameters_json: Record<string, unknown>;
 }
 
 /**
@@ -21,7 +23,10 @@ interface ClaimedJob {
 export class GenerationWorkerService {
   private readonly logger = new Logger(GenerationWorkerService.name);
 
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly modelRegistry: ModelRegistry,
+  ) {}
 
   async processOnce() {
     if (!getEnvironment().modelExecutionEnabled) {
@@ -77,14 +82,18 @@ export class GenerationWorkerService {
       SET status = 'running', started_at = CURRENT_TIMESTAMP
       FROM next_job
       WHERE job.id = next_job.id
-      RETURNING job.id, job.user_id, job.model_config_id, job.job_type, job.prompt
+      RETURNING job.id, job.user_id, job.model_config_id, job.job_type, job.prompt, job.parameters_json
     `);
     return result.rows[0];
   }
 
   private async executeJob(job: ClaimedJob) {
-    // TODO: 依据 model_config_id 解析模型配置和 secret_ref，调用 ModelProviderAdapter。
-    // TODO: 将文件上传学校 S3 兼容对象存储，并插入 generation_outputs。
-    throw new Error(`模型执行适配器尚未配置（任务类型：${job.job_type}）`);
+    const adapter = this.modelRegistry.getForJob({ jobType: job.job_type as any, modelConfigId: job.model_config_id ?? undefined });
+    return adapter.execute({
+      jobType: job.job_type as any,
+      prompt: job.prompt,
+      parameters: job.parameters_json ?? {},
+      modelConfigId: job.model_config_id,
+    });
   }
 }

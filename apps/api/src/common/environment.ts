@@ -12,6 +12,9 @@ const environmentSchema = z.object({
   ENABLE_FILE_UPLOADS: z.enum(["true", "false"]).default("false"),
   UPLOAD_ROOT: z.string().trim().min(1).optional(),
   MODEL_EXECUTION_ENABLED: z.enum(["true", "false"]).default("false"),
+  MODEL_PROVIDERS_JSON: z.string().optional(),
+  AGENT_ALERT_KEYWORDS: z.string().optional(),
+  AGENT_BLOCK_KEYWORDS: z.string().optional(),
 });
 
 export interface Environment {
@@ -25,6 +28,9 @@ export interface Environment {
   fileUploadsEnabled: boolean;
   uploadRoot: string;
   modelExecutionEnabled: boolean;
+  modelProvidersJson?: string;
+  agentAlertKeywords: string[];
+  agentBlockedKeywords: string[];
 }
 
 export function getEnvironment(): Environment {
@@ -73,5 +79,12 @@ export function getEnvironment(): Environment {
     fileUploadsEnabled: parsed.ENABLE_FILE_UPLOADS === "true",
     uploadRoot,
     modelExecutionEnabled: parsed.MODEL_EXECUTION_ENABLED === "true",
+    modelProvidersJson: parsed.MODEL_PROVIDERS_JSON,
+    agentAlertKeywords: splitKeywords(parsed.AGENT_ALERT_KEYWORDS),
+    agentBlockedKeywords: splitKeywords(parsed.AGENT_BLOCK_KEYWORDS),
   };
+}
+
+function splitKeywords(value?: string) {
+  return (value ?? "").split(",").map((keyword) => keyword.trim()).filter(Boolean);
 }

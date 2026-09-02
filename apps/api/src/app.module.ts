@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { AdminModule } from "./modules/admin/admin.module";
+import { AgentModule } from "./modules/agent/agent.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CoursesModule } from "./modules/courses/courses.module";
 import { DatabaseModule } from "./modules/database/database.module";
@@ -12,7 +13,7 @@ import { StudioModule } from "./modules/studio/studio.module";
 import { AuthenticationGuard } from "./modules/auth/authentication.guard";
 
 @Module({
-  imports: [DatabaseModule, AuthModule, AdminModule, CoursesModule, GenerationModule, LearningModule, PortalModule, StudioModule],
+  imports: [DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, GenerationModule, LearningModule, PortalModule, StudioModule],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: AuthenticationGuard }],
 })

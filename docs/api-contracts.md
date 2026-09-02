@@ -13,6 +13,17 @@
 | works | `/works`、`/me/works` | 已实现第一阶段 | 对象存储直传、媒体转码 |
 | admin | `/admin` | 用户、额度、作品审核、课程 CMS 与发布审核 | 资源上传、模型配置管理 |
 | generation-jobs | `/generation-jobs` | 排队和查询 | 模型执行、输出文件、取消与重试 |
+| agent-runs | `/agent-runs` | 已实现基础 Contract 与 mock/local Harness | Local Bridge 配对、结果回传、异步队列与专用适配器 |
+
+## Agent Run Contract
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| POST | `/api/agent-runs` | 创建 UI 创作、网页生成或图案生成任务；输入命中关键词时生成审计与管理员告警。 |
+| POST | `/api/agent-runs/:runId/execute` | 领取一次 Run；默认 local 模式只向本地 Bridge 派发，无密钥上传云端。 |
+| GET | `/api/agent-runs/me` | 查询当前用户最近 50 次任务。 |
+| GET | `/api/agent-runs/:runId` | 查询完整任务档案：消息、工具调用、成果、扫描结果及告警。 |
+| GET | `/api/admin/agent-alerts` | 管理员读取未处理的关键词安全告警。 |
 
 ## 约定
 

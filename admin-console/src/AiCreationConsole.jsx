@@ -43,6 +43,7 @@ export function AiCreationConsole({ account, onCreate }) {
   const [modelId, setModelId] = useState("gpt-4o");
   const [prompt, setPrompt] = useState("");
   const [sending, setSending] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [reply, setReply] = useState("先选择创作方法与模型，再描述你的想法。我会把它整理成可继续执行的创作任务。");
 
   const method = useMemo(() => CREATION_METHODS.find((item) => item.id === methodId) ?? CREATION_METHODS[0], [methodId]);
@@ -53,6 +54,7 @@ export function AiCreationConsole({ account, onCreate }) {
     const content = prompt.trim();
     if (!content || sending) return;
     setSending(true);
+    setFailed(false);
     setReply(`正在用 ${model.name} 整理“${method.label}”任务，并写入生成队列……`);
     const result = await onCreate({
       jobType: method.jobType,
@@ -62,6 +64,7 @@ export function AiCreationConsole({ account, onCreate }) {
     setReply(result
       ? `任务 ${result.id.slice(0, 8)} 已创建。你可以继续补充风格、受众或输出尺寸。`
       : "创作请求已记录为演示状态；连接生成服务后即可执行完整任务。");
+    setFailed(!result);
     setSending(false);
   };
 
@@ -87,7 +90,7 @@ export function AiCreationConsole({ account, onCreate }) {
       <div className="ai-conversation">
         <div className="ai-message ai-message--assistant">
           <span><ChatCircleDots size={17} weight="bold" /></span>
-          <p>{reply}</p>
+          <div><p>{reply}</p>{failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div>
         </div>
         <label htmlFor="artedu-ai-prompt" className="sr-only">描述你的创作想法</label>
         <textarea
