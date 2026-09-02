@@ -26,8 +26,8 @@ function decorateCourse(course) {
   };
 }
 
-export function LearningLibrary({ fallbackCourses, onNotice }) {
-  const [courses, setCourses] = useState(fallbackCourses);
+export function LearningLibrary({ onNotice }) {
+  const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const [methodFilter, setMethodFilter] = useState("全部");
@@ -35,8 +35,8 @@ export function LearningLibrary({ fallbackCourses, onNotice }) {
   const [toolFilter, setToolFilter] = useState("全部工具");
 
   useEffect(() => {
-    getCourses().then((payload) => setCourses(payload.items?.length ? payload.items : fallbackCourses)).catch(() => {});
-  }, [fallbackCourses]);
+    getCourses().then((payload) => setCourses(payload.items ?? [])).catch((error) => onNotice(error.message));
+  }, []);
 
   const openCourse = async (courseId) => {
     setLoading(true);

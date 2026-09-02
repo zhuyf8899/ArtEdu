@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
@@ -8,6 +8,7 @@ import {
   workflowInputSchema,
   workflowRunInputSchema,
   workflowRunProgressSchema,
+  workflowUpdateSchema,
   workflowVersionInputSchema,
   workInputSchema,
 } from "./studio.contracts";
@@ -34,6 +35,21 @@ export class StudioController {
   @Post("workflows")
   async createWorkflow(@Req() request: FastifyRequest, @Body() body: unknown) {
     return this.studio.createWorkflow(await this.auth.getActor(request), parseInput(workflowInputSchema, body) as WorkflowInput);
+  }
+
+  @Get("admin/workflows")
+  async listManagedWorkflows(@Req() request: FastifyRequest, @Query() query: unknown) {
+    return this.studio.listManagedWorkflows(await this.auth.getActor(request), parseInput(catalogQuerySchema, query) as CatalogQuery);
+  }
+
+  @Get("admin/workflows/:workflowId")
+  async getManagedWorkflow(@Req() request: FastifyRequest, @Param("workflowId") workflowId: string) {
+    return this.studio.getManagedWorkflow(await this.auth.getActor(request), workflowId);
+  }
+
+  @Put("admin/workflows/:workflowId")
+  async updateWorkflow(@Req() request: FastifyRequest, @Param("workflowId") workflowId: string, @Body() body: unknown) {
+    return this.studio.updateWorkflow(await this.auth.getActor(request), workflowId, parseInput(workflowUpdateSchema, body));
   }
 
   @Post("workflows/:workflowId/versions")

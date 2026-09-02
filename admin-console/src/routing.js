@@ -12,6 +12,7 @@ export const adminRoutes = {
   overview: "/admin",
   users: "/admin/users",
   courses: "/admin/courses",
+  workflows: "/admin/workflows",
   reviews: "/admin/reviews",
 };
 

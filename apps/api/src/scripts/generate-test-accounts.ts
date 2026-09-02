@@ -1,20 +1,20 @@
 import "dotenv/config";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { hashLocalPassword } from "../modules/auth/password";
 import { withDatabase } from "./run-sql-file";
 
 const accounts = [
-  { id: "user-student-demo", username: "student.demo", displayName: "测试学生", email: "student.demo@example.test", role: "student", roleId: "role-student" },
-  { id: "user-teacher-demo", username: "teacher.demo", displayName: "测试教师", email: "teacher.demo@example.test", role: "teacher", roleId: "role-teacher" },
-  { id: "user-operator-demo", username: "operator.demo", displayName: "测试运营", email: "operator.demo@example.test", role: "operator", roleId: "role-operator" },
-  { id: "user-admin-demo", username: "admin.demo", displayName: "测试管理员", email: "admin.demo@example.test", role: "admin", roleId: "role-admin" },
+  { id: "user-student-demo", username: "student.demo", password: "123456", displayName: "测试学生", email: "student.demo@example.test", role: "student", roleId: "role-student" },
+  { id: "user-teacher-demo", username: "teacher.demo", password: "123456", displayName: "测试教师", email: "teacher.demo@example.test", role: "teacher", roleId: "role-teacher" },
+  { id: "user-operator-demo", username: "operator.demo", password: "123456", displayName: "测试运营", email: "operator.demo@example.test", role: "operator", roleId: "role-operator" },
+  { id: "user-admin-demo", username: "admin.demo", password: "123456", displayName: "测试管理员", email: "admin.demo@example.test", role: "admin", roleId: "role-admin" },
 ] as const;
 
 async function generate() {
   if (process.env.NODE_ENV === "production") throw new Error("Refusing to generate test accounts in production.");
   if (process.env.ARTEDU_ALLOW_TEST_ACCOUNTS !== "true") throw new Error("Set ARTEDU_ALLOW_TEST_ACCOUNTS=true to generate test accounts.");
 
-  const credentials = accounts.map((account) => ({ ...account, password: randomBytes(24).toString("base64url") }));
+  const credentials = accounts;
   await withDatabase(async (pool) => {
     await pool.query("BEGIN");
     try {
@@ -45,7 +45,7 @@ async function generate() {
     }
   });
 
-  console.log("Test accounts generated. Store these passwords in your approved test credential vault:");
+  console.log("Fixed local test accounts provisioned. Never use these credentials outside local development:");
   for (const account of credentials) console.log(`${account.role}\t${account.username}\t${account.password}`);
 }
 

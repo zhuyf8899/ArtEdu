@@ -54,7 +54,7 @@ export class StudioService {
     const result = await this.database.query(`
       SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url,
         latest.id AS version_id, latest.version_number, latest.definition_json,
-        COALESCE(jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
+        COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN LATERAL (
         SELECT id, version_number, definition_json FROM workflow_versions
@@ -72,7 +72,7 @@ export class StudioService {
     const result = await this.database.query(`
       SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url,
         latest.id AS version_id, latest.version_number, latest.definition_json, latest.prompt_template,
-        COALESCE(jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
+        COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN LATERAL (
         SELECT * FROM workflow_versions WHERE workflow_id = w.id AND published_at IS NOT NULL
@@ -94,22 +94,98 @@ export class StudioService {
     return { id, ...input, status: "draft" };
   }
 
+  async listManagedWorkflows(actor: Actor, query: CatalogQuery) {
+    this.auth.requireAnyRole(actor, ["admin", "teacher"]);
+    const values: unknown[] = [];
+    const where = ["1=1"];
+    if (!actor.roles.includes("admin")) {
+      values.push(actor.id);
+      where.push(`w.created_by = $${values.length}`);
+    }
+    if (query.query) {
+      values.push(`%${query.query}%`);
+      where.push(`(w.name ILIKE $${values.length} OR COALESCE(w.description, '') ILIKE $${values.length})`);
+    }
+    values.push(query.pageSize, (query.page - 1) * query.pageSize);
+    const result = await this.database.query(`
+      SELECT w.id,w.name,w.description,w.category,w.entry_type,w.entry_url,w.status,w.created_by,
+        w.created_at,w.updated_at,creator.display_name AS creator_name,
+        latest.id AS version_id,latest.version_number,latest.definition_json,latest.prompt_template,
+        latest.published_at,
+        COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
+      FROM workflows w
+      LEFT JOIN users creator ON creator.id = w.created_by
+      LEFT JOIN LATERAL (
+        SELECT * FROM workflow_versions WHERE workflow_id = w.id
+        ORDER BY version_number DESC LIMIT 1
+      ) latest ON TRUE
+      WHERE ${where.join(" AND ")}
+      ORDER BY w.updated_at DESC
+      LIMIT $${values.length - 1} OFFSET $${values.length}
+    `, values);
+    return { items: result.rows.map((row) => this.mapManagedWorkflow(row)), page: query.page, pageSize: query.pageSize };
+  }
+
+  async getManagedWorkflow(actor: Actor, workflowId: string) {
+    this.auth.requireAnyRole(actor, ["admin", "teacher"]);
+    const workflow = await this.database.query(`
+      SELECT w.*, creator.display_name AS creator_name
+      FROM workflows w LEFT JOIN users creator ON creator.id = w.created_by
+      WHERE w.id = $1
+    `, [workflowId]);
+    if (!workflow.rows[0]) throw new NotFoundException("工作流不存在");
+    this.requireWorkflowAccess(actor, workflow.rows[0].created_by);
+    const versions = await this.database.query(`
+      SELECT id,version_number,definition_json,prompt_template,published_at,created_at
+      FROM workflow_versions WHERE workflow_id = $1 ORDER BY version_number DESC
+    `, [workflowId]);
+    return { ...this.mapManagedWorkflow(workflow.rows[0]), versions: versions.rows.map((version) => {
+      const definition = this.normalizeWorkflowDefinition(version.definition_json);
+      return {
+        id: version.id,
+        versionNumber: version.version_number,
+        definition,
+        nodes: definition.nodes,
+        edges: definition.edges,
+        steps: this.definitionToSteps(definition),
+        promptTemplate: version.prompt_template ?? "",
+        published: Boolean(version.published_at),
+        createdAt: version.created_at,
+      };
+    }) };
+  }
+
+  async updateWorkflow(actor: Actor, workflowId: string, input: Partial<WorkflowInput>) {
+    this.auth.requireAnyRole(actor, ["admin", "teacher"]);
+    const current = await this.database.query<{ created_by: string; status: string }>("SELECT created_by,status FROM workflows WHERE id=$1", [workflowId]);
+    if (!current.rows[0]) throw new NotFoundException("工作流不存在");
+    this.requireWorkflowAccess(actor, current.rows[0].created_by);
+    if (current.rows[0].status === "archived") throw new ConflictException("已归档工作流不能编辑");
+    const fields = Object.entries(input).filter(([, value]) => value !== undefined);
+    if (!fields.length) return this.getManagedWorkflow(actor, workflowId);
+    const values = fields.map(([, value]) => value === "" ? null : value);
+    const assignments = fields.map(([key], index) => `${this.workflowColumn(key)}=$${index + 2}`);
+    await this.database.query(`UPDATE workflows SET ${assignments.join(",")},updated_at=CURRENT_TIMESTAMP WHERE id=$1`, [workflowId, ...values]);
+    return this.getManagedWorkflow(actor, workflowId);
+  }
+
   async createWorkflowVersion(actor: Actor, workflowId: string, input: WorkflowVersionInput) {
     this.auth.requireAnyRole(actor, ["admin", "teacher"]);
     const workflow = await this.database.query<{ created_by: string }>("SELECT created_by FROM workflows WHERE id = $1", [workflowId]);
     if (!workflow.rows[0]) throw new NotFoundException("工作流不存在");
     if (!actor.roles.includes("admin") && workflow.rows[0].created_by !== actor.id) throw new ForbiddenException("只能编辑自己创建的工作流");
+    const definition = input.definition ?? this.legacyStepsToDefinition(input.steps ?? []);
     const version = await this.database.transaction(async (client) => {
       const next = await client.query<{ number: number }>("SELECT COALESCE(MAX(version_number), 0)::int + 1 AS number FROM workflow_versions WHERE workflow_id = $1", [workflowId]);
       const id = `workflow-version-${randomUUID()}`;
       await client.query(`
         INSERT INTO workflow_versions (id, workflow_id, version_number, definition_json, prompt_template, published_at, created_by)
         VALUES ($1,$2,$3,$4::jsonb,$5,CASE WHEN $6 THEN CURRENT_TIMESTAMP ELSE NULL END,$7)
-      `, [id, workflowId, next.rows[0].number, JSON.stringify({ steps: input.steps }), input.promptTemplate ?? null, input.publish, actor.id]);
+      `, [id, workflowId, next.rows[0].number, JSON.stringify(definition), input.promptTemplate ?? null, input.publish, actor.id]);
       if (input.publish) await client.query("UPDATE workflows SET status = 'published', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [workflowId]);
       return { id, versionNumber: next.rows[0].number, published: input.publish };
     });
-    return { ...version, steps: input.steps };
+    return { ...version, definition, nodes: definition.nodes, edges: definition.edges, steps: this.definitionToSteps(definition) };
   }
 
   async startWorkflow(actor: Actor, workflowId: string, input: WorkflowRunInput) {
@@ -326,12 +402,85 @@ export class StudioService {
   }
 
   private mapWorkflow(row: Record<string, any>) {
-    const definition = row.definition_json ?? { steps: [] };
-    return { id: row.id, name: row.name, description: row.description, category: row.category, entryType: row.entry_type, entryUrl: row.entry_url, versionId: row.version_id, versionNumber: row.version_number, stepCount: Number(row.step_count ?? definition.steps?.length ?? 0), steps: definition.steps ?? [], promptTemplate: row.prompt_template ?? "" };
+    const definition = this.normalizeWorkflowDefinition(row.definition_json);
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      category: row.category,
+      entryType: row.entry_type,
+      entryUrl: row.entry_url,
+      versionId: row.version_id,
+      versionNumber: row.version_number,
+      stepCount: Number(row.step_count ?? definition.nodes.length),
+      definition,
+      nodes: definition.nodes,
+      edges: definition.edges,
+      steps: this.definitionToSteps(definition),
+      promptTemplate: row.prompt_template ?? "",
+    };
+  }
+
+  private normalizeWorkflowDefinition(definition: Record<string, any> | null | undefined) {
+    if (Array.isArray(definition?.nodes)) {
+      return {
+        schemaVersion: 2,
+        nodes: definition.nodes,
+        edges: Array.isArray(definition.edges) ? definition.edges : [],
+        viewport: definition.viewport ?? { x: 0, y: 0, zoom: 1 },
+      };
+    }
+    return this.legacyStepsToDefinition(Array.isArray(definition?.steps) ? definition.steps : []);
+  }
+
+  private legacyStepsToDefinition(steps: Array<Record<string, any>>) {
+    const nodes = steps.map((step, index) => ({
+      id: step.id || `legacy-step-${index + 1}`,
+      type: "note",
+      position: { x: 90 + index * 270, y: 180 },
+      data: { label: step.title || `步骤 ${index + 1}`, description: step.description ?? "", value: step.instruction ?? "", estimatedMinutes: step.estimatedMinutes ?? 10 },
+    }));
+    const edges = nodes.slice(1).map((node, index) => ({ id: `legacy-edge-${index + 1}`, source: nodes[index].id, sourceHandle: "output", target: node.id, targetHandle: "input" }));
+    return { schemaVersion: 2, nodes, edges, viewport: { x: 0, y: 0, zoom: 1 } };
+  }
+
+  private definitionToSteps(definition: { nodes: Array<Record<string, any>> }) {
+    return definition.nodes.map((node, index) => ({
+      id: node.id,
+      title: node.data?.label ?? `节点 ${index + 1}`,
+      description: node.data?.description ?? "",
+      instruction: node.data?.value ?? "",
+      estimatedMinutes: Number(node.data?.estimatedMinutes ?? 10),
+    }));
+  }
+
+  private mapManagedWorkflow(row: Record<string, any>) {
+    const mapped = this.mapWorkflow(row);
+    return {
+      ...mapped,
+      status: row.status,
+      creatorId: row.created_by,
+      creatorName: row.creator_name ?? "平台",
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      publishedAt: row.published_at,
+    };
+  }
+
+  private requireWorkflowAccess(actor: Actor, creatorId: string | null) {
+    if (!actor.roles.includes("admin") && creatorId !== actor.id) throw new ForbiddenException("只能管理自己创建的工作流");
+  }
+
+  private workflowColumn(key: string) {
+    const columns: Record<string, string> = { name: "name", description: "description", category: "category", entryType: "entry_type", entryUrl: "entry_url" };
+    const column = columns[key];
+    if (!column) throw new BadRequestException("包含不支持的工作流字段");
+    return column;
   }
 
   private mapRun(row: Record<string, any>) {
-    return { id: row.id, workflowId: row.workflow_id, workflowName: row.workflow_name, category: row.category, status: row.status, currentStep: Number(row.current_step), totalSteps: Number(row.total_steps), context: row.context_json ?? {}, steps: row.definition_json?.steps ?? [], startedAt: row.started_at, completedAt: row.completed_at, updatedAt: row.updated_at };
+    const definition = this.normalizeWorkflowDefinition(row.definition_json);
+    return { id: row.id, workflowId: row.workflow_id, workflowName: row.workflow_name, category: row.category, status: row.status, currentStep: Number(row.current_step), totalSteps: Number(row.total_steps), context: row.context_json ?? {}, definition, nodes: definition.nodes, edges: definition.edges, steps: this.definitionToSteps(definition), startedAt: row.started_at, completedAt: row.completed_at, updatedAt: row.updated_at };
   }
 
   private mapWork(row: WorkRow) {

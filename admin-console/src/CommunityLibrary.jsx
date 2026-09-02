@@ -4,8 +4,8 @@ import { addWorkComment, createWork, getMyWorks, getWork, getWorkflows, getWorks
 
 const emptyForm = { title: "", summary: "", discipline: "视觉传达", tags: "", workflowId: "" };
 
-export function CommunityLibrary({ fallbackWorks, onNotice }) {
-  const [works, setWorks] = useState(fallbackWorks);
+export function CommunityLibrary({ onNotice }) {
+  const [works, setWorks] = useState([]);
   const [myWorks, setMyWorks] = useState([]);
   const [workflows, setWorkflows] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -17,12 +17,12 @@ export function CommunityLibrary({ fallbackWorks, onNotice }) {
 
   const refresh = async () => {
     const [catalog, mine, workflowCatalog] = await Promise.all([getWorks(), getMyWorks(), getWorkflows()]);
-    if (catalog.items?.length) setWorks(catalog.items);
+    setWorks(catalog.items ?? []);
     setMyWorks(mine.items ?? []);
     setWorkflows(workflowCatalog.items ?? []);
   };
 
-  useEffect(() => { refresh().catch(() => {}); }, []);
+  useEffect(() => { refresh().catch((error) => onNotice(error.message)); }, []);
 
   const openWork = async (work) => {
     setLoading(true);

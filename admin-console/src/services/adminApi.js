@@ -20,6 +20,7 @@ async function request(path, options = {}) {
 
 export const getAdminUsers = () => request("/admin/users");
 export const getAdminReviews = () => request("/admin/reviews");
+export const getAdminDashboard = () => request("/admin/dashboard");
 export const getCurrentUser = () => request("/auth/me");
 export const loginLocal = (username, password) => request("/auth/login", {
   method: "POST",
@@ -79,6 +80,11 @@ export const createGenerationJob = (input) => request("/generation-jobs", {
 
 export const getWorkflows = (query = "") => request(`/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getWorkflow = (workflowId) => request(`/workflows/${workflowId}`);
+export const getAdminWorkflows = (query = "") => request(`/admin/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
+export const getAdminWorkflow = (workflowId) => request(`/admin/workflows/${workflowId}`);
+export const createWorkflow = (input) => request("/workflows", { method: "POST", body: JSON.stringify(input) });
+export const updateWorkflow = (workflowId, input) => request(`/admin/workflows/${workflowId}`, { method: "PUT", body: JSON.stringify(input) });
+export const createWorkflowVersion = (workflowId, input) => request(`/workflows/${workflowId}/versions`, { method: "POST", body: JSON.stringify(input) });
 export const startWorkflowRun = (workflowId, context = {}) => request(`/workflows/${workflowId}/runs`, {
   method: "POST",
   body: JSON.stringify({ context }),

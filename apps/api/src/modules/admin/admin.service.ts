@@ -15,11 +15,24 @@ export class AdminService {
 
   async getDashboard(actor: Actor) {
     this.authService.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
-    const [users, reviews] = await Promise.all([this.repository.listUsers(), this.repository.listReviews()]);
+    const [users, reviews, stats] = await Promise.all([
+      this.repository.listUsers(),
+      this.repository.listReviews(),
+      this.database.query<{ monthly_api_calls: number; today_api_calls: number; active_models: number }>(`
+        SELECT
+          (SELECT COUNT(*)::int FROM usage_records WHERE created_at >= date_trunc('month', CURRENT_TIMESTAMP) AND status = 'success') AS monthly_api_calls,
+          (SELECT COUNT(*)::int FROM usage_records WHERE created_at >= date_trunc('day', CURRENT_TIMESTAMP) AND status = 'success') AS today_api_calls,
+          (SELECT COUNT(*)::int FROM model_configs WHERE status = 'active') AS active_models
+      `),
+    ]);
+    const usage = stats.rows[0] ?? { monthly_api_calls: 0, today_api_calls: 0, active_models: 0 };
     return {
       users: users.length,
       pendingReviews: reviews.filter((review) => review.status === "pending").length,
       quotaExhaustedUsers: users.filter((user) => user.quotaStatus === "exhausted").length,
+      monthlyApiCalls: Number(usage.monthly_api_calls),
+      todayApiCalls: Number(usage.today_api_calls),
+      activeModels: Number(usage.active_models),
     };
   }
 
