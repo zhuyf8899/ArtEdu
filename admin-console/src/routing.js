@@ -15,6 +15,7 @@ export const adminRoutes = {
   courses: "/admin/courses",
   workflows: "/admin/workflows",
   reviews: "/admin/reviews",
+  bridges: "/admin/bridges",
 };
 
 export function normalizePath(pathname) {

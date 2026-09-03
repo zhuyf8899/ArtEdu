@@ -20,7 +20,16 @@ export function readModelProviderConfigs(raw = process.env.MODEL_PROVIDERS_JSON)
   } catch {
     throw new Error("MODEL_PROVIDERS_JSON 必须是合法 JSON 数组");
   }
-  return z.array(providerSchema).parse(value);
+  const configs = z.array(providerSchema).parse(value);
+  if ((process.env.NODE_ENV ?? "development") === "production") {
+    for (const config of configs) {
+      const url = new URL(config.baseUrl);
+      if (url.protocol !== "https:" || url.username || url.password) {
+        throw new Error(`生产环境模型地址必须使用无凭据 HTTPS: ${config.id}`);
+      }
+    }
+  }
+  return configs;
 }
 
 function toMessages(request: ModelRequest): ModelMessage[] {

@@ -9,6 +9,7 @@ const environmentSchema = z.object({
   ENABLE_LOCAL_AUTH: z.enum(["true", "false"]).default("false"),
   LOCAL_SESSION_DAYS: z.coerce.number().int().min(1).max(30).default(7),
   LOCAL_SESSION_IDLE_HOURS: z.coerce.number().int().min(1).max(24).default(12),
+  LOCAL_BRIDGE_TOKEN_DAYS: z.coerce.number().int().min(1).max(90).default(30),
   ENABLE_FILE_UPLOADS: z.enum(["true", "false"]).default("false"),
   UPLOAD_ROOT: z.string().trim().min(1).optional(),
   MODEL_EXECUTION_ENABLED: z.enum(["true", "false"]).default("false"),
@@ -25,6 +26,7 @@ export interface Environment {
   localAuthenticationEnabled: boolean;
   localSessionDays: number;
   localSessionIdleHours: number;
+  localBridgeTokenDays: number;
   fileUploadsEnabled: boolean;
   uploadRoot: string;
   modelExecutionEnabled: boolean;
@@ -76,6 +78,7 @@ export function getEnvironment(): Environment {
     localAuthenticationEnabled: parsed.ENABLE_LOCAL_AUTH === "true",
     localSessionDays: parsed.LOCAL_SESSION_DAYS,
     localSessionIdleHours: parsed.LOCAL_SESSION_IDLE_HOURS,
+    localBridgeTokenDays: parsed.LOCAL_BRIDGE_TOKEN_DAYS,
     fileUploadsEnabled: parsed.ENABLE_FILE_UPLOADS === "true",
     uploadRoot,
     modelExecutionEnabled: parsed.MODEL_EXECUTION_ENABLED === "true",

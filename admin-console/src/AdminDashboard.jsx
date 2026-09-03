@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, Bell, CaretDown, ChartBar, Check, Clock, Coins, Eye,
   BookOpenText, CirclesThreePlus, FileImage, Gauge, List, MagnifyingGlass, Robot, ShieldCheck,
-  SlidersHorizontal, Sparkle, Users, Warning, WarningCircle, X,
+  PlugsConnected, SlidersHorizontal, Sparkle, Users, Warning, WarningCircle, X,
 } from "@phosphor-icons/react";
 import {
   getAdminDashboard,
@@ -14,6 +14,7 @@ import {
 } from "./services/adminApi.js";
 import { AdminCourses } from "./AdminCourses.jsx";
 import { WorkflowAdmin } from "./WorkflowAdmin.jsx";
+import { BridgeDevices } from "./BridgeDevices.jsx";
 
 const navItems = [
   { id: "overview", label: "总览", icon: ChartBar },
@@ -21,6 +22,7 @@ const navItems = [
   { id: "courses", label: "课程资源", icon: BookOpenText },
   { id: "workflows", label: "工作流管理", icon: CirclesThreePlus },
   { id: "reviews", label: "作品审核", icon: ShieldCheck },
+  { id: "bridges", label: "本地 Bridge", icon: PlugsConnected },
 ];
 
 const statusLabel = { active: "正常", limited: "额度用尽", suspended: "已停用" };
@@ -46,7 +48,7 @@ function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items,
 }
 
 function Topbar({ section, onOpenMenu, actor, onBack }) {
-  const titles = { overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], courses: ["课程资源", "创建课程、配置课时并完成发布审核"], workflows: ["工作流管理", "创建教学与创作路径，编辑版本并发布到学生端"], reviews: ["作品审核", "审核用户提交到资源库的作品与案例"] };
+  const titles = { overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], courses: ["课程资源", "创建课程、配置课时并完成发布审核"], workflows: ["工作流管理", "创建教学与创作路径，编辑版本并发布到学生端"], reviews: ["作品审核", "审核用户提交到资源库的作品与案例"], bridges: ["本地 Bridge", "管理本机模型执行器与访问令牌"] };
   return <header className="topbar">
     <button className="icon-button menu-button" onClick={onOpenMenu} aria-label="打开导航"><List size={22} weight="bold" /></button>
     <div className="topbar__title"><p>// CONTROL CENTER</p><div><strong>{titles[section][0]}</strong><span>{titles[section][1]}</span></div></div>
@@ -143,5 +145,5 @@ export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSe
   const saveQuota = async (id, values) => { try { const updated = await updateUserQuota(id, values); setUsers((current) => current.map((user) => user.id === id ? updated : user)); setQuotaUser(null); showToast("API 额度策略已更新"); } catch (error) { showToast(error.message); } };
   const toggleUserStatus = async (target) => { const status = target.status === "suspended" ? "active" : "suspended"; try { const updated = await updateUserStatus(target.id, status); setUsers((current) => current.map((user) => user.id === target.id ? updated : user)); showToast(status === "active" ? "用户账户已重新启用" : "用户账户已停用"); } catch (error) { showToast(error.message); } };
   const decideReview = async (id, status, note) => { try { const updated = await reviewSubmission(id, { status, note }); setReviews((current) => current.map((item) => item.id === id ? updated : item)); setSelectedReview(null); showToast(status === "approved" ? "作品已通过并发布到资源库" : "作品已驳回并退回作者修改"); } catch (error) { showToast(error.message); } };
-  return <div className="admin-shell"><Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} dashboard={dashboard} /><div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} /><main>{section === "overview" && <Overview users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} onEditQuota={setQuotaUser} />}{section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} />}{section === "courses" && <AdminCourses showToast={showToast} />}{section === "workflows" && <WorkflowAdmin showToast={showToast} />}{section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}</main></div><QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} /><ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} /><Toast notice={toast} /></div>;
+  return <div className="admin-shell"><Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} dashboard={dashboard} /><div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} /><main>{section === "overview" && <Overview users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} onEditQuota={setQuotaUser} />}{section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} />}{section === "courses" && <AdminCourses showToast={showToast} />}{section === "workflows" && <WorkflowAdmin showToast={showToast} />}{section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}{section === "bridges" && <BridgeDevices showToast={showToast} />}</main></div><QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} /><ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} /><Toast notice={toast} /></div>;
 }

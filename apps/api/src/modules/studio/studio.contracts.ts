@@ -13,7 +13,14 @@ export const workflowInputSchema = z.object({
   description: z.string().trim().min(2).max(2000),
   category: z.string().trim().min(1).max(100),
   entryType: z.enum(["chat", "workbench", "external_tool"]).default("chat"),
-  entryUrl: z.string().trim().max(1000).optional(),
+  entryUrl: z.string().trim().max(1000).refine((value) => {
+    try {
+      const url = new URL(value);
+      return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
+    } catch {
+      return false;
+    }
+  }, "入口地址必须是无凭据的 HTTP(S) 地址").optional(),
 });
 
 export const workflowUpdateSchema = workflowInputSchema.partial();

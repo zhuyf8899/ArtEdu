@@ -34,6 +34,8 @@ export const getAdminUsers = () => request("/admin/users");
 export const getAdminReviews = () => request("/admin/reviews");
 export const getAdminDashboard = () => request("/admin/dashboard");
 export const getCurrentUser = () => request("/auth/me");
+export const getBridgeDevices = () => request("/local-bridge/status");
+export const revokeBridgeDevice = (deviceId) => request(`/local-bridge/${encodeURIComponent(deviceId)}`, { method: "DELETE" });
 export const loginLocal = (username, password) => request("/auth/login", {
   method: "POST",
   body: JSON.stringify({ username, password }),

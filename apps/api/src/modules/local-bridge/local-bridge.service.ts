@@ -1,10 +1,11 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { DatabaseService } from "../database/database.service";
 import type { Actor } from "../auth/auth.service";
 import { AgentService } from "../agent/agent.service";
+import { getEnvironment } from "../../common/environment";
 
-interface DeviceRow { id: string; user_id: string; status: "active" | "revoked"; }
+interface DeviceRow { id: string; user_id: string; status: "active" | "revoked"; expires_at: Date; }
 
 @Injectable()
 export class LocalBridgeService {
@@ -12,7 +13,8 @@ export class LocalBridgeService {
   async pair(actor: Actor, displayName: string) {
     const token = randomBytes(32).toString("base64url");
     const deviceId = `bridge-${randomUUID()}`;
-    await this.database.query(`INSERT INTO local_bridge_devices (id,user_id,display_name,token_hash) VALUES ($1,$2,$3,$4)`, [deviceId, actor.id, displayName, this.hash(token)]);
+    const expiresAt = new Date(Date.now() + getEnvironment().localBridgeTokenDays * 24 * 60 * 60 * 1000);
+    await this.database.query(`INSERT INTO local_bridge_devices (id,user_id,display_name,token_hash,expires_at) VALUES ($1,$2,$3,$4,$5)`, [deviceId, actor.id, displayName, this.hash(token), expiresAt]);
     return { deviceId, token, warning: "配对令牌仅本次返回；请立即交给本地 Bridge，勿保存到云端或截图分享。" };
   }
   async claim(authorization?: string) {
@@ -22,9 +24,14 @@ export class LocalBridgeService {
   }
   async heartbeat(authorization?: string) { const device = await this.authenticate(authorization); await this.touch(device.id); return { ok: true, deviceId: device.id }; }
   async status(actor: Actor) {
-    const result = await this.database.query<{ id: string; display_name: string; last_seen_at: Date | null }>("SELECT id,display_name,last_seen_at FROM local_bridge_devices WHERE user_id=$1 AND status='active' ORDER BY created_at DESC", [actor.id]);
+    const result = await this.database.query<{ id: string; display_name: string; last_seen_at: Date | null; expires_at: Date }>("SELECT id,display_name,last_seen_at,expires_at FROM local_bridge_devices WHERE user_id=$1 AND status='active' AND expires_at>CURRENT_TIMESTAMP ORDER BY created_at DESC", [actor.id]);
     const now = Date.now();
-    return { items: result.rows.map((row) => ({ id: row.id, displayName: row.display_name, lastSeenAt: row.last_seen_at?.toISOString() ?? null, status: row.last_seen_at && now - row.last_seen_at.getTime() <= 45_000 ? "online" : "offline" })) };
+    return { items: result.rows.map((row) => ({ id: row.id, displayName: row.display_name, lastSeenAt: row.last_seen_at?.toISOString() ?? null, expiresAt: row.expires_at.toISOString(), status: row.last_seen_at && now - row.last_seen_at.getTime() <= 45_000 ? "online" : "offline" })) };
+  }
+  async revoke(actor: Actor, deviceId: string) {
+    const result = await this.database.query<{ id: string }>("UPDATE local_bridge_devices SET status='revoked',revoked_at=CURRENT_TIMESTAMP WHERE id=$1 AND user_id=$2 AND status='active' RETURNING id", [deviceId, actor.id]);
+    if (!result.rows[0]) throw new NotFoundException("本地 Bridge 不存在或已撤销");
+    return { ok: true, deviceId };
   }
   async complete(authorization: string | undefined, runId: string, input: { providerId: string; model: string; content: string }) {
     const device = await this.authenticate(authorization);
@@ -37,9 +44,9 @@ export class LocalBridgeService {
   private async authenticate(authorization?: string) {
     const token = authorization?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1];
     if (!token) throw new UnauthorizedException("缺少有效本地 Bridge 令牌");
-    const result = await this.database.query<DeviceRow>("SELECT id,user_id,status FROM local_bridge_devices WHERE token_hash=$1", [this.hash(token)]);
+    const result = await this.database.query<DeviceRow>("SELECT id,user_id,status,expires_at FROM local_bridge_devices WHERE token_hash=$1 AND status='active' AND expires_at>CURRENT_TIMESTAMP", [this.hash(token)]);
     const device = result.rows[0];
-    if (!device || device.status !== "active") throw new ForbiddenException("本地 Bridge 未配对或已撤销");
+    if (!device) throw new ForbiddenException("本地 Bridge 未配对、已过期或已撤销");
     return device;
   }
   private async touch(deviceId: string) { await this.database.query("UPDATE local_bridge_devices SET last_seen_at=CURRENT_TIMESTAMP WHERE id=$1", [deviceId]); }
