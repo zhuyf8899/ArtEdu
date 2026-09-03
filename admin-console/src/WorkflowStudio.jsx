@@ -9,10 +9,10 @@ const nodeStyle = { input: "#4b87ff", prompt: "#b268ff", model: "#ff8b4b", previ
 function GraphNode({ data }) {
   const color = nodeStyle[data.nodeType] || nodeStyle.note;
   return <div className={`workflow-run-node ${data.isActive ? "is-active" : ""} ${data.isComplete ? "is-complete" : ""}`} style={{ "--node-color": color }}>
-    <Handle type="target" position={Position.Left} className="workflow-flow-handle" />
+    <Handle id="input" type="target" position={Position.Left} className="workflow-flow-handle" />
     <div><FlowArrow size={14} weight="bold" /><span>{data.nodeType === "input" ? "输入" : data.nodeType === "prompt" ? "提示词" : data.nodeType === "model" ? "模型" : data.nodeType === "preview" ? "输出" : "说明"}</span></div>
     <strong>{data.label}</strong><small>{data.description}</small>
-    <Handle type="source" position={Position.Right} className="workflow-flow-handle" />
+    <Handle id="output" type="source" position={Position.Right} className="workflow-flow-handle" />
   </div>;
 }
 

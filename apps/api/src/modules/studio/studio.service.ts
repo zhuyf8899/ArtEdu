@@ -208,7 +208,9 @@ export class StudioService {
       FROM workflow_runs r JOIN workflows w ON w.id = r.workflow_id
       WHERE r.user_id = $1 ORDER BY r.updated_at DESC
     `, [actor.id]);
-    return { items: result.rows.map(this.mapRun) };
+    // Pass the mapper through an arrow function so it keeps the service
+    // instance required by normalizeWorkflowDefinition().
+    return { items: result.rows.map((row) => this.mapRun(row)) };
   }
 
   async updateRun(actor: Actor, runId: string, input: WorkflowRunProgressInput) {
