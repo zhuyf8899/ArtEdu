@@ -4,12 +4,13 @@ import "@fontsource/space-grotesk/600.css";
 import "@fontsource/space-grotesk/700.css";
 import "@fontsource/noto-sans-sc/400.css";
 import "@fontsource/noto-sans-sc/700.css";
-import { useEffect, useState } from "react";
-import { AdminDashboard } from "./AdminDashboard.jsx";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { LocalLogin, UserPortal } from "./Portal.jsx";
 import { getCurrentUser, loginLocal, logoutLocal } from "./services/adminApi.js";
 import { canEnterAdmin } from "./testAccounts.js";
 import { adminSectionFromPath, sectionFromPath, useAppRoute } from "./routing.js";
+
+const AdminDashboard = lazy(() => import("./AdminDashboard.jsx").then(({ AdminDashboard: component }) => ({ default: component })));
 
 export function App() {
   const [account, setAccount] = useState(null);
@@ -33,7 +34,7 @@ export function App() {
   if (!ready) return <main className="portal-empty"><p>正在验证登录会话…</p></main>;
   if (!account) return <LocalLogin onLogin={signIn} />;
   if (pathname.startsWith("/admin") && !canEnterAdmin(account)) return <main className="portal-empty"><h1>无权访问管理后台</h1><p>请使用已授权的教师、运营或管理员账户登录。</p></main>;
-  if (pathname.startsWith("/admin")) return <AdminDashboard actor={account} initialSection={adminSectionFromPath(pathname)} onNavigate={(section) => navigate({ overview: "/admin", users: "/admin/users", courses: "/admin/courses", workflows: "/admin/workflows", reviews: "/admin/reviews" }[section] ?? "/admin")} onBack={() => navigate("/")} />;
+  if (pathname.startsWith("/admin")) return <Suspense fallback={<main className="portal-empty"><p>正在加载管理台…</p></main>}><AdminDashboard actor={account} initialSection={adminSectionFromPath(pathname)} onNavigate={(section) => navigate({ overview: "/admin", users: "/admin/users", courses: "/admin/courses", workflows: "/admin/workflows", reviews: "/admin/reviews" }[section] ?? "/admin")} onBack={() => navigate("/")} /></Suspense>;
   return <UserPortal account={account} section={sectionFromPath(pathname)} searchQuery={new URLSearchParams(search).get("query") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
 }
 

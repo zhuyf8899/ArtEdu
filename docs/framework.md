@@ -17,6 +17,8 @@ npm run dev
 npm run check
 ```
 
+`npm run check` 会依次执行 API 类型检查、安全与契约回归测试、前端生产构建及 Sites Worker 测试。
+
 迁移由 `schema_migrations` 记录；新增迁移必须使用 `migrations/0003_描述.sql` 格式，已应用迁移禁止修改。
 
 ## 固定路由

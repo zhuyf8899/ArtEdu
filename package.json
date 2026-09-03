@@ -12,8 +12,9 @@
     "db:migrate": "cd apps/api && npm run db:migrate",
     "db:seed": "cd apps/api && npm run db:seed",
     "db:prepare": "docker compose up -d --wait postgres && npm run db:migrate && npm run db:seed",
-    "check": "npm run check:api && npm run check:web",
+    "check": "npm run check:api && npm run check:api:test && npm run check:web",
     "check:api": "cd apps/api && npm run typecheck",
+    "check:api:test": "npm --prefix apps/api run test:security",
     "check:web": "cd admin-console && npm run build && npm run test:sites"
   }
 }

@@ -97,7 +97,7 @@ npm run check
 - API TypeScript 类型检查通过；
 - API 安全测试 13 项全部通过，覆盖本地登录限流、密码摘要、生产 CORS、路径穿越、私有上传、课程资料和工作流输入校验；
 - 前端 Vite 生产构建通过，Sites Worker 测试 4 项全部通过；
-- 构建过程中存在单个 JavaScript bundle 超过 500 kB 的性能警告，不影响当前构建，但正式上线前应通过动态加载或拆分依赖优化。
+- 学生端和管理端业务页已按路由懒加载，生产构建不再产生超过 500 kB 的 JavaScript chunk 警告。
 
 数据库联调尚未在本次环境完成：当前终端无法调用 `docker` 命令，因此未能执行 PostgreSQL 容器启动、迁移和种子数据验证。Docker CLI 可用后，在仓库根目录执行：
 

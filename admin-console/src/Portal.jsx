@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
@@ -6,12 +6,13 @@ import {
 } from "@phosphor-icons/react";
 import { createGenerationJob, getPortalHome } from "./services/adminApi.js";
 import { AiCreationConsole } from "./AiCreationConsole.jsx";
-import { LearningLibrary } from "./LearningLibrary.jsx";
-import { WorkflowStudio } from "./WorkflowStudio.jsx";
-import { CommunityLibrary } from "./CommunityLibrary.jsx";
-import { MyLearning } from "./MyLearning.jsx";
-import { SearchResults } from "./SearchResults.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
+
+const LearningLibrary = lazy(() => import("./LearningLibrary.jsx").then(({ LearningLibrary: component }) => ({ default: component })));
+const WorkflowStudio = lazy(() => import("./WorkflowStudio.jsx").then(({ WorkflowStudio: component }) => ({ default: component })));
+const CommunityLibrary = lazy(() => import("./CommunityLibrary.jsx").then(({ CommunityLibrary: component }) => ({ default: component })));
+const MyLearning = lazy(() => import("./MyLearning.jsx").then(({ MyLearning: component }) => ({ default: component })));
+const SearchResults = lazy(() => import("./SearchResults.jsx").then(({ SearchResults: component }) => ({ default: component })));
 
 const emptyPortalData = { courses: [], workflows: [], works: [] };
 
@@ -131,15 +132,17 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section>
       </>}
 
-      {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary onNotice={showToast} /></>}
+      <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
+        {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary onNotice={showToast} /></>}
 
-      {section === "studio" && <><SectionHeading eyebrow="// GUIDED CREATION" title="工作流学习与创作" /><WorkflowStudio onNotice={showToast} /></>}
+        {section === "studio" && <><SectionHeading eyebrow="// GUIDED CREATION" title="工作流学习与创作" /><WorkflowStudio onNotice={showToast} /></>}
 
-      {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary onNotice={showToast} /></>}
+        {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary onNotice={showToast} /></>}
 
-      {section === "myLearning" && <MyLearning account={account} onNavigate={onNavigate} onNotice={showToast} />}
+        {section === "myLearning" && <MyLearning account={account} onNavigate={onNavigate} onNotice={showToast} />}
 
-      {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
+        {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
+      </Suspense>
     </main>
     {toast && <div className={`portal-toast portal-toast--${toast.tone}`} role={toast.tone === "error" ? "alert" : "status"}>{toast.tone === "error" ? <WarningCircle size={18} weight="fill" /> : <CheckCircle size={18} weight="fill" />}{toast.text}</div>}
   </div>;
