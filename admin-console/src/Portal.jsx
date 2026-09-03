@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
-  MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree,
+  MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, WarningCircle,
 } from "@phosphor-icons/react";
 import { createGenerationJob, getPortalHome } from "./services/adminApi.js";
 import { AiCreationConsole } from "./AiCreationConsole.jsx";
@@ -70,7 +70,7 @@ export function LocalLogin({ onLogin }) {
 export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     getPortalHome().then((payload) => {
@@ -83,14 +83,16 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     }).catch(() => {
       setData(emptyPortalData);
       setIsLive(false);
-      setToast("首页数据加载失败，请检查 API 服务");
+      showToast("首页数据加载失败，请检查 API 服务", "error");
     });
   }, [account.id]);
 
   const nextCourse = useMemo(() => data.courses.find((course) => course.progressPercent > 0 && course.progressPercent < 100) ?? data.courses[0], [data.courses]);
-  const showToast = (message) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 3000);
+  const showToast = (message, tone) => {
+    const text = typeof message === "string" ? message : message?.message || "操作失败，请稍后重试";
+    const inferredTone = tone || (/失败|错误|无法|不能|不存在|未配置|无权|拒绝|请求失败/.test(text) ? "error" : "success");
+    setToast({ text, tone: inferredTone });
+    window.setTimeout(() => setToast(null), 3200);
   };
   const startGeneration = async (jobType, prompt, parameters = {}) => {
     try {
@@ -98,7 +100,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       showToast(`任务已创建：${job.id.slice(0, 8)}…，可在后端任务队列中查看。`);
       return job;
     } catch (error) {
-      showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。");
+      showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。", "error");
       return null;
     }
   };
@@ -139,7 +141,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
       {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
     </main>
-    {toast && <div className="portal-toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
+    {toast && <div className={`portal-toast portal-toast--${toast.tone}`} role={toast.tone === "error" ? "alert" : "status"}>{toast.tone === "error" ? <WarningCircle size={18} weight="fill" /> : <CheckCircle size={18} weight="fill" />}{toast.text}</div>}
   </div>;
 }
 

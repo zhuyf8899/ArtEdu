@@ -2,20 +2,32 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/
 
 async function request(path, options = {}) {
   const isFormData = options.body instanceof FormData;
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    credentials: "include",
-    headers: {
-      ...(options.body !== undefined && !isFormData ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    },
-    ...options,
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || `请求失败（HTTP ${response.status}）`);
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      credentials: "include",
+      headers: {
+        ...(options.body !== undefined && !isFormData ? { "Content-Type": "application/json" } : {}),
+        ...options.headers,
+      },
+      ...options,
+    });
+  } catch {
+    const error = new Error("无法连接服务，请确认 API 已启动后重试");
+    error.code = "NETWORK_ERROR";
+    throw error;
   }
-  return data;
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = Array.isArray(data?.message) ? data.message.join("；") : data?.message;
+    const error = new Error(message || `请求失败（HTTP ${response.status}）`);
+    error.status = response.status;
+    if (response.status === 401) error.message = "登录状态已失效，请重新登录";
+    if (response.status === 403) error.message = "当前账号没有执行此操作的权限";
+    throw error;
+  }
+  return data ?? {};
 }
 
 export const getAdminUsers = () => request("/admin/users");

@@ -444,14 +444,40 @@ export class StudioService {
     return { schemaVersion: 2, nodes, edges, viewport: { x: 0, y: 0, zoom: 1 } };
   }
 
-  private definitionToSteps(definition: { nodes: Array<Record<string, any>> }) {
-    return definition.nodes.map((node, index) => ({
+  private definitionToSteps(definition: { nodes: Array<Record<string, any>>; edges?: Array<Record<string, any>> }) {
+    const nodes = definition.nodes;
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    const indegree = new Map(nodes.map((node) => [node.id, 0]));
+    const next = new Map(nodes.map((node) => [node.id, [] as string[]]));
+    for (const edge of definition.edges ?? []) {
+      if (!byId.has(edge.source) || !byId.has(edge.target) || edge.source === edge.target) continue;
+      next.get(edge.source)?.push(edge.target);
+      indegree.set(edge.target, (indegree.get(edge.target) ?? 0) + 1);
+    }
+    const order = nodes.map((node) => node.id);
+    const ready = order.filter((id) => indegree.get(id) === 0);
+    const orderedIds: string[] = [];
+    while (ready.length) {
+      const id = ready.shift();
+      if (!id) break;
+      orderedIds.push(id);
+      for (const target of next.get(id) ?? []) {
+        const remaining = (indegree.get(target) ?? 1) - 1;
+        indegree.set(target, remaining);
+        if (remaining === 0) ready.push(target);
+      }
+    }
+    const executionOrder = orderedIds.length === nodes.length ? orderedIds : order;
+    return executionOrder.map((id, index) => {
+      const node = byId.get(id) ?? nodes[index];
+      return {
       id: node.id,
       title: node.data?.label ?? `节点 ${index + 1}`,
       description: node.data?.description ?? "",
       instruction: node.data?.value ?? "",
       estimatedMinutes: Number(node.data?.estimatedMinutes ?? 10),
-    }));
+      };
+    });
   }
 
   private mapManagedWorkflow(row: Record<string, any>) {
