@@ -6,7 +6,7 @@ function formatDate(value) {
   return value ? new Date(value).toLocaleString("zh-CN") : "—";
 }
 
-export function BridgeDevices({ showToast }) {
+export function BridgeDevices({ showToast, confirmAction }) {
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
@@ -18,7 +18,8 @@ export function BridgeDevices({ showToast }) {
   };
   useEffect(() => { void load(); }, []);
   const revoke = async (device) => {
-    if (!window.confirm(`确认撤销“${device.displayName}”吗？撤销后该 Bridge 立即无法继续执行任务。`)) return;
+    const confirmed = await confirmAction({ title: "撤销 Bridge 设备", message: `确认撤销“${device.displayName}”吗？撤销后该设备会立即停止领取和执行模型任务。`, confirmLabel: "确认撤销", danger: true });
+    if (!confirmed) return;
     setBusyId(device.id);
     try { await revokeBridgeDevice(device.id); setDevices((current) => current.filter((item) => item.id !== device.id)); showToast("Bridge 设备已撤销"); }
     catch (error) { showToast(error.message); }

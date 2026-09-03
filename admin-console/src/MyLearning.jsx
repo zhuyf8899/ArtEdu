@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight, BookOpenText, BookmarkSimple, CalendarCheck, Check,
+  ArrowClockwise, ArrowRight, BookOpenText, BookmarkSimple, CalendarCheck, Check,
   Clock, FileText, Heart, House, ImageSquare, NotePencil, Plus, Sparkle,
   Student, Target, Trash, TrendUp,
 } from "@phosphor-icons/react";
@@ -12,6 +12,7 @@ import {
   getLearningSpace,
   updateLearningTask,
 } from "./services/adminApi.js";
+import { useFeedback } from "./FeedbackCenter.jsx";
 
 const COURSE_IMAGES = {
   "course-ai-design-foundation": "/assets/learning/ai-design-foundations.jpg",
@@ -43,11 +44,14 @@ export function MyLearning({ account, onNavigate, onNotice }) {
   const [taskForm, setTaskForm] = useState({ title: "", dueDate: "" });
   const [noteForm, setNoteForm] = useState({ title: "", content: "", courseId: "" });
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const { confirmAction } = useFeedback();
 
   const load = async () => {
     setLoading(true);
+    setLoadError("");
     try { setData(await getLearningSpace()); }
-    catch (error) { onNotice(error.message); }
+    catch (error) { setLoadError(error.message); onNotice(error.message); }
     finally { setLoading(false); }
   };
 
@@ -77,6 +81,9 @@ export function MyLearning({ account, onNavigate, onNotice }) {
   };
 
   const removeTask = async (taskId) => {
+    const target = data.tasks.find((task) => task.id === taskId);
+    const confirmed = await confirmAction({ title: "删除学习任务", message: `确认删除“${target?.title || "这项任务"}”吗？删除后无法恢复。`, confirmLabel: "确认删除", danger: true });
+    if (!confirmed) return;
     try {
       await deleteLearningTask(taskId);
       setData((current) => ({ ...current, tasks: current.tasks.filter((task) => task.id !== taskId) }));
@@ -103,6 +110,9 @@ export function MyLearning({ account, onNavigate, onNotice }) {
   };
 
   const removeNote = async (noteId) => {
+    const target = data.notes.find((note) => note.id === noteId);
+    const confirmed = await confirmAction({ title: "删除学习笔记", message: `确认删除“${target?.title || "这篇笔记"}”吗？删除后无法恢复。`, confirmLabel: "确认删除", danger: true });
+    if (!confirmed) return;
     try {
       await deleteLearningNote(noteId);
       setData((current) => ({ ...current, notes: current.notes.filter((note) => note.id !== noteId) }));
@@ -124,7 +134,7 @@ export function MyLearning({ account, onNavigate, onNotice }) {
       </aside>
 
       <div className="learning-content" aria-busy={loading}>
-        {loading ? <LearningLoading /> : <>
+        {loading ? <LearningLoading /> : loadError ? <LearningLoadError message={loadError} onRetry={load} /> : <>
           {view === "overview" && <Overview data={data} displayName={displayName} onView={setView} onToggleTask={toggleTask} onNavigate={onNavigate} />}
           {view === "courses" && <CoursesView courses={data.courses} onNavigate={onNavigate} />}
           {view === "plan" && <PlanView tasks={data.tasks} form={taskForm} setForm={setTaskForm} saving={saving} onSubmit={addTask} onToggle={toggleTask} onDelete={removeTask} />}
@@ -209,6 +219,10 @@ function EmptyInline({ text }) { return <p className="learning-empty-inline">{te
 
 function LearningLoading() {
   return <div className="learning-loading"><Clock size={28} className="spin" /><strong>正在整理你的学习空间</strong><span>课程、计划与收藏即将就绪。</span></div>;
+}
+
+function LearningLoadError({ message, onRetry }) {
+  return <div className="learning-load-error"><ArrowClockwise size={30} weight="bold" /><strong>学习空间暂时无法加载</strong><span>{message}</span><button onClick={onRetry}>重新加载</button></div>;
 }
 
 function courseImage(course, index) { return COURSE_IMAGES[course.id] || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]; }

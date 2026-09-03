@@ -25,6 +25,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
   const [tag, setTag] = useState("");
   const [loading, setLoading] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     setDraft(initialQuery);
@@ -46,7 +47,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
       setOffline(true);
     }).finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [initialQuery, fallbackData]);
+  }, [initialQuery, fallbackData, retryKey]);
 
   const visibleItems = useMemo(() => payload.items.filter((item) => {
     const matchesType = type === "all" || item.type === type;
@@ -77,7 +78,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
       <div><span>搜索关键词</span><strong>“{initialQuery || "输入关键词开始探索"}”</strong></div>
       <div><span>找到内容</span><strong>{visibleItems.length}<small> 项结果</small></strong></div>
       <div><span>内容范围</span><strong>{Object.values(counts).slice(1).filter(Boolean).length}<small> 个业务区</small></strong></div>
-      {offline && <em>当前使用本地展示数据</em>}
+      {offline && <div className="search-offline"><em>当前使用本地展示数据</em><button onClick={() => setRetryKey((value) => value + 1)}>重新连接</button></div>}
     </div>
 
     <div className="search-layout">

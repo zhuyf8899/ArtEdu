@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpRight, Browser, ChatCircleDots, CirclesThreePlus, Code,
-  ImageSquare, Paperclip, Sparkle,
+  FloppyDisk, Gauge, ImageSquare, Paperclip, Sparkle, Trash,
 } from "@phosphor-icons/react";
 
 const CREATION_METHODS = [
@@ -38,21 +38,52 @@ const MODELS = [
   { id: "qwen-image", name: "Qwen Image", note: "中文视觉创作" },
 ];
 
-export function AiCreationConsole({ account, onCreate }) {
-  const [methodId, setMethodId] = useState("ui");
-  const [modelId, setModelId] = useState("gpt-4o");
-  const [prompt, setPrompt] = useState("");
+export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
+  const storedDraft = useMemo(() => readDraft(account.id), [account.id]);
+  const [methodId, setMethodId] = useState(() => storedDraft?.methodId ?? "ui");
+  const [modelId, setModelId] = useState(() => storedDraft?.modelId ?? "gpt-4o");
+  const [prompt, setPrompt] = useState(() => storedDraft?.prompt ?? "");
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(Boolean(storedDraft?.prompt));
   const [reply, setReply] = useState("先选择创作方法与模型，再描述你的想法。我会把它整理成可继续执行的创作任务。");
 
   const method = useMemo(() => CREATION_METHODS.find((item) => item.id === methodId) ?? CREATION_METHODS[0], [methodId]);
   const model = useMemo(() => MODELS.find((item) => item.id === modelId) ?? MODELS[0], [modelId]);
+  const quota = creation?.quota ?? {};
+  const serviceReady = Boolean(creation?.enabled && creation?.models?.length);
+  const quotaBlocked = (quota.dailyLimit !== null && quota.dailyLimit !== undefined && quota.dailyUsed >= quota.dailyLimit)
+    || (quota.monthlyLimit !== null && quota.monthlyLimit !== undefined && quota.monthlyUsed >= quota.monthlyLimit)
+    || (quota.concurrentLimit !== null && quota.concurrentLimit !== undefined && quota.inFlight >= quota.concurrentLimit);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (!prompt.trim()) {
+        clearDraft(account.id);
+        setDraftSaved(false);
+        return;
+      }
+      setDraftSaved(saveDraft(account.id, { prompt, methodId, modelId, updatedAt: new Date().toISOString() }));
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [account.id, methodId, modelId, prompt]);
 
   const submit = async (event) => {
     event.preventDefault();
     const content = prompt.trim();
     if (!content || sending) return;
+    if (!serviceReady) {
+      setFailed(true);
+      setReply("当前模型服务尚未启用，创作草稿已自动保存。管理员完成模型配置后可直接继续提交。");
+      onNotice?.("模型服务尚未启用，当前内容已保存为本地草稿", "info");
+      return;
+    }
+    if (quotaBlocked) {
+      setFailed(true);
+      setReply("当前生成额度或并发额度已达到上限，草稿已保存。请稍后重试或联系管理员调整额度。");
+      onNotice?.("当前生成额度不可用，请稍后重试", "error");
+      return;
+    }
     setSending(true);
     setFailed(false);
     setReply(`正在用 ${model.name} 整理“${method.label}”任务，并写入生成队列……`);
@@ -62,8 +93,13 @@ export function AiCreationConsole({ account, onCreate }) {
       parameters: { method: method.id, methodLabel: method.label, model: model.id },
     });
     setReply(result
-      ? `任务 ${result.id.slice(0, 8)} 已创建。你可以继续补充风格、受众或输出尺寸。`
+      ? `任务 ${result.id.slice(0, 8)} 已创建。输入内容已清空，你可以继续创建下一个任务。`
       : "创作请求已记录为演示状态；连接生成服务后即可执行完整任务。");
+    if (result) {
+      setPrompt("");
+      setDraftSaved(false);
+      clearDraft(account.id);
+    }
     setFailed(!result);
     setSending(false);
   };
@@ -76,6 +112,11 @@ export function AiCreationConsole({ account, onCreate }) {
     </div>
 
     <form className="ai-composer" onSubmit={submit}>
+      <div className={`ai-service-state ${serviceReady ? "is-ready" : "is-offline"}`}>
+        <span><i />{serviceReady ? `${creation.models.length} 个模型配置可用` : "模型服务尚未启用"}</span>
+        <span><Gauge size={14} />{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
+        <span>并发 {quota.inFlight ?? 0} / {quota.concurrentLimit ?? "∞"}</span>
+      </div>
       <div className="ai-conversation">
         <div className="ai-message ai-message--assistant">
           <span><ChatCircleDots size={17} weight="bold" /></span>
@@ -119,14 +160,41 @@ export function AiCreationConsole({ account, onCreate }) {
             ><Icon size={14} weight="bold" /><strong>{label}</strong></button>)}
           </div>
           <div className="ai-composer__actions">
-            <button type="button" className="ai-attach" aria-label="添加参考文件" title="添加参考文件"><Paperclip size={18} weight="bold" /></button>
-            <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending}>
-              {sending ? "创建中" : "开始创作"} <ArrowUpRight size={18} weight="bold" />
+            <button type="button" className="ai-attach" aria-label="添加参考文件" title="添加参考文件" onClick={() => onNotice?.("参考文件上传将在学校对象存储接入后开放", "info")}><Paperclip size={18} weight="bold" /></button>
+            <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked} title={!serviceReady ? "模型服务未启用时会保留创作草稿" : undefined}>
+              {sending ? "创建中" : quotaBlocked ? "额度已用尽" : serviceReady ? "开始创作" : "保存草稿"} <ArrowUpRight size={18} weight="bold" />
             </button>
           </div>
         </div>
       </div>
-      <div className="ai-composer__status"><ImageSquare size={14} /> 当前身份：{account.shortName} · {method.label} · {model.name}</div>
+      <div className="ai-composer__status"><span><ImageSquare size={14} /> 当前身份：{account.shortName} · {method.label} · {model.name}</span>{prompt.trim() && <button type="button" onClick={() => { setPrompt(""); setDraftSaved(false); clearDraft(account.id); }}><Trash size={13} /> 清空草稿</button>}<em><FloppyDisk size={13} />{draftSaved ? "草稿已保存" : "输入后自动保存"}</em></div>
     </form>
   </section>;
+}
+
+function draftKey(accountId) { return `artedu.ai-draft.${accountId}`; }
+
+// 草稿只保存在当前浏览器，并按账号隔离；不包含密钥或服务端响应。
+function saveDraft(accountId, value) {
+  try { window.localStorage.setItem(draftKey(accountId), JSON.stringify(value)); return true; }
+  catch { return false; }
+}
+
+function clearDraft(accountId) {
+  try { window.localStorage.removeItem(draftKey(accountId)); }
+  catch { /* 浏览器禁用本地存储时不影响创作流程。 */ }
+}
+
+function readDraft(accountId) {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(draftKey(accountId)) || "null");
+    if (!value || typeof value.prompt !== "string") return null;
+    return {
+      prompt: value.prompt,
+      methodId: CREATION_METHODS.some((item) => item.id === value.methodId) ? value.methodId : "ui",
+      modelId: MODELS.some((item) => item.id === value.modelId) ? value.modelId : "gpt-4o",
+    };
+  } catch {
+    return null;
+  }
 }

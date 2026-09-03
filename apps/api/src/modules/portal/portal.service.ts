@@ -1,4 +1,6 @@
 import { Injectable } from "@nestjs/common";
+import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
+import { getEnvironment } from "../../common/environment";
 import { DatabaseService } from "../database/database.service";
 import type { Actor } from "../auth/auth.service";
 import type { PortalSearchQuery } from "./portal.contracts";
@@ -28,6 +30,22 @@ interface WorkRow {
   author: string;
 }
 
+interface QuotaRow {
+  daily_limit: number | null;
+  monthly_limit: number | null;
+  concurrent_limit: number | null;
+  daily_used: number;
+  monthly_used: number;
+  in_flight: number;
+}
+
+interface ModelRow {
+  id: string;
+  display_name: string;
+  model_identifier: string;
+  capabilities_json: unknown;
+}
+
 interface SearchRow {
   id: string;
   title: string;
@@ -44,7 +62,7 @@ export class PortalService {
   constructor(private readonly database: DatabaseService) {}
 
   async getHome(actor: Actor) {
-    const [courses, workflows, works] = await Promise.all([
+    const [courses, workflows, works, quotaResult, models] = await Promise.all([
       this.database.query<CourseRow>(`
         SELECT
           c.id,
@@ -76,7 +94,39 @@ export class PortalService {
         ORDER BY w.is_featured DESC, w.featured_rank NULLS LAST, w.published_at DESC
         LIMIT 8
       `),
+      // 该快照仅用于创作前提示；创建任务时 GenerationService 会在事务内再次校验额度。
+      this.database.query<QuotaRow>(`
+        WITH limits AS (
+          SELECT
+            MAX(limit_value) FILTER (WHERE period_type = 'daily') AS daily_limit,
+            MAX(limit_value) FILTER (WHERE period_type = 'monthly') AS monthly_limit,
+            MAX(limit_value) FILTER (WHERE period_type = 'concurrent') AS concurrent_limit
+          FROM user_usage_limits
+          WHERE user_id = $1 AND capability = $2 AND enabled = TRUE
+        ), usage AS (
+          SELECT
+            COUNT(*) FILTER (WHERE created_at >= date_trunc('day', NOW()) AND status IN ('queued', 'running', 'succeeded'))::int AS daily_used,
+            COUNT(*) FILTER (WHERE created_at >= date_trunc('month', NOW()) AND status IN ('queued', 'running', 'succeeded'))::int AS monthly_used,
+            COUNT(*) FILTER (WHERE status IN ('queued', 'running'))::int AS in_flight
+          FROM generation_jobs
+          WHERE user_id = $1
+        )
+        SELECT limits.daily_limit, limits.monthly_limit, limits.concurrent_limit,
+          usage.daily_used, usage.monthly_used, usage.in_flight
+        FROM limits CROSS JOIN usage
+      `, [actor.id, MANAGED_QUOTA_CAPABILITY]),
+      this.database.query<ModelRow>(`
+        SELECT id, display_name, model_identifier, capabilities_json
+        FROM model_configs
+        WHERE status = 'active'
+        ORDER BY display_name
+      `),
     ]);
+
+    const quota = quotaResult.rows[0] ?? {
+      daily_limit: null, monthly_limit: null, concurrent_limit: null,
+      daily_used: 0, monthly_used: 0, in_flight: 0,
+    };
 
     return {
       profile: { id: actor.id, displayName: actor.displayName, roles: actor.roles },
@@ -102,6 +152,23 @@ export class PortalService {
         discipline: row.discipline ?? "案例作品",
         author: row.author,
       })),
+      creation: {
+        enabled: getEnvironment().modelExecutionEnabled,
+        models: models.rows.map((row) => ({
+          id: row.id,
+          name: row.display_name,
+          identifier: row.model_identifier,
+          capabilities: Array.isArray(row.capabilities_json) ? row.capabilities_json : [],
+        })),
+        quota: {
+          dailyLimit: quota.daily_limit === null ? null : Number(quota.daily_limit),
+          dailyUsed: Number(quota.daily_used),
+          monthlyLimit: quota.monthly_limit === null ? null : Number(quota.monthly_limit),
+          monthlyUsed: Number(quota.monthly_used),
+          concurrentLimit: quota.concurrent_limit === null ? null : Number(quota.concurrent_limit),
+          inFlight: Number(quota.in_flight),
+        },
+      },
     };
   }
 

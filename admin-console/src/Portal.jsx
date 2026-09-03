@@ -1,11 +1,12 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
+  ArrowClockwise, ArrowRight, BookOpenText, Brain, CirclesThreePlus,
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
-  MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, WarningCircle,
+  MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree,
 } from "@phosphor-icons/react";
 import { createGenerationJob, getPortalHome } from "./services/adminApi.js";
 import { AiCreationConsole } from "./AiCreationConsole.jsx";
+import { useFeedback } from "./FeedbackCenter.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 
 const LearningLibrary = lazy(() => import("./LearningLibrary.jsx").then(({ LearningLibrary: component }) => ({ default: component })));
@@ -14,7 +15,10 @@ const CommunityLibrary = lazy(() => import("./CommunityLibrary.jsx").then(({ Com
 const MyLearning = lazy(() => import("./MyLearning.jsx").then(({ MyLearning: component }) => ({ default: component })));
 const SearchResults = lazy(() => import("./SearchResults.jsx").then(({ SearchResults: component }) => ({ default: component })));
 
-const emptyPortalData = { courses: [], workflows: [], works: [] };
+const emptyPortalData = {
+  courses: [], workflows: [], works: [],
+  creation: { enabled: false, models: [], quota: { dailyLimit: null, dailyUsed: 0, monthlyLimit: null, monthlyUsed: 0, concurrentLimit: null, inFlight: 0 } },
+};
 
 const navItems = [
   ["home", "首页", GridFour],
@@ -71,30 +75,36 @@ export function LocalLogin({ onLogin }) {
 export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
-  const [toast, setToast] = useState(null);
+  const [portalLoading, setPortalLoading] = useState(true);
+  const [portalError, setPortalError] = useState("");
+  const { notify } = useFeedback();
 
-  useEffect(() => {
-    getPortalHome().then((payload) => {
+  const loadPortalData = useCallback(async () => {
+    setPortalLoading(true);
+    setPortalError("");
+    try {
+      const payload = await getPortalHome();
       setData({
         courses: payload.courses ?? [],
         workflows: payload.workflows ?? [],
         works: payload.works ?? [],
+        creation: payload.creation ?? emptyPortalData.creation,
       });
       setIsLive(true);
-    }).catch(() => {
+    } catch (error) {
       setData(emptyPortalData);
       setIsLive(false);
-      showToast("首页数据加载失败，请检查 API 服务", "error");
-    });
-  }, [account.id]);
+      setPortalError(error.message || "首页数据加载失败");
+      notify(error.message || "首页数据加载失败，请检查 API 服务", "error");
+    } finally {
+      setPortalLoading(false);
+    }
+  }, [notify]);
+
+  useEffect(() => { void loadPortalData(); }, [account.id, loadPortalData]);
 
   const nextCourse = useMemo(() => data.courses.find((course) => course.progressPercent > 0 && course.progressPercent < 100) ?? data.courses[0], [data.courses]);
-  const showToast = (message, tone) => {
-    const text = typeof message === "string" ? message : message?.message || "操作失败，请稍后重试";
-    const inferredTone = tone || (/失败|错误|无法|不能|不存在|未配置|无权|拒绝|请求失败/.test(text) ? "error" : "success");
-    setToast({ text, tone: inferredTone });
-    window.setTimeout(() => setToast(null), 3200);
-  };
+  const showToast = notify;
   const startGeneration = async (jobType, prompt, parameters = {}) => {
     try {
       const job = await createGenerationJob({ jobType, prompt, parameters: { source: "integrated-test-site", ...parameters } });
@@ -124,12 +134,14 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       {section !== "home" && section !== "myLearning" && section !== "search" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
-        <AiCreationConsole account={account} onCreate={createFromConversation} />
-        <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse?.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse?.progressPercent ?? 0}%` }} /></div><b>{nextCourse?.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section>
+        <AiCreationConsole account={account} onCreate={createFromConversation} creation={data.creation} onNotice={showToast} />
+        {portalLoading && <HomeDataState loading />}
+        {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
+        {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从教学资源库选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}
         <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => navigateSection("studio")} />
         <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课件与课程知识提问，生成学习路径。" onClick={() => showToast("教学对话模块已预留，下一步接入课程知识库。")} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
         <SectionHeading eyebrow="// FEATURED WORKFLOWS" title="精选工作流" />
-        <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section>
+        {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入工作台" onRetry={() => navigateSection("studio")} />}
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
@@ -144,8 +156,15 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
       </Suspense>
     </main>
-    {toast && <div className={`portal-toast portal-toast--${toast.tone}`} role={toast.tone === "error" ? "alert" : "status"}>{toast.tone === "error" ? <WarningCircle size={18} weight="fill" /> : <CheckCircle size={18} weight="fill" />}{toast.text}</div>}
   </div>;
+}
+
+function HomeDataState({ loading = false, error = "", title, text, action, onRetry }) {
+  return <section className={`home-data-state ${error ? "home-data-state--error" : ""}`} aria-busy={loading}>
+    <ArrowClockwise size={21} weight="bold" className={loading ? "spin" : ""} />
+    <div><strong>{loading ? "正在同步平台内容" : title || "平台内容暂时无法加载"}</strong><span>{loading ? "课程、工作流和案例即将就绪。" : text || error}</span></div>
+    {!loading && onRetry && <button onClick={onRetry}>{action || "重新加载"} <ArrowRight size={14} weight="bold" /></button>}
+  </section>;
 }
 
 function GlobalSearchForm({ value, onSearch }) {

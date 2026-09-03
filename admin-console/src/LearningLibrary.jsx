@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, BookOpenText, CheckCircle, Clock, Funnel, PlayCircle, Wrench } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, BookOpenText, CheckCircle, Clock, Funnel, PlayCircle, SpinnerGap, Wrench } from "@phosphor-icons/react";
 import { enrollCourse, getCourse, getCourses, updateLessonProgress } from "./services/adminApi.js";
 
 const COURSE_PROFILES = {
@@ -30,13 +30,21 @@ export function LearningLibrary({ onNotice }) {
   const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
   const [methodFilter, setMethodFilter] = useState("全部");
   const [authorFilter, setAuthorFilter] = useState("全部作者");
   const [toolFilter, setToolFilter] = useState("全部工具");
 
-  useEffect(() => {
-    getCourses().then((payload) => setCourses(payload.items ?? [])).catch((error) => onNotice(error.message));
-  }, []);
+  const loadCatalog = async () => {
+    setCatalogLoading(true);
+    setCatalogError("");
+    try { const payload = await getCourses(); setCourses(payload.items ?? []); }
+    catch (error) { setCatalogError(error.message); onNotice(error.message); }
+    finally { setCatalogLoading(false); }
+  };
+
+  useEffect(() => { void loadCatalog(); }, []);
 
   const openCourse = async (courseId) => {
     setLoading(true);
@@ -81,6 +89,9 @@ export function LearningLibrary({ onNotice }) {
     <div className="lesson-list">{selected.lessons.map((lesson, index) => <article key={lesson.id}><span>{String(index + 1).padStart(2, "0")}</span><div><small>{lesson.lessonType === "workflow" ? "AI 工作流实践" : "课程课时"}</small><strong>{lesson.title}</strong><p>{lesson.summary}</p></div><div><em>{lesson.estimatedMinutes} 分钟</em>{lesson.progressPercent >= 100 ? <b><CheckCircle size={17} weight="fill" /> 已完成</b> : <button disabled={loading} onClick={() => completeLesson(lesson.id)}>标记完成 <ArrowRight size={15} /></button>}</div></article>)}</div>
     {selected.resources?.length > 0 && <section className="course-materials"><p>// COURSE MATERIALS</p><h3>课程资料</h3>{selected.resources.map((resource) => <a key={resource.id} href={resource.downloadUrl ?? resource.externalUrl} target={resource.externalUrl ? "_blank" : undefined} rel={resource.externalUrl ? "noreferrer" : undefined}><BookOpenText size={18} weight="bold" /><span><strong>{resource.title}</strong><small>{resource.resourceType?.toUpperCase() ?? "FILE"}</small></span><ArrowRight size={16} weight="bold" /></a>)}</section>}
   </section>;
+
+  if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载教学资源</strong><p>正在同步课程、作者和工具标签。</p></section>;
+  if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>教学资源暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
 
   return <>
     <section className="resource-filters" aria-label="课程资源筛选">

@@ -6,6 +6,7 @@ import "@fontsource/noto-sans-sc/400.css";
 import "@fontsource/noto-sans-sc/700.css";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { LocalLogin, UserPortal } from "./Portal.jsx";
+import { FeedbackProvider } from "./FeedbackCenter.jsx";
 import { getCurrentUser, loginLocal, logoutLocal } from "./services/adminApi.js";
 import { canEnterAdmin } from "./testAccounts.js";
 import { adminSectionFromPath, sectionFromPath, useAppRoute } from "./routing.js";
@@ -13,6 +14,10 @@ import { adminSectionFromPath, sectionFromPath, useAppRoute } from "./routing.js
 const AdminDashboard = lazy(() => import("./AdminDashboard.jsx").then(({ AdminDashboard: component }) => ({ default: component })));
 
 export function App() {
+  return <FeedbackProvider><AppContent /></FeedbackProvider>;
+}
+
+function AppContent() {
   const [account, setAccount] = useState(null);
   const [ready, setReady] = useState(false);
   const { pathname, search, navigate } = useAppRoute();

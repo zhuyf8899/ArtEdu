@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, CheckCircle, Heart, ImageSquare, PaperPlaneTilt, Plus, X } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, CheckCircle, Heart, ImageSquare, PaperPlaneTilt, Plus, SpinnerGap, X } from "@phosphor-icons/react";
 import { addWorkComment, createWork, getMyWorks, getWork, getWorkflows, getWorks, submitWork, toggleWorkReaction, uploadWorkAsset } from "./services/adminApi.js";
 
 const emptyForm = { title: "", summary: "", discipline: "视觉传达", tags: "", workflowId: "" };
@@ -14,15 +14,26 @@ export function CommunityLibrary({ onNotice }) {
   const [file, setFile] = useState(null);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
 
-  const refresh = async () => {
-    const [catalog, mine, workflowCatalog] = await Promise.all([getWorks(), getMyWorks(), getWorkflows()]);
-    setWorks(catalog.items ?? []);
-    setMyWorks(mine.items ?? []);
-    setWorkflows(workflowCatalog.items ?? []);
+  const refresh = async (showLoading = false) => {
+    if (showLoading) setCatalogLoading(true);
+    setCatalogError("");
+    try {
+      const [catalog, mine, workflowCatalog] = await Promise.all([getWorks(), getMyWorks(), getWorkflows()]);
+      setWorks(catalog.items ?? []);
+      setMyWorks(mine.items ?? []);
+      setWorkflows(workflowCatalog.items ?? []);
+    } catch (error) {
+      setCatalogError(error.message);
+      throw error;
+    } finally {
+      if (showLoading) setCatalogLoading(false);
+    }
   };
 
-  useEffect(() => { refresh().catch((error) => onNotice(error.message)); }, []);
+  useEffect(() => { refresh(true).catch((error) => onNotice(error.message)); }, []);
 
   const openWork = async (work) => {
     setLoading(true);
@@ -75,6 +86,9 @@ export function CommunityLibrary({ onNotice }) {
   };
 
   const pendingCount = useMemo(() => myWorks.filter((work) => work.status === "pending").length, [myWorks]);
+
+  if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载案例社区</strong><p>正在同步公开作品、投稿状态与关联工作流。</p></section>;
+  if (catalogError && !works.length) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>案例社区暂时无法加载</strong><p>{catalogError}</p><button onClick={() => refresh(true).catch((error) => onNotice(error.message))}>重新加载</button></section>;
 
   if (selected) return <section className="community-detail">
     <button className="learning-back" onClick={() => setSelected(null)}><ArrowLeft size={16} weight="bold" /> 返回案例社区</button>
