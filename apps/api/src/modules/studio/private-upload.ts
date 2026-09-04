@@ -2,7 +2,7 @@ import { BadRequestException, PayloadTooLargeException } from "@nestjs/common";
 import type { MultipartFile } from "@fastify/multipart";
 import { createHash, randomUUID } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { mkdir, rename, rm } from "node:fs/promises";
+import { mkdir, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -13,6 +13,8 @@ const allowedTypes = {
   "image/png": "image",
   "image/webp": "image",
   "application/pdf": "document",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "document",
 } as const;
 
 export type PrivateUploadMimeType = keyof typeof allowedTypes;
@@ -54,7 +56,8 @@ export async function storePrivateUpload(
   try {
     await pipeline(part.file, inspect, createWriteStream(temporaryPath, { flags: "wx", mode: 0o600 }));
     if (part.file.truncated) throw new PayloadTooLargeException("文件不能超过 10 MB");
-    const mimeType = detectUploadMimeType(header);
+    // DOCX/PPTX are ZIP containers. Inspecting their entry names avoids extracting untrusted content.
+    const mimeType = detectUploadMimeType(header) ?? detectOfficeMimeType(await readFile(temporaryPath));
     if (!mimeType || mimeType !== part.mimetype || !permittedMimeTypes.includes(mimeType)) {
       throw new BadRequestException("文件内容与声明类型不一致，或类型不被允许");
     }
@@ -82,8 +85,17 @@ export function detectUploadMimeType(header: Buffer): PrivateUploadMimeType | un
   return undefined;
 }
 
+function detectOfficeMimeType(file: Buffer): PrivateUploadMimeType | undefined {
+  if (file.length < 4 || file.subarray(0, 4).toString("ascii") !== "PK\x03\x04") return undefined;
+  const manifest = file.toString("latin1");
+  if (!manifest.includes("[Content_Types].xml")) return undefined;
+  if (manifest.includes("word/")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (manifest.includes("ppt/")) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  return undefined;
+}
+
 function safeFileName(value: string | undefined, mimeType: StoredUpload["mimeType"]) {
-  const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "application/pdf": ".pdf" } as const)[mimeType];
+  const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "application/pdf": ".pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx" } as const)[mimeType];
   const base = path.basename(value ?? "upload").replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 120) || "upload";
   return base.toLowerCase().endsWith(extension) ? base : `${base}${extension}`;
 }

@@ -4,6 +4,7 @@ import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
 import {
   accountStatusSchema,
+  bulkQuotaSchema,
   listUsersQuerySchema,
   quotaSchema,
   reviewDecisionSchema,
@@ -37,6 +38,12 @@ export class AdminController {
   ) {
     const actor = await this.authService.getActor(request);
     return this.adminService.updateQuota(actor, userId, parseInput(quotaSchema, body));
+  }
+
+  @Post("users/quota/bulk")
+  async updateBulkQuota(@Req() request: FastifyRequest, @Body() body: unknown) {
+    const actor = await this.authService.getActor(request);
+    return this.adminService.updateBulkQuota(actor, parseInput(bulkQuotaSchema, body));
   }
 
   @Patch("users/:userId/status")

@@ -75,6 +75,12 @@ interface CourseResourceRow extends QueryResultRow {
   course_status: string;
 }
 
+const courseResourceMimeTypes = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+] as const;
+
 @Injectable()
 export class CoursesService {
   constructor(
@@ -280,8 +286,8 @@ export class CoursesService {
     const course = await this.getOwnedCourse(actor, courseId);
     if (!["draft", "rejected"].includes(course.status)) throw new ConflictException("只有草稿或已驳回课程可以上传资料");
     const part = await request.file();
-    if (!part) throw new BadRequestException("请选择一个 PDF 文件");
-    const upload = await storePrivateUpload(part, getEnvironment().uploadRoot, ["application/pdf"]);
+    if (!part) throw new BadRequestException("请选择 PDF、DOCX 或 PPTX 文件");
+    const upload = await storePrivateUpload(part, getEnvironment().uploadRoot, courseResourceMimeTypes);
     try {
       const resource = await this.database.transaction(async (client) => {
         const locked = await client.query<{ status: string; created_by: string | null }>("SELECT status,created_by FROM courses WHERE id=$1 FOR UPDATE", [courseId]);
@@ -293,8 +299,8 @@ export class CoursesService {
         const id = `course-resource-${randomUUID()}`;
         await client.query(`
           INSERT INTO course_resources (id,course_id,title,resource_type,storage_key,external_url,file_name,mime_type,file_size,source_name,sort_order,status)
-          VALUES ($1,$2,$3,'pdf',$4,NULL,$5,$6,$7,$8,$9,'published')
-        `, [id, courseId, upload.fileName, upload.storageKey, upload.fileName, upload.mimeType, upload.sizeBytes, actor.displayName, count.rows[0].count]);
+          VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,$8,$9,$10,'published')
+        `, [id, courseId, upload.fileName, resourceTypeForMime(upload.mimeType as typeof courseResourceMimeTypes[number]), upload.storageKey, upload.fileName, upload.mimeType, upload.sizeBytes, actor.displayName, count.rows[0].count]);
         return { id, title: upload.fileName, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes };
       });
       return resource;
@@ -313,7 +319,7 @@ export class CoursesService {
     const resource = result.rows[0];
     if (!resource || resource.status !== "published" || resource.course_status !== "published") throw new NotFoundException("课程资料不存在或尚未发布");
     const storageKey = resource.storage_key;
-    if (!storageKey || !/^[a-f0-9-]{36}-[a-f0-9-]{36}$/i.test(storageKey) || resource.mime_type !== "application/pdf") throw new NotFoundException("课程资料存储记录无效");
+    if (!storageKey || !/^[a-f0-9-]{36}-[a-f0-9-]{36}$/i.test(storageKey) || !courseResourceMimeTypes.includes(resource.mime_type as typeof courseResourceMimeTypes[number])) throw new NotFoundException("课程资料存储记录无效");
     return { fileName: resource.file_name ?? resource.title, mimeType: resource.mime_type, stream: createReadStream(path.join(getEnvironment().uploadRoot, storageKey)) };
   }
 
@@ -506,4 +512,10 @@ export class CoursesService {
       updatedAt: row.updated_at,
     };
   }
+}
+
+function resourceTypeForMime(mimeType: typeof courseResourceMimeTypes[number]) {
+  if (mimeType === "application/pdf") return "pdf";
+  if (mimeType.includes("wordprocessingml")) return "word";
+  return "ppt";
 }

@@ -160,6 +160,33 @@ export class AdminRepository {
     });
   }
 
+  async updateQuotas(userIds: string[], quota: QuotaInput, operatorId: string): Promise<number> {
+    return this.database.transaction(async (client) => {
+      const existing = await client.query<{ id: string }>("SELECT id FROM users WHERE id = ANY($1::text[]) FOR UPDATE", [userIds]);
+      if (existing.rowCount !== userIds.length) return Number(existing.rowCount ?? 0);
+      const values: Array<["daily" | "monthly" | "concurrent", number]> = [
+        ["daily", quota.dailyLimit],
+        ["monthly", quota.monthlyLimit],
+        ["concurrent", quota.concurrentLimit],
+      ];
+      for (const userId of userIds) {
+        for (const [periodType, limitValue] of values) {
+          await client.query(`
+            INSERT INTO user_usage_limits (id, user_id, capability, period_type, limit_value)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (user_id, capability, period_type)
+            DO UPDATE SET limit_value = EXCLUDED.limit_value, updated_at = CURRENT_TIMESTAMP
+          `, [randomUUID(), userId, MANAGED_QUOTA_CAPABILITY, periodType, limitValue]);
+        }
+        await client.query(`
+          INSERT INTO audit_records (id, target_type, target_id, reviewer_id, action, reason)
+          VALUES ($1, 'user_usage_limit', $2, $3, 'bulk_update_quota', $4)
+        `, [randomUUID(), userId, operatorId, `daily=${quota.dailyLimit}; monthly=${quota.monthlyLimit}; concurrent=${quota.concurrentLimit}`]);
+      }
+      return userIds.length;
+    });
+  }
+
   async updateAccountStatus(userId: string, status: "active" | "disabled", operatorId: string): Promise<void> {
     await this.database.transaction(async (client) => {
       await client.query(

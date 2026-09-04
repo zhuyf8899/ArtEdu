@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import {
   ArrowClockwise, ArrowRight, BookOpenText, Brain, CirclesThreePlus,
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
-  MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree,
+  MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
 import { createGenerationJob, getPortalHome } from "./services/adminApi.js";
 import { AiCreationConsole } from "./AiCreationConsole.jsx";
@@ -77,6 +77,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
   const [portalError, setPortalError] = useState("");
+  const [coachOpen, setCoachOpen] = useState(false);
   const { notify } = useFeedback();
 
   const loadPortalData = useCallback(async () => {
@@ -139,7 +140,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
         {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从教学资源库选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}
         <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => navigateSection("studio")} />
-        <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课件与课程知识提问，生成学习路径。" onClick={() => showToast("教学对话模块已预留，下一步接入课程知识库。")} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
+        <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课程与工作流生成下一步学习建议。" onClick={() => setCoachOpen(true)} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
         <SectionHeading eyebrow="// FEATURED WORKFLOWS" title="精选工作流" />
         {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入工作台" onRetry={() => navigateSection("studio")} />}
       </>}
@@ -156,7 +157,22 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
       </Suspense>
     </main>
+    {coachOpen && <TeachingCoach courses={data.courses} workflows={data.workflows} onClose={() => setCoachOpen(false)} onNavigate={(target) => { setCoachOpen(false); onNavigate(target); }} />}
   </div>;
+}
+
+function TeachingCoach({ courses, workflows, onClose, onNavigate }) {
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState(null);
+  const createAdvice = (event) => {
+    event.preventDefault();
+    const keyword = question.trim().toLowerCase();
+    const course = courses.find((item) => `${item.title}${item.summary}${item.category}`.toLowerCase().includes(keyword)) ?? courses[0];
+    const workflow = workflows.find((item) => `${item.name}${item.description}${item.category}`.toLowerCase().includes(keyword)) ?? workflows[0];
+    const focus = /图案|纹样|pattern/.test(keyword) ? "先收集 3 个纹样参考，提炼重复单元、主色和留白规则。" : /ui|网页|界面|web/.test(keyword) ? "先写清页面目标、核心用户操作和信息层级，再进入视觉细化。" : "先把创作目标拆成“主题、素材、方法、输出”四项，再逐项验证。";
+    setAnswer({ focus, course, workflow });
+  };
+  return <div className="coach-layer" role="presentation"><button className="coach-scrim" aria-label="关闭教学教练" onClick={onClose} /><section className="coach-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-title"><header><div><p>// LEARNING COACH</p><h2 id="coach-title">教学教练</h2></div><button onClick={onClose} aria-label="关闭教学教练"><X size={20} weight="bold" /></button></header><p className="coach-intro">基于当前已发布课程与工作流，为你整理可执行的下一步。它不调用外部模型，也不会编造课程内容。</p><form onSubmit={createAdvice}><label>你现在想解决什么？<textarea required maxLength="300" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="例如：我想用传统纹样做一个移动端首页，但不知道先做什么。" /></label><button>生成学习建议 <ArrowRight size={16} weight="bold" /></button></form>{answer && <section className="coach-answer"><span><Lightbulb size={18} weight="fill" /> 建议的起点</span><p>{answer.focus}</p>{answer.course && <button onClick={() => onNavigate("/learning")}><small>推荐课程</small><strong>{answer.course.title}</strong><ArrowRight size={16} weight="bold" /></button>}{answer.workflow && <button onClick={() => onNavigate("/studio")}><small>推荐工作流</small><strong>{answer.workflow.name}</strong><ArrowRight size={16} weight="bold" /></button>}{!answer.course && !answer.workflow && <em>当前尚无可推荐内容；请先由教师发布课程或工作流。</em>}</section>}</section></div>;
 }
 
 function HomeDataState({ loading = false, error = "", title, text, action, onRetry }) {

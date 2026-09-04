@@ -138,6 +138,11 @@ export const updateUserQuota = (userId, quota) => request(`/admin/users/${userId
   body: JSON.stringify(quota),
 });
 
+export const updateUsersQuota = (userIds, quota) => request("/admin/users/quota/bulk", {
+  method: "POST",
+  body: JSON.stringify({ userIds, quota }),
+});
+
 export const updateUserStatus = (userId, status) => request(`/admin/users/${userId}/status`, {
   method: "PATCH",
   body: JSON.stringify({ status }),
