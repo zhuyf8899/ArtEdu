@@ -60,24 +60,25 @@ test("does not emit HSTS for local HTTP development", async () => {
   assert.equal(response.headers.get("Strict-Transport-Security"), null);
 });
 
-test("does not turn missing API or write requests into the app shell", async () => {
-  for (const request of [
-    new Request("https://example.test/api/missing", { headers: { accept: "application/json" } }),
-    new Request("https://example.test/flow", { method: "POST", headers: { accept: "text/html" } }),
-  ]) {
-    let calls = 0;
-    const response = await worker.fetch(request, {
-      ASSETS: {
-        fetch: async () => {
-          calls += 1;
-          return new Response("missing", { status: 404 });
-        },
-      },
-    });
+test("returns a clear unavailable response for preview API requests", async () => {
+  let calls = 0;
+  const response = await worker.fetch(new Request("https://example.test/api/missing", { headers: { accept: "application/json" } }), {
+    ASSETS: { fetch: async () => { calls += 1; return new Response("missing", { status: 404 }); } },
+  });
 
-    assert.equal(response.status, 404);
-    assert.equal(calls, 1);
-  }
+  assert.equal(response.status, 503);
+  assert.equal(calls, 0);
+  assert.match((await response.json()).message, /未连接 API 服务/);
+});
+
+test("does not turn missing write requests into the app shell", async () => {
+  let calls = 0;
+  const response = await worker.fetch(new Request("https://example.test/flow", { method: "POST", headers: { accept: "text/html" } }), {
+    ASSETS: { fetch: async () => { calls += 1; return new Response("missing", { status: 404 }); } },
+  });
+
+  assert.equal(response.status, 404);
+  assert.equal(calls, 1);
 });
 
 test("emits the files required by Sites packaging", async () => {

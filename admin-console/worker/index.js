@@ -38,6 +38,15 @@ function withSecurityHeaders(response, request) {
 export default {
   async fetch(request, env) {
     const respond = (response) => withSecurityHeaders(response, request);
+    const requestUrl = new URL(request.url);
+
+    if (requestUrl.pathname.startsWith("/api/")) {
+      return respond(Response.json({ message: "当前在线预览未连接 API 服务，无法登录或写入数据。请在本地测试环境使用测试账号。" }, {
+        status: 503,
+        headers: { "Cache-Control": "no-store" },
+      }));
+    }
+
     const response = await env.ASSETS.fetch(request);
     const acceptsHtml = request.headers.get("accept")?.includes("text/html");
 

@@ -42,6 +42,7 @@ export function LocalLogin({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const isHostedPreview = typeof window !== "undefined" && window.location.hostname.endsWith(".chatgpt.site");
 
   const submit = async (event) => {
     event.preventDefault();
@@ -62,6 +63,7 @@ export function LocalLogin({ onLogin }) {
     </section>
     <section className="test-login__accounts">
       <div className="account-panel__heading"><div><p>// SIGN IN</p><h2>账号登录</h2></div></div>
+      {isHostedPreview && <p className="login-error" role="status">当前为界面预览，未连接 API 或测试数据库；账号仅可在本地测试环境使用。</p>}
       <form className="local-login-form" onSubmit={submit}>
         <label>账号<input autoComplete="username" required maxLength="120" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
         <label>密码<input type="password" autoComplete="current-password" required minLength="1" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
