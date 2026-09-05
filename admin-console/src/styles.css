@@ -661,7 +661,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .ai-submit { flex: 1; justify-content: center; }
   .filter-row { grid-template-columns: 1fr; }
   .portal-console-shortcut { display: none; }
-  .portal-main--home > :not(.ai-creation) { width: min(100% - 24px, 760px); }
+  .portal-main--home .route-transition > :not(.ai-creation) { width: min(100% - 24px, 760px); }
   .workflow-catalog { grid-template-columns: 1fr; }
   .workflow-player > header { flex-direction: column; }
   .workflow-player > header aside { padding-top: 15px; border-top: 1px solid #444; border-left: 0; }
@@ -1010,6 +1010,49 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .search-offline { margin-left: auto; align-self: center; display: flex; align-items: center; gap: 7px; }
 .search-offline em { margin: 0; }
 .search-offline button { padding: 5px 7px; color: var(--ink); background: #fff; border: 1px solid var(--ink); font-size: 7px; font-weight: 700; }
+
+/* Interaction motion system: quick feedback, calm navigation, and reduced-motion support. */
+button, a, input, textarea, select { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, opacity .18s ease, transform .18s ease; }
+button:not(:disabled):active { transform: translateY(1px); }
+.primary-button:not(:disabled):active, .console-entry:active, .portal-primary:active, .publish-submit:active, .ai-submit:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.route-transition { animation: route-enter .34s cubic-bezier(.22, .8, .24, 1) both; }
+@keyframes route-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.portal-nav button::after { transition: background-color .2s ease, transform .2s cubic-bezier(.22, .8, .24, 1); transform: scaleX(0); transform-origin: left; }
+.portal-nav button.is-active::after { transform: scaleX(1); }
+.portal-brand > span, .test-login__brand span, .account-switch > span { transition: transform .2s ease, box-shadow .2s ease; }
+.portal-brand:hover > span, .test-login__brand:hover span, .account-switch:hover > span { transform: rotate(-6deg) scale(1.06); box-shadow: 3px 3px 0 var(--ink); }
+.portal-hero { animation: hero-arrive .55s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes hero-arrive { from { opacity: 0; transform: translateY(14px); box-shadow: 0 0 0 var(--lime); } to { opacity: 1; transform: translateY(0); box-shadow: 6px 6px 0 var(--lime); } }
+.hero-orbit { animation: orbit-in 1s .12s cubic-bezier(.2, .8, .2, 1) both; }
+.orbit-dot { animation: orbit-pulse 2.8s ease-in-out infinite; }
+@keyframes orbit-in { from { opacity: 0; transform: scale(.86) rotate(-12deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes orbit-pulse { 50% { box-shadow: 0 0 0 5px rgba(170,255,0,.15); } }
+.quick-action, .workflow-card, .studio-card, .course-card, .work-card, .workflow-catalog > article, .metric-card, .panel { transition: transform .2s cubic-bezier(.22, .8, .24, 1), box-shadow .2s ease, background-color .2s ease, border-color .2s ease; }
+.quick-action:hover, .workflow-card:hover, .studio-card:hover, .course-card:hover, .work-card:hover, .workflow-catalog > article:hover, .metric-card:hover { transform: translateY(-4px); box-shadow: 5px 5px 0 var(--ink); }
+.workflow-card:hover .workflow-glyph, .studio-card:hover .studio-card__icon { transform: rotate(-4deg) scale(1.06); }
+.workflow-glyph, .studio-card__icon { transition: transform .2s ease; }
+.workflow-card button svg, .studio-card button svg, .work-card button svg, .section-heading button svg, .quick-action i svg { transition: transform .2s ease; }
+.workflow-card button:hover svg, .studio-card button:hover svg, .work-card button:hover svg, .section-heading button:hover svg, .quick-action:hover i svg { transform: translateX(4px); }
+.progress-line i, .table-meter i, .quota-alert__meter i, .wide-meter i { transition: width .55s cubic-bezier(.22, .8, .24, 1); }
+.notification-panel { transform-origin: top right; animation: pop-in .2s cubic-bezier(.22, .8, .24, 1) both; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.scrim, .drawer-scrim, .feedback-dialog-scrim, .coach-scrim, .publish-scrim { animation: scrim-in .22s ease both; }
+@keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
+.drawer, .coach-dialog, .publish-form, .feedback-dialog { animation: surface-in .3s cubic-bezier(.22, .8, .24, 1) both; }
+@keyframes surface-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.drawer { animation-name: drawer-in; }
+@keyframes drawer-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+.feedback-toast { animation: toast-in .28s cubic-bezier(.22, .8, .24, 1) both; }
+.live-indicator.is-live::before, .status-line span, .live-chip i { animation: live-pulse 2.2s ease-in-out infinite; }
+@keyframes live-pulse { 50% { box-shadow: 0 0 0 5px rgba(170,255,0,.08); } }
+.workflow-flow-node, .workflow-run-node { transition: box-shadow .2s ease, border-color .2s ease, opacity .2s ease, transform .2s ease; }
+.workflow-flow-node:hover { transform: translateY(-2px); box-shadow: 5px 5px 0 rgba(0,0,0,.34); }
+.workflow-run-node.is-active { animation: node-active 1.8s ease-in-out infinite; }
+@keyframes node-active { 50% { box-shadow: 0 0 0 6px rgba(185,231,92,.1), 4px 4px 0 #090b0e; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
 
 @media (max-width: 620px) {
   .feedback-stack { right: 14px; bottom: 14px; }

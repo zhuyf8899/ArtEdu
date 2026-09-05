@@ -132,6 +132,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     </header>
 
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}`}>
+      <div key={`${section}:${searchQuery}`} className="route-transition">
       {section !== "home" && section !== "myLearning" && section !== "search" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
@@ -156,6 +157,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
         {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
       </Suspense>
+      </div>
     </main>
     {coachOpen && <TeachingCoach courses={data.courses} workflows={data.workflows} onClose={() => setCoachOpen(false)} onNavigate={(target) => { setCoachOpen(false); onNavigate(target); }} />}
   </div>;
