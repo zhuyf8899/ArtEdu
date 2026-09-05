@@ -14,10 +14,10 @@ export interface AdminUser {
   accountStatus: "active" | "disabled" | "pending";
   quotaStatus: "normal" | "exhausted";
   status: "active" | "limited" | "suspended" | "pending";
-  dailyLimit: number;
-  monthlyLimit: number;
+  dailyLimit: number | null;
+  monthlyLimit: number | null;
   monthlyUsed: number;
-  concurrentLimit: number;
+  concurrentLimit: number | null;
   works: number;
   lastActive: string;
 }
@@ -305,14 +305,14 @@ export class AdminRepository {
   }
 
   private mapUser(row: UserRow): AdminUser {
-    const dailyLimit = Number(row.daily_limit ?? 0);
-    const monthlyLimit = Number(row.monthly_limit ?? 0);
-    const concurrentLimit = Number(row.concurrent_limit ?? 0);
+    const dailyLimit = row.daily_limit === null ? null : Number(row.daily_limit);
+    const monthlyLimit = row.monthly_limit === null ? null : Number(row.monthly_limit);
+    const concurrentLimit = row.concurrent_limit === null ? null : Number(row.concurrent_limit);
     const monthlyUsed = Number(row.monthly_used ?? 0);
     const activeJobs = Number(row.active_jobs ?? 0);
     const quotaExhausted =
-      (monthlyLimit > 0 && monthlyUsed >= monthlyLimit) ||
-      (concurrentLimit > 0 && activeJobs >= concurrentLimit);
+      (monthlyLimit !== null && monthlyUsed >= monthlyLimit) ||
+      (concurrentLimit !== null && activeJobs >= concurrentLimit);
     const status = row.account_status === "disabled"
       ? "suspended"
       : row.account_status === "pending"

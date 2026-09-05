@@ -1066,3 +1066,28 @@ button:not(:disabled):active { transform: translateY(1px); }
   .search-offline { margin-left: 0; }
   .admin-load-state { margin-right: 14px; margin-left: 14px; }
 }
+
+/* Audit fixes: make account actions explicit and preserve visual context for works without a cover. */
+.account-menu { position: relative; }
+.account-menu__panel { position: absolute; z-index: 40; top: calc(100% + 8px); right: 0; width: 180px; padding: 11px; display: grid; gap: 7px; background: #fff; border: 1.5px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+.account-menu__panel > strong { font-size: 10px; }
+.account-menu__panel > span { margin-bottom: 4px; color: var(--muted); font-size: 8px; }
+.account-menu__panel > button { min-height: 31px; padding: 0 9px; background: #fff; border: 1px solid var(--ink); font-size: 9px; font-weight: 700; text-align: left; }
+.account-menu__panel > button:hover { background: var(--lime); }
+.account-menu__panel > .account-menu__signout { color: #8a251d; }
+.same-workflow { flex-wrap: wrap; }
+.same-workflow button { min-height: 32px; padding: 0 9px; display: inline-flex; align-items: center; gap: 6px; color: var(--ink); background: var(--lime); border: 1px solid var(--lime); font-size: 9px; font-weight: 700; }
+.same-workflow button:hover { color: #fff; background: #222; border-color: #fff; }
+.work-visual-fallback { width: 100%; height: 100%; min-height: 220px; padding: 22px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 7px; color: #fff; background: linear-gradient(135deg, #19283a 0%, #476c89 48%, #aaff00 48%, #d8f3ce 100%); }
+.work-visual-fallback svg { margin-bottom: auto; color: var(--lime); }
+.work-visual-fallback span { padding: 4px 6px; color: var(--ink); background: var(--lime); font-size: 8px; font-weight: 700; }
+.work-visual-fallback strong { max-width: 100%; font-size: clamp(18px, 3vw, 31px); line-height: .95; }
+.work-visual-fallback small { color: #d7e4e9; font-size: 8px; }
+.work-visual-fallback--compact { min-height: 0; padding: 14px; }
+.work-visual-fallback--compact strong { font-size: 15px; }
+
+@media (max-width: 560px) {
+  .portal-nav button { min-width: 30px; padding: 0 5px; }
+  .portal-nav button.is-active { min-width: 57px; font-size: 8px; }
+  .account-menu__panel { right: -4px; }
+}

@@ -196,7 +196,7 @@ function WorksView({ title, eyebrow, items, empty, onNavigate }) {
 }
 
 function CourseRow({ course, index, onNavigate }) {
-  return <article className="continue-course"><img src={courseImage(course, index)} alt={`${course.title}课程缩略图`} /><div><span>{course.category} · {course.creatorName}</span><h3>{course.title}</h3><div className="course-progress"><i><b style={{ width: `${course.progressPercent}%` }} /></i><strong>{course.progressPercent}%</strong></div><small>已完成 {course.completedLessons}/{course.lessonCount} 节 · 共 {course.estimatedMinutes} 分钟</small></div><button onClick={() => onNavigate("/learning")}>继续课程 <ArrowRight size={15} weight="bold" /></button></article>;
+  return <article className="continue-course"><img src={courseImage(course, index)} alt={`${course.title}课程缩略图`} /><div><span>{course.category} · {course.creatorName}</span><h3>{course.title}</h3><div className="course-progress"><i><b style={{ width: `${course.progressPercent}%` }} /></i><strong>{course.progressPercent}%</strong></div><small>当前课时完成度 {course.progressPercent}% · 已完成 {course.completedLessons}/{course.lessonCount} 节 · 共 {course.estimatedMinutes} 分钟</small></div><button onClick={() => onNavigate("/learning")}>继续课程 <ArrowRight size={15} weight="bold" /></button></article>;
 }
 
 function TaskRow({ task, compact, onToggle, onDelete }) {

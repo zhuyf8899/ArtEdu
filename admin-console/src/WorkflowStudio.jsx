@@ -18,7 +18,7 @@ function GraphNode({ data }) {
 
 const nodeTypes = { input: GraphNode, prompt: GraphNode, model: GraphNode, preview: GraphNode, note: GraphNode };
 
-export function WorkflowStudio({ onNotice }) {
+export function WorkflowStudio({ initialWorkflowId, onNotice }) {
   const [workflows, setWorkflows] = useState([]);
   const [selected, setSelected] = useState(null);
   const [run, setRun] = useState(null);
@@ -32,6 +32,11 @@ export function WorkflowStudio({ onNotice }) {
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
+  useEffect(() => {
+    if (!initialWorkflowId || selected || loading || !workflows.length) return;
+    const workflow = workflows.find((item) => item.id === initialWorkflowId);
+    if (workflow) void open(workflow);
+  }, [initialWorkflowId, loading, selected, workflows]);
   const start = async () => {
     setLoading(true);
     try { const next = await startWorkflowRun(selected.id, { source: "web-node-canvas" }); setRun(next); onNotice("工作流已开始，节点进度会保存到本地数据库"); }
