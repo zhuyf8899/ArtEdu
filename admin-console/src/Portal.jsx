@@ -146,7 +146,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   return <div className="portal-shell">
     <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
-      <nav className="portal-nav" aria-label="主导航">{navItems.map(([id, label, Icon]) => <button key={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
+      <nav className="portal-nav" aria-label="顶部主导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       <GlobalSearchForm value={searchQuery} onSearch={navigateSearch} />
       {canEnterAdmin(account) && <button className="portal-console-shortcut" onClick={onEnterAdmin}>管理后台 <ArrowRight size={15} weight="bold" /></button>}
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "已连接 API" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
@@ -180,7 +180,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </Suspense>
       </div>
     </main>
-    <nav className="portal-mobile-nav" aria-label="移动端主导航">{navItems.map(([id, label, Icon]) => <button key={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={20} weight={section === id ? "fill" : "regular"} /><span>{label}</span></button>)}</nav>
+    <nav className="portal-mobile-nav" aria-label="移动端辅助导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={20} weight={section === id ? "fill" : "regular"} /><span>{label}</span></button>)}</nav>
     {coachOpen && <TeachingCoach courses={data.courses} workflows={data.workflows} onClose={() => setCoachOpen(false)} onNavigate={(target) => { setCoachOpen(false); onNavigate(target); }} />}
   </div>;
 }
