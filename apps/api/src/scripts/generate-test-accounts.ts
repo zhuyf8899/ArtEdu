@@ -4,10 +4,10 @@ import { hashLocalPassword } from "../modules/auth/password";
 import { withDatabase } from "./run-sql-file";
 
 const accounts = [
-  { id: "user-student-demo", username: "student.demo", password: "ArtEduLocal!2026", displayName: "测试学生", email: "student.demo@example.test", role: "student", roleId: "role-student" },
-  { id: "user-teacher-demo", username: "teacher.demo", password: "ArtEduLocal!2026", displayName: "测试教师", email: "teacher.demo@example.test", role: "teacher", roleId: "role-teacher" },
-  { id: "user-operator-demo", username: "operator.demo", password: "ArtEduLocal!2026", displayName: "测试运营", email: "operator.demo@example.test", role: "operator", roleId: "role-operator" },
-  { id: "user-admin-demo", username: "admin.demo", password: "ArtEduLocal!2026", displayName: "测试管理员", email: "admin.demo@example.test", role: "admin", roleId: "role-admin" },
+  { id: "user-student-demo", username: "student.demo", password: "123456", displayName: "测试学生", email: "student.demo@example.test", role: "student", roleId: "role-student" },
+  { id: "user-teacher-demo", username: "teacher.demo", password: "123456", displayName: "测试教师", email: "teacher.demo@example.test", role: "teacher", roleId: "role-teacher" },
+  { id: "user-operator-demo", username: "operator.demo", password: "123456", displayName: "测试运营", email: "operator.demo@example.test", role: "operator", roleId: "role-operator" },
+  { id: "user-admin-demo", username: "admin.demo", password: "123456", displayName: "测试管理员", email: "admin.demo@example.test", role: "admin", roleId: "role-admin" },
 ] as const;
 
 async function generate() {
