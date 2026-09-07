@@ -1439,3 +1439,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .portal-shell::before { inset: 108px 0 0; background-size: auto, auto, 34px 34px, 34px 34px; opacity: .72; }
   .section-heading h2::after, .portal-heading h1::after { width: .18em; height: .18em; }
 }
+
+/* Button icon sizing: improve recognition without changing the button footprint. */
+.portal-shell button svg,
+.admin-shell button svg,
+.test-login button svg {
+  flex: none;
+  transform: scale(1.14);
+  transform-origin: center;
+}
+.portal-nav button svg { transform: scale(1.2); }
+.primary-button svg,
+.portal-console-shortcut svg,
+.console-entry svg,
+.ai-submit svg,
+.publish-submit svg { transform: scale(1.18); }
+.workflow-card button:hover svg,
+.studio-card button:hover svg,
+.work-card button:hover svg,
+.section-heading button:hover svg,
+.quick-action:hover i svg { transform: translateX(4px) scale(1.14); }
+
+@media (max-width: 560px) {
+  .portal-nav button svg { width: 20px; height: 20px; transform: none; }
+}
