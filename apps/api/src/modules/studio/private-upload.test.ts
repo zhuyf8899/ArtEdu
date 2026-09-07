@@ -9,6 +9,8 @@ import { detectUploadMimeType, storePrivateUpload } from "./private-upload";
 test("上传文件按真实魔数识别，并拒绝伪装内容", () => {
   assert.equal(detectUploadMimeType(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), "image/png");
   assert.equal(detectUploadMimeType(Buffer.from("%PDF-1.7\n", "ascii")), "application/pdf");
+  assert.equal(detectUploadMimeType(Buffer.from("....ftypisom", "ascii")), "video/mp4");
+  assert.equal(detectUploadMimeType(Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x93])), "video/webm");
   assert.equal(detectUploadMimeType(Buffer.from("<script>alert(1)</script>", "utf8")), undefined);
   assert.equal(detectUploadMimeType(Buffer.from("RIFF0000WAVE", "ascii")), undefined);
 });

@@ -12,6 +12,8 @@ const allowedTypes = {
   "image/jpeg": "image",
   "image/png": "image",
   "image/webp": "image",
+  "video/mp4": "video",
+  "video/webm": "video",
   "application/pdf": "document",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "document",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation": "document",
@@ -23,7 +25,7 @@ export interface StoredUpload {
   storageKey: string;
   fileName: string;
   mimeType: PrivateUploadMimeType;
-  assetType: "image" | "document";
+  assetType: "image" | "video" | "document";
   sizeBytes: number;
   sha256: string;
 }
@@ -82,6 +84,8 @@ export function detectUploadMimeType(header: Buffer): PrivateUploadMimeType | un
   if (header.length >= 8 && header.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
   if (header.length >= 12 && header.subarray(0, 4).toString("ascii") === "RIFF" && header.subarray(8, 12).toString("ascii") === "WEBP") return "image/webp";
   if (header.length >= 5 && header.subarray(0, 5).toString("ascii") === "%PDF-") return "application/pdf";
+  if (header.length >= 8 && header.subarray(4, 8).toString("ascii") === "ftyp") return "video/mp4";
+  if (header.length >= 4 && header.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]))) return "video/webm";
   return undefined;
 }
 
@@ -95,7 +99,7 @@ function detectOfficeMimeType(file: Buffer): PrivateUploadMimeType | undefined {
 }
 
 function safeFileName(value: string | undefined, mimeType: StoredUpload["mimeType"]) {
-  const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "application/pdf": ".pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx" } as const)[mimeType];
+  const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4", "video/webm": ".webm", "application/pdf": ".pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx" } as const)[mimeType];
   const base = path.basename(value ?? "upload").replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 120) || "upload";
   return base.toLowerCase().endsWith(extension) ? base : `${base}${extension}`;
 }

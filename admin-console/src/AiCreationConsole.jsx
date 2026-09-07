@@ -92,9 +92,11 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
       prompt: content,
       parameters: { method: method.id, methodLabel: method.label, model: model.id },
     });
-    setReply(result
-      ? `任务 ${result.id.slice(0, 8)} 已创建。输入内容已清空，你可以继续创建下一个任务。`
-      : "创作请求已记录为演示状态；连接生成服务后即可执行完整任务。");
+    setReply(result?.local
+      ? `${result.content}\n\n本次为本地演示结果，任务已写入数据库并完成审计；接入正式模型后可沿用同一创作入口。`
+      : result
+        ? `任务 ${result.id.slice(0, 8)} 已创建。输入内容已清空，你可以继续创建下一个任务。`
+        : "创作请求已记录为演示状态；连接生成服务后即可执行完整任务。");
     if (result) {
       setPrompt("");
       setDraftSaved(false);
@@ -106,7 +108,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
 
   return <section className="ai-creation" aria-labelledby="ai-creation-title">
     <div className="ai-creation__intro">
-      <span><Sparkle size={14} weight="fill" /> 多模型免费体验 · 校内账号直接使用</span>
+      <span><Sparkle size={14} weight="fill" /> {serviceReady ? "已配置模型服务 · 校内账号直接使用" : "本地演示模式 · 不调用外部模型"}</span>
       <h2 id="ai-creation-title">今天想<span>创作</span>什么？</h2>
       <p>选择方法与大模型，把灵感变成可以执行、学习和复用的艺术工作流。</p>
     </div>
@@ -134,7 +136,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
 
       <div className="ai-composer__footer">
         <div className="model-picker">
-          <span>模型接口</span>
+          <span>{serviceReady ? "模型接口" : "演示参数"}</span>
           <div role="radiogroup" aria-label="选择大模型">
             {MODELS.map((item) => <button
               type="button"
@@ -161,8 +163,8 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
           </div>
           <div className="ai-composer__actions">
             <button type="button" className="ai-attach" aria-label="添加参考文件" title="添加参考文件" onClick={() => onNotice?.("参考文件上传将在学校对象存储接入后开放", "info")}><Paperclip size={18} weight="bold" /></button>
-            <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked} title={!serviceReady ? "模型服务未启用时会保留创作草稿" : undefined}>
-              {sending ? "创建中" : quotaBlocked ? "额度已用尽" : serviceReady ? "开始创作" : "保存草稿"} <ArrowUpRight size={18} weight="bold" />
+            <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked} title={!serviceReady ? "使用本地 Harness 完成结构化演示，不调用外部模型" : undefined}>
+              {sending ? "创建中" : quotaBlocked ? "额度已用尽" : serviceReady ? "开始创作" : "本地演示"} <ArrowUpRight size={18} weight="bold" />
             </button>
           </div>
         </div>

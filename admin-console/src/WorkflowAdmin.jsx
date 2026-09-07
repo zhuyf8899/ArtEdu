@@ -118,7 +118,7 @@ function FlowNode({ data }) {
 
 const nodeTypes = { input: FlowNode, prompt: FlowNode, model: FlowNode, preview: FlowNode, note: FlowNode };
 
-export function WorkflowAdmin({ showToast }) {
+export function WorkflowAdmin({ showToast, canPublish = true }) {
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
   const [editor, setEditor] = useState(null);
@@ -199,7 +199,7 @@ export function WorkflowAdmin({ showToast }) {
     } catch (error) { showToast(`导入失败：${error.message}`); }
   };
 
-  if (editor && selected) return <WorkflowCanvas editor={editor} selected={selected} loading={loading} onBack={() => { setEditor(null); setSelected(null); }} onChange={change} onDefinition={changeDefinition} onSave={save} onExport={exportJson} onImport={importJson} />;
+  if (editor && selected) return <WorkflowCanvas editor={editor} selected={selected} loading={loading} canPublish={canPublish} onBack={() => { setEditor(null); setSelected(null); }} onChange={change} onDefinition={changeDefinition} onSave={save} onExport={exportJson} onImport={importJson} />;
 
   return <div className="page-content">
     <section className="page-intro"><div><p>// COMFY-STYLE WORKFLOW OPERATIONS</p><h1>节点工作流</h1><span>用画布连接输入、提示词、模型与输出节点；保存后生成不可变版本。</span></div><button className="primary-button" disabled={loading} onClick={create}><Plus size={18} weight="bold" /> 新建节点工作流</button></section>
@@ -207,7 +207,7 @@ export function WorkflowAdmin({ showToast }) {
   </div>;
 }
 
-function WorkflowCanvas({ editor, selected, loading, onBack, onChange, onDefinition, onSave, onExport, onImport }) {
+function WorkflowCanvas({ editor, selected, loading, canPublish, onBack, onChange, onDefinition, onSave, onExport, onImport }) {
   const [selectedId, setSelectedId] = useState(null);
   const [preview, setPreview] = useState("");
   const nodes = useMemo(() => editor.definition.nodes.map((node) => ({ ...node, data: { ...node.data, nodeType: node.type } })), [editor.definition.nodes]);
@@ -241,7 +241,7 @@ function WorkflowCanvas({ editor, selected, loading, onBack, onChange, onDefinit
       <div className="workflow-flow-wrap"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} defaultViewport={editor.definition.viewport} fitView nodesDraggable nodesConnectable elementsSelectable panOnDrag isValidConnection={isValidConnection} onNodesChange={(changes) => commit({ nodes: applyNodeChanges(changes, editor.definition.nodes) })} onEdgesChange={(changes) => commit({ edges: applyEdgeChanges(changes, editor.definition.edges) })} onConnect={connect} onNodeClick={(_, node) => setSelectedId(node.id)} onPaneClick={() => setSelectedId(null)} onMoveEnd={(_, viewport) => commit({ viewport })}><Background color="#374151" gap={18} size={1} /><MiniMap pannable zoomable nodeColor={(node) => palette[node.type]?.color || "#78859b"} /><Controls /></ReactFlow>{preview && <div className="workflow-preview-toast"><strong>本地结构预览</strong><span>{preview}</span><button onClick={() => setPreview("")}><X size={15} /></button></div>}</div>
       <aside className="workflow-inspector"><p>// INSPECTOR</p><h2>{selectedNode ? "节点配置" : "工作流配置"}</h2>{selectedNode ? <div className="workflow-form"><div className="node-type-badge" style={{ "--node-color": palette[selectedNode.type]?.color }}>{palette[selectedNode.type]?.title}</div><label>节点名称<input value={selectedNode.data.label || ""} onChange={(event) => updateNode("label", event.target.value)} /></label><label>节点说明<textarea value={selectedNode.data.description || ""} onChange={(event) => updateNode("description", event.target.value)} /></label><label>默认值 / 参数<textarea value={selectedNode.data.value || ""} onChange={(event) => updateNode("value", event.target.value)} placeholder="例如：1024×1024、写实摄影、低饱和" /></label><label>预计用时<input type="number" min="0" max="1440" value={selectedNode.data.estimatedMinutes ?? 10} onChange={(event) => updateNode("estimatedMinutes", Number(event.target.value))} /><small>用于学生端步骤提示，不影响图结构。</small></label><button className="danger-text-button" onClick={deleteNode}><X size={15} /> 删除节点</button></div> : <div className="workflow-form"><label>工作流名称<input value={editor.name} onChange={(event) => onChange("name", event.target.value)} /></label><label>工作流描述<textarea value={editor.description} onChange={(event) => onChange("description", event.target.value)} /></label><label>分类<input value={editor.category} onChange={(event) => onChange("category", event.target.value)} /></label><label>入口<select value={editor.entryType} onChange={(event) => onChange("entryType", event.target.value)}><option value="chat">教学对话</option><option value="workbench">设计工作台</option><option value="external_tool">外部工具</option></select></label><label>提示模板（可选）<textarea value={editor.promptTemplate} onChange={(event) => onChange("promptTemplate", event.target.value)} placeholder="供未来模型节点调用的全局提示词" /></label></div>}<div className={`workflow-graph-check ${issues.length ? "is-error" : ""}`}><strong>{issues.length ? "图结构待修复" : "图结构有效"}</strong><span>{issues[0] || `${editor.definition.nodes.length} 个节点 · ${editor.definition.edges.length} 条连接`}</span>{!issues.length && warnings[0] && <em>{warnings[0]}</em>}</div></aside>
     </section>
-    <section className="workflow-runbar"><div><FlowArrow size={19} weight="bold" /><span>当前仅校验图结构；模型执行、队列和运行日志将在后续接入实际算力后启用。</span></div><div><button className="outline-button" onClick={() => setPreview(issues.length ? issues[0] : `连接关系有效：${editor.definition.nodes.length} 个节点将按画布关系传递数据。`)}>本地预览</button><button className="outline-button" disabled={loading} onClick={() => onSave(false)}><FloppyDisk size={16} /> 保存版本</button><button className="primary-button" disabled={loading} onClick={() => onSave(true)}>保存并发布 <ArrowRight size={16} /></button></div></section>
+    <section className="workflow-runbar"><div><FlowArrow size={19} weight="bold" /><span>当前仅校验图结构；模型执行、队列和运行日志将在后续接入实际算力后启用。</span></div><div><button className="outline-button" onClick={() => setPreview(issues.length ? issues[0] : `连接关系有效：${editor.definition.nodes.length} 个节点将按画布关系传递数据。`)}>本地预览</button><button className="outline-button" disabled={loading} onClick={() => onSave(false)}><FloppyDisk size={16} /> 保存版本</button>{canPublish ? <button className="primary-button" disabled={loading} onClick={() => onSave(true)}>保存并发布 <ArrowRight size={16} /></button> : <span className="workflow-publish-hint">保存后由教师、运营或管理员发布。</span>}</div></section>
     {selected.versions?.length > 0 && <section className="table-panel workflow-versions"><div className="panel__heading"><div><p>// VERSION HISTORY</p><h2>版本记录</h2></div><span>{selected.versions.length} 个版本</span></div>{selected.versions.map((version) => <div key={version.id}><strong>V{version.versionNumber}</strong><span>{version.nodes?.length ?? version.steps?.length ?? 0} 个节点 · {version.edges?.length ?? 0} 条连接 · {version.published ? "已发布" : "草稿"}</span><small>{version.createdAt ? new Date(version.createdAt).toLocaleString("zh-CN") : ""}</small></div>)}</section>}
   </div>;
 }

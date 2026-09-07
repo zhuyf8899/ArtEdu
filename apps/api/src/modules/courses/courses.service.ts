@@ -71,6 +71,7 @@ interface CourseResourceRow extends QueryResultRow {
   storage_key: string | null;
   file_name: string | null;
   mime_type: string | null;
+  transcript_text: string | null;
   status: string;
   course_status: string;
 }
@@ -79,6 +80,8 @@ const courseResourceMimeTypes = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "video/mp4",
+  "video/webm",
 ] as const;
 
 @Injectable()
@@ -159,7 +162,7 @@ export class CoursesService {
       `, [actor.id, courseId]),
       this.database.query<CourseResourceRow & { lesson_id: string | null; resource_type: string; external_url: string | null; sort_order: number }>(`
         SELECT id, course_id, lesson_id, title, resource_type, storage_key, external_url, file_name,
-          mime_type, sort_order, status, 'published'::text AS course_status
+          mime_type, transcript_text, sort_order, status, 'published'::text AS course_status
         FROM course_resources
         WHERE course_id = $1 AND status = 'published'
         ORDER BY sort_order, created_at
@@ -187,6 +190,7 @@ export class CoursesService {
         externalUrl: resource.external_url,
         fileName: resource.file_name,
         mimeType: resource.mime_type,
+        transcriptText: resource.transcript_text,
         sortOrder: resource.sort_order,
         downloadUrl: resource.storage_key ? `/api/courses/${courseId}/resources/${resource.id}/download` : null,
       })),
@@ -286,7 +290,7 @@ export class CoursesService {
     const course = await this.getOwnedCourse(actor, courseId);
     if (!["draft", "rejected"].includes(course.status)) throw new ConflictException("只有草稿或已驳回课程可以上传资料");
     const part = await request.file();
-    if (!part) throw new BadRequestException("请选择 PDF、DOCX 或 PPTX 文件");
+    if (!part) throw new BadRequestException("请选择 PDF、DOCX、PPTX 或 MP4/WebM 视频文件");
     const upload = await storePrivateUpload(part, getEnvironment().uploadRoot, courseResourceMimeTypes);
     try {
       const resource = await this.database.transaction(async (client) => {
@@ -517,5 +521,6 @@ export class CoursesService {
 function resourceTypeForMime(mimeType: typeof courseResourceMimeTypes[number]) {
   if (mimeType === "application/pdf") return "pdf";
   if (mimeType.includes("wordprocessingml")) return "word";
+  if (mimeType.startsWith("video/")) return "video";
   return "ppt";
 }

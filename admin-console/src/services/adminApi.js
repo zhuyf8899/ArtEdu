@@ -97,6 +97,16 @@ export const createGenerationJob = (input) => request("/generation-jobs", {
   body: JSON.stringify(input),
 });
 
+export const createAgentRun = (input) => request("/agent-runs", {
+  method: "POST",
+  body: JSON.stringify(input),
+});
+
+export const executeAgentRun = (runId, input = {}) => request(`/agent-runs/${encodeURIComponent(runId)}/execute`, {
+  method: "POST",
+  body: JSON.stringify({ mode: "mock", ...input }),
+});
+
 export const getWorkflows = (query = "") => request(`/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getWorkflow = (workflowId) => request(`/workflows/${workflowId}`);
 export const getAdminWorkflows = (query = "") => request(`/admin/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);

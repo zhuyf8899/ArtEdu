@@ -35,6 +35,8 @@ interface WorkRow {
   preview_url: string | null;
 }
 
+const WORKFLOW_PUBLISH_ROLES = ["admin", "teacher", "operator"];
+
 @Injectable()
 export class StudioService {
   constructor(private readonly database: DatabaseService, private readonly auth: AuthService) {}
@@ -85,7 +87,6 @@ export class StudioService {
   }
 
   async createWorkflow(actor: Actor, input: WorkflowInput) {
-    this.auth.requireAnyRole(actor, ["admin", "teacher"]);
     const id = `workflow-${randomUUID()}`;
     await this.database.query(`
       INSERT INTO workflows (id, name, description, category, entry_type, entry_url, status, created_by)
@@ -95,7 +96,6 @@ export class StudioService {
   }
 
   async listManagedWorkflows(actor: Actor, query: CatalogQuery) {
-    this.auth.requireAnyRole(actor, ["admin", "teacher"]);
     const values: unknown[] = [];
     const where = ["1=1"];
     if (!actor.roles.includes("admin")) {
@@ -127,7 +127,6 @@ export class StudioService {
   }
 
   async getManagedWorkflow(actor: Actor, workflowId: string) {
-    this.auth.requireAnyRole(actor, ["admin", "teacher"]);
     const workflow = await this.database.query(`
       SELECT w.*, creator.display_name AS creator_name
       FROM workflows w LEFT JOIN users creator ON creator.id = w.created_by
@@ -156,7 +155,6 @@ export class StudioService {
   }
 
   async updateWorkflow(actor: Actor, workflowId: string, input: Partial<WorkflowInput>) {
-    this.auth.requireAnyRole(actor, ["admin", "teacher"]);
     const current = await this.database.query<{ created_by: string; status: string }>("SELECT created_by,status FROM workflows WHERE id=$1", [workflowId]);
     if (!current.rows[0]) throw new NotFoundException("工作流不存在");
     this.requireWorkflowAccess(actor, current.rows[0].created_by);
@@ -170,10 +168,10 @@ export class StudioService {
   }
 
   async createWorkflowVersion(actor: Actor, workflowId: string, input: WorkflowVersionInput) {
-    this.auth.requireAnyRole(actor, ["admin", "teacher"]);
     const workflow = await this.database.query<{ created_by: string }>("SELECT created_by FROM workflows WHERE id = $1", [workflowId]);
     if (!workflow.rows[0]) throw new NotFoundException("工作流不存在");
     if (!actor.roles.includes("admin") && workflow.rows[0].created_by !== actor.id) throw new ForbiddenException("只能编辑自己创建的工作流");
+    if (input.publish) this.auth.requireAnyRole(actor, WORKFLOW_PUBLISH_ROLES);
     const definition = input.definition ?? this.legacyStepsToDefinition(input.steps ?? []);
     const version = await this.database.transaction(async (client) => {
       const next = await client.query<{ number: number }>("SELECT COALESCE(MAX(version_number), 0)::int + 1 AS number FROM workflow_versions WHERE workflow_id = $1", [workflowId]);

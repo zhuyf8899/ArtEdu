@@ -4,7 +4,7 @@ import {
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
-import { createGenerationJob, getPortalHome } from "./services/adminApi.js";
+import { createAgentRun, createGenerationJob, executeAgentRun, getPortalHome } from "./services/adminApi.js";
 import { AiCreationConsole } from "./AiCreationConsole.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
@@ -111,6 +111,14 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const showToast = notify;
   const startGeneration = async (jobType, prompt, parameters = {}) => {
     try {
+      if (!data.creation.enabled) {
+        const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation" }[jobType] ?? "ui_design";
+        const run = await createAgentRun({ scenario, prompt, parameters });
+        const completed = await executeAgentRun(run.id);
+        const lastMessage = [...(completed.messages ?? [])].reverse().find((message) => message.role === "agent");
+        showToast("本地演示已完成：创作说明已写入审计记录。", "success");
+        return { id: run.id, local: true, content: lastMessage?.content ?? "本地创作说明已生成。" };
+      }
       const job = await createGenerationJob({ jobType, prompt, parameters: { source: "integrated-test-site", ...parameters } });
       showToast(`任务已创建：${job.id.slice(0, 8)}…，可在后端任务队列中查看。`);
       return job;
