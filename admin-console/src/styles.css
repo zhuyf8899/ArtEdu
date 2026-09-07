@@ -1094,3 +1094,372 @@ button:not(:disabled):active { transform: translateY(1px); }
   .portal-nav button.is-active { min-width: 57px; font-size: 8px; }
   .account-menu__panel { right: -4px; }
 }
+
+/* Neutral light experience: a quiet white canvas with clear black actions. */
+:root {
+  color: #111;
+  background: #fff;
+  --ink: #111;
+  --paper: #f7f7f8;
+  --lime: #111;
+  --muted: #6b6b6b;
+  --soft-line: #e5e5e5;
+}
+
+html, body, #root, .portal-shell, .admin-shell { background: #fff; }
+button, input, textarea, select { border-radius: 8px; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
+
+/* Login */
+.test-login { color: #111; background: #fff; }
+.test-login__intro { color: #111; background: #f7f7f8; border-right-color: #e5e5e5; }
+.test-login__brand span, .portal-brand > span { color: #fff; background: #111; border-radius: 9px; }
+.test-login__intro .eyebrow, .account-panel__heading p { color: #6b6b6b; }
+.test-login__intro > p:not(.eyebrow) { color: #666; }
+.test-login__note { color: #444; background: #fff; border-color: #dedede; border-radius: 12px; }
+.test-login__note svg { color: #111; }
+.local-login-form input { min-height: 46px; border-color: #d7d7d7; background: #fff; }
+.local-login-form button { min-height: 46px; color: #fff; background: #111; border-color: #111; box-shadow: none; }
+.login-service { min-height: 42px; margin: 15px 0; padding: 9px 11px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #6b6b6b; background: #f7f7f8; border: 1px solid #dedede; border-radius: 10px; font-size: 9px; font-weight: 700; }
+.login-service span, .login-service button { display: inline-flex; align-items: center; gap: 7px; }
+.login-service--online { color: #25653b; background: #f0faf3; border-color: #cfe8d6; }
+.login-service--offline { color: #9b2c2c; background: #fff5f5; border-color: #f0cccc; }
+.login-service button { min-height: 30px; padding: 0 9px; color: inherit; background: #fff; border: 1px solid currentColor; font-size: 8px; font-weight: 700; }
+
+/* Portal shell and navigation */
+.portal-shell { color: #111; background: #fff; }
+.portal-topbar { background: rgba(255,255,255,.94); border-bottom: 1px solid #e5e5e5; }
+.portal-nav button { min-height: 44px; color: #737373; border-radius: 0; }
+.portal-nav button:hover { color: #111; background: #f7f7f8; }
+.portal-nav button.is-active::after { height: 2px; background: #111; }
+.portal-search { min-height: 42px; background: #f7f7f8; border: 1px solid #dedede; border-radius: 12px; }
+.portal-search:focus-within { background: #fff; border-color: #aaa; box-shadow: 0 0 0 3px rgba(0,0,0,.06); }
+.portal-search button { width: 34px; height: 34px; color: #fff; background: #111; border-radius: 9px; }
+.account-switch { min-height: 44px; border-radius: 10px; }
+.account-switch:hover { background: #f7f7f8; }
+.live-indicator.is-live { color: #37714b; }
+.live-indicator.is-live::before, .ai-service-state.is-ready i, .status-line span, .live-chip i { background: #31a65a; box-shadow: 0 0 0 3px rgba(49,166,90,.12); }
+.portal-console-shortcut, .console-entry { color: #fff; background: #111; border-color: #111; box-shadow: none; border-radius: 9px; }
+.portal-main { width: min(1180px, calc(100% - 48px)); }
+
+/* Conversational creation surface */
+.ai-creation { color: #111; background: #fff; border: 1px solid #e5e5e5; box-shadow: 0 12px 34px rgba(0,0,0,.06); border-radius: 20px; }
+.portal-main--home .ai-creation { border: 1px solid #e5e5e5; box-shadow: 0 12px 34px rgba(0,0,0,.06); }
+.ai-creation__intro > span, .ai-creation__intro h2 span { color: #111; }
+.ai-creation__intro > p { color: #6b6b6b; }
+.ai-composer { background: #fff; border: 1px solid #d8d8d8; box-shadow: 0 8px 24px rgba(0,0,0,.06); border-radius: 16px; }
+.ai-service-state { color: #666; background: #f7f7f8; border-bottom-color: #e5e5e5; }
+.ai-service-state i { background: #d88a34; box-shadow: 0 0 0 3px rgba(216,138,52,.12); }
+.ai-message { color: #222; }
+.ai-message > span { color: #fff; background: #111; border-radius: 9px; }
+.ai-conversation textarea { min-height: 128px; color: #111; caret-color: #111; background: #fff; border-color: #dedede; border-radius: 12px; }
+.ai-conversation textarea::placeholder { color: #969696; }
+.ai-composer__footer { border-top-color: #e5e5e5; }
+.model-picker > span { color: #777; }
+.model-picker button { min-height: 36px; color: #555; background: #fff; border-color: #dedede; }
+.model-picker button:hover { color: #111; background: #f7f7f8; border-color: #bbb; }
+.model-picker button.is-active { color: #fff; background: #111; border-color: #111; }
+.ai-methods { background: #f7f7f8; border-color: #dedede; border-radius: 10px; }
+.ai-methods button { min-height: 40px; color: #666; border-right-color: #dedede; border-radius: 0; }
+.ai-methods button:first-child { border-radius: 9px 0 0 9px; }
+.ai-methods button:last-child { border-radius: 0 9px 9px 0; }
+.ai-methods button:hover { color: #111; background: #efefef; }
+.ai-methods button.is-active { color: #fff; background: #111; }
+.ai-attach, .ai-clear { min-width: 40px; min-height: 40px; color: #555; background: #fff; border-color: #dedede; }
+.ai-submit { min-height: 40px; color: #fff; background: #111; border-color: #111; }
+.ai-composer__status { color: #777; border-top-color: #ededed; }
+.ai-composer__status > button { color: #555; border-bottom-color: #aaa; }
+
+/* Content cards and states */
+.progress-strip, .quick-action, .workflow-card, .studio-card, .course-card, .work-card,
+.community-actions, .my-submissions, .resource-filters, .resource-load-state,
+.search-card, .search-filters, .search-summary, .home-data-state, .panel, .metric-card {
+  background: #fff;
+  border-color: #e3e3e3;
+  box-shadow: none;
+  border-radius: 14px;
+}
+.quick-action--accent, .studio-card--accent, .metric-card--accent { color: #111; background: #f2f2f2; }
+.quick-action:hover, .workflow-card:hover, .studio-card:hover, .course-card:hover, .work-card:hover, .workflow-catalog > article:hover, .metric-card:hover { transform: translateY(-2px); border-color: #c7c7c7; box-shadow: 0 10px 24px rgba(0,0,0,.06); }
+.workflow-glyph, .studio-card__icon, .course-cover, .search-card__visual { background: #f2f2f2; border-color: #e0e0e0; }
+.course-cover--1, .search-card--1 .search-card__visual { background: #f5f5f5; }
+.course-cover--2, .search-card--2 .search-card__visual { background: #eeeeee; }
+.course-card__tags b, .search-card__type b, .filter-row button.is-active, .search-filter-group--tags button.is-active { color: #fff; background: #111; border-color: #111; box-shadow: none; }
+.course-card__tags span, .search-card__tags span { background: #f7f7f8; border-color: #e2e2e2; }
+.course-card__footer button { width: 40px; height: 40px; }
+.community-actions > button, .publish-submit, .workflow-catalog button, .workflow-start button, .workflow-step footer button,
+.continue-course > button, .my-course-card footer button, .learning-work-grid footer button, .learning-empty button,
+.home-data-state button, .resource-load-state button, .learning-load-error button, .admin-load-state button,
+.learning-create-form > button, .note-create-form > button, .same-workflow button {
+  min-height: 40px; color: #fff; background: #111; border-color: #111; box-shadow: none; border-radius: 9px;
+}
+.work-visual-fallback { background: linear-gradient(135deg, #171717 0 48%, #ededed 48% 100%); }
+.work-visual-fallback svg { color: #fff; }
+.work-visual-fallback span { color: #111; background: #fff; }
+.feedback-toast { color: #fff; background: #111; border-color: #111; box-shadow: 0 8px 24px rgba(0,0,0,.15); border-radius: 10px; }
+
+/* Search */
+.search-page__hero { color: #111; background: #fff; border: 1px solid #e3e3e3; box-shadow: none; border-radius: 18px; }
+.search-page__hero .eyebrow, .search-page__hero h1 span { color: #111; }
+.search-page__hero > div > p:last-child { color: #6b6b6b; }
+.search-page__hero form { background: #f7f7f8; border-color: #dedede; box-shadow: none; border-radius: 13px; }
+.search-page__hero form button { min-height: 42px; color: #fff; background: #111; border-color: #111; }
+.search-filter-group:not(.search-filter-group--tags) > button { min-height: 40px; }
+.search-filters > header { color: #111; background: #fff; border-bottom-color: #e3e3e3; }
+.search-results > header span { color: #555; }
+.search-filter-group:not(.search-filter-group--tags) > button.is-active { color: #fff; background: #111; }
+.search-filter-group:not(.search-filter-group--tags) > button.is-active i { background: #fff; border-color: #fff; }
+.search-filter-group:not(.search-filter-group--tags) > button.is-active b { color: #111; background: #fff; }
+
+/* Workflow and learning spaces */
+.workflow-player > header { color: #111; background: #f7f7f8; border-color: #e3e3e3; border-radius: 14px 14px 0 0; }
+.workflow-player > header span, .workflow-player > header aside strong { color: #111; }
+.workflow-player > header p, .workflow-player > header aside span { color: #6b6b6b; }
+.workflow-player > header aside { border-left-color: #dedede; }
+.workflow-player__progress, .workflow-step { border-color: #e3e3e3; }
+.workflow-player__progress b, .course-progress i b, .learning-goal-card i b { background: #111; }
+.workflow-step > span { color: #555; }
+.workflow-step > div { color: #222; background: #f7f7f8; border-left-color: #111; border-radius: 0 10px 10px 0; }
+.workflow-step > div small { color: #555; }
+.my-learning-heading__status { border-color: #e3e3e3; box-shadow: none; border-radius: 12px; }
+.learning-space { background: #fff; border-color: #e3e3e3; box-shadow: none; border-radius: 16px; overflow: hidden; }
+.learning-rail { color: #111; background: #f7f7f8; border-right-color: #e3e3e3; }
+.learning-rail__brand { color: #111; border-bottom-color: #dedede; }
+.learning-rail__brand strong { color: #111; }
+.learning-rail__brand span, .learning-rail__account small { color: #777; }
+.learning-rail nav button { min-height: 44px; color: #666; border-radius: 9px; }
+.learning-rail nav button:hover { color: #111; background: #eee; border-color: #ddd; }
+.learning-rail nav button.is-active { color: #111; background: #fff; border-color: #dedede; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+.learning-rail nav button b { color: #fff; background: #111; border-color: #111; }
+.learning-rail nav button.is-active b { color: #fff; background: #111; border-color: #111; }
+.learning-rail__account { border-top-color: #dedede; }
+.learning-rail__account > span { color: #fff; background: #111; border-radius: 9px; }
+.learning-goal-card { color: #111; background: #f7f7f8; border-color: #e3e3e3; box-shadow: none; border-radius: 14px; }
+.learning-goal-card__icon { color: #fff; background: #111; border-color: #111; border-radius: 12px; }
+.learning-goal-card span { color: #555; }
+.learning-welcome > svg { color: #111; }
+.learning-welcome span, .learning-section-header span, .today-tasks header span, .recent-learning header span,
+.continue-course > div > span, .my-course-card > div > span, .learning-work-grid article > div:last-child > span { color: #666; }
+.learning-onboarding { margin-bottom: 18px; padding: 18px; display: grid; grid-template-columns: repeat(3, 1fr) auto; align-items: center; gap: 14px; background: #f7f7f8; border: 1px solid #e3e3e3; border-radius: 14px; }
+.learning-onboarding > div { min-height: 78px; padding-right: 13px; border-right: 1px solid #dedede; }
+.learning-onboarding span, .learning-onboarding strong, .learning-onboarding p { display: block; }
+.learning-onboarding span { color: #777; font-size: 8px; font-weight: 700; }
+.learning-onboarding strong { margin-top: 5px; font-size: 10px; }
+.learning-onboarding p { margin: 4px 0 0; color: #707070; font-size: 8px; line-height: 1.5; }
+.learning-onboarding > button { min-height: 40px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; color: #fff; background: #111; border: 1px solid #111; font-size: 8px; font-weight: 700; }
+
+/* Administration stays visually consistent with the public platform. */
+.sidebar { color: #111; background: #f7f7f8; border-right: 1px solid #e3e3e3; }
+.sidebar__top, .side-nav button, .side-nav button:last-child, .sidebar__account { border-color: #e3e3e3; }
+.brand__mark { color: #fff; background: #111; border-color: #111; border-radius: 9px; }
+.brand span, .sidebar__account span { color: #737373; }
+.sidebar__eyebrow, .sidebar__notice-label { color: #555; }
+.side-nav button { min-height: 52px; color: #666; border-radius: 0; }
+.side-nav button:hover { color: #111; background: #eee; }
+.side-nav button.is-active { color: #111; background: #fff; }
+.side-nav button.is-active::before { width: 3px; background: #111; }
+.side-nav button b, .side-nav button.is-active b { color: #fff; background: #111; border-color: #111; }
+.sidebar__notice { background: #fff; border-color: #dedede; border-radius: 12px; }
+.avatar, .avatar--light { color: #fff; background: #111; border-color: #111; border-radius: 9px; }
+.avatar--outline { color: #111; background: #fff; }
+.topbar { background: #fff; border-bottom: 1px solid #e5e5e5; }
+.global-search { background: #f7f7f8; border-color: #dedede; border-radius: 10px; }
+.metric-card, .panel { border: 1px solid #e3e3e3; }
+.metric-card--accent { background: #f1f1f1; }
+.metric-card--accent p { color: #666; }
+.primary-button { color: #fff; background: #111; border-color: #111; box-shadow: none; border-radius: 9px; }
+.empty-state--compact { min-height: 150px; }
+.usage-chart > div > i, .mini-track i, .quota-alert__meter i, .table-meter i { background: #111; border-color: #111; }
+.review-summary, .current-usage { color: #fff; background: #111; border-color: #111; }
+.review-tabs button.is-active, .segmented button.is-active, .table-footer button.is-active { color: #fff; background: #111; }
+.queue-items > button.is-active { box-shadow: inset 4px 0 0 #111; }
+.drawer { background: #fff; border-left-color: #e3e3e3; box-shadow: -12px 0 30px rgba(0,0,0,.08); }
+.prompt-box { color: #222; background: #f7f7f8; border-left-color: #111; }
+.prompt-box span { color: #555; }
+.admin-load-state { color: #315b3e; background: #f0faf3; border-color: #cfe8d6; border-radius: 10px; }
+.account-menu__panel, .feedback-dialog, .coach-dialog, .publish-form { border-color: #dedede; box-shadow: 0 18px 48px rgba(0,0,0,.14); border-radius: 14px; }
+.account-menu__panel > button:hover { color: #111; background: #f1f1f1; }
+
+.portal-mobile-nav { display: none; }
+
+@media (max-width: 760px) {
+  .portal-main { width: min(100% - 24px, 760px); padding-bottom: 72px; }
+  .portal-topbar { height: auto; min-height: 108px; padding-top: 8px; align-content: flex-start; flex-wrap: wrap; gap: 6px 9px; }
+  .portal-brand, .portal-account { min-height: 44px; }
+  .portal-search { width: auto; min-width: 0; flex: 1; }
+  .portal-nav { order: 5; width: 100%; height: 48px; display: flex; gap: 4px; border-top: 1px solid #ededed; overflow: visible; }
+  .portal-nav button { min-width: 0; height: 48px; padding: 0 4px; display: inline-flex; justify-content: center; flex: 1; color: #666; font-size: 7px; }
+  .portal-nav button.is-active { color: #111; background: #f5f5f6; }
+  .learning-onboarding { grid-template-columns: 1fr; }
+  .learning-onboarding > div { min-height: 0; padding: 0 0 10px; border-right: 0; border-bottom: 1px solid #dedede; }
+  .learning-onboarding > button { justify-content: center; }
+}
+
+@media (max-width: 560px) {
+  .portal-brand strong { display: block; }
+  .account-switch > div { display: none; }
+  .ai-creation { padding: 28px 14px; border-radius: 16px; }
+  .ai-creation__intro h2 { font-size: 39px; }
+  .ai-methods { width: 100%; }
+  .ai-methods button { min-height: 44px; }
+  .model-picker button { min-height: 40px; }
+  .learning-rail { background: #f7f7f8; }
+  .portal-nav button { font-size: 7px; }
+}
+
+/* Softer selections: reserve solid charcoal for primary actions only. */
+.ai-message p { color: #333; background: #f7f7f8; border-color: #e5e5e5; border-radius: 10px; }
+.model-picker button.is-active,
+.ai-methods button.is-active,
+.filter-row button.is-active,
+.search-filter-group--tags button.is-active,
+.search-filter-group:not(.search-filter-group--tags) > button.is-active,
+.workflow-outline > div.is-current,
+.review-tabs button.is-active,
+.segmented button.is-active,
+.table-footer button.is-active {
+  color: #111;
+  background: #ececee;
+  border-color: #d2d2d5;
+  box-shadow: inset 0 -2px 0 #111;
+}
+.search-filter-group:not(.search-filter-group--tags) > button.is-active { box-shadow: inset 3px 0 0 #111; }
+.search-filter-group:not(.search-filter-group--tags) > button.is-active i { background: #111; border-color: #111; }
+.search-filter-group:not(.search-filter-group--tags) > button.is-active b { color: #111; background: #fff; }
+.course-card__tags b, .search-card__type b { color: #222; background: #efeff0; border-color: #d8d8da; }
+.resource-filters__title, .search-filters > header { color: #111; background: #f7f7f8; border-bottom: 1px solid #e3e3e3; }
+.resource-filters__title > svg { color: #111; }
+.my-submissions { color: #111; background: #fff; border-color: #e3e3e3; }
+.my-submissions > span { color: #666; }
+.my-submissions button { min-height: 38px; color: #333; background: #f5f5f6; border-color: #dedee0; }
+.my-submissions .status-approved { color: #fff; background: #3f7651; }
+
+/* Art direction: restrained gallery colour, real course imagery and decorative side rails. */
+.portal-shell {
+  position: relative;
+  isolation: isolate;
+  --art-wash-a: rgba(119, 92, 214, .11);
+  --art-wash-b: rgba(69, 163, 119, .09);
+  --art-accent: #7658c9;
+  --art-accent-soft: #eee9fb;
+}
+.portal-shell[data-section="courses"] { --art-wash-a: rgba(62, 154, 112, .12); --art-wash-b: rgba(227, 170, 63, .10); --art-accent: #2f825d; --art-accent-soft: #e5f4ec; }
+.portal-shell[data-section="studio"] { --art-wash-a: rgba(70, 124, 224, .12); --art-wash-b: rgba(149, 95, 209, .09); --art-accent: #456fc2; --art-accent-soft: #e8effb; }
+.portal-shell[data-section="community"] { --art-wash-a: rgba(221, 106, 91, .11); --art-wash-b: rgba(224, 123, 170, .08); --art-accent: #b95148; --art-accent-soft: #faeae7; }
+.portal-shell[data-section="myLearning"] { --art-wash-a: rgba(227, 174, 57, .11); --art-wash-b: rgba(111, 83, 199, .08); --art-accent: #9a721e; --art-accent-soft: #faf2dc; }
+.portal-shell[data-section="search"] { --art-wash-a: rgba(58, 139, 205, .10); --art-wash-b: rgba(64, 157, 119, .08); --art-accent: #367db0; --art-accent-soft: #e6f2f8; }
+.portal-shell::before {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  inset: 69px 0 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at -3% 18%, var(--art-wash-a), transparent 28%),
+    radial-gradient(circle at 103% 72%, var(--art-wash-b), transparent 30%),
+    linear-gradient(90deg, rgba(17,17,17,.018) 1px, transparent 1px),
+    linear-gradient(rgba(17,17,17,.014) 1px, transparent 1px);
+  background-size: auto, auto, 46px 46px, 46px 46px;
+}
+.portal-topbar, .portal-main { position: relative; }
+.portal-main { z-index: 2; }
+.portal-topbar { z-index: 20; }
+.portal-nav button.is-active::after { background: linear-gradient(90deg, #111 0 42%, var(--art-accent) 42% 100%); }
+.portal-heading .eyebrow, .section-heading .eyebrow { color: var(--art-accent); }
+.section-heading h2::after, .portal-heading h1::after {
+  content: "";
+  display: inline-block;
+  width: .22em;
+  height: .22em;
+  margin-left: .14em;
+  border-radius: 50%;
+  background: var(--art-accent);
+  vertical-align: .12em;
+}
+
+.portal-art-rails { position: fixed; z-index: 3; inset: 69px 0 0; pointer-events: none; overflow: hidden; }
+.portal-art-rail {
+  position: absolute;
+  top: 54px;
+  width: clamp(86px, calc((100vw - 1180px) / 2 - 20px), 150px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.portal-art-rail--left { left: 12px; }
+.portal-art-rail--right { right: 12px; top: 92px; }
+.art-rail__index { color: #777; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 7px; letter-spacing: .2em; writing-mode: vertical-rl; }
+.art-rail__tile {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #fff;
+  border: 5px solid rgba(255,255,255,.96);
+  border-radius: 19px;
+  box-shadow: 0 14px 30px rgba(25, 20, 40, .12), 0 0 0 1px rgba(17,17,17,.08);
+}
+.art-rail__tile img { width: 100%; height: 100%; display: block; object-fit: cover; filter: saturate(.82) contrast(.94); transition: filter .45s ease, transform .45s ease; }
+.art-rail__tile figcaption { position: absolute; right: 7px; bottom: 7px; left: 7px; padding: 6px 5px; color: #26232a; background: rgba(255,255,255,.86); backdrop-filter: blur(8px); border-radius: 8px; font-size: 7px; font-weight: 700; text-align: center; letter-spacing: .08em; }
+.art-rail__tile--pattern { aspect-ratio: .82; transform: rotate(-2.5deg); }
+.art-rail__tile--code { width: 82%; aspect-ratio: .9; transform: rotate(3deg); }
+.art-rail__tile--visual { width: 90%; aspect-ratio: .78; transform: rotate(2.5deg); }
+.art-rail__tile--detail { aspect-ratio: 1; transform: rotate(-3deg); }
+.art-rail__shape { display: block; flex: 0 0 auto; }
+.art-rail__shape--ring { width: 48px; height: 48px; border: 10px solid var(--art-accent-soft); border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(17,17,17,.12), 0 0 0 1px rgba(17,17,17,.12); }
+.art-rail__shape--spark { width: 42px; height: 42px; background: var(--art-accent-soft); border: 1px solid rgba(17,17,17,.12); clip-path: polygon(50% 0, 62% 37%, 100% 50%, 62% 63%, 50% 100%, 38% 63%, 0 50%, 38% 37%); transform: rotate(12deg); }
+
+.course-card { overflow: hidden; }
+.course-cover { isolation: isolate; background: var(--art-accent-soft); }
+.course-cover::after { z-index: 1; width: 84%; height: 84%; border-color: rgba(255,255,255,.72); }
+.course-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.86) contrast(.94); transition: transform .45s ease, filter .45s ease; }
+.course-card:hover .course-cover img { transform: scale(1.045); filter: saturate(1) contrast(.98); }
+.course-cover span { z-index: 2; padding: 6px 8px; color: #202020; background: rgba(255,255,255,.88); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.72); border-radius: 8px; }
+.course-card__tags b { color: var(--art-accent); background: var(--art-accent-soft); border-color: transparent; }
+
+.workflow-catalog__cover { isolation: isolate; overflow: hidden; background-size: cover; background-position: center; }
+.workflow-catalog__cover--0 { background-image: url('/assets/learning/ai-design-foundations.jpg'); }
+.workflow-catalog__cover--1 { background-image: url('/assets/learning/traditional-patterns.jpg'); }
+.workflow-catalog__cover--2 { background-image: url('/assets/learning/vibe-coding.jpg'); }
+.workflow-catalog__cover::before { content: ""; position: absolute; z-index: 0; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(17,17,17,.16)); }
+.workflow-catalog__cover svg { position: relative; z-index: 1; width: 58px; height: 58px; padding: 15px; color: #171717; background: rgba(255,255,255,.84); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.9); border-radius: 50%; }
+.workflow-catalog__cover span { z-index: 2; border-radius: 7px; }
+
+.quick-action:nth-child(1), .workflow-card:nth-child(1) { border-top-color: rgba(118,88,201,.48); }
+.quick-action:nth-child(2), .workflow-card:nth-child(2) { border-top-color: rgba(47,130,93,.48); }
+.quick-action:nth-child(3), .workflow-card:nth-child(3) { border-top-color: rgba(185,81,72,.42); }
+.quick-action > svg, .workflow-glyph { color: var(--art-accent); }
+
+@media (max-width: 1399px) {
+  .portal-art-rails { display: none; }
+}
+
+@media (max-width: 760px) {
+  .portal-shell::before { inset: 108px 0 0; background-size: auto, auto, 34px 34px, 34px 34px; opacity: .72; }
+  .section-heading h2::after, .portal-heading h1::after { width: .18em; height: .18em; }
+}
+
+/* Button icon sizing: improve recognition without changing the button footprint. */
+.portal-shell button svg,
+.admin-shell button svg,
+.test-login button svg {
+  flex: none;
+  transform: scale(1.14);
+  transform-origin: center;
+}
+.portal-nav button svg { transform: scale(1.2); }
+.primary-button svg,
+.portal-console-shortcut svg,
+.console-entry svg,
+.ai-submit svg,
+.publish-submit svg { transform: scale(1.18); }
+.workflow-card button:hover svg,
+.studio-card button:hover svg,
+.work-card button:hover svg,
+.section-heading button:hover svg,
+.quick-action:hover i svg { transform: translateX(4px) scale(1.14); }
+
+@media (max-width: 560px) {
+  .portal-nav button svg { width: 20px; height: 20px; transform: none; }
+}

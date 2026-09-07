@@ -4,7 +4,7 @@ import { addWorkComment, createWork, getMyWorks, getWork, getWorkflows, getWorks
 
 const emptyForm = { title: "", summary: "", discipline: "视觉传达", tags: "", workflowId: "" };
 
-export function CommunityLibrary({ onNotice, onOpenWorkflow }) {
+export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   const [works, setWorks] = useState([]);
   const [myWorks, setMyWorks] = useState([]);
   const [workflows, setWorkflows] = useState([]);
@@ -86,6 +86,7 @@ export function CommunityLibrary({ onNotice, onOpenWorkflow }) {
   };
 
   const pendingCount = useMemo(() => myWorks.filter((work) => work.status === "pending").length, [myWorks]);
+  const canModerate = account?.roles?.some((role) => role === "admin" || role === "operator");
 
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载案例社区</strong><p>正在同步公开作品、投稿状态与关联工作流。</p></section>;
   if (catalogError && !works.length) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>案例社区暂时无法加载</strong><p>{catalogError}</p><button onClick={() => refresh(true).catch((error) => onNotice(error.message))}>重新加载</button></section>;
@@ -100,7 +101,7 @@ export function CommunityLibrary({ onNotice, onOpenWorkflow }) {
   </section>;
 
   return <>
-    <div className="community-actions"><div><strong>案例投稿与审核</strong><span>当前有 {pendingCount} 项作品等待审核</span></div><button onClick={() => setShowForm(true)}><Plus size={17} weight="bold" /> 发布作品</button></div>
+    <div className="community-actions"><div><strong>分享你的创作案例</strong><span>{canModerate ? `审核队列中有 ${pendingCount} 项我的投稿` : "作品提交后会由平台管理员审核发布"}</span></div><button onClick={() => setShowForm(true)}><Plus size={17} weight="bold" /> 发布作品</button></div>
     {myWorks.length > 0 && <section className="my-submissions"><span>// 我的投稿</span>{myWorks.map((work) => <button key={work.id} onClick={() => openWork(work)}><strong>{work.title}</strong><em className={`status-${work.status}`}>{statusName(work.status)}</em></button>)}</section>}
     <section className="work-grid">{works.map((work, index) => <article className="work-card" key={work.id}><div className={`work-preview work-preview--${index % 3}`}>{work.previewUrl ? <img src={work.previewUrl} alt={work.title} /> : <WorkVisualFallback work={work} compact />}</div><div><small>{work.author}</small><h3>{work.title}</h3><p>{work.summary}</p><div className="work-card__stats"><span><Heart /> {work.likeCount ?? 0}</span><span><BookmarkSimple /> {work.favoriteCount ?? 0}</span></div><button disabled={loading} onClick={() => openWork(work)}>查看案例 <ArrowRight size={16} weight="bold" /></button></div></article>)}</section>
     {showForm && <div className="publish-layer"><button className="publish-scrim" onClick={() => setShowForm(false)} aria-label="关闭" /><form className="publish-form" onSubmit={publish}><header><div><span>// SUBMIT YOUR WORK</span><h2>发布作品</h2></div><button type="button" onClick={() => setShowForm(false)}><X size={20} /></button></header><label>作品名称<input required minLength="2" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></label><label>作品说明<textarea required minLength="2" value={form.summary} onChange={(event) => setForm({ ...form, summary: event.target.value })} /></label><div className="publish-form__row"><label>学科分类<input required value={form.discipline} onChange={(event) => setForm({ ...form, discipline: event.target.value })} /></label><label>使用的工作流<select value={form.workflowId} onChange={(event) => setForm({ ...form, workflowId: event.target.value })}><option value="">未使用工作流</option>{workflows.map((workflow) => <option key={workflow.id} value={workflow.id}>{workflow.name}</option>)}</select></label></div><label>作品文件<input required type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><small>仅接受 PNG、JPEG、WebP 或 PDF，最大 10 MB；服务端会校验实际文件类型，不接受外部链接。</small></label><label>标签<input placeholder="AI 设计，传统纹样，UI 创作" value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} /></label><button className="publish-submit" disabled={loading}><CheckCircle size={18} weight="fill" /> {loading ? "正在提交…" : "提交管理员审核"}</button></form></div>}

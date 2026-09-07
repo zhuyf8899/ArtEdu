@@ -1,10 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowClockwise, ArrowRight, BookOpenText, Brain, CirclesThreePlus,
+  ArrowClockwise, ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
-import { createAgentRun, createGenerationJob, executeAgentRun, getPortalHome } from "./services/adminApi.js";
+import { createAgentRun, createGenerationJob, executeAgentRun, getApiHealth, getPortalHome } from "./services/adminApi.js";
 import { AiCreationConsole } from "./AiCreationConsole.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
@@ -37,12 +37,38 @@ function WorkflowGlyph({ entryType }) {
   return <span className="workflow-glyph"><Icon size={21} weight="bold" /></span>;
 }
 
+function PortalArtRails() {
+  return <div className="portal-art-rails" aria-hidden="true">
+    <div className="portal-art-rail portal-art-rail--left">
+      <span className="art-rail__index">ART / 01</span>
+      <figure className="art-rail__tile art-rail__tile--pattern"><img src="/assets/learning/traditional-patterns.jpg" alt="" /><figcaption>传统纹样</figcaption></figure>
+      <i className="art-rail__shape art-rail__shape--ring" />
+      <figure className="art-rail__tile art-rail__tile--code"><img src="/assets/learning/vibe-coding.jpg" alt="" /><figcaption>数字实验</figcaption></figure>
+    </div>
+    <div className="portal-art-rail portal-art-rail--right">
+      <figure className="art-rail__tile art-rail__tile--visual"><img src="/assets/learning/ai-design-foundations.jpg" alt="" /><figcaption>视觉叙事</figcaption></figure>
+      <i className="art-rail__shape art-rail__shape--spark" />
+      <span className="art-rail__index">02 / EDU</span>
+      <figure className="art-rail__tile art-rail__tile--detail"><img src="/assets/learning/traditional-patterns.jpg" alt="" /><figcaption>观察 · 重组</figcaption></figure>
+    </div>
+  </div>;
+}
+
 export function LocalLogin({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [serviceStatus, setServiceStatus] = useState("checking");
   const isHostedPreview = typeof window !== "undefined" && window.location.hostname.endsWith(".chatgpt.site");
+
+  const checkService = useCallback(async () => {
+    setServiceStatus("checking");
+    try { await getApiHealth(); setServiceStatus("online"); }
+    catch { setServiceStatus("offline"); }
+  }, []);
+
+  useEffect(() => { void checkService(); }, [checkService]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -64,11 +90,12 @@ export function LocalLogin({ onLogin }) {
     <section className="test-login__accounts">
       <div className="account-panel__heading"><div><p>// SIGN IN</p><h2>账号登录</h2></div></div>
       {isHostedPreview && <p className="login-error" role="status">当前为界面预览，未连接 API 或测试数据库；账号仅可在本地测试环境使用。</p>}
+      {!isHostedPreview && <div className={`login-service login-service--${serviceStatus}`} role="status"><span>{serviceStatus === "checking" ? <ArrowClockwise className="spin" size={16} /> : serviceStatus === "online" ? <CheckCircle size={16} weight="fill" /> : <X size={16} weight="bold" />}{serviceStatus === "checking" ? "正在检测登录服务" : serviceStatus === "online" ? "登录服务与数据库连接正常" : "登录服务暂不可用"}</span>{serviceStatus === "offline" && <button type="button" onClick={checkService}>重新检测</button>}</div>}
       <form className="local-login-form" onSubmit={submit}>
         <label>账号<input autoComplete="username" required maxLength="120" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
         <label>密码<input type="password" autoComplete="current-password" required minLength="1" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         {error && <p className="login-error" role="alert">{error}</p>}
-        <button disabled={submitting}>{submitting ? "正在验证…" : "安全登录"} <ArrowRight size={16} weight="bold" /></button>
+        <button disabled={submitting || serviceStatus !== "online"}>{submitting ? "正在验证…" : serviceStatus === "checking" ? "正在连接…" : serviceStatus === "offline" ? "服务未连接" : "安全登录"} <ArrowRight size={16} weight="bold" /></button>
       </form>
     </section>
   </main>;
@@ -133,14 +160,16 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning" }[nextSection] ?? "/");
   const navigateSearch = (query) => onNavigate(`/search?query=${encodeURIComponent(query)}`);
 
-  return <div className="portal-shell">
+  return <div className="portal-shell" data-section={section}>
     <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
-      <nav className="portal-nav" aria-label="主导航">{navItems.map(([id, label, Icon]) => <button key={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
+      <nav className="portal-nav" aria-label="顶部主导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       <GlobalSearchForm value={searchQuery} onSearch={navigateSearch} />
       {canEnterAdmin(account) && <button className="portal-console-shortcut" onClick={onEnterAdmin}>管理后台 <ArrowRight size={15} weight="bold" /></button>}
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "已连接 API" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
     </header>
+
+    <PortalArtRails />
 
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}`}>
       <div key={`${section}:${searchQuery}`} className="route-transition">
@@ -162,7 +191,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
         {section === "studio" && <><SectionHeading eyebrow="// GUIDED CREATION" title="工作流学习与创作" /><WorkflowStudio initialWorkflowId={studioWorkflowId} onNotice={showToast} /></>}
 
-        {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} /></>}
+        {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} /></>}
 
         {section === "myLearning" && <MyLearning account={account} onNavigate={onNavigate} onNotice={showToast} />}
 

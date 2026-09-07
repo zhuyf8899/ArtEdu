@@ -8,6 +8,14 @@ const COURSE_PROFILES = {
   "course-vibe-gallery": { method: "Vibe Coding", author: "陈明远老师", tools: ["Claude 4", "VS Code"] },
 };
 
+const COURSE_IMAGES = {
+  "course-ai-design-foundation": "/assets/learning/ai-design-foundations.jpg",
+  "course-traditional-pattern": "/assets/learning/traditional-patterns.jpg",
+  "course-vibe-gallery": "/assets/learning/vibe-coding.jpg",
+};
+
+const FALLBACK_IMAGES = Object.values(COURSE_IMAGES);
+
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
 
 function decorateCourse(course) {
@@ -101,7 +109,7 @@ export function LearningLibrary({ onNotice }) {
       <FilterRow label="使用工具" items={["全部工具", ...tools]} value={toolFilter} onChange={setToolFilter} />
     </section>
     {filteredCourses.length ? <section className="course-grid">{filteredCourses.map((course, index) => <article className="course-card" key={course.id}>
-      <div className={`course-cover course-cover--${index % 3}`}><BookOpenText size={32} weight="thin" /><span>{course.method}</span></div>
+      <div className={`course-cover course-cover--${index % 3}`}><img src={COURSE_IMAGES[course.id] ?? FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]} alt="" /><span>{course.method}</span></div>
       <div className="course-card__content">
         <div className="course-card__tags"><b>{course.method}</b><span>{course.category}</span></div>
         <small>{course.lessonCount ?? 0} 个课时 · {difficultyName(course.difficulty)}</small>

@@ -153,6 +153,8 @@ function Overview({ data, displayName, onView, onToggleTask, onNavigate }) {
   return <>
     <div className="learning-welcome"><div><span>// KEEP CREATING</span><h2>欢迎回来，{displayName}</h2><p>把今天的小进展，积累成可以复用的创作方法。</p></div><Sparkle size={34} weight="duotone" /></div>
 
+    {data.summary.enrolledCourses === 0 && <section className="learning-onboarding"><div><span>01</span><strong>挑选一门课程</strong><p>从资源库选择 UI 创作、图案生成或 Vibe Coding 课程。</p></div><div><span>02</span><strong>跟随工作流练习</strong><p>按步骤完成提示词、参数和创作产物。</p></div><div><span>03</span><strong>发布并沉淀案例</strong><p>把作品提交到案例社区，形成个人学习档案。</p></div><button onClick={() => onNavigate("/learning")}>开始学习 <ArrowRight size={15} /></button></section>}
+
     <section className="learning-dashboard-grid">
       <div className="learning-dashboard-main">
         <article className="learning-goal-card">

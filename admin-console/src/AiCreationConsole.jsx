@@ -72,12 +72,6 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
     event.preventDefault();
     const content = prompt.trim();
     if (!content || sending) return;
-    if (!serviceReady) {
-      setFailed(true);
-      setReply("当前模型服务尚未启用，创作草稿已自动保存。管理员完成模型配置后可直接继续提交。");
-      onNotice?.("模型服务尚未启用，当前内容已保存为本地草稿", "info");
-      return;
-    }
     if (quotaBlocked) {
       setFailed(true);
       setReply("当前生成额度或并发额度已达到上限，草稿已保存。请稍后重试或联系管理员调整额度。");
@@ -86,7 +80,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
     }
     setSending(true);
     setFailed(false);
-    setReply(`正在用 ${model.name} 整理“${method.label}”任务，并写入生成队列……`);
+    setReply(serviceReady ? `正在用 ${model.name} 整理“${method.label}”任务，并写入生成队列……` : `正在通过本地演示引擎整理“${method.label}”方案，不会调用外部模型……`);
     const result = await onCreate({
       jobType: method.jobType,
       prompt: content,
@@ -115,7 +109,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
 
     <form className="ai-composer" onSubmit={submit}>
       <div className={`ai-service-state ${serviceReady ? "is-ready" : "is-offline"}`}>
-        <span><i />{serviceReady ? `${creation.models.length} 个模型配置可用` : "模型服务尚未启用"}</span>
+        <span><i />{serviceReady ? `${creation.models.length} 个模型配置可执行` : "外部模型未接入 · 本地演示可用"}</span>
         <span><Gauge size={14} />{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
         <span>并发 {quota.inFlight ?? 0} / {quota.concurrentLimit ?? "∞"}</span>
       </div>
