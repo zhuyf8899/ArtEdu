@@ -180,7 +180,6 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </Suspense>
       </div>
     </main>
-    <nav className="portal-mobile-nav" aria-label="移动端辅助导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={20} weight={section === id ? "fill" : "regular"} /><span>{label}</span></button>)}</nav>
     {coachOpen && <TeachingCoach courses={data.courses} workflows={data.workflows} onClose={() => setCoachOpen(false)} onNavigate={(target) => { setCoachOpen(false); onNavigate(target); }} />}
   </div>;
 }
