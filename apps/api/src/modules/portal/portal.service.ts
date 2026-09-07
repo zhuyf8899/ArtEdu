@@ -3,7 +3,7 @@ import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
 import { getEnvironment } from "../../common/environment";
 import { DatabaseService } from "../database/database.service";
 import type { Actor } from "../auth/auth.service";
-import type { PortalSearchQuery } from "./portal.contracts";
+import { buildPortalSearchPatterns, type PortalSearchQuery } from "./portal.contracts";
 
 interface CourseRow {
   id: string;
@@ -173,7 +173,7 @@ export class PortalService {
   }
 
   async search(_actor: Actor, query: PortalSearchQuery) {
-    const pattern = `%${query.query}%`;
+    const patterns = buildPortalSearchPatterns(query.query);
     const tag = query.tag ?? null;
     const limit = 24;
     const include = (type: PortalSearchQuery["type"]) => query.type === "all" || query.type === type;
@@ -190,12 +190,12 @@ export class PortalService {
         LEFT JOIN tags tag ON tag.id = relation.tag_id
         WHERE c.status = 'published'
           AND (
-            c.title ILIKE $1 OR COALESCE(c.summary, '') ILIKE $1 OR
-            COALESCE(c.category, '') ILIKE $1 OR COALESCE(creator.display_name, '') ILIKE $1 OR
+            c.title ILIKE ANY($1::text[]) OR COALESCE(c.summary, '') ILIKE ANY($1::text[]) OR
+            COALESCE(c.category, '') ILIKE ANY($1::text[]) OR COALESCE(creator.display_name, '') ILIKE ANY($1::text[]) OR
             EXISTS (
               SELECT 1 FROM course_tags search_relation
               JOIN tags search_tag ON search_tag.id = search_relation.tag_id
-              WHERE search_relation.course_id = c.id AND search_tag.name ILIKE $1
+              WHERE search_relation.course_id = c.id AND search_tag.name ILIKE ANY($1::text[])
             )
           )
           AND ($2::text IS NULL OR c.category = $2 OR c.difficulty = $2 OR EXISTS (
@@ -206,7 +206,7 @@ export class PortalService {
         GROUP BY c.id, creator.display_name
         ORDER BY c.is_featured DESC, c.featured_rank NULLS LAST, c.updated_at DESC
         LIMIT $3
-      `, [pattern, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
+      `, [patterns, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
       include("workflow") ? this.database.query<SearchRow>(`
         SELECT workflow.id, workflow.name AS title, workflow.description AS summary,
           workflow.category, creator.display_name AS author, workflow.entry_type AS metadata,
@@ -218,12 +218,12 @@ export class PortalService {
         LEFT JOIN tags tag ON tag.id = relation.tag_id
         WHERE workflow.status = 'published'
           AND (
-            workflow.name ILIKE $1 OR COALESCE(workflow.description, '') ILIKE $1 OR
-            COALESCE(workflow.category, '') ILIKE $1 OR COALESCE(creator.display_name, '') ILIKE $1 OR
+            workflow.name ILIKE ANY($1::text[]) OR COALESCE(workflow.description, '') ILIKE ANY($1::text[]) OR
+            COALESCE(workflow.category, '') ILIKE ANY($1::text[]) OR COALESCE(creator.display_name, '') ILIKE ANY($1::text[]) OR
             EXISTS (
               SELECT 1 FROM workflow_tags search_relation
               JOIN tags search_tag ON search_tag.id = search_relation.tag_id
-              WHERE search_relation.workflow_id = workflow.id AND search_tag.name ILIKE $1
+              WHERE search_relation.workflow_id = workflow.id AND search_tag.name ILIKE ANY($1::text[])
             )
           )
           AND ($2::text IS NULL OR workflow.category = $2 OR workflow.entry_type = $2 OR EXISTS (
@@ -234,7 +234,7 @@ export class PortalService {
         GROUP BY workflow.id, creator.display_name
         ORDER BY workflow.is_featured DESC, workflow.featured_rank NULLS LAST, workflow.updated_at DESC
         LIMIT $3
-      `, [pattern, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
+      `, [patterns, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
       include("work") ? this.database.query<SearchRow>(`
         SELECT work.id, work.title, work.summary, work.discipline AS category,
           author.display_name AS author, NULL::text AS metadata,
@@ -246,12 +246,12 @@ export class PortalService {
         LEFT JOIN tags tag ON tag.id = relation.tag_id
         WHERE work.status = 'approved'
           AND (
-            work.title ILIKE $1 OR COALESCE(work.summary, '') ILIKE $1 OR
-            COALESCE(work.discipline, '') ILIKE $1 OR author.display_name ILIKE $1 OR
+            work.title ILIKE ANY($1::text[]) OR COALESCE(work.summary, '') ILIKE ANY($1::text[]) OR
+            COALESCE(work.discipline, '') ILIKE ANY($1::text[]) OR author.display_name ILIKE ANY($1::text[]) OR
             EXISTS (
               SELECT 1 FROM work_tags search_relation
               JOIN tags search_tag ON search_tag.id = search_relation.tag_id
-              WHERE search_relation.work_id = work.id AND search_tag.name ILIKE $1
+              WHERE search_relation.work_id = work.id AND search_tag.name ILIKE ANY($1::text[])
             )
           )
           AND ($2::text IS NULL OR work.discipline = $2 OR author.display_name = $2 OR EXISTS (
@@ -262,7 +262,7 @@ export class PortalService {
         GROUP BY work.id, author.display_name
         ORDER BY work.is_featured DESC, work.featured_rank NULLS LAST, work.updated_at DESC
         LIMIT $3
-      `, [pattern, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
+      `, [patterns, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
     ]);
 
     const items = [
