@@ -1333,3 +1333,109 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .my-submissions > span { color: #666; }
 .my-submissions button { min-height: 38px; color: #333; background: #f5f5f6; border-color: #dedee0; }
 .my-submissions .status-approved { color: #fff; background: #3f7651; }
+
+/* Art direction: restrained gallery colour, real course imagery and decorative side rails. */
+.portal-shell {
+  position: relative;
+  isolation: isolate;
+  --art-wash-a: rgba(119, 92, 214, .11);
+  --art-wash-b: rgba(69, 163, 119, .09);
+  --art-accent: #7658c9;
+  --art-accent-soft: #eee9fb;
+}
+.portal-shell[data-section="courses"] { --art-wash-a: rgba(62, 154, 112, .12); --art-wash-b: rgba(227, 170, 63, .10); --art-accent: #2f825d; --art-accent-soft: #e5f4ec; }
+.portal-shell[data-section="studio"] { --art-wash-a: rgba(70, 124, 224, .12); --art-wash-b: rgba(149, 95, 209, .09); --art-accent: #456fc2; --art-accent-soft: #e8effb; }
+.portal-shell[data-section="community"] { --art-wash-a: rgba(221, 106, 91, .11); --art-wash-b: rgba(224, 123, 170, .08); --art-accent: #b95148; --art-accent-soft: #faeae7; }
+.portal-shell[data-section="myLearning"] { --art-wash-a: rgba(227, 174, 57, .11); --art-wash-b: rgba(111, 83, 199, .08); --art-accent: #9a721e; --art-accent-soft: #faf2dc; }
+.portal-shell[data-section="search"] { --art-wash-a: rgba(58, 139, 205, .10); --art-wash-b: rgba(64, 157, 119, .08); --art-accent: #367db0; --art-accent-soft: #e6f2f8; }
+.portal-shell::before {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  inset: 69px 0 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at -3% 18%, var(--art-wash-a), transparent 28%),
+    radial-gradient(circle at 103% 72%, var(--art-wash-b), transparent 30%),
+    linear-gradient(90deg, rgba(17,17,17,.018) 1px, transparent 1px),
+    linear-gradient(rgba(17,17,17,.014) 1px, transparent 1px);
+  background-size: auto, auto, 46px 46px, 46px 46px;
+}
+.portal-topbar, .portal-main { position: relative; }
+.portal-main { z-index: 2; }
+.portal-topbar { z-index: 20; }
+.portal-nav button.is-active::after { background: linear-gradient(90deg, #111 0 42%, var(--art-accent) 42% 100%); }
+.portal-heading .eyebrow, .section-heading .eyebrow { color: var(--art-accent); }
+.section-heading h2::after, .portal-heading h1::after {
+  content: "";
+  display: inline-block;
+  width: .22em;
+  height: .22em;
+  margin-left: .14em;
+  border-radius: 50%;
+  background: var(--art-accent);
+  vertical-align: .12em;
+}
+
+.portal-art-rails { position: fixed; z-index: 3; inset: 69px 0 0; pointer-events: none; overflow: hidden; }
+.portal-art-rail {
+  position: absolute;
+  top: 54px;
+  width: clamp(86px, calc((100vw - 1180px) / 2 - 20px), 150px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.portal-art-rail--left { left: 12px; }
+.portal-art-rail--right { right: 12px; top: 92px; }
+.art-rail__index { color: #777; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 7px; letter-spacing: .2em; writing-mode: vertical-rl; }
+.art-rail__tile {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #fff;
+  border: 5px solid rgba(255,255,255,.96);
+  border-radius: 19px;
+  box-shadow: 0 14px 30px rgba(25, 20, 40, .12), 0 0 0 1px rgba(17,17,17,.08);
+}
+.art-rail__tile img { width: 100%; height: 100%; display: block; object-fit: cover; filter: saturate(.82) contrast(.94); transition: filter .45s ease, transform .45s ease; }
+.art-rail__tile figcaption { position: absolute; right: 7px; bottom: 7px; left: 7px; padding: 6px 5px; color: #26232a; background: rgba(255,255,255,.86); backdrop-filter: blur(8px); border-radius: 8px; font-size: 7px; font-weight: 700; text-align: center; letter-spacing: .08em; }
+.art-rail__tile--pattern { aspect-ratio: .82; transform: rotate(-2.5deg); }
+.art-rail__tile--code { width: 82%; aspect-ratio: .9; transform: rotate(3deg); }
+.art-rail__tile--visual { width: 90%; aspect-ratio: .78; transform: rotate(2.5deg); }
+.art-rail__tile--detail { aspect-ratio: 1; transform: rotate(-3deg); }
+.art-rail__shape { display: block; flex: 0 0 auto; }
+.art-rail__shape--ring { width: 48px; height: 48px; border: 10px solid var(--art-accent-soft); border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(17,17,17,.12), 0 0 0 1px rgba(17,17,17,.12); }
+.art-rail__shape--spark { width: 42px; height: 42px; background: var(--art-accent-soft); border: 1px solid rgba(17,17,17,.12); clip-path: polygon(50% 0, 62% 37%, 100% 50%, 62% 63%, 50% 100%, 38% 63%, 0 50%, 38% 37%); transform: rotate(12deg); }
+
+.course-card { overflow: hidden; }
+.course-cover { isolation: isolate; background: var(--art-accent-soft); }
+.course-cover::after { z-index: 1; width: 84%; height: 84%; border-color: rgba(255,255,255,.72); }
+.course-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.86) contrast(.94); transition: transform .45s ease, filter .45s ease; }
+.course-card:hover .course-cover img { transform: scale(1.045); filter: saturate(1) contrast(.98); }
+.course-cover span { z-index: 2; padding: 6px 8px; color: #202020; background: rgba(255,255,255,.88); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.72); border-radius: 8px; }
+.course-card__tags b { color: var(--art-accent); background: var(--art-accent-soft); border-color: transparent; }
+
+.workflow-catalog__cover { isolation: isolate; overflow: hidden; background-size: cover; background-position: center; }
+.workflow-catalog__cover--0 { background-image: url('/assets/learning/ai-design-foundations.jpg'); }
+.workflow-catalog__cover--1 { background-image: url('/assets/learning/traditional-patterns.jpg'); }
+.workflow-catalog__cover--2 { background-image: url('/assets/learning/vibe-coding.jpg'); }
+.workflow-catalog__cover::before { content: ""; position: absolute; z-index: 0; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(17,17,17,.16)); }
+.workflow-catalog__cover svg { position: relative; z-index: 1; width: 58px; height: 58px; padding: 15px; color: #171717; background: rgba(255,255,255,.84); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.9); border-radius: 50%; }
+.workflow-catalog__cover span { z-index: 2; border-radius: 7px; }
+
+.quick-action:nth-child(1), .workflow-card:nth-child(1) { border-top-color: rgba(118,88,201,.48); }
+.quick-action:nth-child(2), .workflow-card:nth-child(2) { border-top-color: rgba(47,130,93,.48); }
+.quick-action:nth-child(3), .workflow-card:nth-child(3) { border-top-color: rgba(185,81,72,.42); }
+.quick-action > svg, .workflow-glyph { color: var(--art-accent); }
+
+@media (max-width: 1399px) {
+  .portal-art-rails { display: none; }
+}
+
+@media (max-width: 760px) {
+  .portal-shell::before { inset: 108px 0 0; background-size: auto, auto, 34px 34px, 34px 34px; opacity: .72; }
+  .section-heading h2::after, .portal-heading h1::after { width: .18em; height: .18em; }
+}
