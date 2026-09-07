@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: artedu
+      POSTGRES_USER: artedu
+      POSTGRES_PASSWORD: ${ARTEDU_POSTGRES_PASSWORD:?Set ARTEDU_POSTGRES_PASSWORD in .env}
+    volumes:
+      - artedu_staging_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U artedu -d artedu"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://artedu:${ARTEDU_POSTGRES_PASSWORD}@postgres:5432/artedu
+      HOST: 0.0.0.0
+      PORT: 4000
+      CORS_ORIGIN: http://8.212.153.167:8080
+      ENABLE_LOCAL_AUTH: "true"
+      ARTEDU_ALLOW_TEST_ACCOUNTS: "true"
+      LOCAL_SESSION_DAYS: 7
+      LOCAL_SESSION_IDLE_HOURS: 12
+      ENABLE_FILE_UPLOADS: "true"
+      UPLOAD_ROOT: /data/uploads
+      MODEL_EXECUTION_ENABLED: "false"
+      MODEL_PROVIDERS_JSON: "[]"
+    volumes:
+      - artedu_staging_uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:4000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - "${ARTEDU_HTTP_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  artedu_staging_postgres:
+  artedu_staging_uploads:
