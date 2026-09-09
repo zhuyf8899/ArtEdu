@@ -31,7 +31,7 @@ const CREATION_METHODS = [
   },
 ];
 
-const MODELS = [
+const FALLBACK_MODELS = [
   { id: "gpt-4o", name: "GPT-4o", note: "策划与视觉理解" },
   { id: "claude-4", name: "Claude 4", note: "长文本与代码" },
   { id: "flux-1", name: "FLUX.1", note: "图像生成" },
@@ -49,12 +49,19 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
   const [reply, setReply] = useState("先选择创作方法与模型，再描述你的想法。我会把它整理成可继续执行的创作任务。");
 
   const method = useMemo(() => CREATION_METHODS.find((item) => item.id === methodId) ?? CREATION_METHODS[0], [methodId]);
-  const model = useMemo(() => MODELS.find((item) => item.id === modelId) ?? MODELS[0], [modelId]);
+  const models = useMemo(() => creation?.enabled && creation?.models?.length
+    ? creation.models.map((item) => ({ id: item.id, name: item.name, note: item.identifier, capabilities: item.capabilities ?? [] }))
+    : FALLBACK_MODELS, [creation]);
+  const model = useMemo(() => models.find((item) => item.id === modelId) ?? models[0], [modelId, models]);
   const quota = creation?.quota ?? {};
   const serviceReady = Boolean(creation?.enabled && creation?.models?.length);
   const quotaBlocked = (quota.dailyLimit !== null && quota.dailyLimit !== undefined && quota.dailyUsed >= quota.dailyLimit)
     || (quota.monthlyLimit !== null && quota.monthlyLimit !== undefined && quota.monthlyUsed >= quota.monthlyLimit)
     || (quota.concurrentLimit !== null && quota.concurrentLimit !== undefined && quota.inFlight >= quota.concurrentLimit);
+
+  useEffect(() => {
+    if (!models.some((item) => item.id === modelId)) setModelId(models[0]?.id ?? "gpt-4o");
+  }, [modelId, models]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -80,17 +87,20 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
     }
     setSending(true);
     setFailed(false);
-    setReply(serviceReady ? `正在用 ${model.name} 整理“${method.label}”任务，并写入生成队列……` : `正在通过本地演示引擎整理“${method.label}”方案，不会调用外部模型……`);
+    setReply(serviceReady ? `正在用 ${model.name} 生成“${method.label}”建议，请稍候……` : `正在通过本地演示引擎整理“${method.label}”方案，不会调用外部模型……`);
     const result = await onCreate({
       jobType: method.jobType,
       prompt: content,
+      modelConfigId: serviceReady ? model.id : undefined,
       parameters: { method: method.id, methodLabel: method.label, model: model.id },
     });
     setReply(result?.local
       ? `${result.content}\n\n本次为本地演示结果，任务已写入数据库并完成审计；接入正式模型后可沿用同一创作入口。`
+      : result?.content
+        ? result.content
       : result
         ? `任务 ${result.id.slice(0, 8)} 已创建。输入内容已清空，你可以继续创建下一个任务。`
-        : "创作请求已记录为演示状态；连接生成服务后即可执行完整任务。");
+        : "创作请求失败，输入已保留。请根据错误提示重试。");
     if (result) {
       setPrompt("");
       setDraftSaved(false);
@@ -132,7 +142,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
         <div className="model-picker">
           <span>{serviceReady ? "模型接口" : "演示参数"}</span>
           <div role="radiogroup" aria-label="选择大模型">
-            {MODELS.map((item) => <button
+            {models.map((item) => <button
               type="button"
               role="radio"
               aria-checked={modelId === item.id}
@@ -188,7 +198,7 @@ function readDraft(accountId) {
     return {
       prompt: value.prompt,
       methodId: CREATION_METHODS.some((item) => item.id === value.methodId) ? value.methodId : "ui",
-      modelId: MODELS.some((item) => item.id === value.modelId) ? value.modelId : "gpt-4o",
+      modelId: typeof value.modelId === "string" ? value.modelId : "gpt-4o",
     };
   } catch {
     return null;

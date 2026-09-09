@@ -98,6 +98,11 @@ export const createGenerationJob = (input) => request("/generation-jobs", {
   body: JSON.stringify(input),
 });
 
+export const runGenerationJob = (input) => request("/generation-jobs/run", {
+  method: "POST",
+  body: JSON.stringify(input),
+});
+
 export const createAgentRun = (input) => request("/agent-runs", {
   method: "POST",
   body: JSON.stringify(input),

@@ -3,6 +3,7 @@ import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
 import { getEnvironment } from "../../common/environment";
 import { DatabaseService } from "../database/database.service";
 import type { Actor } from "../auth/auth.service";
+import { ModelRegistry } from "../generation/model-registry";
 import { buildPortalSearchPatterns, type PortalSearchQuery } from "./portal.contracts";
 
 interface CourseRow {
@@ -59,7 +60,7 @@ interface SearchRow {
 
 @Injectable()
 export class PortalService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(private readonly database: DatabaseService, private readonly modelRegistry: ModelRegistry) {}
 
   async getHome(actor: Actor) {
     const [courses, workflows, works, quotaResult, models] = await Promise.all([
@@ -128,6 +129,9 @@ export class PortalService {
       daily_used: 0, monthly_used: 0, in_flight: 0,
     };
 
+    const configuredModels = new Map(this.modelRegistry.listConfigured().map((model) => [model.id, model]));
+    const executableModels = models.rows.filter((row) => configuredModels.has(row.id));
+
     return {
       profile: { id: actor.id, displayName: actor.displayName, roles: actor.roles },
       courses: courses.rows.map((row) => ({
@@ -153,12 +157,12 @@ export class PortalService {
         author: row.author,
       })),
       creation: {
-        enabled: getEnvironment().modelExecutionEnabled,
-        models: models.rows.map((row) => ({
+        enabled: getEnvironment().modelExecutionEnabled && executableModels.length > 0,
+        models: executableModels.map((row) => ({
           id: row.id,
           name: row.display_name,
           identifier: row.model_identifier,
-          capabilities: Array.isArray(row.capabilities_json) ? row.capabilities_json : [],
+          capabilities: configuredModels.get(row.id)?.capabilities ?? (Array.isArray(row.capabilities_json) ? row.capabilities_json : []),
         })),
         quota: {
           dailyLimit: quota.daily_limit === null ? null : Number(quota.daily_limit),

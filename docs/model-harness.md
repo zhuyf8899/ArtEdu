@@ -12,6 +12,18 @@ SCHOOL_CHAT_API_KEY=由本机密钥管理注入
 
 当前适配器使用 OpenAI-compatible `chat/completions` 协议作为第一版基线，能力类型已经覆盖 `chat`、`image`、`video`、`webpage`、`pattern`、`document` 和 `knowledge_graph`。图像、视频等供应商的专用响应解析和对象存储写入仍应在对应适配器中实现，不应塞进 Worker 业务逻辑。
 
+## DeepSeek 首页对话
+
+首页创作框通过服务端 `POST /api/generation-jobs/run` 同步调用已配置的文本模型。API Key 仅从 API 进程环境变量读取，浏览器响应、数据库任务参数和 Git 仓库均不包含密钥。调用前仍使用管理员配置的每日、每月和并发额度；调用后会记录任务状态和供应商返回的 token 用量。
+
+```env
+MODEL_EXECUTION_ENABLED=true
+MODEL_PROVIDERS_JSON=[{"id":"model-deepseek-v4-flash","baseUrl":"https://api.deepseek.com","model":"deepseek-v4-flash","capabilities":["chat","image","pattern","webpage"],"apiKeyEnv":"DEEPSEEK_API_KEY","timeoutMs":60000}]
+DEEPSEEK_API_KEY=由部署环境的密钥管理服务注入
+```
+
+数据库迁移 `0009_deepseek_model_provider.sql` 提供与上述 `id` 对应的可见模型配置。当前 DeepSeek 接入返回 UI、图案和网页创作的文字方案；它不会伪装成已经生成图片或可下载文件。
+
 ## 统一调用参数
 
 Agent 和生成任务共享 `ModelRequest`。除 `messages`（支持 system/user/assistant/tool 上下文）外，统一支持 `temperature`、`topP`、`maxTokens`、`presencePenalty`、`frequencyPenalty`、`seed`、`stop`、`responseFormat`、`tools`、`toolChoice` 与 `metadata`。

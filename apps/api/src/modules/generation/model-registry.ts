@@ -89,10 +89,23 @@ class OpenAICompatibleAdapter implements ModelAdapter {
         signal: controller.signal,
       });
       if (!response.ok) throw new Error(`模型接口返回 HTTP ${response.status}`);
-      const body = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const body = await response.json() as {
+        choices?: Array<{ message?: { content?: string } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+      };
       const content = body.choices?.[0]?.message?.content;
       if (!content) throw new Error("模型接口返回内容为空");
-      return { kind: request.jobType === "chat" ? "text" : "json", content, metadata: { providerId: this.id, model: this.config.model } };
+      return {
+        kind: "text",
+        content,
+        metadata: {
+          providerId: this.id,
+          model: this.config.model,
+          inputTokens: Number(body.usage?.prompt_tokens ?? 0),
+          outputTokens: Number(body.usage?.completion_tokens ?? 0),
+          totalTokens: Number(body.usage?.total_tokens ?? 0),
+        },
+      };
     } finally {
       clearTimeout(timer);
     }
@@ -102,13 +115,23 @@ class OpenAICompatibleAdapter implements ModelAdapter {
 @Injectable()
 export class ModelRegistry {
   private readonly adapters: ModelAdapter[];
+  private readonly configsById: Map<string, ModelProviderConfig>;
 
   constructor() {
-    this.adapters = readModelProviderConfigs().map((config) => new OpenAICompatibleAdapter(config));
+    const configs = readModelProviderConfigs();
+    this.configsById = new Map(configs.map((config) => [config.id, config]));
+    this.adapters = configs.map((config) => new OpenAICompatibleAdapter(config));
   }
 
   list() {
     return this.adapters.map((adapter) => ({ id: adapter.id, capabilities: adapter.capabilities }));
+  }
+
+  listConfigured() {
+    return this.list().filter((adapter) => {
+      const apiKeyEnv = this.configsById.get(adapter.id)?.apiKeyEnv;
+      return !apiKeyEnv || Boolean(process.env[apiKeyEnv]?.trim());
+    });
   }
 
   getForJob(input: { jobType: ModelCapability; modelConfigId?: string | null; providerId?: string | null }): ModelAdapter {
