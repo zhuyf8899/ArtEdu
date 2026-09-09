@@ -57,6 +57,8 @@ Docker Compose 只负责 PostgreSQL 容器和数据卷；数据库结构必须�
 
 ## 启动
 
+启动命令会自动查找 Docker Desktop、等待数据库健康并应用迁移，再启动应用。只检查依赖可执行 `npm run db:check`；故障排查与数据保护说明见 [Docker 启动说明](docs/docker-startup.md)。
+
 在仓库根目录执行：
 
 ```powershell

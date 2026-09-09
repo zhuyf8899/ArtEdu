@@ -10,4 +10,9 @@ export const createGenerationJobSchema = z.object({
   parameters: z.record(z.string(), z.unknown()).default({}),
 });
 
+export const runGenerationJobSchema = createGenerationJobSchema.extend({
+  modelConfigId: z.string().trim().min(1).max(120),
+});
+
 export type CreateGenerationJobInput = z.infer<typeof createGenerationJobSchema>;
+export type RunGenerationJobInput = z.infer<typeof runGenerationJobSchema>;

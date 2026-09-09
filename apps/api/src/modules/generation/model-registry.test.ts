@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readModelProviderConfigs } from "./model-registry";
+import { ModelRegistry, readModelProviderConfigs } from "./model-registry";
 
 const providers = JSON.stringify([{ id: "school", baseUrl: "https://model.example.edu/v1", model: "chat-v1", capabilities: ["chat"], apiKeyEnv: "SCHOOL_KEY" }]);
 
@@ -14,5 +14,23 @@ test("生产环境拒绝非 HTTPS 或带凭据的模型地址", () => {
   } finally {
     if (originalEnv === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = originalEnv;
+  }
+});
+
+test("仅向首页暴露已配置密钥的模型", () => {
+  const originalProviders = process.env.MODEL_PROVIDERS_JSON;
+  const originalKey = process.env.SCHOOL_KEY;
+  try {
+    process.env.MODEL_PROVIDERS_JSON = providers;
+    delete process.env.SCHOOL_KEY;
+    assert.deepEqual(new ModelRegistry().listConfigured(), []);
+
+    process.env.SCHOOL_KEY = "configured-for-test";
+    assert.equal(new ModelRegistry().listConfigured()[0]?.id, "school");
+  } finally {
+    if (originalProviders === undefined) delete process.env.MODEL_PROVIDERS_JSON;
+    else process.env.MODEL_PROVIDERS_JSON = originalProviders;
+    if (originalKey === undefined) delete process.env.SCHOOL_KEY;
+    else process.env.SCHOOL_KEY = originalKey;
   }
 });

@@ -4,7 +4,7 @@ import {
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
-import { createAgentRun, createGenerationJob, executeAgentRun, getApiHealth, getPortalHome } from "./services/adminApi.js";
+import { createAgentRun, executeAgentRun, getApiHealth, getPortalHome, runGenerationJob } from "./services/adminApi.js";
 import { AiCreationConsole } from "./AiCreationConsole.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
@@ -136,7 +136,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
   const nextCourse = useMemo(() => data.courses.find((course) => course.progressPercent > 0 && course.progressPercent < 100) ?? data.courses[0], [data.courses]);
   const showToast = notify;
-  const startGeneration = async (jobType, prompt, parameters = {}) => {
+  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId) => {
     try {
       if (!data.creation.enabled) {
         const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation" }[jobType] ?? "ui_design";
@@ -146,15 +146,17 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         showToast("本地演示已完成：创作说明已写入审计记录。", "success");
         return { id: run.id, local: true, content: lastMessage?.content ?? "本地创作说明已生成。" };
       }
-      const job = await createGenerationJob({ jobType, prompt, parameters: { source: "integrated-test-site", ...parameters } });
-      showToast(`任务已创建：${job.id.slice(0, 8)}…，可在后端任务队列中查看。`);
-      return job;
+      const selectedModelId = modelConfigId ?? data.creation.models.find((model) => model.capabilities.includes(jobType))?.id;
+      const result = await runGenerationJob({ jobType, prompt, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } });
+      showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
+      void loadPortalData();
+      return { ...result.job, content: result.output.content, model: result.output.metadata?.model };
     } catch (error) {
       showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。", "error");
       return null;
     }
   };
-  const createFromConversation = ({ jobType, prompt, parameters }) => startGeneration(jobType, prompt, parameters);
+  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId }) => startGeneration(jobType, prompt, parameters, modelConfigId);
 
   const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning" }[nextSection] ?? "/");

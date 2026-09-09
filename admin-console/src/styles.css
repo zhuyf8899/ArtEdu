@@ -1463,3 +1463,45 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (max-width: 560px) {
   .portal-nav button svg { width: 20px; height: 20px; transform: none; }
 }
+
+/* Chat reading surface: scope typography so legacy compact portal styles cannot shrink replies. */
+.ai-conversation { padding: clamp(20px, 3vw, 32px); }
+.ai-conversation .ai-message--assistant { grid-template-columns: 34px minmax(0, 1fr); gap: 14px; margin-bottom: 28px; }
+.ai-conversation .ai-message--assistant > span { width: 34px; height: 34px; color: #333; background: #f4f4f4; border: 1px solid #e8e8e8; border-radius: 50%; }
+.ai-message__body { min-width: 0; }
+.ai-conversation .ai-message__author { display: block; margin: 4px 0 10px; color: #666; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.ai-conversation .ai-markdown { color: #242424; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "Microsoft YaHei", sans-serif; font-size: 16px; line-height: 1.85; letter-spacing: normal; overflow-wrap: anywhere; text-align: left; }
+.ai-conversation .ai-markdown p { margin: 0 0 1em; padding: 0; color: inherit; background: transparent; border: 0; border-radius: 0; font: inherit; white-space: normal; }
+.ai-conversation .ai-markdown :is(h3, h4, h5, h6) { margin: 1.4em 0 .65em; color: #171717; font-family: inherit; font-size: 19px; font-weight: 650; letter-spacing: normal; line-height: 1.5; }
+.ai-conversation .ai-markdown h3 { font-size: 21px; }
+.ai-conversation .ai-markdown > :first-child { margin-top: 0; }
+.ai-conversation .ai-markdown > :last-child { margin-bottom: 0; }
+.ai-conversation .ai-markdown strong { color: #171717; font-weight: 650; }
+.ai-conversation .ai-markdown :is(ul, ol) { margin: .7em 0 1em; padding-left: 1.65em; }
+.ai-conversation .ai-markdown ul { list-style: disc; }
+.ai-conversation .ai-markdown ol { list-style: decimal; }
+.ai-conversation .ai-markdown li { margin: .4em 0; padding-left: .25em; }
+.ai-conversation .ai-markdown li > p { margin: .3em 0; }
+.ai-conversation .ai-markdown blockquote { margin: 1em 0; padding: .25em 0 .25em 1em; border-left: 3px solid #d5d5d5; color: #626262; }
+.ai-conversation .ai-markdown a { color: #3159a7; text-decoration: underline; text-underline-offset: 3px; }
+.ai-conversation .ai-markdown hr { margin: 1.5em 0; border: 0; border-top: 1px solid #e7e7e7; }
+.ai-conversation .ai-markdown code { padding: .18em .4em; background: #f1f1f1; border-radius: 5px; font-family: "Cascadia Code", Consolas, monospace; font-size: .88em; }
+.ai-conversation .ai-markdown pre { max-width: 100%; margin: 1em 0; padding: 18px 20px; overflow-x: auto; background: #f7f7f8; border: 1px solid #e5e5e5; border-radius: 12px; white-space: pre; line-height: 1.65; }
+.ai-conversation .ai-markdown pre code { padding: 0; background: transparent; border-radius: 0; overflow-wrap: normal; }
+.ai-markdown__table { max-width: 100%; overflow-x: auto; margin: 1em 0; border: 1px solid #e2e2e2; border-radius: 10px; }
+.ai-conversation .ai-markdown table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.ai-conversation .ai-markdown :is(th, td) { min-width: 110px; padding: 11px 15px; border-bottom: 1px solid #e5e5e5; text-align: left; }
+.ai-conversation .ai-markdown th { color: #333; background: #f7f7f8; font-weight: 600; }
+.ai-conversation .ai-markdown .task-list-item { list-style: none; }
+.ai-conversation .ai-markdown input[type="checkbox"] { width: 15px; height: 15px; margin-right: 8px; accent-color: #555; }
+.ai-conversation .ai-message--user { max-width: 85%; width: fit-content; margin: 0 0 26px auto; }
+.ai-conversation .ai-message--user > span { text-align: right; }
+.ai-conversation .ai-message--user p { margin: 0; padding: 13px 19px; color: #242424; background: #f4f4f4; border-radius: 18px; font-size: 16px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai-conversation textarea { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "Microsoft YaHei", sans-serif; font-size: 16px; line-height: 1.8; }
+@media (max-width: 560px) {
+  .ai-conversation { padding: 18px 14px; }
+  .ai-conversation .ai-message--assistant { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .ai-conversation .ai-message--assistant > span { display: none; }
+  .ai-conversation .ai-message--user { max-width: 95%; }
+  .ai-conversation .ai-markdown pre { padding: 14px; }
+}

@@ -56,6 +56,54 @@ export class GenerationRepository {
     return this.mapJob(result.rows[0]);
   }
 
+  async markRunning(jobId: string) {
+    const result = await this.database.query<GenerationJobRow>(`
+      UPDATE generation_jobs
+      SET status = 'running', started_at = CURRENT_TIMESTAMP, error_message = NULL
+      WHERE id = $1 AND status = 'queued'
+      RETURNING id, user_id, job_type, prompt, status, error_message, created_at, started_at, completed_at
+    `, [jobId]);
+    return result.rows[0] ? this.mapJob(result.rows[0]) : undefined;
+  }
+
+  async completeJob(jobId: string) {
+    const result = await this.database.query<GenerationJobRow>(`
+      UPDATE generation_jobs
+      SET status = 'succeeded', completed_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND status = 'running'
+      RETURNING id, user_id, job_type, prompt, status, error_message, created_at, started_at, completed_at
+    `, [jobId]);
+    return result.rows[0] ? this.mapJob(result.rows[0]) : undefined;
+  }
+
+  async failJob(jobId: string, reason: string) {
+    const result = await this.database.query<GenerationJobRow>(`
+      UPDATE generation_jobs
+      SET status = 'failed', error_message = $2, completed_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND status IN ('queued', 'running')
+      RETURNING id, user_id, job_type, prompt, status, error_message, created_at, started_at, completed_at
+    `, [jobId, reason.slice(0, 1000)]);
+    return result.rows[0] ? this.mapJob(result.rows[0]) : undefined;
+  }
+
+  async recordUsage(input: {
+    userId: string;
+    modelConfigId: string;
+    requestId: string;
+    inputUnits: number;
+    outputUnits: number;
+    status: "success" | "failed";
+    errorCode?: string;
+  }) {
+    await this.database.query(`
+      INSERT INTO usage_records (
+        id, user_id, model_config_id, capability, request_id,
+        input_units, output_units, status, error_code
+      ) VALUES ($1, $2, $3, 'image_generation', $4, $5, $6, $7, $8)
+      ON CONFLICT (request_id) DO NOTHING
+    `, [randomUUID(), input.userId, input.modelConfigId, input.requestId, input.inputUnits, input.outputUnits, input.status, input.errorCode ?? null]);
+  }
+
   private mapJob(row: GenerationJobRow): GenerationJob {
     return {
       id: row.id,

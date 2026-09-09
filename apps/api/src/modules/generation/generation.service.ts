@@ -1,11 +1,12 @@
-import { ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
 import { getEnvironment } from "../../common/environment";
 import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
-import type { CreateGenerationJobInput } from "./generation.contracts";
+import type { CreateGenerationJobInput, RunGenerationJobInput } from "./generation.contracts";
 import { GenerationRepository } from "./generation.repository";
+import { ModelRegistry } from "./model-registry";
 
 interface QuotaRow {
   daily_limit: number | null;
@@ -21,6 +22,7 @@ export class GenerationService {
   constructor(
     private readonly database: DatabaseService,
     private readonly repository: GenerationRepository,
+    private readonly models: ModelRegistry,
   ) {}
 
   async createJob(actor: Actor, input: CreateGenerationJobInput) {
@@ -62,6 +64,58 @@ export class GenerationService {
     const canReadAllJobs = actor.roles.some((role) => ["admin", "teacher"].includes(role));
     if (job.userId !== actor.id && !canReadAllJobs) throw new ForbiddenException("无权查看此生成任务");
     return job;
+  }
+
+  async runJob(actor: Actor, input: RunGenerationJobInput) {
+    let adapter;
+    try {
+      adapter = this.models.getForJob({ jobType: input.jobType, modelConfigId: input.modelConfigId });
+    } catch {
+      throw new ServiceUnavailableException("所选模型当前未配置或不支持此创作方式");
+    }
+
+    const job = await this.createJob(actor, input);
+    if (!await this.repository.markRunning(job.id)) throw new ConflictException("生成任务已被执行或当前不可执行");
+
+    const systemPrompt = buildCreationSystemPrompt(input.jobType);
+    try {
+      const output = await adapter.execute({
+        jobType: input.jobType,
+        modelConfigId: input.modelConfigId,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: input.prompt },
+        ],
+        parameters: {
+          temperature: 0.4,
+          maxTokens: 1200,
+          providerOptions: { thinking: { type: "disabled" } },
+        },
+      });
+      const completed = await this.repository.completeJob(job.id);
+      await this.repository.recordUsage({
+        userId: actor.id,
+        modelConfigId: input.modelConfigId,
+        requestId: job.id,
+        inputUnits: Number(output.metadata?.inputTokens ?? 0),
+        outputUnits: Number(output.metadata?.outputTokens ?? 0),
+        status: "success",
+      });
+      return { job: completed ?? { ...job, status: "succeeded" }, output };
+    } catch (error) {
+      const reason = providerFailureMessage(error);
+      await this.repository.failJob(job.id, reason);
+      await this.repository.recordUsage({
+        userId: actor.id,
+        modelConfigId: input.modelConfigId,
+        requestId: job.id,
+        inputUnits: 0,
+        outputUnits: 0,
+        status: "failed",
+        errorCode: providerErrorCode(error),
+      });
+      throw new ServiceUnavailableException(reason);
+    }
   }
 
   private async getQuotaSnapshot(client: PoolClient, userId: string): Promise<QuotaRow> {
@@ -114,4 +168,34 @@ export class GenerationService {
       throw new HttpException("同时运行的生成任务已达上限", HttpStatus.TOO_MANY_REQUESTS);
     }
   }
+}
+
+function buildCreationSystemPrompt(jobType: RunGenerationJobInput["jobType"]) {
+  const instruction = {
+    image: "围绕 UI 与视觉创作，给出目标、信息层级、构图、色彩、组件和可执行步骤。",
+    pattern: "围绕图案创作，给出主题、构图单元、连续方式、色彩、材质、提示词和迭代建议。",
+    webpage: "围绕 Vibe Coding，给出页面结构、组件、交互状态、响应式策略、实现步骤和验收标准。",
+    video: "围绕视频创作，给出叙事结构、镜头、节奏、视听风格和制作步骤。",
+    document: "围绕艺术文档创作，给出结构、内容层次、视觉规范和校对步骤。",
+    knowledge_graph: "围绕艺术知识梳理，给出实体、关系、层级和可验证的信息组织方案。",
+  }[jobType];
+  return `你是 ArtEdu 艺术教育平台的中文创作助教。${instruction} 输出应简洁、具体、可执行，使用清晰的小标题；信息不足时明确假设。你当前只输出创作方案，不得声称已经生成图片、文件、代码仓库或部署链接。`;
+}
+
+function providerErrorCode(error: unknown) {
+  if (error instanceof Error && error.name === "AbortError") return "timeout";
+  const status = error instanceof Error ? error.message.match(/HTTP (\d{3})/)?.[1] : undefined;
+  return status ? `provider_${status}` : "provider_error";
+}
+
+function providerFailureMessage(error: unknown) {
+  if (error instanceof Error && error.name === "AbortError") return "模型响应超时，请稍后重试";
+  const status = error instanceof Error ? error.message.match(/HTTP (\d{3})/)?.[1] : undefined;
+  return ({
+    "401": "模型服务认证失败，请联系管理员更新 API Key",
+    "402": "模型账户余额不足，请充值后重试",
+    "429": "模型服务请求较多，请稍后重试",
+    "500": "模型服务暂时异常，请稍后重试",
+    "503": "模型服务当前繁忙，请稍后重试",
+  } as Record<string, string>)[status ?? ""] ?? "模型调用失败，请稍后重试";
 }

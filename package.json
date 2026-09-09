@@ -7,14 +7,17 @@
     "dev:api": "cd apps/api && npm run dev",
     "dev:web": "cd admin-console && npm run dev",
     "dev:worker": "cd apps/api && npm run worker",
-    "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down",
+    "db:up": "node scripts/database.mjs up",
+    "db:check": "node scripts/database.mjs check",
+    "db:repair": "node scripts/database.mjs repair",
+    "db:down": "node scripts/database.mjs down",
     "db:migrate": "cd apps/api && npm run db:migrate",
     "db:seed": "cd apps/api && npm run db:seed",
-    "db:prepare": "docker compose up -d --wait postgres && npm run db:migrate && npm run db:seed",
+    "db:prepare": "npm run db:up && npm run db:migrate && npm run db:seed",
     "check": "npm run check:api && npm run check:api:test && npm run check:web",
+    "test:chat:live": "node scripts/verify-demo-chat.mjs",
     "check:api": "cd apps/api && npm run typecheck",
     "check:api:test": "npm --prefix apps/api run test:security",
-    "check:web": "cd admin-console && npm run build && npm run test:sites"
+    "check:web": "cd admin-console && npm run build && npm run test:sites && npm run test:chat"
   }
 }
