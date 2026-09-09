@@ -15,8 +15,9 @@
     "db:seed": "cd apps/api && npm run db:seed",
     "db:prepare": "npm run db:up && npm run db:migrate && npm run db:seed",
     "check": "npm run check:api && npm run check:api:test && npm run check:web",
+    "test:chat:live": "node scripts/verify-demo-chat.mjs",
     "check:api": "cd apps/api && npm run typecheck",
     "check:api:test": "npm --prefix apps/api run test:security",
-    "check:web": "cd admin-console && npm run build && npm run test:sites"
+    "check:web": "cd admin-console && npm run build && npm run test:sites && npm run test:chat"
   }
 }

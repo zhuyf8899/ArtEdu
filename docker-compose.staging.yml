@@ -31,8 +31,10 @@ services:
       LOCAL_SESSION_IDLE_HOURS: 12
       ENABLE_FILE_UPLOADS: "true"
       UPLOAD_ROOT: /data/uploads
-      MODEL_EXECUTION_ENABLED: "false"
-      MODEL_PROVIDERS_JSON: "[]"
+      # Runtime-only configuration: never bake provider credentials into images or the web bundle.
+      MODEL_EXECUTION_ENABLED: ${MODEL_EXECUTION_ENABLED:-false}
+      MODEL_PROVIDERS_JSON: ${MODEL_PROVIDERS_JSON:-[]}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
     volumes:
       - artedu_staging_uploads:/data/uploads
     depends_on:

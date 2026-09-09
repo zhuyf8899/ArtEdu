@@ -24,6 +24,36 @@ DEEPSEEK_API_KEY=由部署环境的密钥管理服务注入
 
 数据库迁移 `0009_deepseek_model_provider.sql` 提供与上述 `id` 对应的可见模型配置。当前 DeepSeek 接入返回 UI、图案和网页创作的文字方案；它不会伪装成已经生成图片或可下载文件。
 
+### 合并后保留配置与部署
+
+- GitHub 保存接口代码、数据库迁移和配置模板，不保存 API Key。GitHub 仓库不是 API 运行服务器；只拉取代码或打开静态预览不能代替后端部署。
+- 本机继续使用已配置的 `apps/api/.env`。它被 Git 忽略，也被 Docker 构建上下文排除；更新代码时不要覆盖此文件。
+- Docker 测试服务器使用根目录的私有 `.env`（参考 `deploy/staging.env.example`）。填写 `DEEPSEEK_API_KEY`，设置 `MODEL_EXECUTION_ENABLED=true` 并保留对应的 `MODEL_PROVIDERS_JSON`。Compose 会在运行时传给 API 容器；不会传给前端。不要把 Key 放入 `VITE_*` 或源码。
+- 更新已有测试环境时，先备份数据库，然后依次执行以下命令（不要删除数据卷）：
+
+```sh
+git pull --ff-only origin main
+docker compose -f docker-compose.staging.yml build api web
+docker compose -f docker-compose.staging.yml up -d postgres
+docker compose -f docker-compose.staging.yml run --rm api npm run db:migrate
+docker compose -f docker-compose.staging.yml up -d api web
+```
+
+已有测试账号无需重新生成。首次安装需按项目初始化流程完成 seed 与账号创建；四个固定 demo 账号仅适合受控测试环境，不可用作公网正式账号。不要将测试账号生成脚本作为每次启动步骤（它会重置密码、角色并注销会话）。
+
+首页通过服务端会话识别学生、教师、运营和管理员，登录用户不需要填写 Key，仍受管理员额度限制。当前首页为单次问答，不宣称具备完整多轮会话历史。正文使用 16px 字号，安全解析 Markdown 标题、加粗、列表、表格和代码块；禁用模型输出的原始 HTML，外部图片只显示链接。
+
+### 回归验证（2026-09-09）
+
+本机 `http://localhost:4173` 验证四个账号 `student.demo`、`teacher.demo`、`operator.demo`、`admin.demo` 登录后均能看到模型、获取真实文字回复并持久化成功任务；匿名首页数据与生成请求返回 401。真实测试显式开启，每次消耗四次模型请求及平台额度，并在结束后注销测试脚本自己的会话：
+
+```powershell
+$env:ARTEDU_LIVE_CHAT_TEST='true'
+npm run test:chat:live
+```
+
+测试默认只接受回环地址，避免把固定测试密码发送到未知服务器；不输出密钥、会话 Cookie 或用户回复。自动化 `npm run check` 包含 24 项 API 测试和 8 项前端测试，不调用外部付费模型。真实调用验证结果只代表本机当前配置；远端部署仍需注入 Key 并独立验收。GitHub Actions 不需要 DeepSeek Key。
+
 ## 统一调用参数
 
 Agent 和生成任务共享 `ModelRequest`。除 `messages`（支持 system/user/assistant/tool 上下文）外，统一支持 `temperature`、`topP`、`maxTokens`、`presencePenalty`、`frequencyPenalty`、`seed`、`stop`、`responseFormat`、`tools`、`toolChoice` 与 `metadata`。

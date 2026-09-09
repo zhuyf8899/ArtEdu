@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AiMarkdown } from "./AiMarkdown.js";
 import {
   ArrowUpRight, Browser, ChatCircleDots, CirclesThreePlus, Code,
   FloppyDisk, Gauge, ImageSquare, Paperclip, Sparkle, Trash,
@@ -47,6 +48,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
   const [failed, setFailed] = useState(false);
   const [draftSaved, setDraftSaved] = useState(Boolean(storedDraft?.prompt));
   const [reply, setReply] = useState("先选择创作方法与模型，再描述你的想法。我会把它整理成可继续执行的创作任务。");
+  const [submittedPrompt, setSubmittedPrompt] = useState("");
 
   const method = useMemo(() => CREATION_METHODS.find((item) => item.id === methodId) ?? CREATION_METHODS[0], [methodId]);
   const models = useMemo(() => creation?.enabled && creation?.models?.length
@@ -87,6 +89,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
     }
     setSending(true);
     setFailed(false);
+    setSubmittedPrompt(content);
     setReply(serviceReady ? `正在用 ${model.name} 生成“${method.label}”建议，请稍候……` : `正在通过本地演示引擎整理“${method.label}”方案，不会调用外部模型……`);
     const result = await onCreate({
       jobType: method.jobType,
@@ -124,9 +127,10 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
         <span>并发 {quota.inFlight ?? 0} / {quota.concurrentLimit ?? "∞"}</span>
       </div>
       <div className="ai-conversation">
-        <div className="ai-message ai-message--assistant">
-          <span><ChatCircleDots size={17} weight="bold" /></span>
-          <div><p>{reply}</p>{failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div>
+        {submittedPrompt && <div className="ai-message--user" aria-label="你的问题"><span className="ai-message__author">你</span><p>{submittedPrompt}</p></div>}
+        <div className="ai-message ai-message--assistant" aria-live="polite" aria-busy={sending}>
+          <span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span>
+          <div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{reply}</AiMarkdown>{failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div>
         </div>
         <label htmlFor="artedu-ai-prompt" className="sr-only">描述你的创作想法</label>
         <textarea
