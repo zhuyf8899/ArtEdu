@@ -40,7 +40,7 @@ const graphPointSchema = z.object({
 
 const workflowNodeSchema = z.object({
   id: z.string().trim().min(1).max(80),
-  type: z.enum(["input", "prompt", "model", "preview", "note"]),
+  type: z.enum(["input", "prompt", "skill", "model", "preview", "note"]),
   position: graphPointSchema,
   data: z.object({
     label: z.string().trim().min(1).max(160),
@@ -75,6 +75,20 @@ export const workflowDefinitionSchema = z.object({
     if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "连线必须连接到已有节点" });
     if (edge.source === edge.target) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "节点不能连接到自身" });
   }
+  const outgoing = new Map([...nodeIds].map((id) => [id, [] as string[]]));
+  for (const edge of definition.edges) outgoing.get(edge.source)?.push(edge.target);
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const hasCycle = (id: string): boolean => {
+    if (visiting.has(id)) return true;
+    if (visited.has(id)) return false;
+    visiting.add(id);
+    const found = (outgoing.get(id) ?? []).some(hasCycle);
+    visiting.delete(id);
+    visited.add(id);
+    return found;
+  };
+  if ([...nodeIds].some(hasCycle)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "工作流不能包含循环连接" });
 });
 
 export const workflowVersionInputSchema = z.object({

@@ -38,3 +38,17 @@ test("工作流版本支持 ComfyUI 式节点和连线", () => {
   assert.equal(result.definition?.edges[0]?.target, "model-1");
   assert.equal(workflowVersionInputSchema.safeParse({ definition: { schemaVersion: 2, nodes: [{ id: "same", type: "input", position: { x: 0, y: 0 }, data: {} }], edges: [{ id: "bad", source: "same", target: "same" }] } }).success, false);
 });
+
+test("工作流版本支持内置 Skill，且拒绝循环图", () => {
+  const base = {
+    schemaVersion: 2,
+    nodes: [
+      { id: "input", type: "input", position: { x: 0, y: 0 }, data: { label: "需求" } },
+      { id: "skill", type: "skill", position: { x: 220, y: 0 }, data: { label: "纹样 Skill", value: "保持四方连续" } },
+      { id: "output", type: "preview", position: { x: 440, y: 0 }, data: { label: "预览" } },
+    ],
+    edges: [{ id: "input-skill", source: "input", target: "skill" }, { id: "skill-output", source: "skill", target: "output" }],
+  };
+  assert.equal(workflowVersionInputSchema.safeParse({ definition: base }).success, true);
+  assert.equal(workflowVersionInputSchema.safeParse({ definition: { ...base, edges: [...base.edges, { id: "cycle", source: "output", target: "input" }] } }).success, false);
+});

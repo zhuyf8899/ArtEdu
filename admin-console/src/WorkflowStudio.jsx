@@ -5,19 +5,19 @@ import "@xyflow/react/dist/style.css";
 import { getWorkflow, getWorkflows, startWorkflowRun, updateWorkflowRun } from "./services/adminApi.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
-const nodeStyle = { input: "#4b87ff", prompt: "#b268ff", model: "#ff8b4b", preview: "#42b883", note: "#78859b" };
+const nodeStyle = { input: "#4b87ff", prompt: "#b268ff", skill: "#d6b335", model: "#ff8b4b", preview: "#42b883", note: "#78859b" };
 
 function GraphNode({ data }) {
   const color = nodeStyle[data.nodeType] || nodeStyle.note;
   return <div className={`workflow-run-node ${data.isActive ? "is-active" : ""} ${data.isComplete ? "is-complete" : ""}`} style={{ "--node-color": color }}>
     <Handle id="input" type="target" position={Position.Left} className="workflow-flow-handle" />
-    <div><FlowArrow size={14} weight="bold" /><span>{data.nodeType === "input" ? "输入" : data.nodeType === "prompt" ? "提示词" : data.nodeType === "model" ? "模型" : data.nodeType === "preview" ? "输出" : "说明"}</span></div>
+    <div><FlowArrow size={14} weight="bold" /><span>{data.nodeType === "input" ? "输入" : data.nodeType === "prompt" ? "提示词" : data.nodeType === "skill" ? "内置 Skill" : data.nodeType === "model" ? "模型" : data.nodeType === "preview" ? "输出" : "说明"}</span></div>
     <strong>{data.label}</strong><small>{data.description}</small>
     <Handle id="output" type="source" position={Position.Right} className="workflow-flow-handle" />
   </div>;
 }
 
-const nodeTypes = { input: GraphNode, prompt: GraphNode, model: GraphNode, preview: GraphNode, note: GraphNode };
+const nodeTypes = { input: GraphNode, prompt: GraphNode, skill: GraphNode, model: GraphNode, preview: GraphNode, note: GraphNode };
 
 export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false }) {
   const [workflows, setWorkflows] = useState([]);
