@@ -508,6 +508,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .model-picker button { min-height: 28px; padding: 0 9px; color: #868686; background: transparent; border: 1px solid #3f3f3f; font-size: 8px; font-weight: 700; }
 .model-picker button:hover { color: #fff; border-color: #777; }
 .model-picker button.is-active { color: var(--ink); background: var(--lime); border-color: var(--lime); }
+.model-picker select { width: min(240px, 48vw); min-height: 30px; padding: 0 28px 0 9px; color: #fff; background: #171717; border: 1px solid #686868; font-size: 9px; font-weight: 700; }
+.model-picker select:focus { outline: 2px solid var(--lime); outline-offset: 2px; }
 .ai-composer__actions { flex: none; display: flex; gap: 7px; }
 .ai-attach { width: 39px; height: 39px; display: grid; place-items: center; color: #aaa; background: transparent; border: 1px solid #444; }
 .ai-submit { min-height: 39px; padding: 0 15px; display: inline-flex; align-items: center; gap: 8px; color: var(--ink); background: var(--lime); border: 1px solid #fff; font-size: 9px; font-weight: 700; }
@@ -1159,6 +1161,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .model-picker button { min-height: 36px; color: #555; background: #fff; border-color: #dedede; }
 .model-picker button:hover { color: #111; background: #f7f7f8; border-color: #bbb; }
 .model-picker button.is-active { color: #fff; background: #111; border-color: #111; }
+.model-picker select { color: #111; background: #fff; border-color: #dedede; }
 .ai-methods { background: #f7f7f8; border-color: #dedede; border-radius: 10px; }
 .ai-methods button { min-height: 40px; color: #666; border-right-color: #dedede; border-radius: 0; }
 .ai-methods button:first-child { border-radius: 9px 0 0 9px; }

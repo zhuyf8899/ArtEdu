@@ -145,17 +145,9 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
       <div className="ai-composer__footer">
         <div className="model-picker">
           <span>{serviceReady ? "模型接口" : "演示参数"}</span>
-          <div role="radiogroup" aria-label="选择大模型">
-            {models.map((item) => <button
-              type="button"
-              role="radio"
-              aria-checked={modelId === item.id}
-              title={item.note}
-              className={modelId === item.id ? "is-active" : ""}
-              key={item.id}
-              onClick={() => setModelId(item.id)}
-            >{item.name}</button>)}
-          </div>
+          <select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>
+            {models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
         </div>
         <div className="ai-composer__controls">
           <div className="ai-methods" role="tablist" aria-label="AI 使用方法">
