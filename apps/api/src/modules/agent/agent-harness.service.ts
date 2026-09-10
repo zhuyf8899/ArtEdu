@@ -4,6 +4,7 @@ import type { ExecuteAgentRunInput } from "./agent.contracts";
 import { AgentService } from "./agent.service";
 import { runModelLoop } from "./agent-runtime";
 import type { ModelAdapter, ModelRequest, ModelToolDefinition } from "../generation/model-adapter";
+import { ModelRegistry } from "../generation/model-registry";
 
 const scenarioInstruction = {
   ui_design: "输出可实施的 UI 设计说明：目标用户、信息层级、视觉方向、组件与交互建议。",
@@ -48,7 +49,7 @@ function createMockLoopAdapter(scenario: keyof typeof scenarioInstruction, promp
 
 @Injectable()
 export class AgentHarnessService {
-  constructor(private readonly agents: AgentService) {}
+  constructor(private readonly agents: AgentService, private readonly models: ModelRegistry) {}
 
   async execute(actor: Actor, runId: string, input: ExecuteAgentRunInput) {
     const run = await this.agents.claimForExecution(actor, runId);
@@ -96,18 +97,46 @@ export class AgentHarnessService {
           },
           maxRounds: 4,
         })
+        : input.mode === "server"
+          ? await runModelLoop({
+            adapter: this.models.getForJob({ jobType: "chat", providerId: input.providerId }),
+            request: {
+              jobType: "chat",
+              providerId: input.providerId,
+              messages: [
+                { role: "system", content: systemPrompt },
+                ...input.context,
+                { role: "user", content: prompt },
+              ],
+              parameters: { ...input.model, tools: [harnessProbeTool, ...(input.model.tools ?? [])] },
+            },
+            tools: [harnessProbeTool, ...(input.model.tools ?? [])],
+            executeTool: {
+              execute: async (call, context) => {
+                if (call.function.name !== harnessProbeTool.function.name) throw new Error(`服务端尚未注册工具: ${call.function.name}`);
+                const parsed = JSON.parse(call.function.arguments) as { round?: number };
+                await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: parsed }, { accepted: true, mode: "server" });
+                return { accepted: true, round: context.round };
+              },
+            },
+            maxRounds: 8,
+          })
         : (() => { throw new BadRequestException("不支持的执行模式"); })();
+
+      const resultProviderId = input.mode === "server"
+        ? String(result.metadata?.providerId ?? input.providerId ?? "server")
+        : "harness-mock";
 
       await this.agents.appendToolCall(runId, "model.invoke", {
         mode: input.mode,
-        providerId: "providerId" in result ? result.providerId : "harness-mock",
+        providerId: resultProviderId,
         scenario,
         systemPrompt,
         contextMessageCount: input.context.length,
         model: input.model,
-      }, { content: result.content, providerId: "providerId" in result ? result.providerId : "harness-mock", rounds: "rounds" in result ? result.rounds : 1, toolCallCount: "toolCallCount" in result ? result.toolCallCount : 0 });
+      }, { content: result.content, providerId: resultProviderId, rounds: "rounds" in result ? result.rounds : 1, toolCallCount: "toolCallCount" in result ? result.toolCallCount : 0 });
       const artifactType = scenario === "webpage_generation" ? "webpage" : scenario === "pattern_generation" ? "pattern" : "brief";
-      await this.agents.appendArtifact(runId, artifactType, { content: result.content, providerId: "providerId" in result ? result.providerId : "harness-mock", scenario, generatedBy: "agent-harness", rounds: "rounds" in result ? result.rounds : 1 });
+      await this.agents.appendArtifact(runId, artifactType, { content: result.content, providerId: resultProviderId, scenario, generatedBy: "agent-harness", rounds: "rounds" in result ? result.rounds : 1 });
       await this.agents.appendAgentMessage(runId, result.content);
       return this.agents.completeRun(runId);
     } catch (error) {

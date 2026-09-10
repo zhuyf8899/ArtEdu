@@ -45,8 +45,8 @@ export const modelInvocationOptionsSchema = z.object({
 });
 
 export const executeAgentRunSchema = z.object({
-  /** local 仅向已配对的本地 Bridge 派发任务；云端永不接收模型密钥。 */
-  mode: z.enum(["mock", "local"]).default("local"),
+  /** local 仅向已配对的本地 Bridge 派发任务；server 使用服务端已配置的模型 provider。 */
+  mode: z.enum(["mock", "local", "server"]).default("local"),
   providerId: z.string().trim().min(1).max(80).optional(),
   systemPrompt: z.string().trim().max(8000).optional(),
   context: z.array(modelMessageSchema).max(30).default([]),

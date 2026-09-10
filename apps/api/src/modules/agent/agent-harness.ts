@@ -4,7 +4,7 @@ import { executeAgentRunSchema } from "./agent.contracts";
 
 function main() {
   const input = executeAgentRunSchema.parse({
-    mode: "mock",
+    mode: "server",
     context: [{ role: "assistant", content: "已确认用户希望现代、简洁的视觉方向。" }],
     model: {
       temperature: 0.3,
@@ -22,7 +22,7 @@ function main() {
       providerOptions: { reasoning_effort: "medium" },
     },
   });
-  assert.equal(input.mode, "mock");
+  assert.equal(input.mode, "server");
   assert.equal(input.model.maxTokens, 1200);
   assert.equal(input.context.length, 1);
   console.log(JSON.stringify({ ok: true, mode: input.mode, supportedFields: Object.keys(input.model).sort() }, null, 2));
