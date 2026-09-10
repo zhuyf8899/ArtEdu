@@ -8,5 +8,6 @@ import { PortalService } from "./portal.service";
   imports: [AuthModule, GenerationModule],
   controllers: [PortalController],
   providers: [PortalService],
+  exports: [PortalService],
 })
 export class PortalModule {}

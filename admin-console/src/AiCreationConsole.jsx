@@ -57,12 +57,13 @@ const FALLBACK_MODELS = [
   { id: "qwen-image", name: "Qwen Image", note: "中文视觉创作" },
 ];
 
-export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
+export function AiCreationConsole({ account, onCreate, onSmartSearch, creation, onNotice }) {
   const storedDraft = useMemo(() => readDraft(account.id), [account.id]);
   const [methodId, setMethodId] = useState(() => storedDraft?.methodId ?? "ui");
   const [modelId, setModelId] = useState(() => storedDraft?.modelId ?? "gpt-4o");
   const [prompt, setPrompt] = useState(() => storedDraft?.prompt ?? "");
   const [sending, setSending] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [failed, setFailed] = useState(false);
   const [draftSaved, setDraftSaved] = useState(Boolean(storedDraft?.prompt));
   const [reply, setReply] = useState("先选择创作方法与模型，再描述你的想法。我会把它整理成可继续执行的创作任务。");
@@ -136,6 +137,19 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
     setSending(false);
   };
 
+  const runSmartSearch = async () => {
+    const content = prompt.trim();
+    if (!content || sending || searching) return;
+    setSearching(true);
+    setFailed(false);
+    setSubmittedPrompt(content);
+    setReply("正在根据你的需求搜索课程、工作流和案例……");
+    const result = await onSmartSearch?.(content);
+    setReply(result?.content ?? "智能搜索未完成，输入内容已保留。请稍后重试。");
+    setFailed(!result);
+    setSearching(false);
+  };
+
   return <section className="ai-creation" aria-labelledby="ai-creation-title">
     <div className="ai-creation__intro">
       <span><Sparkle size={14} weight="fill" /> {serviceReady ? "已配置模型服务 · 校内账号直接使用" : "本地演示模式 · 不调用外部模型"}</span>
@@ -193,7 +207,8 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
               event.target.value = "";
             }} />
             <button type="button" className="ai-attach" aria-label="添加本机参考文件" title="本机临时参考文件" onClick={() => referenceInput.current?.click()}><Paperclip size={18} weight="bold" /></button>
-            <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked} title={!serviceReady ? "使用本地 Harness 完成结构化演示，不调用外部模型" : undefined}>
+            <button type="button" className="ai-attach" disabled={!prompt.trim() || sending || searching || !serviceReady} onClick={() => void runSmartSearch()} title="让模型按需求搜索课程、工作流和案例">智能搜索</button>
+            <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || searching || quotaBlocked} title={!serviceReady ? "使用本地 Harness 完成结构化演示，不调用外部模型" : undefined}>
               {sending ? "创建中" : quotaBlocked ? "额度已用尽" : serviceReady ? "开始创作" : "本地演示"} <ArrowUpRight size={18} weight="bold" />
             </button>
           </div>

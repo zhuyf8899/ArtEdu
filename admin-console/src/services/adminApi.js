@@ -110,7 +110,7 @@ export const createAgentRun = (input) => request("/agent-runs", {
 
 export const executeAgentRun = (runId, input = {}) => request(`/agent-runs/${encodeURIComponent(runId)}/execute`, {
   method: "POST",
-  body: JSON.stringify({ mode: "mock", ...input }),
+  body: JSON.stringify({ mode: "server", ...input }),
 });
 
 export const getWorkflows = (query = "") => request(`/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
