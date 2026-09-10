@@ -16,6 +16,12 @@ export interface GenerationJob {
   completedAt: string | null;
 }
 
+export interface GenerationOutput {
+  storageKey: string;
+  mimeType: string;
+  fileSize: number | null;
+}
+
 interface GenerationJobRow {
   id: string;
   user_id: string;
@@ -84,6 +90,21 @@ export class GenerationRepository {
       RETURNING id, user_id, job_type, prompt, status, error_message, created_at, started_at, completed_at
     `, [jobId, reason.slice(0, 1000)]);
     return result.rows[0] ? this.mapJob(result.rows[0]) : undefined;
+  }
+
+  async createOutput(jobId: string, output: GenerationOutput) {
+    await this.database.query(`
+      INSERT INTO generation_outputs (id, job_id, storage_key, mime_type, file_size)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [randomUUID(), jobId, output.storageKey, output.mimeType, output.fileSize]);
+  }
+
+  async getLatestOutput(jobId: string) {
+    const result = await this.database.query<{ storage_key: string; mime_type: string; file_size: number | null }>(
+      "SELECT storage_key, mime_type, file_size FROM generation_outputs WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1", [jobId],
+    );
+    const row = result.rows[0];
+    return row ? { storageKey: row.storage_key, mimeType: row.mime_type, fileSize: row.file_size } : undefined;
   }
 
   async recordUsage(input: {

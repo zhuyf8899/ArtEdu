@@ -14,7 +14,7 @@
     "import:course-library": "tsx src/scripts/import-course-library.ts",
     "harness:model": "tsx src/modules/generation/model-harness.ts",
     "harness:agent": "tsx src/modules/agent/agent-harness.ts",
-    "test:security": "tsx --test src/common/security.test.ts src/modules/auth/password.test.ts src/modules/auth/auth.service.test.ts src/modules/admin/admin.contracts.test.ts src/modules/learning/learning.contracts.test.ts src/modules/portal/portal.contracts.test.ts src/modules/studio/private-upload.test.ts src/modules/studio/studio.contracts.test.ts src/modules/generation/generation.contracts.test.ts src/modules/generation/generation.service.test.ts src/modules/generation/model-registry.test.ts src/modules/agent/agent.scanner.test.ts",
+    "test:security": "tsx --test src/common/security.test.ts src/modules/auth/password.test.ts src/modules/auth/auth.service.test.ts src/modules/admin/admin.contracts.test.ts src/modules/learning/learning.contracts.test.ts src/modules/portal/portal.contracts.test.ts src/modules/studio/private-upload.test.ts src/modules/studio/studio.contracts.test.ts src/modules/generation/generation.contracts.test.ts src/modules/generation/generation.service.test.ts src/modules/generation/office-export.service.test.ts src/modules/generation/model-registry.test.ts src/modules/agent/agent.scanner.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "overrides": {
@@ -25,8 +25,10 @@
     "@nestjs/common": "^11.0.11",
     "@nestjs/core": "^11.0.11",
     "@nestjs/platform-fastify": "^11.0.11",
+    "docx": "^9.7.1",
     "dotenv": "^16.4.7",
     "pg": "^8.13.3",
+    "pptxgenjs": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^3.24.2"

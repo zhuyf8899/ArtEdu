@@ -7,6 +7,7 @@ import { DatabaseService } from "../database/database.service";
 import type { CreateGenerationJobInput, RunGenerationJobInput } from "./generation.contracts";
 import { GenerationRepository } from "./generation.repository";
 import { ModelRegistry } from "./model-registry";
+import { OfficeExportService, type OfficeFormat } from "./office-export.service";
 
 interface QuotaRow {
   daily_limit: number | null;
@@ -23,6 +24,7 @@ export class GenerationService {
     private readonly database: DatabaseService,
     private readonly repository: GenerationRepository,
     private readonly models: ModelRegistry,
+    private readonly officeExports: OfficeExportService = new OfficeExportService(),
   ) {}
 
   async createJob(actor: Actor, input: CreateGenerationJobInput) {
@@ -66,6 +68,13 @@ export class GenerationService {
     return job;
   }
 
+  async downloadOutput(actor: Actor, jobId: string) {
+    const job = await this.getJob(actor, jobId);
+    const output = await this.repository.getLatestOutput(job.id);
+    if (!output) throw new NotFoundException("该任务尚未生成可下载文件");
+    return { output, data: await this.officeExports.read(output.storageKey) };
+  }
+
   async runJob(actor: Actor, input: RunGenerationJobInput) {
     let adapter;
     try {
@@ -92,6 +101,9 @@ export class GenerationService {
           providerOptions: { thinking: { type: "disabled" } },
         },
       });
+      const artifact = input.jobType === "document"
+        ? await this.createOfficeArtifact(job.id, input.prompt, output.content, input.parameters)
+        : undefined;
       const completed = await this.repository.completeJob(job.id);
       await this.repository.recordUsage({
         userId: actor.id,
@@ -101,7 +113,10 @@ export class GenerationService {
         outputUnits: Number(output.metadata?.outputTokens ?? 0),
         status: "success",
       });
-      return { job: completed ?? { ...job, status: "succeeded" }, output };
+      return {
+        job: completed ?? { ...job, status: "succeeded" }, output,
+        artifact: artifact && { fileName: artifact.fileName, mimeType: artifact.mimeType, fileSize: artifact.fileSize, downloadUrl: `/api/generation-jobs/${job.id}/download` },
+      };
     } catch (error) {
       const reason = providerFailureMessage(error);
       await this.repository.failJob(job.id, reason);
@@ -116,6 +131,13 @@ export class GenerationService {
       });
       throw new ServiceUnavailableException(reason);
     }
+  }
+
+  private async createOfficeArtifact(jobId: string, prompt: string, content: string, parameters: Record<string, unknown>) {
+    const format: OfficeFormat = parameters.outputFormat === "pptx" ? "pptx" : "docx";
+    const artifact = await this.officeExports.create(jobId, prompt, content, format);
+    await this.repository.createOutput(jobId, artifact);
+    return artifact;
   }
 
   private async getQuotaSnapshot(client: PoolClient, userId: string): Promise<QuotaRow> {

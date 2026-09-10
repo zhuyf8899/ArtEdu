@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AiMarkdown } from "./AiMarkdown.js";
 import {
   ArrowUpRight, Browser, ChatCircleDots, CirclesThreePlus, Code,
-  FloppyDisk, Gauge, ImageSquare, Paperclip, Sparkle, Trash,
+  FileDoc, FilePpt, FloppyDisk, Gauge, ImageSquare, Paperclip, Sparkle, Trash,
 } from "@phosphor-icons/react";
 
 const CREATION_METHODS = [
@@ -30,6 +30,24 @@ const CREATION_METHODS = [
     jobType: "webpage",
     Icon: Code,
   },
+  {
+    id: "word",
+    label: "Word 文档",
+    eyebrow: "教案 / 课程方案 / 创作说明",
+    placeholder: "例如：为“传统纹样与当代视觉”生成一份 45 分钟课程教案，包含目标、流程、材料和评价方式……",
+    jobType: "document",
+    outputFormat: "docx",
+    Icon: FileDoc,
+  },
+  {
+    id: "slides",
+    label: "PPT 演示",
+    eyebrow: "汇报 / 课程课件 / 作品阐释",
+    placeholder: "例如：生成一份关于 AI 辅助纹样创作的 8 页课堂汇报，包含主题、案例、方法与讨论题……",
+    jobType: "document",
+    outputFormat: "pptx",
+    Icon: FilePpt,
+  },
 ];
 
 const FALLBACK_MODELS = [
@@ -49,6 +67,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
   const [draftSaved, setDraftSaved] = useState(Boolean(storedDraft?.prompt));
   const [reply, setReply] = useState("先选择创作方法与模型，再描述你的想法。我会把它整理成可继续执行的创作任务。");
   const [submittedPrompt, setSubmittedPrompt] = useState("");
+  const [artifact, setArtifact] = useState(null);
 
   const method = useMemo(() => CREATION_METHODS.find((item) => item.id === methodId) ?? CREATION_METHODS[0], [methodId]);
   const models = useMemo(() => creation?.enabled && creation?.models?.length
@@ -89,13 +108,14 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
     }
     setSending(true);
     setFailed(false);
+    setArtifact(null);
     setSubmittedPrompt(content);
     setReply(serviceReady ? `正在用 ${model.name} 生成“${method.label}”建议，请稍候……` : `正在通过本地演示引擎整理“${method.label}”方案，不会调用外部模型……`);
     const result = await onCreate({
       jobType: method.jobType,
       prompt: content,
       modelConfigId: serviceReady ? model.id : undefined,
-      parameters: { method: method.id, methodLabel: method.label, model: model.id },
+      parameters: { method: method.id, methodLabel: method.label, model: model.id, ...(method.outputFormat ? { outputFormat: method.outputFormat } : {}) },
     });
     setReply(result?.local
       ? `${result.content}\n\n本次为本地演示结果，任务已写入数据库并完成审计；接入正式模型后可沿用同一创作入口。`
@@ -105,6 +125,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
         ? `任务 ${result.id.slice(0, 8)} 已创建。输入内容已清空，你可以继续创建下一个任务。`
         : "创作请求失败，输入已保留。请根据错误提示重试。");
     if (result) {
+      setArtifact(result.artifact ?? null);
       setPrompt("");
       setDraftSaved(false);
       clearDraft(account.id);
@@ -130,7 +151,7 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
         {submittedPrompt && <div className="ai-message--user" aria-label="你的问题"><span className="ai-message__author">你</span><p>{submittedPrompt}</p></div>}
         <div className="ai-message ai-message--assistant" aria-live="polite" aria-busy={sending}>
           <span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span>
-          <div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{reply}</AiMarkdown>{failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div>
+          <div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{reply}</AiMarkdown>{artifact && <a className="ai-download" href={artifact.downloadUrl} download>{`下载 ${artifact.fileName}`}</a>}{failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div>
         </div>
         <label htmlFor="artedu-ai-prompt" className="sr-only">描述你的创作想法</label>
         <textarea

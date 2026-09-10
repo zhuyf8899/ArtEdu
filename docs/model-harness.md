@@ -22,7 +22,7 @@ MODEL_PROVIDERS_JSON=[{"id":"model-deepseek-v4-flash","baseUrl":"https://api.dee
 DEEPSEEK_API_KEY=由部署环境的密钥管理服务注入
 ```
 
-数据库迁移 `0009_deepseek_model_provider.sql` 提供与上述 `id` 对应的可见模型配置。当前 DeepSeek 接入返回 UI、图案和网页创作的文字方案；它不会伪装成已经生成图片或可下载文件。
+数据库迁移 `0009_deepseek_model_provider.sql` 提供与上述 `id` 对应的可见模型配置。当前 DeepSeek 接入返回 UI、图案和网页创作的文字方案；它不会伪装成已经生成图片。选择“Word 文档”或“PPT 演示”时，服务端会将模型生成的结构化内容导出为可下载的 `.docx` 或 `.pptx` 文件；旧版 `.doc` / `.ppt` 不在首期支持范围内。
 
 ### 合并后保留配置与部署
 

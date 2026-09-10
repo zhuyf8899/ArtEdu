@@ -150,7 +150,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       const result = await runGenerationJob({ jobType, prompt, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } });
       showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
       void loadPortalData();
-      return { ...result.job, content: result.output.content, model: result.output.metadata?.model };
+      return { ...result.job, content: result.output.content, model: result.output.metadata?.model, artifact: result.artifact };
     } catch (error) {
       showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。", "error");
       return null;

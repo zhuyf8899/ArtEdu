@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, Req } from "@nestjs/common";
-import type { FastifyRequest } from "fastify";
+import { Body, Controller, Get, Param, Post, Req, Res } from "@nestjs/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
 import { createGenerationJobSchema, runGenerationJobSchema } from "./generation.contracts";
@@ -33,5 +33,16 @@ export class GenerationController {
   async getJob(@Req() request: FastifyRequest, @Param("jobId") jobId: string) {
     const actor = await this.authService.getActor(request);
     return this.generationService.getJob(actor, jobId);
+  }
+
+  @Get(":jobId/download")
+  async downloadOutput(@Req() request: FastifyRequest, @Param("jobId") jobId: string, @Res({ passthrough: true }) reply: FastifyReply) {
+    const actor = await this.authService.getActor(request);
+    const { output, data } = await this.generationService.downloadOutput(actor, jobId);
+    const extension = output.mimeType.includes("presentation") ? "pptx" : "docx";
+    reply.header("Content-Type", output.mimeType);
+    reply.header("Content-Disposition", `attachment; filename=artedu-${jobId.slice(0, 8)}.${extension}`);
+    reply.header("Cache-Control", "private, no-store");
+    return data;
   }
 }

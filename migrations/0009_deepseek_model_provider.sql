@@ -21,7 +21,7 @@ VALUES (
   'provider-deepseek',
   'DeepSeek V4 Flash',
   'deepseek-v4-flash',
-  '["chat","image","pattern","webpage"]'::jsonb,
+  '["chat","image","pattern","webpage","document"]'::jsonb,
   'env:DEEPSEEK_API_KEY',
   'active'
 )

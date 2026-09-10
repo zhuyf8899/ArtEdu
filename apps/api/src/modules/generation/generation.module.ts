@@ -5,11 +5,12 @@ import { GenerationRepository } from "./generation.repository";
 import { GenerationService } from "./generation.service";
 import { GenerationWorkerService } from "./generation.worker";
 import { ModelRegistry } from "./model-registry";
+import { OfficeExportService } from "./office-export.service";
 
 @Module({
   imports: [AuthModule],
   controllers: [GenerationController],
-  providers: [GenerationRepository, GenerationService, GenerationWorkerService, ModelRegistry],
+  providers: [GenerationRepository, GenerationService, GenerationWorkerService, ModelRegistry, OfficeExportService],
   exports: [GenerationWorkerService, ModelRegistry],
 })
 export class GenerationModule {}
