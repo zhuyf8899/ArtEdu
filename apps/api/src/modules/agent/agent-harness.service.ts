@@ -5,6 +5,7 @@ import { AgentService } from "./agent.service";
 import { runModelLoop } from "./agent-runtime";
 import type { ModelAdapter, ModelRequest, ModelToolDefinition } from "../generation/model-adapter";
 import { ModelRegistry } from "../generation/model-registry";
+import { executePlatformTool, platformToolDefinitions } from "./agent-tools";
 
 const scenarioInstruction = {
   ui_design: "输出可实施的 UI 设计说明：目标用户、信息层级、视觉方向、组件与交互建议。",
@@ -108,12 +109,16 @@ export class AgentHarnessService {
                 ...input.context,
                 { role: "user", content: prompt },
               ],
-              parameters: { ...input.model, tools: [harnessProbeTool, ...(input.model.tools ?? [])] },
+              parameters: { ...input.model, tools: [harnessProbeTool, ...platformToolDefinitions, ...(input.model.tools ?? [])] },
             },
-            tools: [harnessProbeTool, ...(input.model.tools ?? [])],
+            tools: [harnessProbeTool, ...platformToolDefinitions, ...(input.model.tools ?? [])],
             executeTool: {
               execute: async (call, context) => {
-                if (call.function.name !== harnessProbeTool.function.name) throw new Error(`服务端尚未注册工具: ${call.function.name}`);
+                if (call.function.name !== harnessProbeTool.function.name) {
+                  const placeholder = await executePlatformTool(call, context);
+                  await this.agents.appendToolCall(runId, call.function.name, { round: context.round }, placeholder);
+                  return placeholder;
+                }
                 const parsed = JSON.parse(call.function.arguments) as { round?: number };
                 await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: parsed }, { accepted: true, mode: "server" });
                 return { accepted: true, round: context.round };
