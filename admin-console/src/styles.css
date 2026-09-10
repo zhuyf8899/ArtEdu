@@ -510,6 +510,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .model-picker button.is-active { color: var(--ink); background: var(--lime); border-color: var(--lime); }
 .model-picker select { width: min(240px, 48vw); min-height: 30px; padding: 0 28px 0 9px; color: #fff; background: #171717; border: 1px solid #686868; font-size: 9px; font-weight: 700; }
 .model-picker select:focus { outline: 2px solid var(--lime); outline-offset: 2px; }
+.model-picker__row { display: flex; align-items: center; gap: 7px; }
+.search-toggle { min-height: 30px; padding: 0 9px; color: #555; background: #fff; border: 1px solid #dedede; border-radius: 7px; font-size: 8px; font-weight: 700; white-space: nowrap; }
+.search-toggle b { margin-left: 5px; color: #888; }
+.search-toggle.is-active { color: #155d35; background: #e8f7ee; border-color: #7fc79c; }
+.search-toggle.is-active b { color: #168245; }
 .ai-composer__actions { flex: none; display: flex; gap: 7px; }
 .ai-attach { width: 39px; height: 39px; display: grid; place-items: center; color: #aaa; background: transparent; border: 1px solid #444; }
 .ai-submit { min-height: 39px; padding: 0 15px; display: inline-flex; align-items: center; gap: 8px; color: var(--ink); background: var(--lime); border: 1px solid #fff; font-size: 9px; font-weight: 700; }

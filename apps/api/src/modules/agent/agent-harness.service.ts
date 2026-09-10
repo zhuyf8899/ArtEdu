@@ -123,10 +123,10 @@ export class AgentHarnessService {
               parameters: {
                 ...input.model,
                 toolChoice: input.model.toolChoice ?? "auto",
-                tools: [harnessProbeTool, ...platformToolDefinitions, ...(input.model.tools ?? [])],
+                tools: [harnessProbeTool, ...(input.searchEnabled ? platformToolDefinitions : platformToolDefinitions.filter((tool) => tool.function.name !== "search_platform")), ...(input.model.tools ?? [])],
               },
             },
-            tools: [harnessProbeTool, ...platformToolDefinitions, ...(input.model.tools ?? [])],
+            tools: [harnessProbeTool, ...(input.searchEnabled ? platformToolDefinitions : platformToolDefinitions.filter((tool) => tool.function.name !== "search_platform")), ...(input.model.tools ?? [])],
             executeTool: {
               execute: async (call, context) => {
                 if (call.function.name !== harnessProbeTool.function.name) {
@@ -159,6 +159,7 @@ export class AgentHarnessService {
         scenario,
         systemPrompt,
         contextMessageCount: input.context.length,
+        searchEnabled: input.searchEnabled,
         model: input.model,
       }, { content: result.content, providerId: resultProviderId, rounds: "rounds" in result ? result.rounds : 1, toolCallCount: "toolCallCount" in result ? result.toolCallCount : 0 });
       const artifactType = scenario === "webpage_generation" ? "webpage" : scenario === "pattern_generation" ? "pattern" : "brief";

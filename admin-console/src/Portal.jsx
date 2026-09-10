@@ -138,42 +138,31 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const showToast = notify;
   const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = []) => {
     try {
+      const searchEnabled = parameters.searchEnabled === true;
+      const promptWithSearchPolicy = `${prompt}\n\n${searchEnabled ? "你可以使用搜索能力。遇到需要平台内课程、工作流或案例信息时，优先调用 search_platform 工具；不得编造搜索结果。" : "搜索能力已经关闭。不要调用搜索工具，也不要声称已经搜索；请仅依据当前对话与输入完成任务。"}`;
+      if (searchEnabled && data.creation.enabled) {
+        const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation" }[jobType] ?? "ui_design";
+        const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters: { ...parameters, source: "portal-home" } });
+        const completed = await executeAgentRun(run.id, { mode: "server", providerId: modelConfigId, context, searchEnabled: true, systemPrompt: "你是 ArtEdu 创作助教。" });
+        const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
+        showToast("已完成带平台搜索能力的创作建议", "success");
+        return { id: run.id, content: message?.content ?? "未生成创作建议。" };
+      }
       if (!data.creation.enabled) {
         const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation" }[jobType] ?? "ui_design";
-        const run = await createAgentRun({ scenario, prompt, parameters });
+        const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters });
         const completed = await executeAgentRun(run.id, { mode: data.creation.enabled ? "server" : "mock", providerId: modelConfigId, context });
         const lastMessage = [...(completed.messages ?? [])].reverse().find((message) => message.role === "agent");
         showToast("本地演示已完成：创作说明已写入审计记录。", "success");
         return { id: run.id, local: true, content: lastMessage?.content ?? "本地创作说明已生成。" };
       }
       const selectedModelId = modelConfigId ?? data.creation.models.find((model) => model.capabilities.includes(jobType))?.id;
-      const result = await runGenerationJob({ jobType, prompt, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } });
+      const result = await runGenerationJob({ jobType, prompt: promptWithSearchPolicy, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } });
       showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
       void loadPortalData();
       return { ...result.job, content: result.output.content, model: result.output.metadata?.model, artifact: result.artifact };
     } catch (error) {
       showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。", "error");
-      return null;
-    }
-  };
-  const smartSearch = async (prompt, context = []) => {
-    if (!data.creation.enabled || !data.creation.models.length) {
-      showToast("智能搜索需要先启用模型服务", "error");
-      return null;
-    }
-    try {
-      const run = await createAgentRun({ scenario: "ui_design", prompt, parameters: { source: "smart-search" } });
-      const completed = await executeAgentRun(run.id, {
-        mode: "server",
-        providerId: data.creation.models[0].id,
-        context,
-        systemPrompt: "你是 ArtEdu 智能搜索助教。必须调用 search_platform 按用户需求搜索课程、工作流和案例；不要凭记忆回答。搜索完成后用简洁中文总结结果，并给出下一步建议。",
-      });
-      const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
-      showToast("智能搜索已完成", "success");
-      return { content: message?.content ?? "没有得到搜索结果。" };
-    } catch (error) {
-      showToast(error.message, "error");
       return null;
     }
   };
@@ -199,7 +188,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       {section !== "home" && section !== "myLearning" && section !== "search" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
-        <AiCreationConsole account={account} onCreate={createFromConversation} onSmartSearch={smartSearch} creation={data.creation} onNotice={showToast} />
+        <AiCreationConsole account={account} onCreate={createFromConversation} creation={data.creation} onNotice={showToast} />
         {portalLoading && <HomeDataState loading />}
         {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
         {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从教学资源库选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}

@@ -57,13 +57,13 @@ const FALLBACK_MODELS = [
   { id: "qwen-image", name: "Qwen Image", note: "中文视觉创作" },
 ];
 
-export function AiCreationConsole({ account, onCreate, onSmartSearch, creation, onNotice }) {
+export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
   const storedDraft = useMemo(() => readDraft(account.id), [account.id]);
   const [methodId, setMethodId] = useState(() => storedDraft?.methodId ?? "ui");
   const [modelId, setModelId] = useState(() => storedDraft?.modelId ?? "gpt-4o");
   const [prompt, setPrompt] = useState(() => storedDraft?.prompt ?? "");
   const [sending, setSending] = useState(false);
-  const [searching, setSearching] = useState(false);
+  const [searchEnabled, setSearchEnabled] = useState(() => storedDraft?.searchEnabled ?? false);
   const [failed, setFailed] = useState(false);
   const [draftSaved, setDraftSaved] = useState(Boolean(storedDraft?.prompt));
   const [messages, setMessages] = useState(() => readConversation(account.id));
@@ -93,10 +93,10 @@ export function AiCreationConsole({ account, onCreate, onSmartSearch, creation, 
         setDraftSaved(false);
         return;
       }
-      setDraftSaved(saveDraft(account.id, { prompt, methodId, modelId, updatedAt: new Date().toISOString() }));
+      setDraftSaved(saveDraft(account.id, { prompt, methodId, modelId, searchEnabled, updatedAt: new Date().toISOString() }));
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [account.id, methodId, modelId, prompt]);
+  }, [account.id, methodId, modelId, prompt, searchEnabled]);
 
   useEffect(() => {
     try { window.localStorage.setItem(conversationKey(account.id), JSON.stringify(messages.slice(-20))); }
@@ -123,7 +123,7 @@ export function AiCreationConsole({ account, onCreate, onSmartSearch, creation, 
       jobType: method.jobType,
       prompt: content,
       modelConfigId: serviceReady ? model.id : undefined,
-      parameters: { method: method.id, methodLabel: method.label, model: model.id, ...(method.outputFormat ? { outputFormat: method.outputFormat } : {}) },
+      parameters: { method: method.id, methodLabel: method.label, model: model.id, searchEnabled, ...(method.outputFormat ? { outputFormat: method.outputFormat } : {}) },
       context,
     });
     const response = result?.local
@@ -144,19 +144,6 @@ export function AiCreationConsole({ account, onCreate, onSmartSearch, creation, 
     setSending(false);
   };
 
-  const runSmartSearch = async () => {
-    const content = prompt.trim();
-    if (!content || sending || searching) return;
-    setSearching(true);
-    setFailed(false);
-    const context = messages.map(({ role, content: messageContent }) => ({ role, content: messageContent }));
-    setMessages((current) => [...current, { role: "user", content }, { role: "assistant", content: "正在根据你的需求搜索课程、工作流和案例……" }]);
-    const result = await onSmartSearch?.(content, context);
-    setMessages((current) => [...current.slice(0, -1), { role: "assistant", content: result?.content ?? "智能搜索未完成，输入内容已保留。请稍后重试。" }]);
-    setFailed(!result);
-    setSearching(false);
-  };
-
   return <section className="ai-creation" aria-labelledby="ai-creation-title">
     <div className="ai-creation__intro">
       <span><Sparkle size={14} weight="fill" /> {serviceReady ? "已配置模型服务 · 校内账号直接使用" : "本地演示模式 · 不调用外部模型"}</span>
@@ -173,7 +160,7 @@ export function AiCreationConsole({ account, onCreate, onSmartSearch, creation, 
       <div className="ai-conversation">
         {messages.map((message, index) => message.role === "user"
           ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p></div>
-          : <div className="ai-message ai-message--assistant" aria-live="polite" aria-busy={sending || searching} key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{message.content}</AiMarkdown>{index === messages.length - 1 && artifact && <a className="ai-download" href={artifact.downloadUrl} download>{`下载 ${artifact.fileName}`}</a>}{index === messages.length - 1 && failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div></div>)}
+          : <div className="ai-message ai-message--assistant" aria-live="polite" aria-busy={sending} key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{message.content}</AiMarkdown>{index === messages.length - 1 && artifact && <a className="ai-download" href={artifact.downloadUrl} download>{`下载 ${artifact.fileName}`}</a>}{index === messages.length - 1 && failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div></div>)}
         <label htmlFor="artedu-ai-prompt" className="sr-only">描述你的创作想法</label>
         <textarea
           id="artedu-ai-prompt"
@@ -187,9 +174,7 @@ export function AiCreationConsole({ account, onCreate, onSmartSearch, creation, 
       <div className="ai-composer__footer">
         <div className="model-picker">
           <span>{serviceReady ? "模型接口" : "演示参数"}</span>
-          <select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>
-            {models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
+          <div className="model-picker__row"><select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>{models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button type="button" className={`search-toggle ${searchEnabled ? "is-active" : ""}`} aria-pressed={searchEnabled} onClick={() => setSearchEnabled((enabled) => !enabled)} title={searchEnabled ? "搜索能力已开启：模型可以调用平台搜索工具" : "搜索能力已关闭：本轮不会向模型提供搜索工具"}>智能搜索 <b>{searchEnabled ? "开" : "关"}</b></button></div>
         </div>
         <div className="ai-composer__controls">
           <div className="ai-methods" role="tablist" aria-label="AI 使用方法">
@@ -212,8 +197,7 @@ export function AiCreationConsole({ account, onCreate, onSmartSearch, creation, 
               event.target.value = "";
             }} />
             <button type="button" className="ai-attach" aria-label="添加本机参考文件" title="本机临时参考文件" onClick={() => referenceInput.current?.click()}><Paperclip size={18} weight="bold" /></button>
-            <button type="button" className="ai-attach" disabled={!prompt.trim() || sending || searching || !serviceReady} onClick={() => void runSmartSearch()} title="让模型按需求搜索课程、工作流和案例">智能搜索</button>
-            <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || searching || quotaBlocked} title={!serviceReady ? "使用本地 Harness 完成结构化演示，不调用外部模型" : undefined}>
+            <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked} title={!serviceReady ? "使用本地 Harness 完成结构化演示，不调用外部模型" : undefined}>
               {sending ? "创建中" : quotaBlocked ? "额度已用尽" : serviceReady ? "开始创作" : "本地演示"} <ArrowUpRight size={18} weight="bold" />
             </button>
           </div>
@@ -253,6 +237,7 @@ function readDraft(accountId) {
       prompt: value.prompt,
       methodId: CREATION_METHODS.some((item) => item.id === value.methodId) ? value.methodId : "ui",
       modelId: typeof value.modelId === "string" ? value.modelId : "gpt-4o",
+      searchEnabled: value.searchEnabled === true,
     };
   } catch {
     return null;
