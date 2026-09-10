@@ -309,7 +309,7 @@ export class StudioService {
     if (!["draft", "rejected"].includes(work.status)) throw new ConflictException("当前作品不能继续上传资源");
     const part = await request.file();
     if (!part) throw new BadRequestException("请选择一个文件");
-    const upload = await storePrivateUpload(part, environment.uploadRoot);
+    const upload = await storePrivateUpload(part, environment.uploadRoot, undefined, `users/${actor.id}/works/${workId}`);
     try {
       const asset = await this.database.transaction(async (client) => {
         const locked = await client.query<{ status: string; author_id: string }>("SELECT status,author_id FROM works WHERE id=$1 FOR UPDATE", [workId]);

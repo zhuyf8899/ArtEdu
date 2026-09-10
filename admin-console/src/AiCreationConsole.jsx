@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AiMarkdown } from "./AiMarkdown.js";
 import {
   ArrowUpRight, Browser, ChatCircleDots, CirclesThreePlus, Code,
@@ -68,6 +68,8 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
   const [reply, setReply] = useState("先选择创作方法与模型，再描述你的想法。我会把它整理成可继续执行的创作任务。");
   const [submittedPrompt, setSubmittedPrompt] = useState("");
   const [artifact, setArtifact] = useState(null);
+  const [localReference, setLocalReference] = useState(null);
+  const referenceInput = useRef(null);
 
   const method = useMemo(() => CREATION_METHODS.find((item) => item.id === methodId) ?? CREATION_METHODS[0], [methodId]);
   const models = useMemo(() => creation?.enabled && creation?.models?.length
@@ -183,14 +185,21 @@ export function AiCreationConsole({ account, onCreate, creation, onNotice }) {
             ><Icon size={14} weight="bold" /><strong>{label}</strong></button>)}
           </div>
           <div className="ai-composer__actions">
-            <button type="button" className="ai-attach" aria-label="添加参考文件" title="添加参考文件" onClick={() => onNotice?.("参考文件上传将在学校对象存储接入后开放", "info")}><Paperclip size={18} weight="bold" /></button>
+            <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx" onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              setLocalReference({ name: file.name, size: file.size });
+              onNotice?.(`“${file.name}”仅暂存在当前浏览器，未上传到服务器`, "info");
+              event.target.value = "";
+            }} />
+            <button type="button" className="ai-attach" aria-label="添加本机参考文件" title="本机临时参考文件" onClick={() => referenceInput.current?.click()}><Paperclip size={18} weight="bold" /></button>
             <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked} title={!serviceReady ? "使用本地 Harness 完成结构化演示，不调用外部模型" : undefined}>
               {sending ? "创建中" : quotaBlocked ? "额度已用尽" : serviceReady ? "开始创作" : "本地演示"} <ArrowUpRight size={18} weight="bold" />
             </button>
           </div>
         </div>
       </div>
-      <div className="ai-composer__status"><span><ImageSquare size={14} /> 当前身份：{account.shortName} · {method.label} · {model.name}</span>{prompt.trim() && <button type="button" onClick={() => { setPrompt(""); setDraftSaved(false); clearDraft(account.id); }}><Trash size={13} /> 清空草稿</button>}<em><FloppyDisk size={13} />{draftSaved ? "草稿已保存" : "输入后自动保存"}</em></div>
+      <div className="ai-composer__status"><span><ImageSquare size={14} /> 当前身份：{account.shortName} · {method.label} · {model.name}</span>{localReference && <span title="文件未上传，刷新页面后会消失">本机暂存：{localReference.name}</span>}{prompt.trim() && <button type="button" onClick={() => { setPrompt(""); setDraftSaved(false); clearDraft(account.id); }}><Trash size={13} /> 清空草稿</button>}<em><FloppyDisk size={13} />{draftSaved ? "草稿已保存" : "输入后自动保存"}</em></div>
     </form>
   </section>;
 }

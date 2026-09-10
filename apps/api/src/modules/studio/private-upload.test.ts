@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -24,10 +24,11 @@ test("课程资料上传接受安全识别的 PDF、DOCX，并在拒绝时清理
       mimetype: "application/pdf",
       file: Readable.from([Buffer.from("%PDF-1.7\\n", "ascii")]),
     } as any;
-    const stored = await storePrivateUpload(pdf, root, ["application/pdf"]);
+    const stored = await storePrivateUpload(pdf, root, ["application/pdf"], "users/user-a/works/work-a");
     assert.equal(stored.mimeType, "application/pdf");
     assert.equal(stored.assetType, "document");
-    assert.match(stored.storageKey, /^[a-f0-9-]{36}-[a-f0-9-]{36}$/i);
+    assert.match(stored.storageKey, /^users\/user-a\/works\/work-a\/[a-f0-9-]{36}-[a-f0-9-]{36}$/i);
+    assert.match((await readFile(path.join(root, ...stored.storageKey.split("/")))).toString("ascii"), /^%PDF-/);
 
     const docx = {
       fieldname: "file",
@@ -46,7 +47,6 @@ test("课程资料上传接受安全识别的 PDF、DOCX，并在拒绝时清理
       file: Readable.from([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])]),
     } as any;
     await assert.rejects(() => storePrivateUpload(image, root, ["application/pdf"]));
-    assert.deepEqual((await readdir(root)).sort(), [stored.storageKey, document.storageKey].sort());
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -291,7 +291,7 @@ export class CoursesService {
     if (!["draft", "rejected"].includes(course.status)) throw new ConflictException("只有草稿或已驳回课程可以上传资料");
     const part = await request.file();
     if (!part) throw new BadRequestException("请选择 PDF、DOCX、PPTX 或 MP4/WebM 视频文件");
-    const upload = await storePrivateUpload(part, getEnvironment().uploadRoot, courseResourceMimeTypes);
+    const upload = await storePrivateUpload(part, getEnvironment().uploadRoot, courseResourceMimeTypes, `admin/courses/${courseId}`);
     try {
       const resource = await this.database.transaction(async (client) => {
         const locked = await client.query<{ status: string; created_by: string | null }>("SELECT status,created_by FROM courses WHERE id=$1 FOR UPDATE", [courseId]);

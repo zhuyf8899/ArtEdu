@@ -34,13 +34,15 @@ export async function storePrivateUpload(
   part: MultipartFile,
   root: string,
   permittedMimeTypes: readonly PrivateUploadMimeType[] = Object.keys(allowedTypes) as PrivateUploadMimeType[],
+  storagePrefix = "",
 ): Promise<StoredUpload> {
   if (part.fieldname !== "file") throw new BadRequestException("只允许提交名为 file 的单个文件字段");
   const uploadRoot = path.resolve(root);
   await mkdir(uploadRoot, { recursive: true, mode: 0o700 });
-  const storageKey = `${randomUUID()}-${randomUUID()}`;
-  const temporaryPath = path.join(uploadRoot, `.${storageKey}.tmp`);
-  const destinationPath = path.join(uploadRoot, storageKey);
+  const storageKey = createStorageKey(storagePrefix);
+  const destinationPath = path.join(uploadRoot, ...storageKey.split("/"));
+  const temporaryPath = path.join(path.dirname(destinationPath), `.${path.basename(destinationPath)}.tmp`);
+  await mkdir(path.dirname(destinationPath), { recursive: true, mode: 0o700 });
   const digest = createHash("sha256");
   let bytes = 0;
   let header = Buffer.alloc(0);
@@ -77,6 +79,15 @@ export async function storePrivateUpload(
     await rm(destinationPath, { force: true }).catch(() => undefined);
     throw error;
   }
+}
+
+function createStorageKey(prefix: string) {
+  const normalized = prefix.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+  if (normalized && !normalized.split("/").every((part) => /^[A-Za-z0-9_-]{1,160}$/.test(part))) {
+    throw new BadRequestException("无效的文件存储目录");
+  }
+  const name = `${randomUUID()}-${randomUUID()}`;
+  return normalized ? `${normalized}/${name}` : name;
 }
 
 export function detectUploadMimeType(header: Buffer): PrivateUploadMimeType | undefined {
