@@ -2,6 +2,8 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import type { Actor } from "../auth/auth.service";
 import type { ExecuteAgentRunInput } from "./agent.contracts";
 import { AgentService } from "./agent.service";
+import { runModelLoop } from "./agent-runtime";
+import type { ModelAdapter, ModelRequest, ModelToolDefinition } from "../generation/model-adapter";
 
 const scenarioInstruction = {
   ui_design: "输出可实施的 UI 设计说明：目标用户、信息层级、视觉方向、组件与交互建议。",
@@ -19,6 +21,31 @@ function mockResult(scenario: keyof typeof scenarioInstruction, prompt: string) 
   ].join("\n");
 }
 
+const harnessProbeTool: ModelToolDefinition = {
+  type: "function",
+  function: {
+    name: "harness_probe",
+    description: "基础循环探针，仅用于验证工具调用和多轮回传。",
+    parameters: { type: "object", properties: { round: { type: "integer" } }, required: ["round"] },
+  },
+};
+
+function createMockLoopAdapter(scenario: keyof typeof scenarioInstruction, prompt: string): ModelAdapter {
+  let calls = 0;
+  return {
+    id: "harness-mock",
+    capabilities: ["chat"],
+    async execute(request: ModelRequest) {
+      calls += 1;
+      const toolMessages = request.messages?.filter((message) => message.role === "tool").length ?? 0;
+      if (calls === 1) {
+        return { kind: "text", content: "", toolCalls: [{ id: "harness-probe-1", type: "function", function: { name: "harness_probe", arguments: JSON.stringify({ round: calls }) } }] };
+      }
+      return { kind: "text", content: mockResult(scenario, `${prompt}\n已完成工具轮次：${toolMessages}`), finishReason: "stop" };
+    },
+  };
+}
+
 @Injectable()
 export class AgentHarnessService {
   constructor(private readonly agents: AgentService) {}
@@ -34,6 +61,12 @@ export class AgentHarnessService {
 
     try {
       if (input.mode === "local") {
+        await this.agents.attachExecutionInput(runId, {
+          providerId: input.providerId ?? null,
+          systemPrompt,
+          context: input.context,
+          model: input.model,
+        });
         await this.agents.appendToolCall(runId, "local_bridge.dispatch", {
           scenario, providerId: input.providerId ?? null, systemPrompt, contextMessageCount: input.context.length, model: input.model,
         }, { state: "waiting_local_bridge", secretTransferred: false });
@@ -41,19 +74,40 @@ export class AgentHarnessService {
         return this.agents.waitForLocalBridge(runId);
       }
       const result = input.mode === "mock"
-        ? { content: mockResult(scenario, prompt), providerId: "harness-mock" }
+        ? await runModelLoop({
+          adapter: createMockLoopAdapter(scenario, prompt),
+          request: {
+            jobType: "chat",
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...input.context,
+              { role: "user", content: prompt },
+            ],
+            parameters: { ...input.model, tools: [harnessProbeTool] },
+          },
+          tools: [harnessProbeTool],
+          executeTool: {
+            execute: async (call, context) => {
+              if (call.function.name !== harnessProbeTool.function.name) throw new Error(`未注册的 harness 工具: ${call.function.name}`);
+              const parsed = JSON.parse(call.function.arguments) as { round?: number };
+              await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: parsed }, { accepted: true });
+              return { accepted: true, round: context.round };
+            },
+          },
+          maxRounds: 4,
+        })
         : (() => { throw new BadRequestException("不支持的执行模式"); })();
 
       await this.agents.appendToolCall(runId, "model.invoke", {
         mode: input.mode,
-        providerId: result.providerId,
+        providerId: "providerId" in result ? result.providerId : "harness-mock",
         scenario,
         systemPrompt,
         contextMessageCount: input.context.length,
         model: input.model,
-      }, { content: result.content, providerId: result.providerId });
+      }, { content: result.content, providerId: "providerId" in result ? result.providerId : "harness-mock", rounds: "rounds" in result ? result.rounds : 1, toolCallCount: "toolCallCount" in result ? result.toolCallCount : 0 });
       const artifactType = scenario === "webpage_generation" ? "webpage" : scenario === "pattern_generation" ? "pattern" : "brief";
-      await this.agents.appendArtifact(runId, artifactType, { content: result.content, providerId: result.providerId, scenario, generatedBy: "agent-harness" });
+      await this.agents.appendArtifact(runId, artifactType, { content: result.content, providerId: "providerId" in result ? result.providerId : "harness-mock", scenario, generatedBy: "agent-harness", rounds: "rounds" in result ? result.rounds : 1 });
       await this.agents.appendAgentMessage(runId, result.content);
       return this.agents.completeRun(runId);
     } catch (error) {

@@ -90,6 +90,13 @@ export class AgentService {
     return this.getRunInternal(runId);
   }
 
+  async attachExecutionInput(runId: string, execution: Record<string, unknown>) {
+    await this.database.query(
+      "UPDATE agent_runs SET input_json = input_json || $2::jsonb, updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='running'",
+      [runId, JSON.stringify({ execution })],
+    );
+  }
+
   async claimNextForLocalBridge(userId: string) {
     const result = await this.database.query<RunRow>(`
       WITH next_run AS (

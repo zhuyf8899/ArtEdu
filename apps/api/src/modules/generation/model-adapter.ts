@@ -14,6 +14,13 @@ export interface ModelMessage {
   content: string;
   name?: string;
   toolCallId?: string;
+  toolCalls?: ModelToolCall[];
+}
+
+export interface ModelToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
 }
 
 export interface ModelToolDefinition {
@@ -53,6 +60,8 @@ export interface ModelResult {
   content: string;
   mimeType?: string;
   metadata?: Record<string, unknown>;
+  toolCalls?: ModelToolCall[];
+  finishReason?: string;
 }
 
 export interface ModelAdapter {

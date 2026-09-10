@@ -44,6 +44,7 @@ function toOpenAiMessages(request: ModelRequest) {
     content: message.content,
     ...(message.name === undefined ? {} : { name: message.name }),
     ...(message.toolCallId === undefined ? {} : { tool_call_id: message.toolCallId }),
+    ...(message.toolCalls === undefined ? {} : { tool_calls: message.toolCalls }),
   }));
 }
 
@@ -90,14 +91,23 @@ class OpenAICompatibleAdapter implements ModelAdapter {
       });
       if (!response.ok) throw new Error(`模型接口返回 HTTP ${response.status}`);
       const body = await response.json() as {
-        choices?: Array<{ message?: { content?: string } }>;
+        choices?: Array<{ finish_reason?: string; message?: { content?: string | null; tool_calls?: Array<{ id?: string; type?: string; function?: { name?: string; arguments?: string } }> } }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
       };
-      const content = body.choices?.[0]?.message?.content;
-      if (!content) throw new Error("模型接口返回内容为空");
+      const choice = body.choices?.[0];
+      const toolCalls = (choice?.message?.tool_calls ?? []).map((call) => {
+        if (call.type !== "function" || !call.id || !call.function?.name || call.function.arguments === undefined) {
+          throw new Error("模型接口返回了无效的 tool call");
+        }
+        return { id: call.id, type: "function" as const, function: { name: call.function.name, arguments: call.function.arguments } };
+      });
+      const content = choice?.message?.content ?? "";
+      if (!content && toolCalls.length === 0) throw new Error("模型接口返回内容为空");
       return {
         kind: "text",
         content,
+        toolCalls: toolCalls.length ? toolCalls : undefined,
+        finishReason: choice?.finish_reason,
         metadata: {
           providerId: this.id,
           model: this.config.model,
