@@ -32,6 +32,15 @@ const harnessProbeTool: ModelToolDefinition = {
   },
 };
 
+const toolUsePolicy = [
+  "你是 ArtEdu 平台的 AI 设计助教。",
+  "涉及平台课程、课时、案例、工作流、学习进度或平台内容时，必须先调用可用工具获取事实，再回答。",
+  "不得凭记忆编造课程、案例、作者、工作流、链接或执行结果。",
+  "需求不明确时先搜索；获得明确 ID 后再读取详情。",
+  "涉及保存成果或启动工作流时，必须先向用户说明并等待明确确认。",
+  "工具返回 not_implemented 时，必须如实说明接口已预留但当前尚未实现。",
+].join("\n");
+
 function createMockLoopAdapter(scenario: keyof typeof scenarioInstruction, prompt: string): ModelAdapter {
   let calls = 0;
   return {
@@ -58,7 +67,7 @@ export class AgentHarnessService {
     if (!prompt) throw new BadRequestException("Agent Run 缺少创作需求");
 
     const scenario = run.scenario as keyof typeof scenarioInstruction;
-    const systemPrompt = input.systemPrompt ?? `你是美院设计创作助手。${scenarioInstruction[scenario]} 输出应清晰、可执行，并避免编造文件、链接或已完成的生成结果。`;
+    const systemPrompt = input.systemPrompt ?? `${toolUsePolicy}\n${scenarioInstruction[scenario]}\n输出应清晰、可执行，并避免编造文件、链接或已完成的生成结果。`;
     await this.agents.appendAgentMessage(runId, "正在整理创作需求并准备调用模型。");
 
     try {
@@ -109,7 +118,11 @@ export class AgentHarnessService {
                 ...input.context,
                 { role: "user", content: prompt },
               ],
-              parameters: { ...input.model, tools: [harnessProbeTool, ...platformToolDefinitions, ...(input.model.tools ?? [])] },
+              parameters: {
+                ...input.model,
+                toolChoice: input.model.toolChoice ?? "auto",
+                tools: [harnessProbeTool, ...platformToolDefinitions, ...(input.model.tools ?? [])],
+              },
             },
             tools: [harnessProbeTool, ...platformToolDefinitions, ...(input.model.tools ?? [])],
             executeTool: {
