@@ -136,12 +136,12 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
   const nextCourse = useMemo(() => data.courses.find((course) => course.progressPercent > 0 && course.progressPercent < 100) ?? data.courses[0], [data.courses]);
   const showToast = notify;
-  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId) => {
+  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = []) => {
     try {
       if (!data.creation.enabled) {
         const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation" }[jobType] ?? "ui_design";
         const run = await createAgentRun({ scenario, prompt, parameters });
-        const completed = await executeAgentRun(run.id, { mode: data.creation.enabled ? "server" : "mock", providerId: modelConfigId });
+        const completed = await executeAgentRun(run.id, { mode: data.creation.enabled ? "server" : "mock", providerId: modelConfigId, context });
         const lastMessage = [...(completed.messages ?? [])].reverse().find((message) => message.role === "agent");
         showToast("本地演示已完成：创作说明已写入审计记录。", "success");
         return { id: run.id, local: true, content: lastMessage?.content ?? "本地创作说明已生成。" };
@@ -156,7 +156,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       return null;
     }
   };
-  const smartSearch = async (prompt) => {
+  const smartSearch = async (prompt, context = []) => {
     if (!data.creation.enabled || !data.creation.models.length) {
       showToast("智能搜索需要先启用模型服务", "error");
       return null;
@@ -166,6 +166,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       const completed = await executeAgentRun(run.id, {
         mode: "server",
         providerId: data.creation.models[0].id,
+        context,
         systemPrompt: "你是 ArtEdu 智能搜索助教。必须调用 search_platform 按用户需求搜索课程、工作流和案例；不要凭记忆回答。搜索完成后用简洁中文总结结果，并给出下一步建议。",
       });
       const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
@@ -176,7 +177,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       return null;
     }
   };
-  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId }) => startGeneration(jobType, prompt, parameters, modelConfigId);
+  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }) => startGeneration(jobType, prompt, parameters, modelConfigId, context);
 
   const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning" }[nextSection] ?? "/");
