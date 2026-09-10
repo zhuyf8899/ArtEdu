@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit"
   },
   "overrides": {
-    "fastify": "5.12.1"
+    "fastify": "5.12.1",
+    "image-size": "file:vendor/image-size"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.1",
