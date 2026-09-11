@@ -32,3 +32,17 @@ Docker 后端日志报告 `sailor-ingest.sock` 和 `docker-secrets-engine/engine
 Docker 自动更新到 4.90.0 后，官方 `docker desktop restart` 仍复现套接字错误，因此此变更是可验证的恢复与启动保障，不能声称修复了 Docker/Windows 底层缺陷或保证永不复发。相同故障见 [Docker 官方问题区 #531](https://github.com/docker/desktop-feedback/issues/531)。正常 Windows 临时套接字测试关闭后文件自动消失，不能据此将问题归咎于整个 Windows 系统。
 
 修复脚本只有在引擎不可用、错误记录属于当前后端进程、错误内容匹配已知故障且 Docker 错误窗口存在时，才允许停止失败的后端。备份目录保留供人工核对；不自动删除。无需重装或恢复出厂设置。
+
+## 2026-09-11 修复：`.stale` 残留会让启动永久失败
+
+上一次故障恢复把运行目录里的套接字改名保留了 `.stale` 后缀（`dockerInference.stale`、`sailor-ingest.sock.stale`）。启动前的 `scripts/prepare-docker-runtime.ps1` 只认白名单里的原始文件名，于是判定"目录里有未知内容"并直接抛错，导致 `npm run db:up` 与 `npm run start-local` 永远起不来，报错为：
+
+```text
+Runtime directory contains something other than known empty socket entries; no cleanup attempted.
+```
+
+现在白名单同时接受 `<已知名称>.stale`：这些同样是 0 字节的运行时套接字残留，会被整目录备份后由 Docker 重建，不涉及镜像、容器或数据卷。其余校验（必须位于 `%LOCALAPPDATA%` 下、必须是 0 字节、必须是重解析点、必须是已知名称）保持不变。
+
+## 一键启动
+
+日常启动推荐 `scripts\start-local.ps1`（或双击 `scripts\start-local.cmd`）：它会检查环境、按需 `npm ci`、拉起 Docker 与 PostgreSQL、应用迁移与种子、确保演示账号可登录、启动 API/前端/Worker，最后做健康检查与一次真实登录验证，并打印入口地址与演示账号。停止用 `-Stop`。

@@ -47,7 +47,10 @@ foreach ($target in $targets) {
         throw 'Unexpected runtime directory target; refusing to move it.'
     }
     $entries = @(Get-ChildItem -LiteralPath $resolved -Force)
-    if ($entries | Where-Object { $_.PSIsContainer -or $_.Length -ne 0 -or -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $_.Name -notin $target.Names }) {
+    # A previous recovery leaves the same sockets renamed to <name>.stale. Those are equally
+    # ephemeral (0-byte reparse points) and must not permanently block startup.
+    $allowedNames = @($target.Names) + @($target.Names | ForEach-Object { $_ + '.stale' })
+    if ($entries | Where-Object { $_.PSIsContainer -or $_.Length -ne 0 -or -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $_.Name -notin $allowedNames }) {
         throw 'Runtime directory contains something other than known empty socket entries; no cleanup attempted.'
     }
     if ($entries.Count -gt 0) { $eligible += $resolved }

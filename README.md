@@ -65,6 +65,8 @@ Docker Compose 只负责 PostgreSQL 容器和数据卷；数据库结构必须�
 npm run dev
 ```
 
+也可以直接双击 `scripts\start-local.cmd`（等价于 `powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1`）。它会自动完成依赖安装、Docker/PostgreSQL 启动、迁移、演示数据、演示账号检查，再启动服务并做一次健康检查与真实登录验证，最后打印入口地址；停止用 `-Stop` 参数。首次在未安装 Docker Desktop 的机器上运行仍需先安装 Docker Desktop。
+
 启动后可访问：
 
 | 服务 | 地址 |
