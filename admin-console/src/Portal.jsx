@@ -5,7 +5,8 @@ import {
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
 import { createAgentRun, executeAgentRun, getApiHealth, getPortalHome, runGenerationJob } from "./services/adminApi.js";
-import { AiCreationLauncher, AiCreationWorkspace } from "./AiCreationConsole.jsx";
+import { AiCreationLauncher } from "./AiCreationConsole.jsx";
+import { AiCreationWorkspace } from "./CreationWorkspace.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 
@@ -101,7 +102,7 @@ export function LocalLogin({ onLogin }) {
   </main>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", studioWorkflowId = "", creationStartNew = false, onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", studioWorkflowId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -178,7 +179,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }) => startGeneration(jobType, prompt, parameters, modelConfigId, context);
 
   const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
-  const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning" }[nextSection] ?? "/");
+  const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning", creation: "/create" }[nextSection] ?? "/");
   const navigateSearch = (query) => onNavigate(`/search?query=${encodeURIComponent(query)}`);
 
   return <div className="portal-shell" data-section={section}>
@@ -197,7 +198,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       {section !== "home" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
-        <AiCreationLauncher account={account} creation={data.creation} onLaunch={() => onNavigate("/create?new=1")} />
+        <AiCreationLauncher account={account} creation={data.creation} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />
         {portalLoading && <HomeDataState loading />}
         {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
         {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从教学资源库选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}
@@ -218,7 +219,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
         {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
 
-        {section === "creation" && <AiCreationWorkspace account={account} onCreate={createFromConversation} creation={data.creation} onNotice={showToast} startNew={creationStartNew} onBack={() => onNavigate("/")} />}
+        {section === "creation" && <AiCreationWorkspace key={creationId || (creationStartNew ? "new" : "latest")} account={account} onCreate={createFromConversation} creation={data.creation} onNotice={showToast} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
       </Suspense>
       </div>
     </main>

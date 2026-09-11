@@ -484,16 +484,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .ai-creation__intro h2 span { color: var(--lime); }
 .ai-creation__intro p { margin: 14px 0 0; color: #888; font-size: 10px; line-height: 1.7; }
 .ai-composer { width: min(940px, 100%); margin: 0 auto; overflow: hidden; background: #0f0f0f; border: 1px solid #858585; box-shadow: 5px 5px 0 #252525; }
-.ai-methods { min-height: 68px; display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid #595959; }
-.ai-methods button { position: relative; padding: 12px 14px; display: flex; align-items: center; gap: 10px; color: #8e8e8e; background: transparent; border: 0; border-right: 1px solid #333; text-align: left; }
-.ai-methods button:last-child { border-right: 0; }
-.ai-methods button::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: transparent; }
-.ai-methods button:hover { color: #fff; background: #171717; }
-.ai-methods button.is-active { color: var(--ink); background: var(--lime); }
-.ai-methods button.is-active::after { background: #fff; }
-.ai-methods span, .ai-methods strong, .ai-methods small { display: block; }
-.ai-methods strong { font-size: 11px; }
-.ai-methods small { margin-top: 3px; color: currentColor; opacity: .66; font-size: 7px; }
 .ai-conversation { padding: 18px; }
 .ai-message { margin-bottom: 14px; display: grid; grid-template-columns: 31px minmax(0, 1fr); align-items: start; gap: 11px; }
 .ai-message > span { width: 31px; height: 31px; display: grid; place-items: center; color: var(--ink); background: var(--lime); }
@@ -663,9 +653,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 @media (max-width: 760px) {
   .ai-creation { min-height: 0; padding: 30px 18px; }
-  .ai-methods { grid-template-columns: 1fr; }
-  .ai-methods button { border-right: 0; border-bottom: 1px solid #333; }
-  .ai-methods button:last-child { border-bottom: 0; }
   .ai-composer__footer { align-items: stretch; flex-direction: column; }
   .ai-composer__actions { width: 100%; }
   .ai-submit { flex: 1; justify-content: center; }
@@ -923,12 +910,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 /* Compact creation method controls inside the composer footer */
 .ai-composer__footer { align-items: center; }
 .ai-composer__controls { min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-.ai-methods { min-height: 0; display: flex; grid-template-columns: none; border: 1px solid #3c3c3c; background: #080808; }
-.ai-methods button { min-height: 33px; padding: 0 8px; display: inline-flex; align-items: center; gap: 5px; border: 0; border-right: 1px solid #333; white-space: nowrap; }
-.ai-methods button:last-child { border-right: 0; }
-.ai-methods button::after { display: none; }
-.ai-methods strong { font-size: 7px; }
-.ai-methods button.is-active { color: var(--ink); background: var(--lime); }
 
 @media (max-width: 1080px) {
   .portal-search { width: 180px; }
@@ -961,8 +942,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .search-card h3 { font-size: 15px; }
   .search-card footer { align-items: flex-start; flex-direction: column; }
   .ai-composer__controls { width: 100%; }
-  .ai-methods { width: 100%; }
-  .ai-methods button { flex: 1; justify-content: center; padding: 0 5px; }
   .ai-composer__actions { width: 100%; }
 }
 
@@ -1167,12 +1146,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .model-picker button:hover { color: #111; background: #f7f7f8; border-color: #bbb; }
 .model-picker button.is-active { color: #fff; background: #111; border-color: #111; }
 .model-picker select { color: #111; background: #fff; border-color: #dedede; }
-.ai-methods { background: #f7f7f8; border-color: #dedede; border-radius: 10px; }
-.ai-methods button { min-height: 40px; color: #666; border-right-color: #dedede; border-radius: 0; }
-.ai-methods button:first-child { border-radius: 9px 0 0 9px; }
-.ai-methods button:last-child { border-radius: 0 9px 9px 0; }
-.ai-methods button:hover { color: #111; background: #efefef; }
-.ai-methods button.is-active { color: #fff; background: #111; }
 .ai-attach, .ai-clear { min-width: 40px; min-height: 40px; color: #555; background: #fff; border-color: #dedede; }
 .ai-submit { min-height: 40px; color: #fff; background: #111; border-color: #111; }
 .ai-composer__status { color: #777; border-top-color: #ededed; }
@@ -1308,8 +1281,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .account-switch > div { display: none; }
   .ai-creation { padding: 28px 14px; border-radius: 16px; }
   .ai-creation__intro h2 { font-size: 39px; }
-  .ai-methods { width: 100%; }
-  .ai-methods button { min-height: 44px; }
   .model-picker button { min-height: 40px; }
   .learning-rail { background: #f7f7f8; }
   .portal-nav button { font-size: 7px; }
@@ -1318,7 +1289,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 /* Softer selections: reserve solid charcoal for primary actions only. */
 .ai-message p { color: #333; background: #f7f7f8; border-color: #e5e5e5; border-radius: 10px; }
 .model-picker button.is-active,
-.ai-methods button.is-active,
 .filter-row button.is-active,
 .search-filter-group--tags button.is-active,
 .search-filter-group:not(.search-filter-group--tags) > button.is-active,
@@ -1552,3 +1522,42 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .creation-workspace__main { min-width: 0; padding: 22px; background: #fff; }.creation-workspace__main .ai-composer { width: 100%; min-height: 570px; margin: 0; box-shadow: none; }.creation-workspace__main .ai-conversation { min-height: 390px; max-height: none; }.creation-workspace__main .ai-conversation textarea { min-height: 126px; }
 @media (max-width: 780px) { .ai-launcher > footer { align-items: flex-start; flex-direction: column; }.ai-launcher__actions { width: 100%; justify-content: stretch; flex-wrap: wrap; }.ai-launcher__actions select { flex: 1; }.ai-launcher__actions .ai-submit { flex: 1; justify-content: center; }.creation-workspace__header { grid-template-columns: 1fr auto; }.creation-workspace__header > div { grid-column: 1 / -1; grid-row: 1; text-align: left; padding-left: 2px; }.creation-workspace__header > button { grid-row: 2; }.creation-workspace__header > span { grid-row: 2; }.creation-workspace__layout { min-height: 0; grid-template-columns: 1fr; }.creation-history { max-height: 190px; border-right: 0; border-bottom: 1px solid #e3e3e3; }.creation-history__list { display: flex; overflow-x: auto; overflow-y: hidden; }.creation-history__list > button { min-width: 176px; }.creation-history__delete { display: none; }.creation-workspace__main { padding: 14px; } }
 @media (max-width: 560px) { .ai-creation--launcher { padding: 28px 14px; }.ai-launcher > textarea { min-height: 130px; padding: 15px; font-size: 14px; }.ai-launcher__actions .search-toggle { flex: 1; }.ai-launcher__actions .ai-submit { width: 100%; flex-basis: 100%; }.creation-workspace { border-radius: 15px; }.creation-workspace__main .ai-composer { min-height: 480px; } }
+
+/* Creation launcher + reading workspace: capability popover, history strip, scrollable reply pane. */
+.ai-method-picker { position: relative; display: inline-flex; flex: 0 0 auto; }
+.ai-method-picker--end .ai-method-menu { left: auto; right: 0; }
+.ai-launcher__status { min-height: 34px; padding: 9px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; color: #777; border-top: 1px solid #f0f0f0; font-size: 10px; }
+.ai-launcher__status > span, .ai-launcher__status > em, .ai-launcher__status > button { display: inline-flex; align-items: center; gap: 5px; }
+.ai-launcher__status > em { margin-left: auto; color: #8b8b8b; font-style: normal; }
+.ai-launcher__status > button { padding: 0; color: #555; background: transparent; border: 0; border-bottom: 1px solid #aaa; font: inherit; font-size: 10px; cursor: pointer; }
+.ai-launcher__hint { width: min(920px, 100%); margin: 12px auto 0; color: #8a8a8a; font-size: 11px; line-height: 1.7; text-align: center; }
+.ai-launcher__actions .ai-attach { flex: 0 0 auto; }
+.ai-history-strip { width: min(920px, 100%); margin: 14px auto 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
+.ai-history-strip button { min-height: 38px; max-width: 100%; padding: 0 13px; display: inline-flex; align-items: center; gap: 7px; overflow: hidden; color: #444; background: #fff; border: 1px solid #dedede; border-radius: 10px; font: inherit; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.ai-history-strip button:hover { color: #111; background: #f6f6f6; }
+
+.creation-history__empty { margin: 12px 6px; color: #999; font-size: 10px; line-height: 1.7; }
+.ai-thread { min-height: 0; }
+.ai-thread__empty { min-height: 250px; display: grid; place-content: center; justify-items: center; gap: 9px; padding: 20px; text-align: center; }
+.ai-thread__empty svg { color: #111; }
+.ai-thread__empty strong { color: #222; font-size: 14px; }
+.ai-thread__empty p { max-width: 360px; margin: 0; color: #8a8a8a; font-size: 12px; line-height: 1.8; }
+
+/* Desktop: the history rail and the composer stay put while only the reply pane scrolls. */
+@media (min-width: 781px) {
+  .creation-workspace__layout { height: min(calc(100vh - 200px), 860px); min-height: 560px; }
+  .creation-history__list { flex: 1; }
+  .creation-workspace__main { display: flex; flex-direction: column; min-height: 0; }
+  .creation-workspace__main .ai-composer { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .creation-workspace__main .ai-conversation { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .creation-workspace__main .ai-conversation > textarea { flex: none; }
+  .creation-workspace__main .ai-thread { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .creation-workspace__main .ai-composer__footer, .creation-workspace__main .ai-composer__status { flex: none; }
+}
+
+@media (max-width: 780px) {
+  .creation-workspace { border-radius: 15px; }
+  .ai-thread__empty { min-height: 170px; }
+  .ai-history-strip { justify-content: stretch; }
+  .ai-history-strip button { flex: 1 1 auto; justify-content: center; }
+}

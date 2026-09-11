@@ -140,3 +140,13 @@ PostgreSQL 保存用户、权限、课程、工作流、额度、任务、作品
 ## 我的学习业务
 
 “我的学习”由 `0007_learning_space_business.sql`、`apps/api/src/modules/learning` 和 `admin-console/src/MyLearning.jsx` 共同实现。它在课程进度之上聚合本周学习时长、待办任务、学习笔记、收藏案例、个人作品与工作流执行记录，并提供任务和笔记的增删改能力。视觉验收记录与桌面/窄屏对比证据见 [`design-qa.md`](design-qa.md)。
+
+## 创作入口与创作对话
+
+创作流程分成“起始页说清需求”和“专用页面阅读长文”两段，避免长回复把首页撑开：
+
+- 起始页（`/`，`admin-console/src/AiCreationConsole.jsx`）只保留需求输入、创作能力、模型与搜索开关。创作能力收在一个 42px 圆形按钮里（`admin-console/src/CapabilityPicker.jsx`），点开才展开列表，不再把多个能力按钮并排堆在控制条中。
+- 提交后先把需求写入本机对话记录，再跳转到 `/create` 专用阅读页（`admin-console/src/CreationWorkspace.jsx`）。左侧是历次对话，右侧是长文本阅读区与继续输入的输入框。
+- 对话记录保存在浏览器 IndexedDB（`admin-console/src/conversationStore.js`），按账号隔离并自动压缩超长对话；服务端只记录生成任务、额度和审计。临时参考文件由 `creation-storage` 模块管理，默认 72 小时未活动自动清理（`TEMPORARY_UPLOAD_RETENTION_HOURS`、`TEMPORARY_UPLOAD_QUOTA_MB`）。
+
+视觉验收证据见 [`design-qa-creation.md`](design-qa-creation.md)。
