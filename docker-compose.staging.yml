@@ -72,7 +72,9 @@ services:
     restart: unless-stopped
     read_only: true
     tmpfs:
-      - /tmp
+      - /tmp:uid=999,gid=999,mode=1777
+      - /home/appuser/.crawl4ai:uid=999,gid=999,mode=0700
+      - /home/appuser/.gunicorn:uid=999,gid=999,mode=0700
     environment:
       CRAWL4AI_HOOKS_ENABLED: "false"
     healthcheck:
