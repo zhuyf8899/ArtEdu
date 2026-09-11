@@ -3,6 +3,7 @@ import type { ModelToolCall, ModelToolDefinition } from "../generation/model-ada
 
 export const platformToolDefinitions: readonly ModelToolDefinition[] = [
   { type: "function", function: { name: "search_platform", description: "搜索当前用户可见的课程、工作流和案例作品。", parameters: { type: "object", properties: { query: { type: "string", minLength: 1 }, type: { type: "string", enum: ["all", "course", "workflow", "work"] }, limit: { type: "integer", minimum: 1, maximum: 10 } }, required: ["query"] } } },
+  { type: "function", function: { name: "search_web", description: "联网检索公开网页并提取可信来源正文。仅在用户开启智能搜索时可用；结果必须附来源链接，不能将未检索内容说成搜索结果。", parameters: { type: "object", properties: { query: { type: "string", minLength: 1, maxLength: 300 }, limit: { type: "integer", minimum: 1, maximum: 5 } }, required: ["query"] } } },
   { type: "function", function: { name: "get_course_lesson", description: "读取已发布课程和课时、资料摘要及学习进度。", parameters: { type: "object", properties: { courseId: { type: "string" }, lessonId: { type: "string" } }, required: ["courseId"] } } },
   { type: "function", function: { name: "get_workflow_detail", description: "读取已发布工作流的步骤、节点、提示模板和入口信息。", parameters: { type: "object", properties: { workflowId: { type: "string" } }, required: ["workflowId"] } } },
   { type: "function", function: { name: "get_case_detail", description: "读取已发布案例的作品信息、作者、资源和关联工作流。", parameters: { type: "object", properties: { workId: { type: "string" } }, required: ["workId"] } } },

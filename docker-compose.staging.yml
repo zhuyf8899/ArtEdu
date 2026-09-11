@@ -35,6 +35,13 @@ services:
       MODEL_EXECUTION_ENABLED: ${MODEL_EXECUTION_ENABLED:-false}
       MODEL_PROVIDERS_JSON: ${MODEL_PROVIDERS_JSON:-[]}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # Internal-only internet-search chain. The DeepSeek fallback is intentionally
+      # opt-in because the standard public API does not provide a documented web-search tool.
+      WEB_SEARCH_URL: http://websearch:8081/search
+      CRAWL4AI_BASE_URL: http://crawler:11235
+      WEB_SEARCH_TIMEOUT_MS: ${WEB_SEARCH_TIMEOUT_MS:-20000}
+      DEEPSEEK_SEARCH_URL: ${DEEPSEEK_SEARCH_URL:-}
+      DEEPSEEK_SEARCH_API_KEY: ${DEEPSEEK_SEARCH_API_KEY:-}
     volumes:
       - artedu_staging_uploads:/data/uploads
     depends_on:
@@ -45,6 +52,34 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+
+  websearch:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.websearch
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  crawler:
+    image: unclecode/crawl4ai:0.9.3
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      CRAWL4AI_HOOKS_ENABLED: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:11235/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 8
 
   web:
     build:

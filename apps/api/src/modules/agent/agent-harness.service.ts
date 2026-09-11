@@ -8,6 +8,7 @@ import { ModelRegistry } from "../generation/model-registry";
 import { executePlatformTool, platformToolDefinitions } from "./agent-tools";
 import { portalSearchQuerySchema } from "../portal/portal.contracts";
 import { PortalService } from "../portal/portal.service";
+import { WebSearchService } from "./web-search.service";
 
 const scenarioInstruction = {
   ui_design: "输出可实施的 UI 设计说明：目标用户、信息层级、视觉方向、组件与交互建议。",
@@ -61,7 +62,7 @@ function createMockLoopAdapter(scenario: keyof typeof scenarioInstruction, promp
 
 @Injectable()
 export class AgentHarnessService {
-  constructor(private readonly agents: AgentService, private readonly models: ModelRegistry, private readonly portal: PortalService) {}
+  constructor(private readonly agents: AgentService, private readonly models: ModelRegistry, private readonly portal: PortalService, private readonly webSearch: WebSearchService) {}
 
   async execute(actor: Actor, runId: string, input: ExecuteAgentRunInput) {
     const run = await this.agents.claimForExecution(actor, runId);
@@ -123,10 +124,10 @@ export class AgentHarnessService {
               parameters: {
                 ...input.model,
                 toolChoice: input.model.toolChoice ?? "auto",
-                tools: [harnessProbeTool, ...(input.searchEnabled ? platformToolDefinitions : platformToolDefinitions.filter((tool) => tool.function.name !== "search_platform")), ...(input.model.tools ?? [])],
+                tools: [harnessProbeTool, ...(input.searchEnabled ? platformToolDefinitions : platformToolDefinitions.filter((tool) => tool.function.name !== "search_platform" && tool.function.name !== "search_web")), ...(input.model.tools ?? [])],
               },
             },
-            tools: [harnessProbeTool, ...(input.searchEnabled ? platformToolDefinitions : platformToolDefinitions.filter((tool) => tool.function.name !== "search_platform")), ...(input.model.tools ?? [])],
+            tools: [harnessProbeTool, ...(input.searchEnabled ? platformToolDefinitions : platformToolDefinitions.filter((tool) => tool.function.name !== "search_platform" && tool.function.name !== "search_web")), ...(input.model.tools ?? [])],
             executeTool: {
               execute: async (call, context) => {
                 if (call.function.name !== harnessProbeTool.function.name) {
@@ -134,6 +135,12 @@ export class AgentHarnessService {
                     const args = portalSearchQuerySchema.parse(JSON.parse(call.function.arguments));
                     const searchResult = await this.portal.search(actor, args);
                     await this.agents.appendToolCall(runId, call.function.name, { round: context.round, query: args.query, type: args.type }, { status: "succeeded", resultCount: searchResult.items.length });
+                    return searchResult;
+                  }
+                  if (call.function.name === "search_web") {
+                    const args = portalSearchQuerySchema.parse(JSON.parse(call.function.arguments));
+                    const searchResult = await this.webSearch.search(args.query, input.providerId);
+                    await this.agents.appendToolCall(runId, call.function.name, { round: context.round, query: args.query, limit: 5 }, { status: "succeeded", provider: searchResult.provider, degraded: searchResult.degraded, sourceCount: searchResult.sources.length });
                     return searchResult;
                   }
                   const placeholder = await executePlatformTool(call, context);
