@@ -18,6 +18,7 @@ export class GenerationController {
     const input = parseInput(createGenerationJobSchema, body);
     return this.generationService.createJob(actor, {
       ...input,
+      context: input.context ?? [],
       parameters: input.parameters ?? {},
     });
   }
@@ -26,7 +27,7 @@ export class GenerationController {
   async runJob(@Req() request: FastifyRequest, @Body() body: unknown) {
     const actor = await this.authService.getActor(request);
     const input = parseInput(runGenerationJobSchema, body);
-    return this.generationService.runJob(actor, { ...input, parameters: input.parameters ?? {} });
+    return this.generationService.runJob(actor, { ...input, context: input.context ?? [], parameters: input.parameters ?? {} });
   }
 
   @Get(":jobId")

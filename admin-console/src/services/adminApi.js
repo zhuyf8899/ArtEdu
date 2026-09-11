@@ -113,6 +113,13 @@ export const executeAgentRun = (runId, input = {}) => request(`/agent-runs/${enc
   body: JSON.stringify({ mode: "server", ...input }),
 });
 
+export const getTemporaryCreationFiles = () => request("/creation-files");
+export const deleteTemporaryCreationFile = (fileId) => request(`/creation-files/${encodeURIComponent(fileId)}`, { method: "DELETE" });
+export const uploadTemporaryCreationFile = (file, conversationLocalId) => {
+  const form = new FormData(); form.append("file", file);
+  return request(`/creation-files${conversationLocalId ? `?conversationLocalId=${encodeURIComponent(conversationLocalId)}` : ""}`, { method: "POST", body: form });
+};
+
 export const getWorkflows = (query = "") => request(`/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getWorkflow = (workflowId) => request(`/workflows/${workflowId}`);
 export const getAdminWorkflows = (query = "") => request(`/admin/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);

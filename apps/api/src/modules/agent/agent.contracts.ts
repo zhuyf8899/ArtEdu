@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const agentScenarioSchema = z.enum(["ui_design", "webpage_generation", "pattern_generation"]);
+export const agentScenarioSchema = z.enum(["ui_design", "webpage_generation", "pattern_generation", "document_generation"]);
 export const createAgentRunSchema = z.object({
   scenario: agentScenarioSchema,
   prompt: z.string().trim().min(1, "创作需求不能为空").max(10000),

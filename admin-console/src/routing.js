@@ -7,6 +7,7 @@ export const portalRoutes = {
   community: "/community",
   myLearning: "/my-learning",
   search: "/search",
+  creation: "/create",
 };
 
 export const adminRoutes = {

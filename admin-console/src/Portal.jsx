@@ -5,7 +5,7 @@ import {
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
 import { createAgentRun, executeAgentRun, getApiHealth, getPortalHome, runGenerationJob } from "./services/adminApi.js";
-import { AiCreationConsole } from "./AiCreationConsole.jsx";
+import { AiCreationLauncher, AiCreationWorkspace } from "./AiCreationConsole.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 
@@ -101,7 +101,7 @@ export function LocalLogin({ onLogin }) {
   </main>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", studioWorkflowId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", studioWorkflowId = "", creationStartNew = false, onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -140,12 +140,21 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     try {
       const searchEnabled = parameters.searchEnabled === true;
       const promptWithSearchPolicy = `${prompt}\n\n${searchEnabled ? "你可以使用搜索能力。平台内课程、工作流或案例信息使用 search_platform；需要公开互联网的实时信息、官网链接、近期动态或外部资料时使用 search_web。必须基于工具返回的来源回答，不得编造搜索结果。" : "搜索能力已经关闭。不要调用搜索工具，也不要声称已经搜索；请仅依据当前对话与输入完成任务。"}`;
-      if (searchEnabled && data.creation.enabled) {
-        const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation" }[jobType] ?? "ui_design";
+      if (data.creation.enabled) {
+        const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation", document: "document_generation" }[jobType] ?? "ui_design";
         const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters: { ...parameters, source: "portal-home" } });
-        const completed = await executeAgentRun(run.id, { mode: "server", providerId: modelConfigId, context, searchEnabled: true, systemPrompt: "你是 ArtEdu 创作助教。" });
+        const completed = await executeAgentRun(run.id, {
+          mode: "server",
+          providerId: modelConfigId,
+          context,
+          searchEnabled,
+          systemPrompt: searchEnabled
+            ? "你是 ArtEdu 创作助教。先从用户需求中提炼简洁、可检索的互联网关键词，首轮必须调用 search_web。收到结果后，只能依据工具返回的来源撰写建议，并在结尾列出实际使用的来源链接。"
+            : "你是 ArtEdu 创作助教。搜索能力已经关闭。你仍须根据上下文主动调用可用的非搜索工具、维护任务状态并进行多轮工具回传；不得声称已经搜索互联网或平台。",
+          model: searchEnabled ? { toolChoice: { type: "function", function: { name: "search_web" } } } : { toolChoice: "auto" },
+        });
         const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
-        showToast("已完成带平台搜索能力的创作建议", "success");
+        showToast(searchEnabled ? "已完成带搜索能力的 Agent 创作" : "已完成 Agent 创作", "success");
         return { id: run.id, content: message?.content ?? "未生成创作建议。" };
       }
       if (!data.creation.enabled) {
@@ -157,7 +166,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         return { id: run.id, local: true, content: lastMessage?.content ?? "本地创作说明已生成。" };
       }
       const selectedModelId = modelConfigId ?? data.creation.models.find((model) => model.capabilities.includes(jobType))?.id;
-      const result = await runGenerationJob({ jobType, prompt: promptWithSearchPolicy, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } });
+      const result = await runGenerationJob({ jobType, prompt: promptWithSearchPolicy, context, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } });
       showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
       void loadPortalData();
       return { ...result.job, content: result.output.content, model: result.output.metadata?.model, artifact: result.artifact };
@@ -168,7 +177,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   };
   const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }) => startGeneration(jobType, prompt, parameters, modelConfigId, context);
 
-  const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索" }[section];
+  const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning" }[nextSection] ?? "/");
   const navigateSearch = (query) => onNavigate(`/search?query=${encodeURIComponent(query)}`);
 
@@ -185,10 +194,10 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}`}>
       <div key={`${section}:${searchQuery}`} className="route-transition">
-      {section !== "home" && section !== "myLearning" && section !== "search" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
+      {section !== "home" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
-        <AiCreationConsole account={account} onCreate={createFromConversation} creation={data.creation} onNotice={showToast} />
+        <AiCreationLauncher account={account} creation={data.creation} onLaunch={() => onNavigate("/create?new=1")} />
         {portalLoading && <HomeDataState loading />}
         {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
         {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从教学资源库选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}
@@ -208,6 +217,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         {section === "myLearning" && <MyLearning account={account} onNavigate={onNavigate} onNotice={showToast} />}
 
         {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
+
+        {section === "creation" && <AiCreationWorkspace account={account} onCreate={createFromConversation} creation={data.creation} onNotice={showToast} startNew={creationStartNew} onBack={() => onNavigate("/")} />}
       </Suspense>
       </div>
     </main>

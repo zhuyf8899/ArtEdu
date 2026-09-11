@@ -41,10 +41,13 @@ export async function runModelLoop(options: ModelLoopOptions): Promise<ModelLoop
   let toolCallCount = 0;
 
   for (let round = 1; round <= maxRounds; round += 1) {
+    // A named tool choice is a first-turn gate. Once its result has been returned,
+    // return to automatic selection so the model can synthesize a final answer.
+    const namedToolChoice = typeof options.request.parameters?.toolChoice === "object";
     const result = await options.adapter.execute({
       ...options.request,
       messages,
-      parameters: { ...options.request.parameters, ...(definitions.length ? { tools: definitions } : {}) },
+      parameters: { ...options.request.parameters, ...(round > 1 && namedToolChoice ? { toolChoice: "auto" } : {}), ...(definitions.length ? { tools: definitions } : {}) },
     });
     const toolCalls = result.toolCalls ?? [];
     if (!toolCalls.length) return { ...result, rounds: round, messages, toolCallCount };

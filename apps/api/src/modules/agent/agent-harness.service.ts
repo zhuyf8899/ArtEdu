@@ -14,6 +14,7 @@ const scenarioInstruction = {
   ui_design: "输出可实施的 UI 设计说明：目标用户、信息层级、视觉方向、组件与交互建议。",
   webpage_generation: "输出可实施的网页构建说明：页面结构、组件树、状态、响应式与验收标准。不要输出未经验证的部署链接。",
   pattern_generation: "输出可实施的图案生成说明：视觉主题、构图、色彩、材质、节点/提示词和迭代方案。",
+  document_generation: "输出可实施的文档或课件创作说明：结构、内容层级、视觉规范、制作步骤与校对清单。",
 } as const;
 
 function mockResult(scenario: keyof typeof scenarioInstruction, prompt: string) {
@@ -169,7 +170,7 @@ export class AgentHarnessService {
         searchEnabled: input.searchEnabled,
         model: input.model,
       }, { content: result.content, providerId: resultProviderId, rounds: "rounds" in result ? result.rounds : 1, toolCallCount: "toolCallCount" in result ? result.toolCallCount : 0 });
-      const artifactType = scenario === "webpage_generation" ? "webpage" : scenario === "pattern_generation" ? "pattern" : "brief";
+      const artifactType = scenario === "webpage_generation" ? "webpage" : scenario === "pattern_generation" ? "pattern" : scenario === "document_generation" ? "document" : "brief";
       await this.agents.appendArtifact(runId, artifactType, { content: result.content, providerId: resultProviderId, scenario, generatedBy: "agent-harness", rounds: "rounds" in result ? result.rounds : 1 });
       await this.agents.appendAgentMessage(runId, result.content);
       return this.agents.completeRun(runId);

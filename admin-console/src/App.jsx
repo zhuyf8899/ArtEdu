@@ -41,7 +41,7 @@ function AppContent() {
   if (pathname.startsWith("/admin") && !canEnterAdmin(account)) return <main className="portal-empty"><h1>无权访问管理后台</h1><p>请使用已授权的教师、运营或管理员账户登录。</p></main>;
   if (pathname.startsWith("/admin")) return <Suspense fallback={<main className="portal-empty"><p>正在加载管理台…</p></main>}><AdminDashboard actor={account} initialSection={adminSectionFromPath(pathname)} onNavigate={(section) => navigate({ overview: "/admin", users: "/admin/users", courses: "/admin/courses", workflows: "/admin/workflows", reviews: "/admin/reviews", bridges: "/admin/bridges" }[section] ?? "/admin")} onBack={() => navigate("/")} /></Suspense>;
   const query = new URLSearchParams(search);
-  return <UserPortal account={account} section={sectionFromPath(pathname)} searchQuery={query.get("query") ?? ""} studioWorkflowId={query.get("workflow") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
+  return <UserPortal account={account} section={sectionFromPath(pathname)} searchQuery={query.get("query") ?? ""} studioWorkflowId={query.get("workflow") ?? ""} creationStartNew={query.get("new") === "1"} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
 }
 
 function toPortalAccount(actor) {

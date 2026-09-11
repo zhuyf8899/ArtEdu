@@ -93,6 +93,7 @@ export class GenerationService {
         modelConfigId: input.modelConfigId,
         messages: [
           { role: "system", content: systemPrompt },
+          ...(input.context ?? []),
           { role: "user", content: input.prompt },
         ],
         parameters: {
