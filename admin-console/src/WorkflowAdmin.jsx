@@ -3,6 +3,7 @@ import { addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, Hand
 import { ArrowLeft, ArrowRight, DownloadSimple, FloppyDisk, FlowArrow, Plus, UploadSimple, X } from "@phosphor-icons/react";
 import "@xyflow/react/dist/style.css";
 import { createWorkflow, createWorkflowVersion, getAdminWorkflow, getAdminWorkflows, updateWorkflow } from "./services/adminApi.js";
+import { shortId } from "./randomId.js";
 
 const blankWorkflow = { name: "", description: "", category: "视觉创作", entryType: "workbench", entryUrl: "" };
 const palette = {
@@ -14,7 +15,8 @@ const palette = {
   note: { title: "说明", hint: "补充教学或操作说明", color: "#78859b" },
 };
 const draftKey = (id) => `artedu.workflow.graph-draft.${id}`;
-const newId = (prefix) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+// crypto.randomUUID 在明文 HTTP 的不安全上下文里不存在，统一走 randomId。
+const newId = shortId;
 
 function emptyDefinition() {
   return {

@@ -42,6 +42,24 @@ MODELSCOPE_API=由部署环境的密钥管理服务注入
 1. 数据库 `model_configs` 存在同 id 且 `status='active'` 的记录（`0015_modelscope_image_model.sql`）；
 2. `MODEL_PROVIDERS_JSON` 里存在同 id 的条目。
 
+### 内部通道：图像模型不出现在前台
+
+`MODEL_PROVIDERS_JSON` 里的条目加 `"internal": true` 后，该模型只服务后端按能力路由，**不进入前台的模型选择列表**：首页与创作页的下拉里看不到它，用户也不需要选它。
+
+这是图像生成的正确接法——它是平台替用户调用的"生图工具"，不是让用户挑的模型：
+
+```json
+{"id":"model-modelscope-qwen-image","baseUrl":"https://api-inference.modelscope.cn","model":"Qwen/Qwen-Image",
+ "capabilities":["image","pattern"],"apiKeyEnv":"MODELSCOPE_API","timeoutMs":120000,
+ "protocol":"modelscope-image","internal":true}
+```
+
+配套约定：
+
+- 前台只在**当前模型声明支持该能力**时才把 `modelConfigId` 发给服务端；图像/图案这类内部通道任务不带 `modelConfigId`，由 `ModelRegistry.getForJob` 按能力路由过去。把不支持的模型 id 发过去只会被服务端拒绝（"所选模型当前未配置或不支持此创作方式"）。
+- 创建对话时若模型不支持该能力，界面文案显示"平台内置图像通道"而不是某个文本模型名，避免让人以为图是那个文本模型画的。
+- 过滤发生在 `portal.service.ts`：只暴露 `status='active'`、命中 `MODEL_PROVIDERS_JSON`、且 `internal !== true` 的模型。
+
 **能力声明要诚实**：`ModelRegistry.getForJob` 取「第一个声明支持该任务类型的适配器」。文本模型若也声明 `image`/`pattern`（并且排在前面），图片任务会被路由到它，只返回文字方案、永远出不了图。`0015` 因此把 DeepSeek 的能力收窄为 `chat/webpage/document`，图像与图案只由 ModelScope 声明。
 
 ### 合并后保留配置与部署

@@ -130,7 +130,12 @@ export class PortalService {
     };
 
     const configuredModels = new Map(this.modelRegistry.listConfigured().map((model) => [model.id, model]));
-    const executableModels = models.rows.filter((row) => configuredModels.has(row.id));
+    // 内部通道（如平台内置图像生成）只服务后端按能力路由，不进入前台的模型选择列表：
+    // 用户不需要、也不应该看到它，图像类任务由服务端自动路由过去。
+    const executableModels = models.rows.filter((row) => {
+      const configured = configuredModels.get(row.id);
+      return Boolean(configured) && configured?.internal !== true;
+    });
 
     return {
       profile: { id: actor.id, displayName: actor.displayName, roles: actor.roles },

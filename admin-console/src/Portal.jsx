@@ -170,7 +170,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         showToast("本地演示已完成：创作说明已写入审计记录。", "success");
         return { id: run.id, local: true, content: lastMessage?.content ?? "本地创作说明已生成。" };
       }
-      const selectedModelId = modelConfigId ?? data.creation.models.find((model) => model.capabilities.includes(jobType))?.id;
+      // 只挑真正声明支持该能力的模型；图像/图案留给服务端的内部图像通道（不带 modelConfigId）。
+      const selectedModelId = modelConfigId ?? data.creation.models.find((model) => model.capabilities?.includes(jobType))?.id;
       const result = await runGenerationJob({ jobType, prompt: promptWithSearchPolicy, context, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } });
       showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
       void loadPortalData();
@@ -203,7 +204,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       {section !== "home" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
-        <AiCreationLauncher account={account} creation={data.creation} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />
+        <AiCreationLauncher account={account} creation={data.creation} onNotice={showToast} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />
         {portalLoading && <HomeDataState loading />}
         {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
         {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从教学资源库选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}

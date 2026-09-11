@@ -86,4 +86,9 @@ export interface ModelProviderConfig {
   apiKeyEnv?: string;
   timeoutMs: number;
   protocol?: ModelProtocol;
+  /**
+   * 内部通道：只服务后端按能力路由（例如图像生成），
+   * 不进入前台的模型选择列表。前台不感知它，也不需要选它。
+   */
+  internal?: boolean;
 }

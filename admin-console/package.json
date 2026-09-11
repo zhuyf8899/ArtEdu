@@ -8,7 +8,8 @@
     "build": "vite build && node scripts/prepare-sites-build.mjs",
     "preview": "vite preview",
     "test:sites": "node --test tests/sites-worker.test.mjs",
-    "test:chat": "node --test tests/ai-markdown.test.mjs"
+    "test:chat": "node --test tests/ai-markdown.test.mjs",
+    "test:platform": "node --test tests/platform-runtime.test.mjs"
   },
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.3.0",

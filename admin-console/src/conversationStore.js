@@ -1,3 +1,5 @@
+import { randomId } from "./randomId.js";
+
 const DATABASE = "artedu-creation-conversations";
 const STORE = "conversations";
 export const USER_CONVERSATION_QUOTA_BYTES = 20 * 1024 * 1024;
@@ -19,7 +21,7 @@ export async function getConversation(id) {
 }
 
 export function createConversation(userId, methodId = "ui", title = "新创作对话") {
-  return { id: crypto.randomUUID(), userId, methodId, title, messages: [], memory: "", pinned: [], pending: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  return { id: randomId(), userId, methodId, title, messages: [], memory: "", pinned: [], pending: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 
 export async function saveConversation(conversation) {

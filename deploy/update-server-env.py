@@ -10,7 +10,8 @@ PROVIDERS = (
     '[{"id":"model-deepseek-v4-pro","baseUrl":"https://api.deepseek.com","model":"deepseek-v4-pro",'
     '"capabilities":["chat","webpage","document"],"apiKeyEnv":"DEEPSEEK_API_KEY","timeoutMs":60000},'
     '{"id":"model-modelscope-qwen-image","baseUrl":"https://api-inference.modelscope.cn","model":"Qwen/Qwen-Image",'
-    '"capabilities":["image","pattern"],"apiKeyEnv":"MODELSCOPE_API","timeoutMs":120000,"protocol":"modelscope-image"}]'
+    '"capabilities":["image","pattern"],"apiKeyEnv":"MODELSCOPE_API","timeoutMs":120000,'
+    '"protocol":"modelscope-image","internal":true}]'
 )
 
 env_path = pathlib.Path.home() / "artedu" / ".env"

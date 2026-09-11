@@ -18,6 +18,6 @@
     "test:chat:live": "node scripts/verify-demo-chat.mjs",
     "check:api": "cd apps/api && npm run typecheck",
     "check:api:test": "npm --prefix apps/api run test:security",
-    "check:web": "cd admin-console && npm run build && npm run test:sites && npm run test:chat"
+    "check:web": "cd admin-console && npm run build && npm run test:sites && npm run test:chat && npm run test:platform"
   }
 }

@@ -55,14 +55,10 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
     });
   }, []);
 
-  // 与起始页一致：按当前创作能力选中支持的模型，避免图片任务被路由到文本模型。
-  const pickerJobType = creationMethod(methodId).jobType;
-  useEffect(() => {
-    const current = models.find((item) => item.id === modelId);
-    if (current?.capabilities?.includes(pickerJobType)) return;
-    const candidate = models.find((item) => item.capabilities?.includes(pickerJobType)) ?? models[0];
-    if (candidate && candidate.id !== modelId) setModelId(candidate.id);
-  }, [pickerJobType, modelId, models]);
+  // 图像/图案由平台内部图像通道完成（不出现在前台模型列表），
+  // 因此只有当前模型声明支持该能力时才把 modelConfigId 发给服务端。
+  const modelSupportsMethod = Boolean(model?.capabilities?.includes(method.jobType));
+  const modelLabel = modelSupportsMethod ? (model?.name ?? "未选择模型") : "平台内置图像通道";
 
   // 载入本地对话列表；IndexedDB 不可用时页面仍可读，只是不再持久化。
   useEffect(() => {
@@ -129,7 +125,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
     setArtifact(null);
     const context = makeModelContext(conversation);
     const placeholder = { role: "assistant", content: serviceReady
-      ? `正在用 ${modelName} 生成“${methodDefinition.label}”方案，请稍候……`
+      ? `正在用 ${modelName} 生成“${methodDefinition.label}”，请稍候……`
       : `正在通过本地演示引擎整理“${methodDefinition.label}”方案，不会调用外部模型……` };
     const streaming = [...(conversation.messages ?? []), { role: "user", content: job.prompt }, placeholder];
     setMessages(streaming);
@@ -149,6 +145,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
       await persist(conversation.id, { messages: finalMessages, methodId: methodDefinition.id });
     } catch (error) {
       setFailed(true);
+      console.error("[creation] 生成失败", error);
       onNotice?.(error.message || "创作请求失败", "error");
     } finally {
       setSending(false);
@@ -199,7 +196,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
     const context = makeModelContext(conversation);
     const methodDefinition = creationMethod(methodId);
     const placeholder = { role: "assistant", content: serviceReady
-      ? `正在用 ${model?.name} 生成“${methodDefinition.label}”方案，请稍候……`
+      ? `正在用 ${modelLabel} 生成“${methodDefinition.label}”，请稍候……`
       : `正在通过本地演示引擎整理“${methodDefinition.label}”方案，不会调用外部模型……` };
     const streaming = [...(conversation.messages ?? []), { role: "user", content }, placeholder];
     setMessages(streaming);
@@ -208,7 +205,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
       const result = await onCreate({
         jobType: methodDefinition.jobType,
         prompt: content,
-        modelConfigId: serviceReady ? model?.id : undefined,
+        modelConfigId: serviceReady && modelSupportsMethod ? model?.id : undefined,
         parameters: buildCreationParameters({ methodId, modelId: model?.id, searchEnabled: false, reference }),
         context,
       });
@@ -219,6 +216,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
       await persist(conversation.id, { messages: finalMessages, methodId });
     } catch (error) {
       setFailed(true);
+      console.error("[creation] 生成失败", error);
       onNotice?.(error.message || "创作请求失败", "error");
     } finally {
       setSending(false);
@@ -328,7 +326,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
           </div>
 
           <div className="ai-composer__status">
-            <span>{method.label} · {model?.name}</span>
+            <span>{method.label} · {modelLabel}</span>
             {reference && <span title="临时参考文件独立占用服务器配额">参考文件：{reference.fileName}</span>}
             <span>{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
             <em>对话保存在本机浏览器 · 仅当前账号可见</em>

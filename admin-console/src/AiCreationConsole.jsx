@@ -30,14 +30,12 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
     || (quota.monthlyLimit !== null && quota.monthlyLimit !== undefined && quota.monthlyUsed >= quota.monthlyLimit)
     || (quota.concurrentLimit !== null && quota.concurrentLimit !== undefined && quota.inFlight >= quota.concurrentLimit);
 
-  // 模型必须支持当前创作能力：图案生成要选中生图模型，
-  // 否则请求会被服务端路由到文本模型，只返回文字方案而出不了图。
-  useEffect(() => {
-    const current = models.find((item) => item.id === modelId);
-    if (current?.capabilities?.includes(method.jobType)) return;
-    const candidate = models.find((item) => item.capabilities?.includes(method.jobType)) ?? models[0];
-    if (candidate && candidate.id !== modelId) setModelId(candidate.id);
-  }, [methodId, method.jobType, modelId, models]);
+  // 图像/图案走平台内部的图像通道（ModelScope 等），它不出现在前台模型列表里。
+  // 因此：当前模型声明支持该能力时才带 modelConfigId，否则留空，
+  // 交给服务端按能力路由；把不支持的模型 id 发过去只会被服务端拒绝。
+  const modelSupportsMethod = Boolean(model?.capabilities?.includes(method.jobType));
+  const effectiveModelId = serviceReady && modelSupportsMethod ? (model?.id ?? null) : null;
+  const modelLabel = modelSupportsMethod ? (model?.name ?? "未选择模型") : "平台内置图像通道";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -69,7 +67,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
         pending: {
           prompt: content,
           methodId,
-          modelId: serviceReady ? (model?.id ?? null) : null,
+          modelId: effectiveModelId,
           searchEnabled,
           reference: reference ?? null,
           createdAt: new Date().toISOString(),
@@ -80,8 +78,10 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
       setPrompt("");
       setReference(null);
       onLaunch(conversation.id);
-    } catch {
-      onNotice?.("本地对话空间不可用，暂时无法打开创作对话页", "error");
+    } catch (error) {
+      // 不要把错误吞掉：本地存储不可用、id 生成失败、路由异常都会静默表现为"点了没反应"。
+      console.error("[creation] 打开创作对话失败", error);
+      onNotice?.(`无法打开创作对话页：${error?.message ?? error}`, "error");
     } finally {
       setSending(false);
     }
@@ -129,7 +129,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
       </footer>
 
       <div className="ai-launcher__status">
-        <span><ImageSquare size={13} /> {account.shortName} · {method.label} · {model.name}</span>
+        <span><ImageSquare size={13} /> {account.shortName} · {method.label} · {modelLabel}</span>
         {reference && <span title="临时文件独立占用服务器配额">临时文件：{reference.fileName} · 72 小时未活动自动删除</span>}
         <span>{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
         {prompt.trim() && <button type="button" onClick={() => { setPrompt(""); setDraftSaved(false); clearDraft(account.id); }}><Trash size={13} /> 清空草稿</button>}

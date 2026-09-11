@@ -13,6 +13,8 @@ const providerSchema = z.object({
   timeoutMs: z.coerce.number().int().min(1000).max(120000).default(30000),
   // 默认沿用 OpenAI 兼容的 chat/completions；图像等专用协议在此显式声明。
   protocol: z.enum(["openai-chat", "modelscope-image"]).default("openai-chat"),
+  // 内部通道（如平台内置图像生成）：只用于后端路由，不出现在前台模型列表。
+  internal: z.boolean().default(false),
 });
 
 export function readModelProviderConfigs(raw = process.env.MODEL_PROVIDERS_JSON): ModelProviderConfig[] {
@@ -139,7 +141,11 @@ export class ModelRegistry {
   }
 
   list() {
-    return this.adapters.map((adapter) => ({ id: adapter.id, capabilities: adapter.capabilities }));
+    return this.adapters.map((adapter) => ({
+      id: adapter.id,
+      capabilities: adapter.capabilities,
+      internal: this.configsById.get(adapter.id)?.internal === true,
+    }));
   }
 
   listConfigured() {

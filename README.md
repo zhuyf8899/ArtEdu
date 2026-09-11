@@ -83,6 +83,8 @@ npm run dev
 
 统一反馈、确认和降级状态的实现边界见 [`docs/ux-feedback-polish.md`](docs/ux-feedback-polish.md)。
 
+用明文 HTTP 的 IP 地址部署时，浏览器会禁用部分只在安全上下文存在的 Web API（例如 `crypto.randomUUID`），这类问题在本地 `localhost` 复现不出来，说明见 [浏览器运行时注意事项](docs/browser-runtime-notes.md)。
+
 ## 验证
 
 ```powershell
