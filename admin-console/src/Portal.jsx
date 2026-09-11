@@ -139,7 +139,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = []) => {
     try {
       const searchEnabled = parameters.searchEnabled === true;
-      const promptWithSearchPolicy = `${prompt}\n\n${searchEnabled ? "你可以使用搜索能力。遇到需要平台内课程、工作流或案例信息时，优先调用 search_platform 工具；不得编造搜索结果。" : "搜索能力已经关闭。不要调用搜索工具，也不要声称已经搜索；请仅依据当前对话与输入完成任务。"}`;
+      const promptWithSearchPolicy = `${prompt}\n\n${searchEnabled ? "你可以使用搜索能力。平台内课程、工作流或案例信息使用 search_platform；需要公开互联网的实时信息、官网链接、近期动态或外部资料时使用 search_web。必须基于工具返回的来源回答，不得编造搜索结果。" : "搜索能力已经关闭。不要调用搜索工具，也不要声称已经搜索；请仅依据当前对话与输入完成任务。"}`;
       if (searchEnabled && data.creation.enabled) {
         const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation" }[jobType] ?? "ui_design";
         const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters: { ...parameters, source: "portal-home" } });
