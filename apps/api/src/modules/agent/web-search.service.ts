@@ -30,6 +30,7 @@ function text(value: unknown, maximum: number) {
 export class WebSearchService {
   private readonly searchUrl = process.env.WEB_SEARCH_URL?.trim() || "http://websearch:8081/search";
   private readonly crawlerBaseUrl = process.env.CRAWL4AI_BASE_URL?.trim() || "http://crawler:11235";
+  private readonly crawlerToken = process.env.CRAWL4AI_API_TOKEN?.trim();
   private readonly timeoutMs = Math.min(45_000, Math.max(3_000, Number(process.env.WEB_SEARCH_TIMEOUT_MS ?? 20_000)));
   private readonly deepSeekFallbackUrl = process.env.DEEPSEEK_SEARCH_URL?.trim();
   private readonly deepSeekFallbackKey = process.env.DEEPSEEK_SEARCH_API_KEY?.trim();
@@ -78,7 +79,8 @@ export class WebSearchService {
       }));
       const sources = candidates.filter((item): item is SearchItem => Boolean(item)).slice(0, 3);
       if (!sources.length) throw new Error("检索服务未返回可访问的公网来源");
-      const crawl = await fetch(new URL("/crawl", this.crawlerBaseUrl), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ urls: sources.map((item) => item.url), browser_config: { headless: true }, crawler_config: { stream: false, cache_mode: "bypass" } }), signal: controller.signal });
+      if (!this.crawlerToken) throw new Error("未配置 CRAWL4AI_API_TOKEN");
+      const crawl = await fetch(new URL("/crawl", this.crawlerBaseUrl), { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${this.crawlerToken}` }, body: JSON.stringify({ urls: sources.map((item) => item.url), browser_config: { headless: true }, crawler_config: { stream: false, cache_mode: "bypass" } }), signal: controller.signal });
       if (!crawl.ok) throw new Error(`抓取服务 HTTP ${crawl.status}`);
       const body = await crawl.json() as { results?: Array<{ url?: string; markdown?: string | { fit_markdown?: string; raw_markdown?: string }; success?: boolean }> };
       const crawled = new Map((body.results ?? []).filter((item) => item.success !== false && item.url).map((item) => [item.url!, text(typeof item.markdown === "string" ? item.markdown : item.markdown?.fit_markdown ?? item.markdown?.raw_markdown, 6000)]));

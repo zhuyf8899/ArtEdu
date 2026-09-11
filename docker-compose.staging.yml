@@ -39,6 +39,7 @@ services:
       # opt-in because the standard public API does not provide a documented web-search tool.
       WEB_SEARCH_URL: http://websearch:8081/search
       CRAWL4AI_BASE_URL: http://crawler:11235
+      CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:?Set CRAWL4AI_API_TOKEN in .env}
       WEB_SEARCH_TIMEOUT_MS: ${WEB_SEARCH_TIMEOUT_MS:-20000}
       DEEPSEEK_SEARCH_URL: ${DEEPSEEK_SEARCH_URL:-}
       DEEPSEEK_SEARCH_API_KEY: ${DEEPSEEK_SEARCH_API_KEY:-}
@@ -77,6 +78,7 @@ services:
       - /home/appuser/.gunicorn:uid=999,gid=999,mode=0700
     environment:
       CRAWL4AI_HOOKS_ENABLED: "false"
+      CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:?Set CRAWL4AI_API_TOKEN in .env}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:11235/health')\""]
       interval: 15s
