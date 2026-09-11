@@ -30,9 +30,14 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
     || (quota.monthlyLimit !== null && quota.monthlyLimit !== undefined && quota.monthlyUsed >= quota.monthlyLimit)
     || (quota.concurrentLimit !== null && quota.concurrentLimit !== undefined && quota.inFlight >= quota.concurrentLimit);
 
+  // 模型必须支持当前创作能力：图案生成要选中生图模型，
+  // 否则请求会被服务端路由到文本模型，只返回文字方案而出不了图。
   useEffect(() => {
-    if (!models.some((item) => item.id === modelId)) setModelId(models[0]?.id ?? FALLBACK_MODELS[0].id);
-  }, [modelId, models]);
+    const current = models.find((item) => item.id === modelId);
+    if (current?.capabilities?.includes(method.jobType)) return;
+    const candidate = models.find((item) => item.capabilities?.includes(method.jobType)) ?? models[0];
+    if (candidate && candidate.id !== modelId) setModelId(candidate.id);
+  }, [methodId, method.jobType, modelId, models]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

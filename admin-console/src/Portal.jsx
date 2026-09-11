@@ -141,7 +141,11 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     try {
       const searchEnabled = parameters.searchEnabled === true;
       const promptWithSearchPolicy = `${prompt}\n\n${searchEnabled ? "你可以使用搜索能力。平台内课程、工作流或案例信息使用 search_platform；需要公开互联网的实时信息、官网链接、近期动态或外部资料时使用 search_web。必须基于工具返回的来源回答，不得编造搜索结果。" : "搜索能力已经关闭。不要调用搜索工具，也不要声称已经搜索；请仅依据当前对话与输入完成任务。"}`;
-      if (data.creation.enabled) {
+      // 图像 / 图案 / 文档要交付真实产物（图片文件、可下载的 Office 文件），
+      // 只有生成任务通道会登记 generation_outputs 并提供下载地址；
+      // Agent 通道是带工具的文本对话，产出不了文件。其余创作方式仍走 Agent。
+      const producesArtifact = ["image", "pattern", "document"].includes(jobType);
+      if (data.creation.enabled && !producesArtifact) {
         const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation", document: "document_generation" }[jobType] ?? "ui_design";
         const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters: { ...parameters, source: "portal-home" } });
         const completed = await executeAgentRun(run.id, {
@@ -170,7 +174,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       const result = await runGenerationJob({ jobType, prompt: promptWithSearchPolicy, context, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } });
       showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
       void loadPortalData();
-      return { ...result.job, content: result.output.content, model: result.output.metadata?.model, artifact: result.artifact };
+      // 产物类结果（kind=asset）的 content 是存储键，不能当正文显示。
+      return { ...result.job, content: resultContent(result), model: result.output.metadata?.model, artifact: result.artifact };
     } catch (error) {
       showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。", "error");
       return null;
@@ -269,4 +274,13 @@ function QuickAction({ icon: Icon, title, text, accent, onClick }) {
 
 function StudioCard({ icon: Icon, label, title, text, action, accent, onClick }) {
   return <article className={`studio-card ${accent ? "studio-card--accent" : ""}`}><span className="studio-card__icon"><Icon size={26} weight="thin" /></span><small>{label}</small><h3>{title}</h3><p>{text}</p><button onClick={onClick}>{action} <ArrowRight size={16} weight="bold" /></button></article>;
+}
+
+// 产物类结果（kind=asset，例如图像）的 content 是存储键，不能直接当正文显示。
+function resultContent(result) {
+  const output = result?.output ?? {};
+  if (output.kind === "asset") {
+    return "已生成图像产物，可在下方直接查看或下载。\n\n生成文件保存在平台私有目录，仅你的账号可以访问；继续输入描述即可调整风格、构图或配色。";
+  }
+  return output.content ?? "";
 }

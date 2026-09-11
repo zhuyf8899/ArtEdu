@@ -50,11 +50,12 @@ export const CREATION_METHODS = [
 
 export const DEFAULT_METHOD_ID = CREATION_METHODS[0].id;
 
+// 仅在服务端未配置任何可执行模型时使用的占位项。
+// 不再罗列并不存在的第三方模型（gpt-4o / claude-4 / flux-1 / qwen-image）——
+// 那些名字会让界面看起来"有很多模型可用"，实际一个都调不通。
+// 真实模型来自 API：model_configs 中 status=active 且 id 出现在 MODEL_PROVIDERS_JSON 里的记录。
 export const FALLBACK_MODELS = [
-  { id: "gpt-4o", name: "GPT-4o", note: "策划与视觉理解" },
-  { id: "claude-4", name: "Claude 4", note: "长文本与代码" },
-  { id: "flux-1", name: "FLUX.1", note: "图像生成" },
-  { id: "qwen-image", name: "Qwen Image", note: "中文视觉创作" },
+  { id: "local-demo", name: "本地演示模型", note: "未配置模型服务 · 不调用外部模型" },
 ];
 
 export function creationMethod(methodId) {

@@ -1561,3 +1561,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .ai-history-strip { justify-content: stretch; }
   .ai-history-strip button { flex: 1 1 auto; justify-content: center; }
 }
+
+/* 图像产物：直接在回复里内联展示，并提供原图下载 */
+.ai-artifact { margin: 14px 0 0; padding: 0; }
+.ai-artifact > a { display: block; width: min(340px, 100%); overflow: hidden; background: #fff; border: 1px solid #e3e3e3; border-radius: 12px; }
+.ai-artifact > a:hover { border-color: #c7c7c7; }
+/* 默认方图；高度再用视口比例封顶，避免把输入框与下载入口挤出可视范围。 */
+.ai-artifact img { display: block; width: 100%; height: auto; max-height: min(44vh, 340px); object-fit: contain; }
+.ai-artifact figcaption { width: min(340px, 100%); margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #777; font-size: 11px; }
+.ai-artifact figcaption span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-artifact figcaption a { flex: none; color: #111; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }

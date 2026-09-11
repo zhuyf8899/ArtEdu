@@ -53,6 +53,8 @@ export interface ModelRequest {
   parameters?: ModelInvocationOptions;
   modelConfigId?: string | null;
   providerId?: string | null;
+  /** 生成任务 id：产物类适配器（图像/视频）据此把文件写进上传目录。 */
+  jobId?: string;
 }
 
 export interface ModelResult {
@@ -70,6 +72,12 @@ export interface ModelAdapter {
   execute(request: ModelRequest): Promise<ModelResult>;
 }
 
+/**
+ * 供应商协议。默认 openai-chat（chat/completions）；
+ * 图像/视频等不兼容 OpenAI 文本协议的供应商使用各自的专用适配器。
+ */
+export type ModelProtocol = "openai-chat" | "modelscope-image";
+
 export interface ModelProviderConfig {
   id: string;
   baseUrl: string;
@@ -77,4 +85,5 @@ export interface ModelProviderConfig {
   capabilities: ModelCapability[];
   apiKeyEnv?: string;
   timeoutMs: number;
+  protocol?: ModelProtocol;
 }

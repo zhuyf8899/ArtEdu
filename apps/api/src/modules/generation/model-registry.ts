@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { z } from "zod";
+import { ModelScopeImageAdapter } from "./modelscope-image.adapter";
 import type { ModelAdapter, ModelCapability, ModelInvocationOptions, ModelMessage, ModelProviderConfig, ModelRequest, ModelResult } from "./model-adapter";
 
 const capabilitySchema = z.enum(["chat", "image", "video", "webpage", "pattern", "document", "knowledge_graph"]);
@@ -10,6 +11,8 @@ const providerSchema = z.object({
   capabilities: z.array(capabilitySchema).min(1),
   apiKeyEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/).optional(),
   timeoutMs: z.coerce.number().int().min(1000).max(120000).default(30000),
+  // 默认沿用 OpenAI 兼容的 chat/completions；图像等专用协议在此显式声明。
+  protocol: z.enum(["openai-chat", "modelscope-image"]).default("openai-chat"),
 });
 
 export function readModelProviderConfigs(raw = process.env.MODEL_PROVIDERS_JSON): ModelProviderConfig[] {
@@ -130,7 +133,9 @@ export class ModelRegistry {
   constructor() {
     const configs = readModelProviderConfigs();
     this.configsById = new Map(configs.map((config) => [config.id, config]));
-    this.adapters = configs.map((config) => new OpenAICompatibleAdapter(config));
+    this.adapters = configs.map((config) => config.protocol === "modelscope-image"
+      ? new ModelScopeImageAdapter(config)
+      : new OpenAICompatibleAdapter(config));
   }
 
   list() {

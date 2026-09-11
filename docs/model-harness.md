@@ -18,11 +18,31 @@ SCHOOL_CHAT_API_KEY=由本机密钥管理注入
 
 ```env
 MODEL_EXECUTION_ENABLED=true
-MODEL_PROVIDERS_JSON=[{"id":"model-deepseek-v4-flash","baseUrl":"https://api.deepseek.com","model":"deepseek-v4-flash","capabilities":["chat","image","pattern","webpage"],"apiKeyEnv":"DEEPSEEK_API_KEY","timeoutMs":60000}]
+MODEL_PROVIDERS_JSON=[{"id":"model-deepseek-v4-pro","baseUrl":"https://api.deepseek.com","model":"deepseek-v4-pro","capabilities":["chat","image","pattern","webpage","document"],"apiKeyEnv":"DEEPSEEK_API_KEY","timeoutMs":60000}]
 DEEPSEEK_API_KEY=由部署环境的密钥管理服务注入
 ```
 
-数据库迁移 `0009_deepseek_model_provider.sql` 提供与上述 `id` 对应的可见模型配置。当前 DeepSeek 接入返回 UI、图案和网页创作的文字方案；它不会伪装成已经生成图片。选择“Word 文档”或“PPT 演示”时，服务端会将模型生成的结构化内容导出为可下载的 `.docx` 或 `.pptx` 文件；旧版 `.doc` / `.ppt` 不在首期支持范围内。
+数据库迁移 `0009_deepseek_model_provider.sql` 建立 DeepSeek 供应商记录，`0014_deepseek_v4_pro_model.sql` 把默认可执行模型切到 V4 Pro 并让旧的 V4 Flash 记录退出可执行列表。**`MODEL_PROVIDERS_JSON` 里的 `id` 必须与 `model_configs.id` 完全一致**，前端下拉只展示两者都命中的模型；只改其中一边会导致首页没有任何可用模型。可用模型 ID 以供应商 `/models` 接口为准（本账号为 `deepseek-v4-pro` 与 `deepseek-flash`，其中 `deepseek-v4-flash` 是后者的别名）。
+
+当前 DeepSeek 接入返回 UI、图案和网页创作的文字方案；它不会伪装成已经生成图片。选择“Word 文档”或“PPT 演示”时，服务端会将模型生成的结构化内容导出为可下载的 `.docx` 或 `.pptx` 文件；旧版 `.doc` / `.ppt` 不在首期支持范围内。
+
+### ModelScope 文生图（图像 / 图案）
+
+ModelScope（魔搭）文生图不兼容 OpenAI 的 `chat/completions`，因此单独实现适配器，并在 `MODEL_PROVIDERS_JSON` 里用 `protocol` 显式声明：
+
+```env
+MODEL_PROVIDERS_JSON=[{"id":"model-deepseek-v4-pro","baseUrl":"https://api.deepseek.com","model":"deepseek-v4-pro","capabilities":["chat","webpage","document"],"apiKeyEnv":"DEEPSEEK_API_KEY","timeoutMs":60000},{"id":"model-modelscope-qwen-image","baseUrl":"https://api-inference.modelscope.cn","model":"Qwen/Qwen-Image","capabilities":["image","pattern"],"apiKeyEnv":"MODELSCOPE_API","timeoutMs":120000,"protocol":"modelscope-image"}]
+MODELSCOPE_API=由部署环境的密钥管理服务注入
+```
+
+调用链：`POST /v1/images/generations`（带 `X-ModelScope-Async-Mode: true`）拿 `task_id` → 轮询 `GET /v1/tasks/{task_id}`（带 `X-ModelScope-Task-Type: image_generation`）→ 下载 `output_images[0]` 写入 `UPLOAD_ROOT/generated/<jobId>/`。适配器返回 `kind: "asset"`，服务层登记 `generation_outputs`，前端通过 `/api/generation-jobs/:jobId/download` 内联展示（该响应为 `Content-Disposition: inline`，文档仍为 `attachment`）。
+
+两个必须同时满足的条件，缺一个首页就没有可用模型：
+
+1. 数据库 `model_configs` 存在同 id 且 `status='active'` 的记录（`0015_modelscope_image_model.sql`）；
+2. `MODEL_PROVIDERS_JSON` 里存在同 id 的条目。
+
+**能力声明要诚实**：`ModelRegistry.getForJob` 取「第一个声明支持该任务类型的适配器」。文本模型若也声明 `image`/`pattern`（并且排在前面），图片任务会被路由到它，只返回文字方案、永远出不了图。`0015` 因此把 DeepSeek 的能力收窄为 `chat/webpage/document`，图像与图案只由 ModelScope 声明。
 
 ### 合并后保留配置与部署
 

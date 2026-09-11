@@ -40,10 +40,19 @@ export class GenerationController {
   async downloadOutput(@Req() request: FastifyRequest, @Param("jobId") jobId: string, @Res({ passthrough: true }) reply: FastifyReply) {
     const actor = await this.authService.getActor(request);
     const { output, data } = await this.generationService.downloadOutput(actor, jobId);
-    const extension = output.mimeType.includes("presentation") ? "pptx" : "docx";
     reply.header("Content-Type", output.mimeType);
-    reply.header("Content-Disposition", `attachment; filename=artedu-${jobId.slice(0, 8)}.${extension}`);
+    // 图片用 inline，前端 <img> 与直接打开都能看；文档仍按附件下载。
+    const inline = output.mimeType.startsWith("image/");
+    reply.header("Content-Disposition", `${inline ? "inline" : "attachment"}; filename=artedu-${jobId.slice(0, 8)}.${extensionFor(output.mimeType)}`);
     reply.header("Cache-Control", "private, no-store");
     return data;
   }
+}
+
+function extensionFor(mimeType: string) {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType.includes("presentation")) return "pptx";
+  return "docx";
 }

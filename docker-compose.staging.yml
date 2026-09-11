@@ -35,6 +35,8 @@ services:
       MODEL_EXECUTION_ENABLED: ${MODEL_EXECUTION_ENABLED:-false}
       MODEL_PROVIDERS_JSON: ${MODEL_PROVIDERS_JSON:-[]}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # ModelScope（魔搭）文生图；同样只从服务器 .env 注入，不写入镜像。
+      MODELSCOPE_API: ${MODELSCOPE_API:-}
       # Internal-only internet-search chain. The DeepSeek fallback is intentionally
       # opt-in because the standard public API does not provide a documented web-search tool.
       WEB_SEARCH_URL: http://websearch:8081/search

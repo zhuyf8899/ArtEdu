@@ -6,6 +6,7 @@ import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import type { CreateGenerationJobInput, RunGenerationJobInput } from "./generation.contracts";
 import { GenerationRepository } from "./generation.repository";
+import type { ModelResult } from "./model-adapter";
 import { ModelRegistry } from "./model-registry";
 import { OfficeExportService, type OfficeFormat } from "./office-export.service";
 
@@ -91,6 +92,8 @@ export class GenerationService {
       const output = await adapter.execute({
         jobType: input.jobType,
         modelConfigId: input.modelConfigId,
+        // 产物类适配器（图像/视频）需要 jobId 决定文件落盘目录。
+        jobId: job.id,
         messages: [
           { role: "system", content: systemPrompt },
           ...(input.context ?? []),
@@ -102,9 +105,7 @@ export class GenerationService {
           providerOptions: { thinking: { type: "disabled" } },
         },
       });
-      const artifact = input.jobType === "document"
-        ? await this.createOfficeArtifact(job.id, input.prompt, output.content, input.parameters)
-        : undefined;
+      const artifact = await this.createArtifact(job.id, input, output);
       const completed = await this.repository.completeJob(job.id);
       await this.repository.recordUsage({
         userId: actor.id,
@@ -139,6 +140,25 @@ export class GenerationService {
     const artifact = await this.officeExports.create(jobId, prompt, content, format);
     await this.repository.createOutput(jobId, artifact);
     return artifact;
+  }
+
+  /**
+   * 产物类适配器（图像/视频）已经按 uploadRoot/generated/<jobId>/ 的约定把文件写好，
+   * 这里只登记元数据；文本类任务仍按需导出 Office 文件，其余任务没有可下载产物。
+   */
+  private async createArtifact(jobId: string, input: RunGenerationJobInput, output: ModelResult) {
+    if (output.kind === "asset") {
+      const artifact = {
+        storageKey: output.content,
+        fileName: String(output.metadata?.fileName ?? "artedu-asset"),
+        mimeType: output.mimeType ?? "application/octet-stream",
+        fileSize: Number(output.metadata?.fileSize ?? 0),
+      };
+      await this.repository.createOutput(jobId, artifact);
+      return artifact;
+    }
+    if (input.jobType === "document") return this.createOfficeArtifact(jobId, input.prompt, output.content, input.parameters);
+    return undefined;
   }
 
   private async getQuotaSnapshot(client: PoolClient, userId: string): Promise<QuotaRow> {

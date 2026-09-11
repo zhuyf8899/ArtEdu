@@ -55,9 +55,14 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
     });
   }, []);
 
+  // 与起始页一致：按当前创作能力选中支持的模型，避免图片任务被路由到文本模型。
+  const pickerJobType = creationMethod(methodId).jobType;
   useEffect(() => {
-    if (!models.some((item) => item.id === modelId)) setModelId(models[0]?.id ?? FALLBACK_MODELS[0].id);
-  }, [modelId, models]);
+    const current = models.find((item) => item.id === modelId);
+    if (current?.capabilities?.includes(pickerJobType)) return;
+    const candidate = models.find((item) => item.capabilities?.includes(pickerJobType)) ?? models[0];
+    if (candidate && candidate.id !== modelId) setModelId(candidate.id);
+  }, [pickerJobType, modelId, models]);
 
   // 载入本地对话列表；IndexedDB 不可用时页面仍可读，只是不再持久化。
   useEffect(() => {
@@ -278,7 +283,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
                 const isLast = index === messages.length - 1;
                 return message.role === "user"
                   ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p></div>
-                  : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{message.content}</AiMarkdown>{isLast && artifact && <a className="ai-download" href={artifact.downloadUrl} download>{`下载 ${artifact.fileName}`}</a>}{isLast && failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div></div>;
+                  : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{message.content}</AiMarkdown>{isLast && artifact && <ArtifactBlock artifact={artifact} />}{isLast && failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div></div>;
               }) : <div className="ai-thread__empty">
                 <Sparkle size={30} weight="duotone" />
                 <strong>还没有内容</strong>
@@ -339,4 +344,20 @@ function responseText(result, methodDefinition) {
   if (result.local) return `${result.content}\n\n本次为本地演示结果，任务已写入数据库并完成审计；接入正式模型后可沿用同一创作入口。`;
   if (result.content) return result.content;
   return `任务 ${String(result.id).slice(0, 8)} 已创建（${methodDefinition.label}）。你可以继续输入下一步。`;
+}
+
+// 图片产物直接内联展示（下载路由对该类型返回 inline），文档仍只给下载入口。
+function ArtifactBlock({ artifact }) {
+  if (!String(artifact?.mimeType ?? "").startsWith("image/")) {
+    return <a className="ai-download" href={artifact.downloadUrl} download>{`下载 ${artifact.fileName}`}</a>;
+  }
+  return <figure className="ai-artifact">
+    <a href={artifact.downloadUrl} target="_blank" rel="noopener noreferrer" title="打开原图">
+      <img src={artifact.downloadUrl} alt={artifact.fileName} loading="lazy" />
+    </a>
+    <figcaption>
+      <span>{artifact.fileName}</span>
+      <a href={artifact.downloadUrl} download>下载原图</a>
+    </figcaption>
+  </figure>;
 }
