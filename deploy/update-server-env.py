@@ -7,7 +7,7 @@ import pathlib
 import sys
 
 PROVIDERS = (
-    '[{"id":"model-deepseek-v4-pro","baseUrl":"https://api.deepseek.com","model":"deepseek-v4-pro",'
+    '[{"id":"model-deepseek-v4-flash","baseUrl":"https://api.deepseek.com","model":"deepseek-flash",'
     '"capabilities":["chat","webpage","document"],"apiKeyEnv":"DEEPSEEK_API_KEY","timeoutMs":60000},'
     '{"id":"model-modelscope-qwen-image","baseUrl":"https://api-inference.modelscope.cn","model":"Qwen/Qwen-Image",'
     '"capabilities":["image","pattern"],"apiKeyEnv":"MODELSCOPE_API","timeoutMs":120000,'
@@ -25,15 +25,16 @@ for line in lines:
         out.append("MODEL_PROVIDERS_JSON=" + PROVIDERS)
         seen_providers = True
     elif line.startswith("MODELSCOPE_API="):
-        out.append("MODELSCOPE_API=" + secret)
-        seen_key = True
+        # 未从 stdin 提供新密钥时，保留服务器现有的私有密钥。
+        out.append("MODELSCOPE_API=" + secret if secret else line)
+        seen_key = bool(secret)
     elif line.startswith("MODEL_EXECUTION_ENABLED="):
         out.append("MODEL_EXECUTION_ENABLED=true")
     else:
         out.append(line)
 if not seen_providers:
     out.append("MODEL_PROVIDERS_JSON=" + PROVIDERS)
-if not seen_key:
+if secret and not seen_key:
     out.append("MODELSCOPE_API=" + secret)
 
 env_path.write_text("\n".join(out) + "\n", encoding="utf-8")
