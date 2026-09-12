@@ -4,6 +4,7 @@ import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
 import { createGenerationJobSchema, runGenerationJobSchema } from "./generation.contracts";
 import { GenerationService } from "./generation.service";
+import { outputExtension } from "./office-export.service";
 
 @Controller("generation-jobs")
 export class GenerationController {
@@ -53,6 +54,5 @@ function extensionFor(mimeType: string) {
   if (mimeType === "image/png") return "png";
   if (mimeType === "image/jpeg") return "jpg";
   if (mimeType === "image/webp") return "webp";
-  if (mimeType.includes("presentation")) return "pptx";
-  return "docx";
+  return outputExtension(mimeType) ?? "bin";
 }

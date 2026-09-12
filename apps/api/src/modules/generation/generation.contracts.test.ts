@@ -3,7 +3,8 @@ import test from "node:test";
 import { runGenerationJobSchema } from "./generation.contracts";
 
 test("同步模型执行必须选择服务端模型配置", () => {
-  assert.equal(runGenerationJobSchema.safeParse({ jobType: "image", prompt: "设计课程卡片", parameters: {} }).success, false);
+  assert.equal(runGenerationJobSchema.safeParse({ jobType: "document", prompt: "设计课程卡片", parameters: {} }).success, false);
+  assert.equal(runGenerationJobSchema.safeParse({ jobType: "image", prompt: "设计课程卡片", parameters: {} }).success, true);
   const parsed = runGenerationJobSchema.parse({
     jobType: "image",
     prompt: "设计课程卡片",

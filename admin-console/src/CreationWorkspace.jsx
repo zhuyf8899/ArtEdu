@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ChatCircleDots, Paperclip, Plus, Sparkle, Trash } from "@phosphor-icons/react";
 import { AiMarkdown } from "./AiMarkdown.js";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
+import { DocumentOptions } from "./DocumentOptions.jsx";
+import { supportsCreationMethod } from "./creation-capabilities.js";
 import {
   DEFAULT_METHOD_ID, FALLBACK_MODELS, buildCreationParameters, creationMethod, formatConversationTime, titleFromPrompt,
 } from "./creationMethods.js";
@@ -26,6 +28,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
   const [failed, setFailed] = useState(false);
   const [artifact, setArtifact] = useState(null);
   const [reference, setReference] = useState(null);
+  const [pageCount, setPageCount] = useState("");
   const { confirmAction } = useFeedback();
 
   const conversationsRef = useRef([]);
@@ -45,7 +48,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
     || (quota.concurrentLimit !== null && quota.concurrentLimit !== undefined && quota.inFlight >= quota.concurrentLimit);
 
   const activeConversation = conversations.find((item) => item.id === activeId) ?? null;
-  const method = useMemo(() => creationMethod(activeConversation?.methodId ?? methodId), [activeConversation, methodId]);
+  const method = useMemo(() => creationMethod(methodId), [methodId]);
 
   const updateConversations = useCallback((updater) => {
     setConversations((current) => {
@@ -57,8 +60,9 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
 
   // 图像/图案由平台内部图像通道完成（不出现在前台模型列表），
   // 因此只有当前模型声明支持该能力时才把 modelConfigId 发给服务端。
-  const modelSupportsMethod = Boolean(model?.capabilities?.includes(method.jobType));
-  const modelLabel = modelSupportsMethod ? (model?.name ?? "未选择模型") : "平台内置图像通道";
+  const modelSupportsMethod = supportsCreationMethod(model, method.jobType);
+  const documentBlocked = serviceReady && method.jobType === "document" && !modelSupportsMethod;
+  const modelLabel = modelSupportsMethod ? (model?.name ?? "未选择模型") : method.jobType === "document" ? "请选择支持文档的模型" : "平台内置图像通道";
 
   // 载入本地对话列表；IndexedDB 不可用时页面仍可读，只是不再持久化。
   useEffect(() => {
@@ -109,6 +113,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
     setFailed(false);
     setArtifact(null);
     setReference(target.pending?.reference ?? null);
+    setPageCount(target.pending?.pageCount ?? target.pageCount ?? "");
   }, [activeId, conversations, loaded]);
 
   const persist = useCallback(async (id, patch) => {
@@ -135,14 +140,14 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
         jobType: methodDefinition.jobType,
         prompt: job.prompt,
         modelConfigId: job.modelId ?? undefined,
-        parameters: buildCreationParameters({ methodId: methodDefinition.id, modelId: job.modelId, searchEnabled: job.searchEnabled, reference: job.reference }),
+        parameters: buildCreationParameters({ methodId: methodDefinition.id, modelId: job.modelId, searchEnabled: job.searchEnabled, reference: job.reference, pageCount: job.pageCount }),
         context,
       });
-      const finalMessages = [...streaming.slice(0, -1), { role: "assistant", content: responseText(result, methodDefinition) }];
+      const finalMessages = [...streaming.slice(0, -1), { role: "assistant", content: responseText(result, methodDefinition), artifact: result?.artifact ?? null }];
       setMessages(finalMessages);
       setArtifact(result?.artifact ?? null);
       setFailed(!result);
-      await persist(conversation.id, { messages: finalMessages, methodId: methodDefinition.id });
+      await persist(conversation.id, { messages: finalMessages, methodId: methodDefinition.id, pageCount: job.pageCount ?? "" });
     } catch (error) {
       setFailed(true);
       console.error("[creation] 生成失败", error);
@@ -172,6 +177,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
     event.preventDefault();
     const content = prompt.trim();
     if (!content || sending) return;
+    if (documentBlocked) { onNotice?.("请选择支持文档生成的模型", "error"); return; }
     if (quotaBlocked) {
       onNotice?.("当前生成额度或并发额度已达到上限，请稍后重试或联系管理员调整额度。", "error");
       return;
@@ -206,14 +212,15 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
         jobType: methodDefinition.jobType,
         prompt: content,
         modelConfigId: serviceReady && modelSupportsMethod ? model?.id : undefined,
-        parameters: buildCreationParameters({ methodId, modelId: model?.id, searchEnabled: false, reference }),
+        parameters: buildCreationParameters({ methodId, modelId: model?.id, searchEnabled: false, reference, pageCount }),
         context,
       });
-      const finalMessages = [...streaming.slice(0, -1), { role: "assistant", content: responseText(result, methodDefinition) }];
+      const finalMessages = [...streaming.slice(0, -1), { role: "assistant", content: responseText(result, methodDefinition), artifact: result?.artifact ?? null }];
       setMessages(finalMessages);
       setArtifact(result?.artifact ?? null);
       setFailed(!result);
-      await persist(conversation.id, { messages: finalMessages, methodId });
+      if (!result) setPrompt(content);
+      await persist(conversation.id, { messages: finalMessages, methodId, pageCount });
     } catch (error) {
       setFailed(true);
       console.error("[creation] 生成失败", error);
@@ -274,14 +281,14 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
       </aside>
 
       <div className="creation-workspace__main">
-        <div className="ai-composer">
+        <form className="ai-composer" onSubmit={send}>
           <div className="ai-conversation">
             <div className="ai-thread" ref={scrollRef} aria-busy={sending} aria-live="polite">
               {messages.length ? messages.map((message, index) => {
                 const isLast = index === messages.length - 1;
                 return message.role === "user"
                   ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p></div>
-                  : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{message.content}</AiMarkdown>{isLast && artifact && <ArtifactBlock artifact={artifact} />}{isLast && failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div></div>;
+                  : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{message.content}</AiMarkdown>{(message.artifact || (isLast && artifact)) && <ArtifactBlock artifact={message.artifact || artifact} />}{isLast && failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div></div>;
               }) : <div className="ai-thread__empty">
                 <Sparkle size={30} weight="duotone" />
                 <strong>还没有内容</strong>
@@ -300,6 +307,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
           </div>
 
           <div className="ai-composer__footer">
+            <DocumentOptions method={method} pageCount={pageCount} onChange={setPageCount} disabled={sending} />
             <div className="model-picker">
               <span>{serviceReady ? "模型接口" : "演示参数"}</span>
               <div className="model-picker__row"><select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>{models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
@@ -318,7 +326,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
                 }} />
                 <button type="button" className="ai-attach" aria-label="添加本机参考文件" title={reference ? `已选择：${reference.fileName}` : "本机临时参考文件"} onClick={() => referenceInput.current?.click()}><Paperclip size={18} weight="bold" /></button>
                 <CapabilityPicker methodId={methodId} onChange={setMethodId} align="end" />
-                <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked}>
+                <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked || documentBlocked}>
                   {sending ? "生成中" : quotaBlocked ? "额度已用尽" : "继续创作"} <ArrowRight size={18} weight="bold" />
                 </button>
               </div>
@@ -331,7 +339,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
             <span>{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
             <em>对话保存在本机浏览器 · 仅当前账号可见</em>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   </section>;

@@ -13,6 +13,51 @@ const actor: Actor = {
   roles: ["student"],
 };
 
+test("内部图片路由保留图片产物、上下文和实际模型 ID", async () => {
+  let saved: unknown;
+  let actualModel: unknown;
+  let request: ModelRequest | undefined;
+  const repository = {
+    markRunning: async () => true,
+    completeJob: async () => ({ id: "image-job", status: "succeeded" }),
+    createOutput: async (_id: string, artifact: unknown) => { saved = artifact; },
+    recordUsage: async (usage: { modelConfigId: string }) => { actualModel = usage.modelConfigId; },
+  };
+  const model = { id: "internal-image", execute: async (input: ModelRequest) => {
+    request = input;
+    return { kind: "asset", content: "generated/image-job/image.png", mimeType: "image/png", metadata: { fileName: "image.png", fileSize: 123 } };
+  } };
+  const service = new GenerationService({} as never, repository as never, { getForJob: () => model } as never);
+  service.createJob = async inputActor => ({ id: "image-job", userId: inputActor.id } as GenerationJob);
+  const result = await service.runJob(actor, { jobType: "image", prompt: "海浪", parameters: {}, context: [{ role: "user", content: "蓝白色" }] });
+  assert.equal(actualModel, "internal-image");
+  assert.equal(request?.jobId, "image-job");
+  assert.equal(request?.messages?.[1].content, "蓝白色");
+  assert.equal(result.artifact?.mimeType, "image/png");
+  assert.ok(saved);
+});
+
+test("文档结构失败保留实际模型用量，且不创建残缺下载文件", async () => {
+  const usage: Array<Record<string, unknown>> = [];
+  let exported = false;
+  let failed = false;
+  const repository = {
+    markRunning: async () => true,
+    failJob: async () => { failed = true; },
+    recordUsage: async (input: Record<string, unknown>) => { usage.push(input); },
+  };
+  const registry = { getForJob: () => ({ execute: async () => ({ content: "invalid JSON", metadata: { inputTokens: 40, outputTokens: 20 } }) }) };
+  const exporter = { create: async () => { exported = true; } };
+  const service = new GenerationService({} as never, repository as never, registry as never, exporter as never);
+  service.createJob = async () => ({ id: "job-invalid-document" } as GenerationJob);
+  await assert.rejects(service.runJob(actor, { jobType: "document", prompt: "教案", modelConfigId: "model", parameters: { outputFormat: "docx" } }), /结构/);
+  assert.equal(failed, true);
+  assert.equal(exported, false);
+  assert.equal(usage[0].inputUnits, 40);
+  assert.equal(usage[0].outputUnits, 20);
+  assert.equal(usage[0].status, "failed");
+});
+
 test("同步创作完成后返回模型正文并记录 token 用量", async () => {
   const queuedJob: GenerationJob = {
     id: "job-deepseek-test",
