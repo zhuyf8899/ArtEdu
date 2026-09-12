@@ -32,6 +32,8 @@
 
 `npm run check` 执行 API 类型检查、安全及业务单测、前端构建和现有前端测试。设置有效 PDF_BROWSER_EXECUTABLE 后，导出单测也会启动沙箱浏览器验证 PDF。
 
+GitHub CI 显式使用运行器的 `/usr/bin/google-chrome` 并安装 `fonts-noto-cjk`，避免将 Ubuntu 的 Chromium Snap 启动器当成可用渲染服务。CI 保留浏览器沙箱并实际生成 PDF；浏览器启动失败会阻止合并，而不是跳过测试。
+
 在仅包含测试账号的本机环境，设置 ARTEDU_LIVE_DOCUMENT_TEST=true 后运行 `npm run test:documents:live`。该脚本会调用真实模型，消耗用量，并留下测试任务及私有文件。它验证四账号的 Word/PPT/PDF 生成、文件格式、匿名拒绝及 operator 跨用户拒绝；不会输出密钥或登录 cookie。
 
 2026-09-11：四账号真实测试通过；PDF 中文 A4 样本及 PPT 三页预览已检查。Word 已验证 DOCX 内部结构与正文，但缺少捆绑的 LibreOffice，尚未完成 Word 原生分页视觉验收。PPT 预览采用导入渲染，仍建议在目标 PowerPoint/WPS 版本复核。

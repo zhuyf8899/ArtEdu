@@ -14,7 +14,7 @@ const fixture = { schemaVersion: 1 as const, title: "传统纹样课程", summar
   { heading: "课堂活动", paragraphs: ["分组讨论与创作。"], bullets: ["分享作品并讨论"] },
 ] };
 
-test("将模型结构化正文导出为 DOCX 与 PPTX", async () => {
+test("将模型结构化正文导出为 DOCX、PPTX 及已配置的 PDF", async () => {
   const uploadRoot = await mkdtemp(path.join(os.tmpdir(), "artedu-office-"));
   const previous = process.env.UPLOAD_ROOT;
   process.env.UPLOAD_ROOT = uploadRoot;
