@@ -18,8 +18,10 @@ test("PPT 页数传入请求且 PDF 不携带课件页数", () => {
   assert.equal(normalizePageCount("99"), "");
 });
 
-test("创作页绑定继续创作表单，历史回复保留文件入口", async () => {
+test("创作页绑定续写表单、键盘发送与历史文件入口", async () => {
   const source = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
-  assert.ok(source.includes('<form className="ai-composer" onSubmit={send}>'));
+  assert.ok(source.includes('<form className="ai-composer studio-chat__composer" onSubmit={send}>'));
+  assert.ok(source.includes("onKeyDown={handlePromptKeyDown}"));
+  assert.ok(source.includes("event.ctrlKey || event.shiftKey || event.altKey || event.metaKey"));
   assert.ok(source.includes("artifact: result?.artifact ?? null"));
 });

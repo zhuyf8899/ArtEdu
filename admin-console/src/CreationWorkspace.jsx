@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, ChatCircleDots, Paperclip, Plus, Sparkle, Trash } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, ChatCircleDots, PaperPlaneTilt, Paperclip, Plus, Sparkle, Trash } from "@phosphor-icons/react";
 import { AiMarkdown } from "./AiMarkdown.js";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
 import { DocumentOptions } from "./DocumentOptions.jsx";
@@ -251,18 +251,27 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
     setPrompt("");
   };
 
-  return <section className="creation-workspace" aria-label="创作对话">
+  // Enter 提交；Ctrl+Enter（以及 Shift/Alt/Meta+Enter）保留为换行。
+  // isComposing 防止中文输入法确认候选词时被误判为发送。
+  const handlePromptKeyDown = (event) => {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
+    if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return;
+    event.preventDefault();
+    if (prompt.trim() && !sending && !quotaBlocked && !documentBlocked) event.currentTarget.form?.requestSubmit();
+  };
+
+  return <section className="creation-workspace studio-chat" aria-label="创作对话">
     <header className="creation-workspace__header">
       <button type="button" onClick={onBack}><ArrowLeft size={16} weight="bold" />返回首页</button>
-      <div><p>// {method.eyebrow}</p><h1>{activeConversation?.title ?? "新的创作对话"}</h1></div>
-      <span>{sending ? "正在生成" : serviceReady ? "已连接模型服务" : "本地演示模式"}</span>
+      <div className="studio-chat__title"><p>ARTEDU / {method.eyebrow}</p><h1>{activeConversation?.title ?? "新的创作对话"}</h1></div>
+      <span className={sending ? "is-working" : ""}><i />{sending ? "正在生成" : serviceReady ? "模型服务在线" : "本地演示模式"}</span>
     </header>
 
     <div className="creation-workspace__layout">
       <aside className="creation-history" aria-label="历次创作对话">
         <header>
-          <div><span>历次对话</span><strong>{conversations.length} 个会话</strong></div>
-          <button type="button" onClick={startBlank} aria-label="新建创作对话" title="新建创作对话"><Plus size={16} weight="bold" /></button>
+          <div><span>你的工作区</span><strong>历次对话</strong></div>
+          <button type="button" onClick={startBlank} aria-label="新建创作对话" title="新建创作对话"><Plus size={16} weight="bold" /><b>新建</b></button>
         </header>
         <div className="creation-history__list">
           {conversations.length ? conversations.map((item) => <button
@@ -272,7 +281,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
             onClick={() => openConversation(item.id)}
             title={item.title}
           >
-            <span>{creationMethod(item.methodId).label}{item.pending ? " · 待生成" : ""}</span>
+            <span>{creationMethod(item.methodId).label}{item.pending ? " · 正在处理中" : ""}</span>
             <strong>{item.title}</strong>
             <small>{formatConversationTime(item.updatedAt)} · {item.messages?.length ?? 0} 条记录</small>
           </button>) : <p className="creation-history__empty">还没有创作对话，在右侧输入一个想法即可开始。</p>}
@@ -281,39 +290,29 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
       </aside>
 
       <div className="creation-workspace__main">
-        <form className="ai-composer" onSubmit={send}>
-          <div className="ai-conversation">
+        <form className="ai-composer studio-chat__composer" onSubmit={send}>
+          <div className="ai-conversation studio-chat__conversation">
             <div className="ai-thread" ref={scrollRef} aria-busy={sending} aria-live="polite">
               {messages.length ? messages.map((message, index) => {
                 const isLast = index === messages.length - 1;
                 return message.role === "user"
                   ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p></div>
                   : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{message.content}</AiMarkdown>{(message.artifact || (isLast && artifact)) && <ArtifactBlock artifact={message.artifact || artifact} />}{isLast && failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div></div>;
-              }) : <div className="ai-thread__empty">
-                <Sparkle size={30} weight="duotone" />
-                <strong>还没有内容</strong>
-                <p>{loadError || "在下方描述你的创作想法；完整回复会在这块阅读区展开，历次对话保存在左侧。"}</p>
+              }) : <div className="ai-thread__empty studio-chat__empty">
+                <span><Sparkle size={25} weight="fill" /></span>
+                <strong>从一个想法开始</strong>
+                <p>{loadError || "描述你想创作、学习或完善的内容。我会协助你把它推进为下一步。"}</p>
+                <div><button type="button" onClick={() => setPrompt("帮我梳理一个清晰的设计创作方向")}>梳理创作方向</button><button type="button" onClick={() => setPrompt("请帮我把这个想法拆成可执行步骤")}>拆解执行步骤</button></div>
               </div>}
             </div>
-            <label htmlFor="artedu-thread-prompt" className="sr-only">继续描述你的创作想法</label>
-            <textarea
-              id="artedu-thread-prompt"
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              placeholder={method.placeholder}
-              rows={3}
-              disabled={sending}
-            />
           </div>
 
-          <div className="ai-composer__footer">
-            <DocumentOptions method={method} pageCount={pageCount} onChange={setPageCount} disabled={sending} />
-            <div className="model-picker">
-              <span>{serviceReady ? "模型接口" : "演示参数"}</span>
-              <div className="model-picker__row"><select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>{models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
-            </div>
-            <div className="ai-composer__controls">
-              <div className="ai-composer__actions">
+          <div className="ai-composer__footer studio-chat__footer">
+            <div className="studio-chat__input">
+              <label htmlFor="artedu-thread-prompt" className="sr-only">继续描述你的创作想法</label>
+              <textarea id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={3} disabled={sending} />
+              <div className="studio-chat__toolbar">
+                <div className="studio-chat__tools">
                 <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx" onChange={async (event) => {
                   const file = event.target.files?.[0];
                   if (!file) return;
@@ -326,15 +325,18 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
                 }} />
                 <button type="button" className="ai-attach" aria-label="添加本机参考文件" title={reference ? `已选择：${reference.fileName}` : "本机临时参考文件"} onClick={() => referenceInput.current?.click()}><Paperclip size={18} weight="bold" /></button>
                 <CapabilityPicker methodId={methodId} onChange={setMethodId} align="end" />
+                <div className="model-picker"><select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>{models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
+                <DocumentOptions method={method} pageCount={pageCount} onChange={setPageCount} disabled={sending} />
+                </div>
                 <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked || documentBlocked}>
-                  {sending ? "生成中" : quotaBlocked ? "额度已用尽" : "继续创作"} <ArrowRight size={18} weight="bold" />
+                  {sending ? "生成中" : quotaBlocked ? "额度已用尽" : "发送"} <PaperPlaneTilt size={18} weight="fill" />
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="ai-composer__status">
-            <span>{method.label} · {modelLabel}</span>
+          <div className="ai-composer__status studio-chat__status">
+            <span>{method.label} · {modelLabel}</span><span className="studio-chat__shortcut"><kbd>Enter</kbd> 发送 <b>·</b> <kbd>Ctrl</kbd><kbd>Enter</kbd> 换行</span>
             {reference && <span title="临时参考文件独立占用服务器配额">参考文件：{reference.fileName}</span>}
             <span>{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
             <em>对话保存在本机浏览器 · 仅当前账号可见</em>
