@@ -2,7 +2,8 @@ import { z } from "zod";
 import { officeFormatSchema } from "./document-content";
 
 export const createGenerationJobSchema = z.object({
-  jobType: z.enum(["image", "video", "webpage", "pattern", "document", "knowledge_graph"]),
+  // chat 是纯文本问答（默认能力），其余为产物类创作。
+  jobType: z.enum(["chat", "image", "video", "webpage", "pattern", "document", "knowledge_graph"]),
   prompt: z.string().trim().min(1).max(10000),
   context: z.array(z.object({ role: z.enum(["system", "user", "assistant"]), content: z.string().trim().min(1).max(20000) })).max(30).default([]),
   conversationId: z.string().trim().min(1).max(120).optional(),
@@ -15,7 +16,7 @@ export const createGenerationJobSchema = z.object({
 export const runGenerationJobSchema = createGenerationJobSchema.extend({
   modelConfigId: z.string().trim().min(1).max(120).optional(),
 }).superRefine((input, context) => {
-  // Image jobs may use main's internal image provider; text/document jobs still select an explicit model.
+  // Image jobs may use main's internal image provider; text/chat/document jobs still select an explicit model.
   if (!input.modelConfigId && !["image", "pattern"].includes(input.jobType)) context.addIssue({ code: "custom", path: ["modelConfigId"], message: "请选择服务端模型配置" });
   if (input.jobType !== "document") return;
   const format = officeFormatSchema.safeParse(input.parameters.outputFormat ?? "docx");

@@ -1,9 +1,19 @@
 import {
-  Browser, CirclesThreePlus, Code, FileDoc, FilePpt,
+  Browser, ChatCircleDots, CirclesThreePlus, Code, FileDoc, FilePpt,
 } from "@phosphor-icons/react";
 
 // 创作能力定义由入口编排器与对话页共用，避免两处按钮列表出现漂移。
 export const CREATION_METHODS = [
+  // 默认能力是"问答"而不是某个产物类创作：
+  // userId 打开页面后直接输入问题时，期望的是一段回答，而不是一张图。
+  {
+    id: "chat",
+    label: "学习问答",
+    eyebrow: "提问 / 讲解 / 思路梳理",
+    placeholder: "例如：讲讲宋代山水画的构图特点，再给我三条临摹练习建议……",
+    jobType: "chat",
+    Icon: ChatCircleDots,
+  },
   {
     id: "ui",
     label: "UI 创作",
@@ -49,7 +59,7 @@ export const CREATION_METHODS = [
   { id: "pdf", label: "PDF 文档", eyebrow: "讲义 / 阅读材料 / 打印文档", placeholder: "生成一份传统纹样入门讲义，包含学习目标和课堂练习……", jobType: "document", outputFormat: "pdf", Icon: FileDoc },
 ];
 
-export const DEFAULT_METHOD_ID = "ui";
+export const DEFAULT_METHOD_ID = "chat";
 
 // 仅在服务端未配置任何可执行模型时使用的占位项。
 // 不再罗列并不存在的第三方模型（gpt-4o / claude-4 / flux-1 / qwen-image）——

@@ -112,7 +112,8 @@ export class GenerationService {
         ],
         parameters: {
           temperature: 0.4,
-          maxTokens: input.jobType === "document" ? 6500 : 1200,
+          // 文档要写满整篇；问答比普通创作需要更多余地，否则长答案会被截断。
+          maxTokens: input.jobType === "document" ? 6500 : input.jobType === "chat" ? 2200 : 1200,
           ...(input.jobType === "document" ? { responseFormat: "json_object" as const } : {}),
           providerOptions: { thinking: { type: "disabled" } },
         },
@@ -228,15 +229,28 @@ export class GenerationService {
   }
 }
 
+// 问答系统提示词与创作类分开：创作类的收尾是"只输出创作方案"，
+// 套在问答上会把"提问"逼成"方案"，答非所问。
+const CHAT_SYSTEM_PROMPT = [
+  "你是 ArtEdu 艺术教育平台的中文助教，服务对象是艺术院校的师生。",
+  "回答方式：先给结论，再给依据，最后给可执行的做法；用中文，可用小标题和列表，但不要为了凑长度而展开。",
+  "篇幅与问题复杂度相称：简单的问题直接答；只有对方要求展开或问题本身复杂时才分层详述，默认不超过 600 字。",
+  "事实边界：涉及作品、作者、年代、流派、技法时，只讲有把握的内容；不确定就写明不确定，并给出可靠方向（建议查阅的著作、展览或检索词）。不得编造作品名、年代、作者、链接或统计数据。",
+  "信息不足时先写明你的假设再回答；提问本身有歧义时，先指出是哪一种歧义，再分别作答。",
+  "你当前只在对话中作答，不得声称已经生成图片、文档、代码仓库或部署链接；对方需要出图或出文档时，提示他切换到对应的创作能力。",
+].join("");
+
 function buildCreationSystemPrompt(jobType: RunGenerationJobInput["jobType"]) {
-  const instruction = {
+  if (jobType === "chat") return CHAT_SYSTEM_PROMPT;
+  const instructions = {
     image: "围绕 UI 与视觉创作，给出目标、信息层级、构图、色彩、组件和可执行步骤。",
     pattern: "围绕图案创作，给出主题、构图单元、连续方式、色彩、材质、提示词和迭代建议。",
     webpage: "围绕 Vibe Coding，给出页面结构、组件、交互状态、响应式策略、实现步骤和验收标准。",
     video: "围绕视频创作，给出叙事结构、镜头、节奏、视听风格和制作步骤。",
     document: "围绕艺术文档创作，给出结构、内容层次、视觉规范和校对步骤。",
     knowledge_graph: "围绕艺术知识梳理，给出实体、关系、层级和可验证的信息组织方案。",
-  }[jobType];
+  } satisfies Record<Exclude<RunGenerationJobInput["jobType"], "chat">, string>;
+  const instruction = instructions[jobType];
   return `你是 ArtEdu 艺术教育平台的中文创作助教。${instruction} 输出应简洁、具体、可执行，使用清晰的小标题；信息不足时明确假设。你当前只输出创作方案，不得声称已经生成图片、文件、代码仓库或部署链接。`;
 }
 

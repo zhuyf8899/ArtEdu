@@ -300,9 +300,13 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
                   : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">ArtEdu 助教</span><AiMarkdown>{message.content}</AiMarkdown>{(message.artifact || (isLast && artifact)) && <ArtifactBlock artifact={message.artifact || artifact} />}{isLast && failed && <img className="ai-failure-image" src="/assets/generation-failure.png" alt="生成失败占位图" />}</div></div>;
               }) : <div className="ai-thread__empty studio-chat__empty">
                 <span><Sparkle size={25} weight="fill" /></span>
-                <strong>从一个想法开始</strong>
-                <p>{loadError || "描述你想创作、学习或完善的内容。我会协助你把它推进为下一步。"}</p>
-                <div><button type="button" onClick={() => setPrompt("帮我梳理一个清晰的设计创作方向")}>梳理创作方向</button><button type="button" onClick={() => setPrompt("请帮我把这个想法拆成可执行步骤")}>拆解执行步骤</button></div>
+                <strong>从一个问题开始</strong>
+                <p>{loadError || "提问、讲解、思路梳理，直接说就行；需要出图或出文档时，在下方把能力切到「UI 创作」「图案生成」或「文档」。"}</p>
+                <div>
+                  <button type="button" onClick={() => setPrompt("讲讲宋代山水画的构图特点，再给我三条临摹练习建议。")}>讲讲山水画构图</button>
+                  <button type="button" onClick={() => setPrompt("帮我梳理一条从临摹到独立创作的练习路径。")}>梳理练习路径</button>
+                  <button type="button" onClick={() => setPrompt("把一次 45 分钟的纹样课拆成可执行的教学步骤。")}>拆一堂纹样课</button>
+                </div>
               </div>}
             </div>
           </div>

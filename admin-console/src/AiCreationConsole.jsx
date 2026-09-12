@@ -97,12 +97,15 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
   return <section className="ai-creation ai-creation--launcher" aria-labelledby="ai-creation-title">
     <div className="ai-creation__intro">
       <span>{serviceReady ? "已配置模型服务 · 校内账号直接使用" : "本地演示模式 · 不调用外部模型"}</span>
-      <h2 id="ai-creation-title">今天想<span>创作</span>什么？</h2>
-      <p>选择能力与大模型，把灵感变成可以执行、学习和复用的艺术工作流。</p>
+      {/* 默认能力是问答，所以首屏文案跟着能力走，避免对着提问者喊"创作"。 */}
+      <h2 id="ai-creation-title">今天想<span>{method.jobType === "chat" ? "问" : "创作"}</span>什么？</h2>
+      <p>{method.jobType === "chat"
+        ? "直接输入问题，就能拿到讲解、点评与可执行的思路。"
+        : "选择能力与大模型，把灵感变成可以执行、学习和复用的艺术工作流。"}</p>
     </div>
 
     <form className="ai-launcher" onSubmit={submit}>
-      <label htmlFor="artedu-ai-prompt" className="sr-only">描述你的创作想法</label>
+      <label htmlFor="artedu-ai-prompt" className="sr-only">输入你的问题或创作想法</label>
       <textarea
         id="artedu-ai-prompt"
         value={prompt}
