@@ -9,6 +9,8 @@ import { GenerationRepository } from "./generation.repository";
 import type { ModelResult } from "./model-adapter";
 import { ModelRegistry } from "./model-registry";
 import { OfficeExportService, type OfficeFormat } from "./office-export.service";
+import { DocumentContentError, documentMarkdown, documentPrompt, officeFormatSchema, parseDocumentContent, type DocumentContent } from "./document-content";
+import { assertPdfAvailable, PdfExportError } from "./pdf-export";
 
 interface QuotaRow {
   daily_limit: number | null;
@@ -84,10 +86,19 @@ export class GenerationService {
       throw new ServiceUnavailableException("所选模型当前未配置或不支持此创作方式");
     }
 
+    const modelConfigId = input.modelConfigId ?? adapter.id;
+    input = { ...input, modelConfigId };
+    const format = input.jobType === "document" ? officeFormatSchema.parse(input.parameters.outputFormat ?? "docx") : "docx";
+    // Reject missing PDF dependencies before incurring model usage.
+    if (format === "pdf") {
+      try { assertPdfAvailable(); } catch (error) { throw new ServiceUnavailableException(providerFailureMessage(error)); }
+    }
     const job = await this.createJob(actor, input);
     if (!await this.repository.markRunning(job.id)) throw new ConflictException("生成任务已被执行或当前不可执行");
-
-    const systemPrompt = buildCreationSystemPrompt(input.jobType);
+    const pageCount = input.jobType === "document" && format === "pptx" ? input.parameters.pageCount as number | undefined : undefined;
+    const systemPrompt = input.jobType === "document" ? documentPrompt(format, pageCount) : buildCreationSystemPrompt(input.jobType);
+    let inputUnits = 0;
+    let outputUnits = 0;
     try {
       const output = await adapter.execute({
         jobType: input.jobType,
@@ -101,22 +112,27 @@ export class GenerationService {
         ],
         parameters: {
           temperature: 0.4,
-          maxTokens: 1200,
+          maxTokens: input.jobType === "document" ? 6500 : 1200,
+          ...(input.jobType === "document" ? { responseFormat: "json_object" as const } : {}),
           providerOptions: { thinking: { type: "disabled" } },
         },
       });
-      const artifact = await this.createArtifact(job.id, input, output);
+      inputUnits = Number(output.metadata?.inputTokens ?? 0);
+      outputUnits = Number(output.metadata?.outputTokens ?? 0);
+      if (input.jobType === "document" && output.finishReason === "length") throw new DocumentContentError("文档正文被模型截断，未生成不完整文件，请减少页数或内容后重试");
+      const document = input.jobType === "document" ? parseDocumentContent(output.content, pageCount) : undefined;
+      const artifact = document ? await this.createOfficeArtifact(job.id, document, format) : await this.createArtifact(job.id, output);
       const completed = await this.repository.completeJob(job.id);
       await this.repository.recordUsage({
         userId: actor.id,
-        modelConfigId: input.modelConfigId,
+        modelConfigId,
         requestId: job.id,
-        inputUnits: Number(output.metadata?.inputTokens ?? 0),
-        outputUnits: Number(output.metadata?.outputTokens ?? 0),
+        inputUnits,
+        outputUnits,
         status: "success",
       });
       return {
-        job: completed ?? { ...job, status: "succeeded" }, output,
+        job: completed ?? { ...job, status: "succeeded" }, output: document ? { ...output, content: documentMarkdown(document) } : output,
         artifact: artifact && { fileName: artifact.fileName, mimeType: artifact.mimeType, fileSize: artifact.fileSize, downloadUrl: `/api/generation-jobs/${job.id}/download` },
       };
     } catch (error) {
@@ -124,10 +140,10 @@ export class GenerationService {
       await this.repository.failJob(job.id, reason);
       await this.repository.recordUsage({
         userId: actor.id,
-        modelConfigId: input.modelConfigId,
+        modelConfigId,
         requestId: job.id,
-        inputUnits: 0,
-        outputUnits: 0,
+        inputUnits,
+        outputUnits,
         status: "failed",
         errorCode: providerErrorCode(error),
       });
@@ -135,10 +151,10 @@ export class GenerationService {
     }
   }
 
-  private async createOfficeArtifact(jobId: string, prompt: string, content: string, parameters: Record<string, unknown>) {
-    const format: OfficeFormat = parameters.outputFormat === "pptx" ? "pptx" : "docx";
-    const artifact = await this.officeExports.create(jobId, prompt, content, format);
-    await this.repository.createOutput(jobId, artifact);
+  private async createOfficeArtifact(jobId: string, content: DocumentContent, format: OfficeFormat) {
+    const artifact = await this.officeExports.create(jobId, content, format);
+    try { await this.repository.createOutput(jobId, artifact); }
+    catch (error) { await this.officeExports.remove(artifact.storageKey).catch(() => undefined); throw error; }
     return artifact;
   }
 
@@ -146,7 +162,7 @@ export class GenerationService {
    * 产物类适配器（图像/视频）已经按 uploadRoot/generated/<jobId>/ 的约定把文件写好，
    * 这里只登记元数据；文本类任务仍按需导出 Office 文件，其余任务没有可下载产物。
    */
-  private async createArtifact(jobId: string, input: RunGenerationJobInput, output: ModelResult) {
+  private async createArtifact(jobId: string, output: ModelResult) {
     if (output.kind === "asset") {
       const artifact = {
         storageKey: output.content,
@@ -157,7 +173,6 @@ export class GenerationService {
       await this.repository.createOutput(jobId, artifact);
       return artifact;
     }
-    if (input.jobType === "document") return this.createOfficeArtifact(jobId, input.prompt, output.content, input.parameters);
     return undefined;
   }
 
@@ -226,12 +241,15 @@ function buildCreationSystemPrompt(jobType: RunGenerationJobInput["jobType"]) {
 }
 
 function providerErrorCode(error: unknown) {
+  if (error instanceof PdfExportError) return "pdf_export_error";
+  if (error instanceof DocumentContentError) return "document_content_error";
   if (error instanceof Error && error.name === "AbortError") return "timeout";
   const status = error instanceof Error ? error.message.match(/HTTP (\d{3})/)?.[1] : undefined;
   return status ? `provider_${status}` : "provider_error";
 }
 
 function providerFailureMessage(error: unknown) {
+  if (error instanceof DocumentContentError || error instanceof PdfExportError) return error.message;
   if (error instanceof Error && error.name === "AbortError") return "模型响应超时，请稍后重试";
   const status = error instanceof Error ? error.message.match(/HTTP (\d{3})/)?.[1] : undefined;
   return ({

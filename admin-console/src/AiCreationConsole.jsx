@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ChatCircleDots, FloppyDisk, ImageSquare, Paperclip, Trash } from "@phosphor-icons/react";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
+import { DocumentOptions } from "./DocumentOptions.jsx";
+import { normalizePageCount } from "./creationMethods.js";
+import { supportsCreationMethod } from "./creation-capabilities.js";
 import { CREATION_METHODS, FALLBACK_MODELS, creationMethod, titleFromPrompt } from "./creationMethods.js";
 import { createConversation, listConversations, saveConversation } from "./conversationStore.js";
 import { uploadTemporaryCreationFile } from "./services/adminApi.js";
@@ -16,6 +19,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
   const [sending, setSending] = useState(false);
   const [draftSaved, setDraftSaved] = useState(Boolean(storedDraft?.prompt));
   const [reference, setReference] = useState(null);
+  const [pageCount, setPageCount] = useState(() => storedDraft?.pageCount ?? "");
   const [recent, setRecent] = useState([]);
   const referenceInput = useRef(null);
 
@@ -33,17 +37,18 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
   // 图像/图案走平台内部的图像通道（ModelScope 等），它不出现在前台模型列表里。
   // 因此：当前模型声明支持该能力时才带 modelConfigId，否则留空，
   // 交给服务端按能力路由；把不支持的模型 id 发过去只会被服务端拒绝。
-  const modelSupportsMethod = Boolean(model?.capabilities?.includes(method.jobType));
+  const modelSupportsMethod = supportsCreationMethod(model, method.jobType);
+  const documentBlocked = serviceReady && method.jobType === "document" && !modelSupportsMethod;
   const effectiveModelId = serviceReady && modelSupportsMethod ? (model?.id ?? null) : null;
-  const modelLabel = modelSupportsMethod ? (model?.name ?? "未选择模型") : "平台内置图像通道";
+  const modelLabel = modelSupportsMethod ? (model?.name ?? "未选择模型") : method.jobType === "document" ? "请选择支持文档的模型" : "平台内置图像通道";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       if (!prompt.trim()) { clearDraft(account.id); setDraftSaved(false); return; }
-      setDraftSaved(saveDraft(account.id, { prompt, methodId, modelId, searchEnabled, updatedAt: new Date().toISOString() }));
+      setDraftSaved(saveDraft(account.id, { prompt, methodId, modelId, searchEnabled, pageCount, updatedAt: new Date().toISOString() }));
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [account.id, methodId, modelId, prompt, searchEnabled]);
+  }, [account.id, methodId, modelId, prompt, searchEnabled, pageCount]);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +60,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
     event.preventDefault();
     const content = prompt.trim();
     if (!content || sending) return;
+    if (documentBlocked) { onNotice?.("请选择支持文档生成的模型", "error"); return; }
     if (quotaBlocked) {
       onNotice?.("当前生成额度或并发额度已达到上限，草稿已保存。请稍后重试或联系管理员调整额度。", "error");
       return;
@@ -69,6 +75,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
           methodId,
           modelId: effectiveModelId,
           searchEnabled,
+          pageCount,
           reference: reference ?? null,
           createdAt: new Date().toISOString(),
         },
@@ -99,10 +106,12 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
       <textarea
         id="artedu-ai-prompt"
         value={prompt}
+        disabled={sending}
         onChange={(event) => setPrompt(event.target.value)}
         placeholder={method.placeholder}
       />
 
+      <DocumentOptions method={method} pageCount={pageCount} onChange={setPageCount} disabled={sending} />
       <footer>
         <div className="ai-launcher__method">
           <CapabilityPicker methodId={methodId} onChange={setMethodId} />
@@ -122,7 +131,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
           <button type="button" className="ai-attach" aria-label="添加本机参考文件" title={reference ? `已选择：${reference.fileName}` : "本机临时参考文件"} onClick={() => referenceInput.current?.click()}><Paperclip size={18} weight="bold" /></button>
           <select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>{models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
           <button type="button" className={`search-toggle ${searchEnabled ? "is-active" : ""}`} aria-pressed={searchEnabled} onClick={() => setSearchEnabled((enabled) => !enabled)} title={searchEnabled ? "搜索能力已开启：模型可以调用平台搜索工具" : "搜索能力已关闭：本轮不会向模型提供搜索工具"}>智能搜索 <b>{searchEnabled ? "开" : "关"}</b></button>
-          <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked}>
+          <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked || documentBlocked}>
             {sending ? "正在打开" : quotaBlocked ? "额度已用尽" : "开始创作"} <ArrowRight size={18} weight="bold" />
           </button>
         </div>
@@ -167,6 +176,7 @@ function readDraft(accountId) {
       methodId: CREATION_METHODS.some((item) => item.id === value.methodId) ? value.methodId : CREATION_METHODS[0].id,
       modelId: typeof value.modelId === "string" ? value.modelId : FALLBACK_MODELS[0].id,
       searchEnabled: value.searchEnabled === true,
+      pageCount: normalizePageCount(value.pageCount),
     };
   } catch {
     return null;

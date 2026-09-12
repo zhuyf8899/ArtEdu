@@ -46,9 +46,10 @@ export const CREATION_METHODS = [
     outputFormat: "pptx",
     Icon: FilePpt,
   },
+  { id: "pdf", label: "PDF 文档", eyebrow: "讲义 / 阅读材料 / 打印文档", placeholder: "生成一份传统纹样入门讲义，包含学习目标和课堂练习……", jobType: "document", outputFormat: "pdf", Icon: FileDoc },
 ];
 
-export const DEFAULT_METHOD_ID = CREATION_METHODS[0].id;
+export const DEFAULT_METHOD_ID = "ui";
 
 // 仅在服务端未配置任何可执行模型时使用的占位项。
 // 不再罗列并不存在的第三方模型（gpt-4o / claude-4 / flux-1 / qwen-image）——
@@ -74,7 +75,7 @@ export function titleFromPrompt(prompt) {
 }
 
 // 组装一次生成请求：创作方法、模型、搜索开关决定 jobType 与模型参数。
-export function buildCreationParameters({ methodId, modelId, searchEnabled, reference }) {
+export function buildCreationParameters({ methodId, modelId, searchEnabled, reference, pageCount }) {
   const method = creationMethod(methodId);
   return {
     method: method.id,
@@ -82,9 +83,12 @@ export function buildCreationParameters({ methodId, modelId, searchEnabled, refe
     model: modelId,
     searchEnabled,
     ...(method.outputFormat ? { outputFormat: method.outputFormat } : {}),
+    ...(method.outputFormat === "pptx" && normalizePageCount(pageCount) ? { pageCount: Number(pageCount) } : {}),
     ...(reference ? { referenceFileId: reference.id, referenceFileName: reference.fileName } : {}),
   };
 }
+
+export function normalizePageCount(value) { return /^(?:[2-9]|1[0-2])$/.test(String(value)) ? String(value) : ""; }
 
 export function formatConversationTime(value) {
   if (!value) return "";

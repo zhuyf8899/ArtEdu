@@ -3,6 +3,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 COPY apps/api/package.json apps/api/package-lock.json ./apps/api/
+COPY apps/api/vendor ./apps/api/vendor
 RUN cd apps/api && npm ci
 
 COPY apps/api ./apps/api

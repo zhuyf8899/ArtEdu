@@ -8,6 +8,10 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      # Use the runner's installed Chrome, not Ubuntu's chromium Snap launcher.
+      # Keep Chromium sandboxing enabled for the real PDF export regression.
+      PDF_BROWSER_EXECUTABLE: /usr/bin/google-chrome
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,6 +23,12 @@ jobs:
             admin-console/package-lock.json
       - run: cd apps/api && npm ci
       - run: cd admin-console && npm ci
+      - name: Prepare PDF rendering dependencies
+        run: |
+          test -x "$PDF_BROWSER_EXECUTABLE"
+          "$PDF_BROWSER_EXECUTABLE" --version
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
       - run: cd apps/api && npm audit --omit=dev --audit-level=high
       - run: cd admin-console && npm audit --omit=dev --audit-level=high
       - run: cd apps/api && npm run test:security
