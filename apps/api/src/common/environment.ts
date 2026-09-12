@@ -16,6 +16,13 @@ const environmentSchema = z.object({
   TEMPORARY_UPLOAD_RETENTION_HOURS: z.coerce.number().int().min(1).max(720).default(72),
   MODEL_EXECUTION_ENABLED: z.enum(["true", "false"]).default("false"),
   MODEL_PROVIDERS_JSON: z.string().optional(),
+  RAG_ENABLED: z.enum(["true", "false"]).default("false"),
+  RAG_EMBEDDING_BASE_URL: z.string().url().optional(),
+  RAG_EMBEDDING_MODEL: z.string().trim().max(200).optional(),
+  RAG_EMBEDDING_API_KEY: z.string().trim().max(2000).optional(),
+  RAG_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(64).max(4096).default(1024),
+  RAG_MIN_SIMILARITY: z.coerce.number().min(0).max(1).default(0.62),
+  RAG_WEB_FALLBACK_ENABLED: z.enum(["true", "false"]).default("true"),
   AGENT_ALERT_KEYWORDS: z.string().optional(),
   AGENT_BLOCK_KEYWORDS: z.string().optional(),
 });
@@ -35,6 +42,13 @@ export interface Environment {
   temporaryUploadRetentionHours: number;
   modelExecutionEnabled: boolean;
   modelProvidersJson?: string;
+  ragEnabled: boolean;
+  ragEmbeddingBaseUrl?: string;
+  ragEmbeddingModel?: string;
+  ragEmbeddingApiKey?: string;
+  ragEmbeddingDimensions: number;
+  ragMinSimilarity: number;
+  ragWebFallbackEnabled: boolean;
   agentAlertKeywords: string[];
   agentBlockedKeywords: string[];
 }
@@ -74,6 +88,10 @@ export function getEnvironment(): Environment {
     throw new Error("生产环境启用文件上传时必须显式配置 UPLOAD_ROOT");
   }
 
+  if (parsed.RAG_ENABLED === "true" && (!parsed.RAG_EMBEDDING_BASE_URL || !parsed.RAG_EMBEDDING_MODEL || !parsed.RAG_EMBEDDING_API_KEY)) {
+    throw new Error("启用 RAG 时必须配置 RAG_EMBEDDING_BASE_URL、RAG_EMBEDDING_MODEL 与 RAG_EMBEDDING_API_KEY");
+  }
+
   return {
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
@@ -89,6 +107,13 @@ export function getEnvironment(): Environment {
     temporaryUploadRetentionHours: parsed.TEMPORARY_UPLOAD_RETENTION_HOURS,
     modelExecutionEnabled: parsed.MODEL_EXECUTION_ENABLED === "true",
     modelProvidersJson: parsed.MODEL_PROVIDERS_JSON,
+    ragEnabled: parsed.RAG_ENABLED === "true",
+    ragEmbeddingBaseUrl: parsed.RAG_EMBEDDING_BASE_URL,
+    ragEmbeddingModel: parsed.RAG_EMBEDDING_MODEL,
+    ragEmbeddingApiKey: parsed.RAG_EMBEDDING_API_KEY,
+    ragEmbeddingDimensions: parsed.RAG_EMBEDDING_DIMENSIONS,
+    ragMinSimilarity: parsed.RAG_MIN_SIMILARITY,
+    ragWebFallbackEnabled: parsed.RAG_WEB_FALLBACK_ENABLED === "true",
     agentAlertKeywords: splitKeywords(parsed.AGENT_ALERT_KEYWORDS),
     agentBlockedKeywords: splitKeywords(parsed.AGENT_BLOCK_KEYWORDS),
   };

@@ -14,6 +14,7 @@
 | admin | `/admin` | 用户、额度、作品审核、课程 CMS 与发布审核 | 资源上传、模型配置管理 |
 | generation-jobs | `/generation-jobs` | 排队和查询 | 模型执行、输出文件、取消与重试 |
 | agent-runs | `/agent-runs` | 已实现基础 Contract 与 mock/local Harness | Local Bridge 配对、结果回传、异步队列与专用适配器 |
+| rag | `/courses/:courseId/rag`、`/admin/courses/:courseId/resources/:resourceId/rag` | 已实现接口与索引队列契约 | 校内 embedding Provider、PDF 解析与向量检索 |
 
 ## Agent Run Contract
 
@@ -60,10 +61,13 @@
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
 | GET | `/api/courses` | 查询已发布课程，支持关键词、学科、难度和精选筛选 |
-| GET | `/api/courses/:courseId` | 查询课程课时、资源与当前用户进度 |
+| GET | `/api/courses/:courseId` | 查询课程课时、资源与当前用户进度；仅已选课用户获得私有视频播放地址 |
 | POST | `/api/courses/:courseId/enroll` | 加入或重新加入课程 |
 | PUT | `/api/courses/:courseId/lessons/:lessonId/progress` | 保存课时进度，全部完成后自动完成课程 |
 | GET | `/api/me/learning-progress` | 查询当前用户已加入的课程 |
+| POST | `/api/courses/:courseId/rag/search` | 课程知识库检索契约；当前明确返回等待校内 embedding Provider，不伪造答案 |
+
+课程资料为 PDF 时，上传响应会附带 `rag` 状态。PDF 会写入索引队列；DOCX、PPTX、视频不进入第一版 RAG。`allowWebFallback` 仅表示用户允许本地证据不足时联网搜索其问题，课程正文不会发送到联网搜索链路。学生端只可通过受控 API 播放自己已选课程的视频；PDF、Word、PPT 原件仅允许课程创建教师或管理员下载。
 
 ## 我的学习空间
 
@@ -88,6 +92,8 @@
 | POST | `/api/admin/courses/:courseId/submit-review` | 提交发布审核 |
 | GET | `/api/admin/course-reviews` | 查询课程发布审核队列 |
 | POST | `/api/admin/course-reviews/:reviewId/decision` | 通过并发布，或驳回课程 |
+| POST | `/api/admin/courses/:courseId/resources/:resourceId/rag/reindex` | 教师/管理员重新进入 PDF 索引队列 |
+| GET | `/api/admin/courses/:courseId/resources/:resourceId/rag/status` | 查询 PDF 的索引、分片与最近任务状态 |
 
 ## 工作流学习与执行
 

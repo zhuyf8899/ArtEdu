@@ -50,8 +50,8 @@ done
 echo "[4/6] 应用数据库迁移"
 $COMPOSE run --rm api npm run db:migrate
 
-echo "[5/6] 重建 api 与 web 容器"
-$COMPOSE up -d api web
+echo "[5/6] 重建应用、RAG Worker 与检索容器"
+$COMPOSE up -d api rag-worker websearch crawler web
 
 echo "[6/6] 容器状态与健康检查"
 $COMPOSE ps
@@ -59,6 +59,6 @@ sleep 5
 if curl -fsS -m 15 http://127.0.0.1:8080/api/health >/dev/null; then
   echo "  健康检查通过"
 else
-  echo "  ! 健康检查未通过，请查看：$COMPOSE logs --tail=80 api web"
+  echo "  ! 健康检查未通过，请查看：$COMPOSE logs --tail=80 api rag-worker web"
 fi
 echo "DEPLOY_DONE"

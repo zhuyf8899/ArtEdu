@@ -19,6 +19,8 @@
 
 本阶段不包含学校 SSO、真实大模型调用和对象存储文件直传。工作流与作品业务已可在不依赖模型 API 的情况下完整演示；作品暂以安全的 HTTP(S) 资源链接登记，接入对象存储后替换上传适配器。详细边界见 [`docs/framework.md`](docs/framework.md)，接口状态见 [`docs/api-contracts.md`](docs/api-contracts.md)。
 
+学校 SSO 尚不可用时，可在受控测试环境以本地账号完成课程文件上传、选课与受控视频播放；PDF、Word、PPT 不对学生端开放原件。具体规则见 [`docs/pre-sso-file-access.md`](docs/pre-sso-file-access.md)。
+
 ## 上线部署前置条件（尚未完成）
 
 以下事项尚未配置或接入，因此当前版本仅适合本地开发、联调和校内测试，**不能作为公网正式环境直接部署**：

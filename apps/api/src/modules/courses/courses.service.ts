@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyRequest } from "fastify";
 import type { PoolClient, QueryResultRow } from "pg";
@@ -9,6 +9,7 @@ import { AuthService, type Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import { getEnvironment } from "../../common/environment";
 import { storePrivateUpload } from "../studio/private-upload";
+import { RagService } from "../rag/rag.service";
 import type {
   CourseReviewDecisionInput,
   CreateCourseInput,
@@ -74,6 +75,10 @@ interface CourseResourceRow extends QueryResultRow {
   transcript_text: string | null;
   status: string;
   course_status: string;
+  resource_type: string;
+  file_size: number | null;
+  created_by: string | null;
+  enrolled: boolean;
 }
 
 const courseResourceMimeTypes = [
@@ -89,6 +94,7 @@ export class CoursesService {
   constructor(
     private readonly database: DatabaseService,
     private readonly authService: AuthService,
+    private readonly ragService: RagService,
   ) {}
 
   async listPublished(actor: Actor, filters: { query?: string; category?: string; difficulty?: string; featured?: string }) {
@@ -192,7 +198,11 @@ export class CoursesService {
         mimeType: resource.mime_type,
         transcriptText: resource.transcript_text,
         sortOrder: resource.sort_order,
-        downloadUrl: resource.storage_key ? `/api/courses/${courseId}/resources/${resource.id}/download` : null,
+        // 课件原件不向学生端暴露。视频仅在用户已选课后通过受控 API 播放；
+        // 教师/管理员的资料管理入口不依赖这个学生端字段。
+        downloadUrl: resource.storage_key && resource.resource_type === "video" && course.enrollment_status
+          ? `/api/courses/${courseId}/resources/${resource.id}/download`
+          : null,
       })),
     };
   }
@@ -307,7 +317,12 @@ export class CoursesService {
         `, [id, courseId, upload.fileName, resourceTypeForMime(upload.mimeType as typeof courseResourceMimeTypes[number]), upload.storageKey, upload.fileName, upload.mimeType, upload.sizeBytes, actor.displayName, count.rows[0].count]);
         return { id, title: upload.fileName, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes };
       });
-      return resource;
+      // RAG 是课件上传后的异步能力。队列表未迁移或 Provider 未接入时，
+      // 不能让已保存的原始课件被回滚或误删。
+      const rag = upload.mimeType === "application/pdf"
+        ? await this.ragService.enqueueResource(courseId, resource.id).catch(() => ({ queued: false, reason: "索引队列暂不可用" }))
+        : { queued: false, reason: "RAG 第一版仅接收 PDF" };
+      return { ...resource, rag };
     } catch (error) {
       await import("node:fs/promises").then(({ rm }) => rm(path.join(getEnvironment().uploadRoot, upload.storageKey), { force: true }));
       throw error;
@@ -316,15 +331,41 @@ export class CoursesService {
 
   async openResource(actor: Actor, courseId: string, resourceId: string) {
     const result = await this.database.query<CourseResourceRow>(`
-      SELECT r.id,r.course_id,r.title,r.storage_key,r.file_name,r.mime_type,r.status,c.status AS course_status
+      SELECT r.id,r.course_id,r.title,r.resource_type,r.storage_key,r.file_name,r.mime_type,r.file_size,r.status,
+        c.status AS course_status,c.created_by,
+        EXISTS(SELECT 1 FROM course_enrollments enrollment
+          WHERE enrollment.course_id=c.id AND enrollment.user_id=$3 AND enrollment.status <> 'withdrawn') AS enrolled
       FROM course_resources r JOIN courses c ON c.id=r.course_id
       WHERE r.id=$1 AND r.course_id=$2
-    `, [resourceId, courseId]);
+    `, [resourceId, courseId, actor.id]);
     const resource = result.rows[0];
     if (!resource || resource.status !== "published" || resource.course_status !== "published") throw new NotFoundException("课程资料不存在或尚未发布");
+    const manager = actor.roles.includes("admin") || (actor.roles.includes("teacher") && resource.created_by === actor.id);
+    if (resource.resource_type !== "video" && !manager) {
+      throw new ForbiddenException("教学文档仅用于课程 AI 检索，暂不提供学生端原件下载");
+    }
+    if (resource.resource_type === "video" && !manager && !resource.enrolled) {
+      throw new ForbiddenException("请先加入课程后再播放教学视频");
+    }
     const storageKey = resource.storage_key;
-    if (!storageKey || !/^[a-f0-9-]{36}-[a-f0-9-]{36}$/i.test(storageKey) || !courseResourceMimeTypes.includes(resource.mime_type as typeof courseResourceMimeTypes[number])) throw new NotFoundException("课程资料存储记录无效");
-    return { fileName: resource.file_name ?? resource.title, mimeType: resource.mime_type, stream: createReadStream(path.join(getEnvironment().uploadRoot, storageKey)) };
+    const expectedPrefix = `admin/courses/${courseId}/`;
+    if (!storageKey || !storageKey.startsWith(expectedPrefix) || !/^[a-f0-9-]{36}-[a-f0-9-]{36}$/i.test(storageKey.slice(expectedPrefix.length)) || !courseResourceMimeTypes.includes(resource.mime_type as typeof courseResourceMimeTypes[number])) {
+      throw new NotFoundException("课程资料存储记录无效");
+    }
+    const filePath = path.join(getEnvironment().uploadRoot, ...storageKey.split("/"));
+    const file = await stat(filePath).catch(() => undefined);
+    if (!file?.isFile()) throw new NotFoundException("课程资料文件不存在");
+    await this.database.query(
+      "INSERT INTO course_resource_access_events (id,resource_id,user_id,access_kind) VALUES ($1,$2,$3,$4)",
+      [`course-resource-access-${randomUUID()}`, resource.id, actor.id, resource.resource_type === "video" ? "stream" : "download"],
+    );
+    return {
+      fileName: resource.file_name ?? resource.title,
+      mimeType: resource.mime_type,
+      resourceType: resource.resource_type,
+      filePath,
+      sizeBytes: file.size,
+    };
   }
 
   async create(actor: Actor, input: CreateCourseInput) {

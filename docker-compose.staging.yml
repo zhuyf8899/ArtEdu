@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_DB: artedu
@@ -24,7 +24,7 @@ services:
       DATABASE_URL: postgresql://artedu:${ARTEDU_POSTGRES_PASSWORD}@postgres:5432/artedu
       HOST: 0.0.0.0
       PORT: 4000
-      CORS_ORIGIN: http://8.212.153.167:8080
+      CORS_ORIGIN: ${ARTEDU_CORS_ORIGIN:?Set ARTEDU_CORS_ORIGIN in .env}
       ENABLE_LOCAL_AUTH: "true"
       ARTEDU_ALLOW_TEST_ACCOUNTS: "true"
       LOCAL_SESSION_DAYS: 7
@@ -45,6 +45,13 @@ services:
       WEB_SEARCH_TIMEOUT_MS: ${WEB_SEARCH_TIMEOUT_MS:-20000}
       DEEPSEEK_SEARCH_URL: ${DEEPSEEK_SEARCH_URL:-}
       DEEPSEEK_SEARCH_API_KEY: ${DEEPSEEK_SEARCH_API_KEY:-}
+      RAG_ENABLED: ${RAG_ENABLED:-false}
+      RAG_EMBEDDING_BASE_URL: ${RAG_EMBEDDING_BASE_URL:-}
+      RAG_EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-}
+      RAG_EMBEDDING_API_KEY: ${RAG_EMBEDDING_API_KEY:-}
+      RAG_EMBEDDING_DIMENSIONS: ${RAG_EMBEDDING_DIMENSIONS:-1024}
+      RAG_MIN_SIMILARITY: ${RAG_MIN_SIMILARITY:-0.62}
+      RAG_WEB_FALLBACK_ENABLED: ${RAG_WEB_FALLBACK_ENABLED:-true}
     volumes:
       - artedu_staging_uploads:/data/uploads
     depends_on:
@@ -55,6 +62,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+
+  rag-worker:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    command: ["node", "dist/rag.worker.js"]
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://artedu:${ARTEDU_POSTGRES_PASSWORD}@postgres:5432/artedu
+      ENABLE_FILE_UPLOADS: "true"
+      UPLOAD_ROOT: /data/uploads
+      RAG_ENABLED: ${RAG_ENABLED:-false}
+      RAG_EMBEDDING_BASE_URL: ${RAG_EMBEDDING_BASE_URL:-}
+      RAG_EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-}
+      RAG_EMBEDDING_API_KEY: ${RAG_EMBEDDING_API_KEY:-}
+      RAG_EMBEDDING_DIMENSIONS: ${RAG_EMBEDDING_DIMENSIONS:-1024}
+      RAG_MIN_SIMILARITY: ${RAG_MIN_SIMILARITY:-0.62}
+      RAG_WEB_FALLBACK_ENABLED: ${RAG_WEB_FALLBACK_ENABLED:-true}
+    volumes:
+      - artedu_staging_uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   websearch:
     build:
@@ -93,7 +124,7 @@ services:
       dockerfile: deploy/Dockerfile.web
     restart: unless-stopped
     ports:
-      - "${ARTEDU_HTTP_PORT:-8080}:80"
+      - "${ARTEDU_BIND_IP:-127.0.0.1}:${ARTEDU_HTTP_PORT:-8080}:80"
     depends_on:
       api:
         condition: service_healthy

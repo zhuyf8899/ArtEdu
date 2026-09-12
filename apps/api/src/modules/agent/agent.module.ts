@@ -13,6 +13,6 @@ import { WebSearchService } from "./web-search.service";
   imports: [AuthModule, DatabaseModule, GenerationModule, PortalModule],
   controllers: [AgentController, AgentAdminController],
   providers: [AgentService, AgentHarnessService, WebSearchService],
-  exports: [AgentService],
+  exports: [AgentService, WebSearchService],
 })
 export class AgentModule {}

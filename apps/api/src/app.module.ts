@@ -11,11 +11,12 @@ import { HealthController } from "./modules/health/health.controller";
 import { LearningModule } from "./modules/learning/learning.module";
 import { LocalBridgeModule } from "./modules/local-bridge/local-bridge.module";
 import { PortalModule } from "./modules/portal/portal.module";
+import { RagModule } from "./modules/rag/rag.module";
 import { StudioModule } from "./modules/studio/studio.module";
 import { AuthenticationGuard } from "./modules/auth/authentication.guard";
 
 @Module({
-  imports: [DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, CreationStorageModule, GenerationModule, LearningModule, LocalBridgeModule, PortalModule, StudioModule],
+  imports: [DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, CreationStorageModule, GenerationModule, LearningModule, LocalBridgeModule, PortalModule, RagModule, StudioModule],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: AuthenticationGuard }],
 })

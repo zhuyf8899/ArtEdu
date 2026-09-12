@@ -2,6 +2,9 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
+# RAG 第一版只处理 PDF；pdftotext 在隔离 Worker 中执行，不解析 Office 容器。
+RUN apk add --no-cache poppler-utils
+
 COPY apps/api/package.json apps/api/package-lock.json ./apps/api/
 COPY apps/api/vendor ./apps/api/vendor
 RUN cd apps/api && npm ci
