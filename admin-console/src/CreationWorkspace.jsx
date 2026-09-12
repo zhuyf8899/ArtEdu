@@ -310,7 +310,7 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
           <div className="ai-composer__footer studio-chat__footer">
             <div className="studio-chat__input">
               <label htmlFor="artedu-thread-prompt" className="sr-only">继续描述你的创作想法</label>
-              <textarea id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={3} disabled={sending} />
+              <textarea id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={2} disabled={sending} />
               <div className="studio-chat__toolbar">
                 <div className="studio-chat__tools">
                 <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx" onChange={async (event) => {
@@ -333,13 +333,6 @@ export function AiCreationWorkspace({ account, creation, onCreate, onNotice, sta
                 </button>
               </div>
             </div>
-          </div>
-
-          <div className="ai-composer__status studio-chat__status">
-            <span>{method.label} · {modelLabel}</span><span className="studio-chat__shortcut"><kbd>Enter</kbd> 发送 <b>·</b> <kbd>Ctrl</kbd><kbd>Enter</kbd> 换行</span>
-            {reference && <span title="临时参考文件独立占用服务器配额">参考文件：{reference.fileName}</span>}
-            <span>{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
-            <em>对话保存在本机浏览器 · 仅当前账号可见</em>
           </div>
         </form>
       </div>
