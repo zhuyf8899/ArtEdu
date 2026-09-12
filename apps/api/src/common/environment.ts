@@ -1,6 +1,11 @@
 import { z } from "zod";
 import path from "node:path";
 
+const optionalUrl = z.preprocess(
+  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().url().optional(),
+);
+
 const environmentSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
@@ -17,7 +22,7 @@ const environmentSchema = z.object({
   MODEL_EXECUTION_ENABLED: z.enum(["true", "false"]).default("false"),
   MODEL_PROVIDERS_JSON: z.string().optional(),
   RAG_ENABLED: z.enum(["true", "false"]).default("false"),
-  RAG_EMBEDDING_BASE_URL: z.string().url().optional(),
+  RAG_EMBEDDING_BASE_URL: optionalUrl,
   RAG_EMBEDDING_MODEL: z.string().trim().max(200).optional(),
   RAG_EMBEDDING_API_KEY: z.string().trim().max(2000).optional(),
   RAG_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(64).max(4096).default(1024),
