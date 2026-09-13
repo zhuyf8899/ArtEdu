@@ -50,8 +50,8 @@ done
 echo "[4/6] 应用数据库迁移"
 $COMPOSE run --rm api npm run db:migrate
 
-echo "[5/6] 重建应用、RAG Worker 与检索容器"
-$COMPOSE up -d api rag-worker websearch crawler web
+echo "[5/6] 重建应用与 RAG Worker"
+$COMPOSE up -d api rag-worker web
 
 echo "[6/6] 容器状态与健康检查"
 $COMPOSE ps

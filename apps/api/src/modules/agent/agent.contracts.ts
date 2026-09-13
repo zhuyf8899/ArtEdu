@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-export const agentScenarioSchema = z.enum(["ui_design", "webpage_generation", "pattern_generation", "document_generation"]);
+// chat 是单独的文本问答场景。不能让普通提问回退为 ui_design，
+// 否则上层编排一旦漏传任务类型，就可能错误进入图像创作链路。
+export const agentScenarioSchema = z.enum(["chat", "ui_design", "webpage_generation", "pattern_generation", "document_generation"]);
 export const createAgentRunSchema = z.object({
   scenario: agentScenarioSchema,
   prompt: z.string().trim().min(1, "创作需求不能为空").max(10000),

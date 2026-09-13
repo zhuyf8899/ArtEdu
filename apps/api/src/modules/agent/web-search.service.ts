@@ -1,90 +1,56 @@
 import { Injectable } from "@nestjs/common";
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
 
-type SearchItem = { title: string; url: string; snippet: string; content?: string };
+import { DEEPSEEK_SEARCH_DEFAULT_MAX_USES, deepSeekWebSearch, type WebSearchSource } from "./deepseek-web-search";
 
-function isPrivateAddress(address: string) {
-  if (isIP(address) === 4) {
-    const [a, b] = address.split(".").map(Number);
-    return a === 10 || a === 127 || a === 0 || a === 169 && b === 254 || a === 172 && b >= 16 && b <= 31 || a === 192 && b === 168;
-  }
-  const lower = address.toLowerCase();
-  return lower === "::1" || lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80:");
+/** 统一失败原因文案：上游详情必须带上，否则线上只能看到笼统的"搜索不可用"。 */
+function reasonOf(error: unknown): string {
+  return error instanceof Error ? error.message : "未知错误";
 }
 
-async function assertSafePublicUrl(value: string) {
-  const url = new URL(value);
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("仅允许 HTTP(S) 来源");
-  if (["localhost", "localhost.localdomain"].includes(url.hostname.toLowerCase()) || url.hostname.endsWith(".local")) throw new Error("不允许本地来源");
-  const addresses = await lookup(url.hostname, { all: true });
-  if (!addresses.length || addresses.some((entry) => isPrivateAddress(entry.address))) throw new Error("不允许内网来源");
-  return url.toString();
+export interface WebSearchOutcome {
+  provider: string;
+  latencyMs: number;
+  sources: WebSearchSource[];
+  summary?: string;
 }
 
-function text(value: unknown, maximum: number) {
-  return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, maximum) : "";
-}
-
+/**
+ * 联网检索的唯一入口（capability seam，对应 dsh 的 `ctx.web`）。
+ *
+ * 只负责 provider 选择与配置读取，不感知线格式与网络细节 —— 具体调用在
+ * `deepseek-web-search.ts` 里。
+ *
+ * 当前只注册 DeepSeek 原生联网搜索一个 provider：检索与正文抽取都在服务商侧完成，
+ * 因此既不需要本地检索服务，也不需要 Chromium 抓取器（后者在 1.6G 内存且无 swap 的
+ * 机器上会引发负载尖峰并连带拖垮容器 DNS）。
+ */
 @Injectable()
 export class WebSearchService {
-  private readonly searchUrl = process.env.WEB_SEARCH_URL?.trim() || "http://websearch:8081/search";
-  private readonly crawlerBaseUrl = process.env.CRAWL4AI_BASE_URL?.trim() || "http://crawler:11235";
-  private readonly crawlerToken = process.env.CRAWL4AI_API_TOKEN?.trim();
-  private readonly timeoutMs = Math.min(45_000, Math.max(3_000, Number(process.env.WEB_SEARCH_TIMEOUT_MS ?? 20_000)));
-  private readonly deepSeekFallbackUrl = process.env.DEEPSEEK_SEARCH_URL?.trim();
-  private readonly deepSeekFallbackKey = process.env.DEEPSEEK_SEARCH_API_KEY?.trim();
+  /** 与模型共用同一账号密钥，只是端点不同（Anthropic 兼容 Messages API）。 */
+  private readonly apiKey = process.env.DEEPSEEK_API_KEY?.trim();
+  private readonly baseUrl = process.env.DEEPSEEK_SEARCH_BASE_URL?.trim();
+  private readonly model = process.env.DEEPSEEK_SEARCH_MODEL?.trim();
+  private readonly maxUses = Number(process.env.DEEPSEEK_SEARCH_MAX_USES ?? "") || DEEPSEEK_SEARCH_DEFAULT_MAX_USES;
+  private readonly timeoutMs = Math.min(45_000, Math.max(3_000, Number(process.env.WEB_SEARCH_TIMEOUT_MS ?? 25_000)));
 
-  async search(query: string, providerId?: string) {
-    try {
-      return await this.searchAndCrawl(query);
-    } catch (primaryError) {
-      try {
-        const fallback = await this.searchWithConfiguredDeepSeek(query, providerId);
-        return { provider: "deepseek-web-search", degraded: true, ...fallback };
-      } catch (fallbackError) {
-        const primaryReason = primaryError instanceof Error ? primaryError.message : "crawler unavailable";
-        const fallbackReason = fallbackError instanceof Error ? fallbackError.message : "DeepSeek fallback unavailable";
-        throw new Error(`联网搜索不可用：抓取链路 ${primaryReason}；DeepSeek 降级 ${fallbackReason}`);
-      }
-    }
-  }
+  async search(query: string): Promise<WebSearchOutcome> {
+    const trimmed = query.trim();
+    if (!trimmed) throw new Error("联网搜索不可用：检索词为空");
+    if (!this.apiKey) throw new Error("联网搜索不可用：未配置 DEEPSEEK_API_KEY");
 
-  private async searchWithConfiguredDeepSeek(query: string, providerId?: string) {
-    if (!this.deepSeekFallbackUrl) throw new Error("未配置 DEEPSEEK_SEARCH_URL");
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const startedAt = Date.now();
     try {
-      const response = await fetch(this.deepSeekFallbackUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json", ...(this.deepSeekFallbackKey ? { authorization: `Bearer ${this.deepSeekFallbackKey}` } : {}) },
-        body: JSON.stringify({ query, limit: 5, providerId }), signal: controller.signal,
+      const result = await deepSeekWebSearch({
+        query: trimmed,
+        apiKey: this.apiKey,
+        baseUrl: this.baseUrl,
+        model: this.model,
+        maxUses: this.maxUses,
+        timeoutMs: this.timeoutMs,
       });
-      if (!response.ok) throw new Error(`DeepSeek 搜索服务 HTTP ${response.status}`);
-      const body = await response.json() as { sources?: SearchItem[]; results?: SearchItem[]; content?: string };
-      const sources = body.sources ?? body.results ?? [];
-      return { sources: sources.slice(0, 5).map((item) => ({ title: text(item.title, 300), url: text(item.url, 2048), snippet: text(item.snippet, 1200), content: text(item.content, 6000) || undefined })), ...(text(body.content, 12_000) ? { summary: text(body.content, 12_000) } : {}) };
-    } finally { clearTimeout(timer); }
-  }
-
-  private async searchAndCrawl(query: string) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    try {
-      const discovery = await fetch(this.searchUrl, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query, limit: 5 }), signal: controller.signal });
-      if (!discovery.ok) throw new Error(`检索服务 HTTP ${discovery.status}`);
-      const payload = await discovery.json() as { results?: SearchItem[] };
-      const candidates = await Promise.all((payload.results ?? []).slice(0, 5).map(async (item) => {
-        try { return { ...item, url: await assertSafePublicUrl(item.url) }; } catch { return null; }
-      }));
-      const sources = candidates.filter((item): item is SearchItem => Boolean(item)).slice(0, 3);
-      if (!sources.length) throw new Error("检索服务未返回可访问的公网来源");
-      if (!this.crawlerToken) throw new Error("未配置 CRAWL4AI_API_TOKEN");
-      const crawl = await fetch(new URL("/crawl", this.crawlerBaseUrl), { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${this.crawlerToken}` }, body: JSON.stringify({ urls: sources.map((item) => item.url), browser_config: { headless: true }, crawler_config: { stream: false, cache_mode: "bypass" } }), signal: controller.signal });
-      if (!crawl.ok) throw new Error(`抓取服务 HTTP ${crawl.status}`);
-      const body = await crawl.json() as { results?: Array<{ url?: string; markdown?: string | { fit_markdown?: string; raw_markdown?: string }; success?: boolean }> };
-      const crawled = new Map((body.results ?? []).filter((item) => item.success !== false && item.url).map((item) => [item.url!, text(typeof item.markdown === "string" ? item.markdown : item.markdown?.fit_markdown ?? item.markdown?.raw_markdown, 6000)]));
-      return { provider: "ddgs+crawl4ai", degraded: false, sources: sources.map((item) => ({ ...item, content: crawled.get(item.url) || undefined })) };
-    } finally { clearTimeout(timer); }
+      return { provider: "deepseek-native", latencyMs: Date.now() - startedAt, ...result };
+    } catch (error) {
+      throw new Error(`联网搜索不可用：${reasonOf(error)}`);
+    }
   }
 }
