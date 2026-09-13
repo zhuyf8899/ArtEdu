@@ -12,10 +12,13 @@ async function request(path, options = {}) {
       },
       ...options,
     });
-  } catch {
-    const error = new Error("无法连接服务，请确认 API 已启动后重试");
-    error.code = "NETWORK_ERROR";
-    throw error;
+  } catch (error) {
+    // 主动暂停时 fetch 抛的是 AbortError，必须原样上抛：它不是网络故障，
+    // 调用方要据此显示「已暂停」而不是「无法连接服务」。
+    if (error?.name === "AbortError") throw error;
+    const networkError = new Error("无法连接服务，请确认 API 已启动后重试");
+    networkError.code = "NETWORK_ERROR";
+    throw networkError;
   }
 
   const data = await response.json().catch(() => null);
@@ -24,7 +27,8 @@ async function request(path, options = {}) {
     const error = new Error(message || `请求失败（HTTP ${response.status}）`);
     error.status = response.status;
     if (response.status === 401) error.message = "登录状态已失效，请重新登录";
-    if (response.status === 403) error.message = "当前账号没有执行此操作的权限";
+    if (response.status === 403 && !message) error.message = "当前账号没有执行此操作的权限";
+    if (response.status === 403 && message === "跨站写请求被拒绝") error.message = "当前访问地址未获服务器授权，请联系管理员配置此地址后重试";
     throw error;
   }
   return data ?? {};
@@ -98,19 +102,22 @@ export const createGenerationJob = (input) => request("/generation-jobs", {
   body: JSON.stringify(input),
 });
 
-export const runGenerationJob = (input) => request("/generation-jobs/run", {
+export const runGenerationJob = (input, options = {}) => request("/generation-jobs/run", {
   method: "POST",
   body: JSON.stringify(input),
+  signal: options.signal,
 });
 
-export const createAgentRun = (input) => request("/agent-runs", {
+export const createAgentRun = (input, options = {}) => request("/agent-runs", {
   method: "POST",
   body: JSON.stringify(input),
+  signal: options.signal,
 });
 
-export const executeAgentRun = (runId, input = {}) => request(`/agent-runs/${encodeURIComponent(runId)}/execute`, {
+export const executeAgentRun = (runId, input = {}, options = {}) => request(`/agent-runs/${encodeURIComponent(runId)}/execute`, {
   method: "POST",
   body: JSON.stringify({ mode: "server", ...input }),
+  signal: options.signal,
 });
 
 export const getTemporaryCreationFiles = () => request("/creation-files");

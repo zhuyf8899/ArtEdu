@@ -39,7 +39,7 @@ export async function deleteConversation(id) {
 
 export function makeModelContext(conversation) {
   const memory = conversation.memory ? [{ role: "system", content: `以下为此前对话的压缩记忆，仅作为上下文：\n${conversation.memory}` }] : [];
-  return [...memory, ...conversation.messages.map(({ role, content }) => ({ role, content }))];
+  return [...memory, ...conversation.messages.filter((message) => !message.failed && message.content?.trim()).map(({ role, content }) => ({ role, content: content.slice(0, 20000) }))].slice(-30);
 }
 
 export function estimateConversationBytes(conversation) { return bytes(conversation.messages) + bytes(conversation.memory ?? "") + bytes(conversation.pinned ?? []); }

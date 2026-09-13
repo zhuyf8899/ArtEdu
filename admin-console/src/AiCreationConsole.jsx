@@ -4,7 +4,7 @@ import { CapabilityPicker } from "./CapabilityPicker.jsx";
 import { DocumentOptions } from "./DocumentOptions.jsx";
 import { normalizePageCount } from "./creationMethods.js";
 import { supportsCreationMethod } from "./creation-capabilities.js";
-import { CREATION_METHODS, FALLBACK_MODELS, creationMethod, titleFromPrompt } from "./creationMethods.js";
+import { CREATION_METHODS, FALLBACK_MODELS, creationMethod, resolveCreationOperation, titleFromPrompt } from "./creationMethods.js";
 import { createConversation, listConversations, saveConversation } from "./conversationStore.js";
 import { uploadTemporaryCreationFile } from "./services/adminApi.js";
 
@@ -34,13 +34,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
     || (quota.monthlyLimit !== null && quota.monthlyLimit !== undefined && quota.monthlyUsed >= quota.monthlyLimit)
     || (quota.concurrentLimit !== null && quota.concurrentLimit !== undefined && quota.inFlight >= quota.concurrentLimit);
 
-  // 图像/图案走平台内部的图像通道（ModelScope 等），它不出现在前台模型列表里。
-  // 因此：当前模型声明支持该能力时才带 modelConfigId，否则留空，
-  // 交给服务端按能力路由；把不支持的模型 id 发过去只会被服务端拒绝。
-  const modelSupportsMethod = supportsCreationMethod(model, method.jobType);
-  const documentBlocked = serviceReady && method.jobType === "document" && !modelSupportsMethod;
-  const effectiveModelId = serviceReady && modelSupportsMethod ? (model?.id ?? null) : null;
-  const modelLabel = modelSupportsMethod ? (model?.name ?? "未选择模型") : method.jobType === "document" ? "请选择支持文档的模型" : "平台内置图像通道";
+  const modelLabel = model?.name ?? "未选择模型";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -60,7 +54,10 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
     event.preventDefault();
     const content = prompt.trim();
     if (!content || sending) return;
-    if (documentBlocked) { onNotice?.("请选择支持文档生成的模型", "error"); return; }
+    const operation = resolveCreationOperation(content, methodId);
+    const modelSupportsOperation = supportsCreationMethod(model, operation.jobType);
+    const operationNeedsSelectedModel = !["image", "pattern"].includes(operation.jobType);
+    if (serviceReady && operationNeedsSelectedModel && !modelSupportsOperation) { onNotice?.(`请选择支持${operation.label}的模型`, "error"); return; }
     if (quotaBlocked) {
       onNotice?.("当前生成额度或并发额度已达到上限，草稿已保存。请稍后重试或联系管理员调整额度。", "error");
       return;
@@ -73,7 +70,9 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
         pending: {
           prompt: content,
           methodId,
-          modelId: effectiveModelId,
+          operationMethodId: operation.id,
+          jobType: operation.jobType,
+          modelId: serviceReady && modelSupportsOperation ? (model?.id ?? null) : null,
           searchEnabled,
           pageCount,
           reference: reference ?? null,
@@ -98,10 +97,8 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
     <div className="ai-creation__intro">
       <span>{serviceReady ? "已配置模型服务 · 校内账号直接使用" : "本地演示模式 · 不调用外部模型"}</span>
       {/* 默认能力是问答，所以首屏文案跟着能力走，避免对着提问者喊"创作"。 */}
-      <h2 id="ai-creation-title">今天想<span>{method.jobType === "chat" ? "问" : "创作"}</span>什么？</h2>
-      <p>{method.jobType === "chat"
-        ? "直接输入问题，就能拿到讲解、点评与可执行的思路。"
-        : "选择能力与大模型，把灵感变成可以执行、学习和复用的艺术工作流。"}</p>
+      <h2 id="ai-creation-title">今天想<span>问</span>什么？</h2>
+      <p>模式只影响下方建议和输入提示；真正执行问答、出图、网页或文档，由你这次输入的明确意图决定。</p>
     </div>
 
     <form className="ai-launcher" onSubmit={submit}>
@@ -111,14 +108,20 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
         value={prompt}
         disabled={sending}
         onChange={(event) => setPrompt(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
+          if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+          event.preventDefault();
+          if (prompt.trim() && !sending && !quotaBlocked) event.currentTarget.form?.requestSubmit();
+        }}
         placeholder={method.placeholder}
       />
 
       <DocumentOptions method={method} pageCount={pageCount} onChange={setPageCount} disabled={sending} />
       <footer>
         <div className="ai-launcher__method">
-          <CapabilityPicker methodId={methodId} onChange={setMethodId} />
-          <div><strong>{method.label}</strong><span>点击左侧圆钮可切换能力 · {method.eyebrow}</span></div>
+          <CapabilityPicker methodId={methodId} onChange={setMethodId} label="建议模式" />
+          <div><strong>{method.label}</strong><span>点击左侧圆钮可切换建议模式 · {method.eyebrow}</span></div>
         </div>
         <div className="ai-launcher__actions">
           <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx" onChange={async (event) => {
@@ -134,14 +137,14 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
           <button type="button" className="ai-attach" aria-label="添加本机参考文件" title={reference ? `已选择：${reference.fileName}` : "本机临时参考文件"} onClick={() => referenceInput.current?.click()}><Paperclip size={18} weight="bold" /></button>
           <select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>{models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
           <button type="button" className={`search-toggle ${searchEnabled ? "is-active" : ""}`} aria-pressed={searchEnabled} onClick={() => setSearchEnabled((enabled) => !enabled)} title={searchEnabled ? "搜索能力已开启：模型可以调用平台搜索工具" : "搜索能力已关闭：本轮不会向模型提供搜索工具"}>智能搜索 <b>{searchEnabled ? "开" : "关"}</b></button>
-          <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked || documentBlocked}>
-            {sending ? "正在打开" : quotaBlocked ? "额度已用尽" : "开始创作"} <ArrowRight size={18} weight="bold" />
+          <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked}>
+            {sending ? "正在打开" : quotaBlocked ? "额度已用尽" : "进入对话"} <ArrowRight size={18} weight="bold" />
           </button>
         </div>
       </footer>
 
       <div className="ai-launcher__status">
-        <span><ImageSquare size={13} /> {account.shortName} · {method.label} · {modelLabel}</span>
+        <span><ImageSquare size={13} /> {account.shortName} · 建议模式：{method.label} · {modelLabel}</span>
         {reference && <span title="临时文件独立占用服务器配额">临时文件：{reference.fileName} · 72 小时未活动自动删除</span>}
         <span>{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
         {prompt.trim() && <button type="button" onClick={() => { setPrompt(""); setDraftSaved(false); clearDraft(account.id); }}><Trash size={13} /> 清空草稿</button>}
@@ -149,7 +152,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
       </div>
     </form>
 
-    <p className="ai-launcher__hint">提交后直接进入专用创作对话页：完整回复在那里阅读，历次对话保留在左侧列表。</p>
+    <p className="ai-launcher__hint">提交后进入标准 Agent 对话页：模式保留为建议环境，不会强制把普通问题变成图片或文档任务。</p>
 
     {recent.length > 0 && <div className="ai-history-strip">
       <button type="button" onClick={() => onLaunch(recent[0].id)}><ChatCircleDots size={16} weight="bold" />继续上次对话 · {recent[0].title}</button>

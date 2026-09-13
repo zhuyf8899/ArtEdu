@@ -2,7 +2,7 @@ import { createElement as h } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-function safeReplyUrl(value) {
+export function safeReplyUrl(value) {
   if (value.startsWith("#")) return value;
   try {
     const url = new URL(value);

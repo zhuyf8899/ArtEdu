@@ -137,17 +137,22 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
   const nextCourse = useMemo(() => data.courses.find((course) => course.progressPercent > 0 && course.progressPercent < 100) ?? data.courses[0], [data.courses]);
   const showToast = notify;
-  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = []) => {
+  // signal 由创作页下发：用户点「暂停输出」时中断在途请求。
+  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal) => {
     try {
+      if (portalLoading || !isLive) throw new Error("平台服务尚未就绪，请等待加载完成后重试");
       const searchEnabled = parameters.searchEnabled === true;
       const promptWithSearchPolicy = `${prompt}\n\n${searchEnabled ? "你可以使用搜索能力。平台内课程、工作流或案例信息使用 search_platform；需要公开互联网的实时信息、官网链接、近期动态或外部资料时使用 search_web。必须基于工具返回的来源回答，不得编造搜索结果。" : "搜索能力已经关闭。不要调用搜索工具，也不要声称已经搜索；请仅依据当前对话与输入完成任务。"}`;
-      // 图像 / 图案 / 文档要交付真实产物（图片文件、可下载的 Office 文件），
-      // 只有生成任务通道会登记 generation_outputs 并提供下载地址；
-      // Agent 通道是带工具的文本对话，产出不了文件。其余创作方式仍走 Agent。
-      const producesArtifact = ["image", "pattern", "document"].includes(jobType);
-      if (data.creation.enabled && !producesArtifact) {
-        const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation", document: "document_generation" }[jobType] ?? "ui_design";
-        const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters: { ...parameters, source: "portal-home" } });
+      // 任务分流必须是白名单：普通问答只能走文本 Agent，绝不允许因为未知类型
+      // 或缺失映射而默认回退到 ui_design / 图片生成通道。
+      const agentScenarios = { chat: "chat", webpage: "webpage_generation" };
+      const offlineScenarios = { chat: "chat", image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation", document: "document_generation" };
+      const artifactJobTypes = new Set(["image", "pattern", "document"]);
+      const agentScenario = agentScenarios[jobType];
+
+      if (data.creation.enabled && agentScenario) {
+        const scenario = agentScenario;
+        const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters: { ...parameters, source: "portal-home" } }, { signal });
         const completed = await executeAgentRun(run.id, {
           mode: "server",
           providerId: modelConfigId,
@@ -156,33 +161,42 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
           systemPrompt: searchEnabled
             ? "你是 ArtEdu 创作助教。先从用户需求中提炼简洁、可检索的互联网关键词，首轮必须调用 search_web。收到结果后，只能依据工具返回的来源撰写建议，并在结尾列出实际使用的来源链接。"
             : "你是 ArtEdu 创作助教。搜索能力已经关闭。你仍须根据上下文主动调用可用的非搜索工具、维护任务状态并进行多轮工具回传；不得声称已经搜索互联网或平台。",
-          model: searchEnabled ? { toolChoice: { type: "function", function: { name: "search_web" } } } : { toolChoice: "auto" },
-        });
+          // 不要用 tool_choice 强制指定函数：当前文本模型（deepseek-flash）运行在
+          // 思考模式下，DeepSeek 会直接拒绝并返回
+          // 400 "Thinking mode does not support this tool_choice"。
+          // 首轮调用 search_web 由上面的 systemPrompt 明确要求，auto 下模型会遵守；
+          // 强制反而会让开启搜索的每一轮对话都失败。
+          model: { toolChoice: "auto" },
+        }, { signal });
         const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
         showToast(searchEnabled ? "已完成带搜索能力的 Agent 创作" : "已完成 Agent 创作", "success");
-        return { id: run.id, content: message?.content ?? "未生成创作建议。" };
+        return { id: run.id, content: message?.content ?? "未生成创作建议。", sources: searchSourcesFromRun(completed.toolCalls) };
       }
       if (!data.creation.enabled) {
-        const scenario = { image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation" }[jobType] ?? "ui_design";
-        const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters });
-        const completed = await executeAgentRun(run.id, { mode: data.creation.enabled ? "server" : "mock", providerId: modelConfigId, context });
+        const scenario = offlineScenarios[jobType];
+        if (!scenario) throw new Error("不支持的创作类型，已阻止执行");
+        const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters }, { signal });
+        const completed = await executeAgentRun(run.id, { mode: data.creation.enabled ? "server" : "mock", providerId: modelConfigId, context }, { signal });
         const lastMessage = [...(completed.messages ?? [])].reverse().find((message) => message.role === "agent");
         showToast("本地演示已完成：创作说明已写入审计记录。", "success");
         return { id: run.id, local: true, content: lastMessage?.content ?? "本地创作说明已生成。" };
       }
+      if (!artifactJobTypes.has(jobType)) throw new Error("不支持的创作类型，已阻止执行");
       // 只挑真正声明支持该能力的模型；图像/图案留给服务端的内部图像通道（不带 modelConfigId）。
       const selectedModelId = modelConfigId ?? data.creation.models.find((model) => model.capabilities?.includes(jobType))?.id;
-      const result = await runGenerationJob({ jobType, prompt: promptWithSearchPolicy, context, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } });
+      const result = await runGenerationJob({ jobType, prompt: promptWithSearchPolicy, context, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } }, { signal });
       showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
       void loadPortalData();
       // 产物类结果（kind=asset）的 content 是存储键，不能当正文显示。
       return { ...result.job, content: resultContent(result), model: result.output.metadata?.model, artifact: result.artifact };
     } catch (error) {
+      // 主动暂停不是失败：不弹错误提示，交给创作页显示「已暂停」并回填输入。
+      if (error?.name === "AbortError") throw error;
       showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。", "error");
-      return null;
+      throw error;
     }
   };
-  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }) => startGeneration(jobType, prompt, parameters, modelConfigId, context);
+  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal);
 
   const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning", creation: "/create" }[nextSection] ?? "/");
@@ -225,7 +239,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
         {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
 
-        {section === "creation" && <AiCreationWorkspace key={creationId || (creationStartNew ? "new" : "latest")} account={account} onCreate={createFromConversation} creation={data.creation} onNotice={showToast} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
+        {section === "creation" && <AiCreationWorkspace key={creationId || (creationStartNew ? "new" : "latest")} account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} creation={data.creation} onNotice={showToast} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
       </Suspense>
       </div>
     </main>
@@ -284,4 +298,23 @@ function resultContent(result) {
     return "已生成图像产物，可在下方直接查看或下载。\n\n生成文件保存在平台私有目录，仅你的账号可以访问；继续输入描述即可调整风格、构图或配色。";
   }
   return output.content ?? "";
+}
+
+/**
+ * 从本轮 Agent Run 的工具调用记录里取出联网检索来源，供创作页渲染引用卡片。
+ * 来源由后端在 search_web 工具调用时随记录落库（output.sources），这里按 URL 去重保序。
+ */
+function searchSourcesFromRun(toolCalls) {
+  const seen = new Set();
+  const sources = [];
+  for (const call of toolCalls ?? []) {
+    if (call?.toolName !== "search_web") continue;
+    for (const source of call?.output?.sources ?? []) {
+      const url = typeof source?.url === "string" ? source.url : "";
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      sources.push({ title: typeof source?.title === "string" ? source.title : "", url });
+    }
+  }
+  return sources.slice(0, 12);
 }
