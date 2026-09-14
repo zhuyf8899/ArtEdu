@@ -1,20 +1,25 @@
 #!/usr/bin/env bash
-# ArtEdu staging 部署脚本：构建 api/web → 迁移 → 重启容器
+# ArtEdu staging 部署脚本：构建 api/web/rag-worker → 迁移 → 重启容器
 # 由 Hermes 生成，2026-09-11；不含任何密钥（密钥在 ~/artedu/.env，git 忽略）
 #
 # ⚠ 2026-09-11 教训：本机（阿里云免费机，1.6G 内存、无 swap）执行
 #   `docker compose build api web` 并行构建两个 Node 镜像时内存耗尽，
 #   整机失去响应（SSH 握手超时、站点不可达）近一小时。
 #   因此现在改为**串行构建**，并在内存不足时要求显式确认。
+#
+# ⚠ 2026-09-14 教训：rag-worker 与 api **共用 deploy/Dockerfile.api**，
+#   只 build api/web 时 rag-worker 镜像不会重建，容器会一直跑旧代码
+#   （实测线上 rag-worker 停在 09-12 的镜像上，而 api/web 已是当天构建）。
+#   因此第 2 步显式补建 rag-worker；同 Dockerfile 走层缓存，几乎不额外耗时。
 set -euo pipefail
 
 cd "$HOME/artedu"
 COMPOSE="docker compose -f docker-compose.staging.yml"
 
-echo "[0/6] 部署前版本"
+echo "[0/7] 部署前版本"
 git log --oneline -1
 
-echo "[0/6] 资源检查"
+echo "[0/7] 资源检查"
 free -m | head -2
 SWAP_TOTAL=$(free -m | awk '/^Swap:/ {print $2}')
 TOTAL_MB=$(free -m | awk '/^Mem:/ {print $2}')
@@ -31,13 +36,16 @@ WARN
   exit 1
 fi
 
-echo "[1/6] 构建 api 镜像（串行，避免同时占用内存）"
+echo "[1/7] 构建 api 镜像（串行，避免同时占用内存）"
 $COMPOSE build api
 
-echo "[2/6] 构建 web 镜像（串行）"
+echo "[2/7] 构建 rag-worker 镜像（与 api 同 Dockerfile，走层缓存，几乎不耗时）"
+$COMPOSE build rag-worker
+
+echo "[3/7] 构建 web 镜像（串行）"
 $COMPOSE build web
 
-echo "[3/6] 确保 postgres 运行并健康"
+echo "[4/7] 确保 postgres 运行并健康"
 $COMPOSE up -d postgres
 for _ in $(seq 1 30); do
   if docker exec artedu-postgres-1 pg_isready -U artedu -d artedu >/dev/null 2>&1; then
@@ -47,13 +55,13 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 
-echo "[4/6] 应用数据库迁移"
+echo "[5/7] 应用数据库迁移"
 $COMPOSE run --rm api npm run db:migrate
 
-echo "[5/6] 重建应用与 RAG Worker"
+echo "[6/7] 重建应用与 RAG Worker"
 $COMPOSE up -d api rag-worker web
 
-echo "[6/6] 容器状态与健康检查"
+echo "[7/7] 容器状态与健康检查"
 $COMPOSE ps
 sleep 5
 if curl -fsS -m 15 http://127.0.0.1:8080/api/health >/dev/null; then
