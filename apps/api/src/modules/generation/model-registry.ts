@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import { ModelScopeImageAdapter } from "./modelscope-image.adapter";
+import { ModelHttpError, UNUSABLE_KEY_HTTP_STATUSES, describeProviderApiKeyEnvs, providerApiKeyEnvNames, resolveProviderApiKeys } from "./provider-api-keys";
 import type { ModelAdapter, ModelCapability, ModelInvocationOptions, ModelMessage, ModelProviderConfig, ModelRequest, ModelResult } from "./model-adapter";
 
 const capabilitySchema = z.enum(["chat", "image", "video", "webpage", "pattern", "document", "knowledge_graph"]);
@@ -10,6 +11,8 @@ const providerSchema = z.object({
   model: z.string().trim().min(1).max(160),
   capabilities: z.array(capabilitySchema).min(1),
   apiKeyEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/).optional(),
+  // 备用 key：主 key 缺失、或主 key 返回 401/402/403（失效/欠费）时自动切换。
+  apiKeyFallbackEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/).optional(),
   timeoutMs: z.coerce.number().int().min(1000).max(120000).default(30000),
   // 默认沿用 OpenAI 兼容的 chat/completions；图像等专用协议在此显式声明。
   protocol: z.enum(["openai-chat", "modelscope-image"]).default("openai-chat"),
@@ -81,9 +84,29 @@ class OpenAICompatibleAdapter implements ModelAdapter {
       throw new Error(`模型 ${this.config.id} 不支持任务类型 ${request.jobType}`);
     }
 
-    const apiKey = this.config.apiKeyEnv ? process.env[this.config.apiKeyEnv] : undefined;
-    if (!apiKey) throw new Error(`模型 ${this.config.id} 未配置环境变量 ${this.config.apiKeyEnv ?? "API key"}`);
+    const apiKeys = resolveProviderApiKeys(this.config);
+    if (apiKeys.length === 0) {
+      throw new Error(`模型 ${this.config.id} 未配置环境变量 ${describeProviderApiKeyEnvs(this.config)}`);
+    }
 
+    let lastError: unknown;
+    for (const [index, apiKey] of apiKeys.entries()) {
+      try {
+        return await this.invoke(request, apiKey);
+      } catch (error) {
+        lastError = error;
+        const status = error instanceof ModelHttpError ? error.status : undefined;
+        const hasBackupKey = index < apiKeys.length - 1;
+        // 只有"这把 key 本身不可用"（失效/欠费/无权限）才切备用 key。
+        // 其余错误（5xx、超时、内容为空）换 key 也救不回来，原样抛出，
+        // 免得一次调用被放大成两次。
+        if (!hasBackupKey || status === undefined || !UNUSABLE_KEY_HTTP_STATUSES.has(status)) throw error;
+      }
+    }
+    throw lastError;
+  }
+
+  private async invoke(request: ModelRequest, apiKey: string): Promise<ModelResult> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
@@ -94,7 +117,7 @@ class OpenAICompatibleAdapter implements ModelAdapter {
         body: JSON.stringify({ model: this.config.model, messages: toOpenAiMessages(request), ...toOpenAiParameters(request.parameters) }),
         signal: controller.signal,
       });
-      if (!response.ok) throw new Error(`模型接口返回 HTTP ${response.status}`);
+      if (!response.ok) throw new ModelHttpError(response.status, `模型接口返回 HTTP ${response.status}`);
       const body = await response.json() as {
         choices?: Array<{ finish_reason?: string; message?: { content?: string | null; tool_calls?: Array<{ id?: string; type?: string; function?: { name?: string; arguments?: string } }> } }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
@@ -150,8 +173,10 @@ export class ModelRegistry {
 
   listConfigured() {
     return this.list().filter((adapter) => {
-      const apiKeyEnv = this.configsById.get(adapter.id)?.apiKeyEnv;
-      return !apiKeyEnv || Boolean(process.env[apiKeyEnv]?.trim());
+      const config = this.configsById.get(adapter.id);
+      if (!config) return false;
+      // 主 key 与备用 key 都没配时才从列表里隐藏；任意一把有值就照常列出。
+      return providerApiKeyEnvNames(config).length === 0 || resolveProviderApiKeys(config).length > 0;
     });
   }
 

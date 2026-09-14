@@ -84,6 +84,11 @@ export interface ModelProviderConfig {
   model: string;
   capabilities: ModelCapability[];
   apiKeyEnv?: string;
+  /**
+   * 备用 key 的环境变量名。主 key 缺失，或主 key 被判为不可用
+   * （鉴权失败 401 / 余额不足 402 / 无权限 403）时自动切换过来。
+   */
+  apiKeyFallbackEnv?: string;
   timeoutMs: number;
   protocol?: ModelProtocol;
   /**
