@@ -35,6 +35,9 @@ services:
       MODEL_EXECUTION_ENABLED: ${MODEL_EXECUTION_ENABLED:-false}
       MODEL_PROVIDERS_JSON: ${MODEL_PROVIDERS_JSON:-[]}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # 备用 key：主 key 失效/欠费（HTTP 401/402/403）时自动接管，逻辑见
+      # apps/api/src/modules/generation/provider-api-keys.ts。
+      DEEPSEEK_API_KEY_FALLBACK: ${DEEPSEEK_API_KEY_FALLBACK:-}
       # ModelScope（魔搭）文生图；同样只从服务器 .env 注入，不写入镜像。
       MODELSCOPE_API: ${MODELSCOPE_API:-}
       # Internet search runs through DeepSeek's native web search (Anthropic-compatible
