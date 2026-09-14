@@ -13,8 +13,8 @@
 | works | `/works`、`/me/works` | 已实现第一阶段 | 对象存储直传、媒体转码 |
 | admin | `/admin` | 用户、额度、作品审核、课程 CMS 与发布审核 | 资源上传、模型配置管理 |
 | generation-jobs | `/generation-jobs` | 排队和查询 | 模型执行、输出文件、取消与重试 |
-| agent-runs | `/agent-runs` | 已实现基础 Contract 与 mock/local Harness | Local Bridge 配对、结果回传、异步队列与专用适配器 |
-| rag | `/courses/:courseId/rag`、`/admin/courses/:courseId/resources/:resourceId/rag` | 已实现接口与索引队列契约 | 校内 embedding Provider、PDF 解析与向量检索 |
+| agent-runs | `/agent-runs` | 已实现服务端工具循环、受控平台查询、确认后保存成果/启动工作流，以及 mock/local Harness | Local Bridge 配对、结果回传、异步队列与专用适配器 |
+| rag | `/courses/:courseId/rag`、`/admin/courses/:courseId/resources/:resourceId/rag` | 已实现接口、索引队列与课程转写文本精确检索 | 校内 embedding Provider、PDF 解析与向量检索 |
 
 ## Agent Run Contract
 

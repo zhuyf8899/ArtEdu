@@ -1,5 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 import type { PoolClient, QueryResultRow } from "pg";
 import { getEnvironment } from "../../common/environment";
 import type { Actor } from "../auth/auth.service";
@@ -73,11 +75,32 @@ export class AgentService {
   async appendArtifact(runId: string, type: "brief" | "prompt" | "webpage" | "image" | "pattern" | "document" | "preview", metadata: Record<string, unknown>, location: { storageKey?: string; externalUrl?: string } = {}) {
     const run = await this.getOwnedRun(runId);
     const artifactId = `agent-artifact-${randomUUID()}`;
-    await this.database.transaction(async (client) => {
+    const storageKey = location.storageKey ?? (location.externalUrl ? null : `agent-runs/${runId}/${artifactId}.json`);
+    // Agent 文本产物同样落在受管私有目录，不能只在数据库写一个并不存在的 storageKey。
+    // 外链预览是显式例外；它不被当成平台托管文件。
+    if (storageKey) await this.writeLocalArtifact(storageKey, { id: artifactId, runId, type, metadata, createdAt: new Date().toISOString() });
+    try {
+      await this.database.transaction(async (client) => {
       const scanStatus = await this.scanTarget(client, runId, run.user_id, "artifact", artifactId, JSON.stringify(metadata));
-      await client.query(`INSERT INTO agent_artifacts (id,run_id,artifact_type,storage_key,external_url,metadata_json,scan_status) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)`, [artifactId, runId, type, location.storageKey ?? (location.externalUrl ? null : `agent-runs/${runId}/${artifactId}.json`), location.externalUrl ?? null, JSON.stringify(metadata), scanStatus]);
-    });
+        await client.query(`INSERT INTO agent_artifacts (id,run_id,artifact_type,storage_key,external_url,metadata_json,scan_status) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)`, [artifactId, runId, type, storageKey, location.externalUrl ?? null, JSON.stringify(metadata), scanStatus]);
+      });
+    } catch (error) {
+      if (storageKey) await rm(this.artifactPath(storageKey), { force: true }).catch(() => undefined);
+      throw error;
+    }
     return artifactId;
+  }
+
+  async readArtifact(actor: Actor, runId: string, artifactId: string) {
+    const run = await this.getOwnedRun(runId);
+    if (run.user_id !== actor.id && !actor.roles.includes("admin")) throw new ForbiddenException("无权读取该 Agent 产物");
+    const result = await this.database.query<{ storage_key: string | null; external_url: string | null }>("SELECT storage_key,external_url FROM agent_artifacts WHERE id=$1 AND run_id=$2", [artifactId, runId]);
+    const artifact = result.rows[0];
+    if (!artifact) throw new NotFoundException("Agent 产物不存在");
+    if (artifact.external_url) throw new ForbiddenException("该产物由外部服务托管，不提供本地下载");
+    if (!artifact.storage_key) throw new NotFoundException("该产物没有本地文件");
+    try { return { data: await readFile(this.artifactPath(artifact.storage_key)), fileName: `${artifactId}.json` }; }
+    catch { throw new NotFoundException("本地产物文件不存在"); }
   }
 
   async completeRun(runId: string) {
@@ -186,7 +209,7 @@ export class AgentService {
       ...this.mapRun(run),
       messages: messages.rows.map((row) => ({ id: row.id, role: row.role, content: row.content, scanStatus: row.scan_status, createdAt: row.created_at.toISOString() })),
       toolCalls: toolCalls.rows.map((row) => ({ id: row.id, toolName: row.tool_name, status: row.status, input: row.input_json, output: row.output_json, errorMessage: row.error_message, startedAt: row.started_at.toISOString(), completedAt: row.completed_at?.toISOString() ?? null })),
-      artifacts: artifacts.rows.map((row) => ({ id: row.id, type: row.artifact_type, storageKey: row.storage_key, externalUrl: row.external_url, metadata: row.metadata_json, scanStatus: row.scan_status, createdAt: row.created_at.toISOString() })),
+      artifacts: artifacts.rows.map((row) => ({ id: row.id, type: row.artifact_type, storageKey: row.storage_key, externalUrl: row.external_url, downloadUrl: row.storage_key ? `/api/agent-runs/${runId}/artifacts/${row.id}/download` : null, metadata: row.metadata_json, scanStatus: row.scan_status, createdAt: row.created_at.toISOString() })),
       scanResults: scans.rows.map((row) => ({ id: row.id, targetType: row.target_type, targetId: row.target_id, severity: row.severity, matchedRule: row.matched_rule, excerpt: row.redacted_excerpt, createdAt: row.created_at.toISOString() })),
       alerts: alerts.rows.map((row) => ({ id: row.id, severity: row.severity, status: row.status, summary: row.summary, targetType: row.target_type, targetId: row.target_id, createdAt: row.created_at.toISOString() })),
     };
@@ -194,5 +217,18 @@ export class AgentService {
 
   private mapRun(row: RunRow) {
     return { id: row.id, userId: row.user_id, scenario: row.scenario, status: row.status, input: row.input_json, failureReason: row.failure_reason, createdAt: row.created_at.toISOString(), updatedAt: row.updated_at.toISOString(), completedAt: row.completed_at?.toISOString() ?? null };
+  }
+
+  private artifactPath(storageKey: string) {
+    const root = path.resolve(getEnvironment().uploadRoot);
+    const candidate = path.resolve(root, ...storageKey.split("/"));
+    if (candidate !== root && !candidate.startsWith(`${root}${path.sep}`)) throw new ForbiddenException("无效的产物存储路径");
+    return candidate;
+  }
+
+  private async writeLocalArtifact(storageKey: string, content: Record<string, unknown>) {
+    const target = this.artifactPath(storageKey);
+    await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+    await writeFile(target, JSON.stringify(content, null, 2), { encoding: "utf8", mode: 0o600, flag: "wx" });
   }
 }

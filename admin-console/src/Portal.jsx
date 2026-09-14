@@ -159,8 +159,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
           context,
           searchEnabled,
           systemPrompt: searchEnabled
-            ? "你是 ArtEdu 创作助教。先从用户需求中提炼简洁、可检索的互联网关键词，首轮必须调用 search_web。收到结果后，只能依据工具返回的来源撰写建议，并在结尾列出实际使用的来源链接。"
-            : "你是 ArtEdu 创作助教。搜索能力已经关闭。你仍须根据上下文主动调用可用的非搜索工具、维护任务状态并进行多轮工具回传；不得声称已经搜索互联网或平台。",
+            ? "你是 ArtEdu 创作助教。先自行完成能基于用户输入和已有上下文完成的分析。只有用户明确要求最新信息、官方链接、外部资料、事实核验，或问题必须依赖实时互联网信息时，才调用 search_web。调用后只能依据工具返回的来源撰写相关事实，并在结尾列出实际使用的来源链接；没有调用就不要声称已搜索。"
+            : "你是 ArtEdu 创作助教。搜索能力已经关闭。优先依据用户输入和已有上下文独立完成任务；只有确实需要平台内具体课程、案例或工作流详情时才调用对应非搜索工具。不得声称已经搜索互联网或平台。",
           // 不要用 tool_choice 强制指定函数：当前文本模型（deepseek-flash）运行在
           // 思考模式下，DeepSeek 会直接拒绝并返回
           // 400 "Thinking mode does not support this tool_choice"。
@@ -170,7 +170,13 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         }, { signal });
         const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
         showToast(searchEnabled ? "已完成带搜索能力的 Agent 创作" : "已完成 Agent 创作", "success");
-        return { id: run.id, content: message?.content ?? "未生成创作建议。", sources: searchSourcesFromRun(completed.toolCalls) };
+        const latestArtifact = [...(completed.artifacts ?? [])].reverse().find((item) => item.downloadUrl);
+        return {
+          id: run.id,
+          content: message?.content ?? "未生成创作建议。",
+          sources: searchSourcesFromRun(completed.toolCalls),
+          artifact: latestArtifact ? { fileName: `${latestArtifact.type ?? "agent-artifact"}.json`, mimeType: "application/json", downloadUrl: latestArtifact.downloadUrl } : null,
+        };
       }
       if (!data.creation.enabled) {
         const scenario = offlineScenarios[jobType];

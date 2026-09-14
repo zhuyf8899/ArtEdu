@@ -26,14 +26,17 @@ test("建议模式不强制执行操作，只有显式产物意图才切换通�
   assert.equal(resolveCreationOperation("生成一份 8 页 PPT 课堂汇报", "chat").id, "slides");
 });
 
-test("创作页绑定续写表单、键盘发送与历史文件入口", async () => {
+test("创作页绑定续写表单、键盘发送、历史文件入口与消息操作", async () => {
   const source = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
   assert.ok(source.includes('<form className="creation-canvas__composer" onSubmit={send}>'));
   assert.ok(source.includes("onKeyDown={handlePromptKeyDown}"));
   assert.ok(source.includes("event.ctrlKey || event.shiftKey || event.altKey || event.metaKey"));
   assert.ok(source.includes("artifact: result?.artifact ?? null"));
   assert.ok(source.includes("creation-canvas__history"));
-  assert.ok(source.includes("creation-canvas__environment"));
+  assert.ok(!source.includes('aria-label="本轮 Agent 环境"'));
+  assert.ok(source.includes("copyReply"));
+  assert.ok(source.includes("retryReply"));
+  assert.ok(source.includes("editPrompt"));
   assert.ok(source.includes("resolveCreationOperation(content, methodId)"));
 });
 
@@ -46,15 +49,15 @@ test("普通问答具备显式 Agent 场景，未知任务不会回退到 UI 创
   assert.ok(contracts.includes('"chat", "ui_design"'));
 });
 
-test("开启智能搜索时不强制 tool_choice，避免思考模式模型接口 400", async () => {
+test("开启智能搜索时不强制 tool_choice，且不把检索当成默认动作", async () => {
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   // 当前文本模型（deepseek-flash）运行在思考模式下，DeepSeek 会直接拒绝具名
   // tool_choice 并返回 400 "Thinking mode does not support this tool_choice"。
-  // 首轮调用 search_web 由 systemPrompt 明确要求，auto 下模型同样会遵守，
-  // 因此这里不允许再出现对象形态的 toolChoice。
+  // 保持 auto，具体是否检索由用户需求决定，而不是强制第一轮调用。
   assert.ok(!/toolChoice:\s*\{/.test(portal), "不得向模型发送对象形态的 tool_choice");
   assert.ok(portal.includes('model: { toolChoice: "auto" }'));
-  assert.ok(portal.includes("首轮必须调用 search_web"), "首轮检索要求仍须由系统提示词承担");
+  assert.ok(portal.includes("只有用户明确要求最新信息"));
+  assert.ok(!portal.includes("首轮必须调用 search_web"));
 });
 
 test("暂停输出：中断在途请求，且不当作失败处理", async () => {

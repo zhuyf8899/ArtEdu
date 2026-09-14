@@ -4,6 +4,14 @@ import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import type { RagQueryInput } from "./rag.contracts";
 
+interface LocalEvidenceRow {
+  id: string;
+  title: string;
+  resource_type: string;
+  transcript_text: string;
+  match_position: number;
+}
+
 @Injectable()
 export class RagService {
   constructor(private readonly database: DatabaseService) {}
@@ -43,11 +51,39 @@ export class RagService {
   }
 
   /**
-   * 已固定对外响应格式。当前没有配置校内 embedding Provider，因此不返回伪造答案；
-   * Provider 接入后在此处填充 localEvidence，再按 allowWebFallback 触发联网检索。
+   * 在校内 embedding Provider 接入前，优先使用教师已经录入的课程转写文本做本地证据检索。
+   * 这不是向量检索：没有文本命中时会如实返回等待 embedding Provider，而不会编造答案。
    */
   async query(actor: Actor, courseId: string, input: RagQueryInput) {
     await this.assertReadable(actor, courseId);
+    const result = await this.database.query<LocalEvidenceRow>(`
+      SELECT id,title,resource_type,transcript_text,
+        GREATEST(strpos(lower(transcript_text), lower($2)), 1) AS match_position
+      FROM course_resources
+      WHERE course_id=$1 AND status='published' AND transcript_text IS NOT NULL
+        AND char_length(btrim(transcript_text)) > 0
+        AND lower(transcript_text) LIKE '%' || lower($2) || '%'
+      ORDER BY match_position, sort_order, created_at
+      LIMIT 5
+    `, [courseId, input.query]);
+    const localEvidence = result.rows.map((row) => ({
+      resourceId: row.id,
+      resourceTitle: row.title,
+      resourceType: row.resource_type,
+      excerpt: excerptAroundMatch(row.transcript_text, Number(row.match_position), input.query.length),
+      match: input.query,
+    }));
+    if (localEvidence.length) {
+      return {
+        query: input.query,
+        scope: input.scope,
+        localEvidence,
+        webEvidence: [],
+        webFallbackEligible: input.allowWebFallback,
+        retrievalState: "local_text_evidence",
+        message: "已从本课程已授权的转写文本中找到相关证据；向量检索接入后可提供更宽泛的语义匹配。",
+      };
+    }
     return {
       query: input.query,
       scope: input.scope,
@@ -65,6 +101,9 @@ export class RagService {
     if (!course) throw new NotFoundException("课程不存在");
     const manager = actor.roles.includes("admin") || (actor.roles.includes("teacher") && course.created_by === actor.id);
     if (course.status !== "published" && !manager) throw new NotFoundException("课程不存在或尚未发布");
+    if (manager) return;
+    const enrollment = await this.database.query("SELECT 1 FROM course_enrollments WHERE course_id=$1 AND user_id=$2 AND status <> 'withdrawn'", [courseId, actor.id]);
+    if (!enrollment.rowCount) throw new ForbiddenException("请先加入课程后再使用课程知识库");
   }
 
   private async assertCanManage(actor: Actor, courseId: string, resourceId: string) {
@@ -73,4 +112,12 @@ export class RagService {
     if (!resource) throw new NotFoundException("课程资料不存在");
     if (!actor.roles.includes("admin") && (!actor.roles.includes("teacher") || resource.created_by !== actor.id)) throw new ForbiddenException("无权管理该课程资料");
   }
+}
+
+function excerptAroundMatch(text: string, position: number, queryLength: number) {
+  const start = Math.max(0, position - 1 - 90);
+  const end = Math.min(text.length, position - 1 + queryLength + 150);
+  const prefix = start > 0 ? "…" : "";
+  const suffix = end < text.length ? "…" : "";
+  return `${prefix}${text.slice(start, end).replace(/\s+/g, " ").trim()}${suffix}`;
 }

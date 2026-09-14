@@ -4,6 +4,8 @@ import remarkGfm from "remark-gfm";
 
 export function safeReplyUrl(value) {
   if (value.startsWith("#")) return value;
+  // 站内路由无需知道部署域名；只接受单个绝对路径，拒绝 protocol-relative URL。
+  if (/^\/(?!\/)/.test(value)) return value;
   try {
     const url = new URL(value);
     return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password ? url.href : "";

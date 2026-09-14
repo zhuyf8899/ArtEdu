@@ -3,6 +3,7 @@ import { AuthModule } from "../auth/auth.module";
 import { DatabaseModule } from "../database/database.module";
 import { GenerationModule } from "../generation/generation.module";
 import { PortalModule } from "../portal/portal.module";
+import { StudioModule } from "../studio/studio.module";
 import { AgentAdminController } from "./agent-admin.controller";
 import { AgentController } from "./agent.controller";
 import { AgentService } from "./agent.service";
@@ -10,7 +11,7 @@ import { AgentHarnessService } from "./agent-harness.service";
 import { WebSearchService } from "./web-search.service";
 
 @Module({
-  imports: [AuthModule, DatabaseModule, GenerationModule, PortalModule],
+  imports: [AuthModule, DatabaseModule, GenerationModule, PortalModule, StudioModule],
   controllers: [AgentController, AgentAdminController],
   providers: [AgentService, AgentHarnessService, WebSearchService],
   exports: [AgentService, WebSearchService],

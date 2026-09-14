@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, ChatCircleDots, PaperPlaneTilt, Paperclip, Plus, Sparkle, Stop, Trash } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, ChatCircleDots, Copy, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, Stop, Trash } from "@phosphor-icons/react";
 import { AiMarkdown, safeReplyUrl } from "./AiMarkdown.js";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
 import { DocumentOptions } from "./DocumentOptions.jsx";
@@ -271,6 +271,27 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     abortRef.current?.abort();
   }, []);
 
+  const copyReply = useCallback(async (content) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      onNotice?.("回复已复制", "success");
+    } catch {
+      onNotice?.("浏览器未授予复制权限，请手动选择文本复制", "error");
+    }
+  }, [onNotice]);
+
+  const retryReply = useCallback((index) => {
+    const previousUser = [...messages.slice(0, index)].reverse().find((message) => message.role === "user");
+    if (!previousUser?.content) return;
+    setPrompt(previousUser.content);
+    onNotice?.("已将本轮问题带回输入框，可修改后重新发送", "success");
+  }, [messages, onNotice]);
+
+  const editPrompt = useCallback((content) => {
+    setPrompt(content);
+    onNotice?.("已带回输入框，可修改后重新发送", "success");
+  }, [onNotice]);
+
   const removeConversation = async () => {
     const target = conversationsRef.current.find((item) => item.id === activeId);
     if (!target) return;
@@ -338,8 +359,8 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
               {messages.length ? messages.map((message, index) => {
                 const isLast = index === messages.length - 1;
                 return message.role === "user"
-                  ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p></div>
-                  : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span><AiMarkdown>{message.content}</AiMarkdown>{(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}{(message.artifact || (isLast && artifact)) && <ArtifactBlock artifact={message.artifact || artifact} />}</div></div>;
+                  ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p><button type="button" className="ai-message__action" onClick={() => editPrompt(message.content)}><PencilSimple size={14} />编辑</button></div>
+                  : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span><AiMarkdown>{message.content}</AiMarkdown>{(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}{(message.artifact || (isLast && artifact)) && <ArtifactBlock artifact={message.artifact || artifact} />}<div className="ai-message__actions"><button type="button" onClick={() => copyReply(message.content)} title="复制回复"><Copy size={14} />复制</button><button type="button" onClick={() => retryReply(index)} title="将对应问题带回输入框"><ArrowClockwise size={14} />重新输出</button></div></div></div>;
               }) : <div className="ai-thread__empty creation-canvas__empty">
                 <span><Sparkle size={25} weight="fill" /></span>
                 <strong>今天，想弄明白什么？</strong>
@@ -352,13 +373,6 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       </section>
 
       <form className="creation-canvas__composer" onSubmit={send}>
-        <div className="creation-canvas__environment" aria-label="本轮 Agent 环境">
-          <span>建议模式：{method.label}</span>
-          <span>实际操作：按本轮输入自动判断</span>
-          <span>模型：{modelLabel}</span>
-          <span>{searchEnabled ? "搜索：开" : "搜索：关"}</span>
-          {reference && <span title={reference.fileName}>参考：{reference.fileName}</span>}
-        </div>
         <div className="creation-canvas__input">
               <label htmlFor="artedu-thread-prompt" className="sr-only">继续描述你的创作想法</label>
               <textarea id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={2} disabled={sending} />
@@ -380,12 +394,12 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
                 <button type="button" className={`search-toggle ${searchEnabled ? "is-active" : ""}`} aria-pressed={searchEnabled} onClick={() => setSearchEnabled((enabled) => !enabled)} title={searchEnabled ? "搜索能力已开启" : "搜索能力已关闭"}>搜索 <b>{searchEnabled ? "开" : "关"}</b></button>
                 <DocumentOptions method={method} pageCount={pageCount} onChange={setPageCount} disabled={sending} />
                 </div>
-                {sending && <button type="button" className="ai-pause" onClick={pauseOutput} title="中断本次输出；已渲染的内容与输入都会保留">
-                  <Stop size={15} weight="fill" />暂停输出
-                </button>}
                 <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked}>
                   {sending ? "生成中" : quotaBlocked ? "额度已用尽" : "发送"} <PaperPlaneTilt size={18} weight="fill" />
                 </button>
+                {sending && <button type="button" className="ai-pause" onClick={pauseOutput} title="中断本次输出；已渲染的内容与输入都会保留">
+                  <Stop size={15} weight="fill" />暂停输出
+                </button>}
               </div>
             </div>
       </form>

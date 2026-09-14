@@ -26,12 +26,21 @@ export class DocumentContentError extends Error {}
 
 export function parseDocumentContent(raw: string, pageCount?: number): DocumentContent {
   try {
-    const parsed = documentContentSchema.parse(JSON.parse(raw));
+    // 部分 OpenAI-compatible 模型即使被要求只输出 JSON，仍会包一层 ```json 围栏。
+    // 围栏不改变内容结构，先安全剥离；其余前后说明文字仍会被 JSON.parse 拒绝，避免
+    // 从任意自然语言里猜测对象而把错误文档落盘。
+    const parsed = documentContentSchema.parse(JSON.parse(stripJsonFence(raw)));
     if (pageCount !== undefined && parsed.sections.length + 1 !== pageCount) throw new Error("slide count");
     return parsed;
   } catch {
     throw new DocumentContentError("文档内容结构或页数不符合要求，未生成文件，请重试或简化要求");
   }
+}
+
+function stripJsonFence(raw: string) {
+  const value = raw.trim();
+  const fenced = value.match(/^```(?:json)?\s*\r?\n([\s\S]*?)\r?\n```$/i);
+  return fenced ? fenced[1].trim() : value;
 }
 
 export function documentPrompt(format: OfficeFormat, pageCount?: number) {
