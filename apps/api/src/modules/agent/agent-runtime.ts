@@ -1,4 +1,4 @@
-import type { ModelAdapter, ModelMessage, ModelRequest, ModelResult, ModelToolCall, ModelToolDefinition } from "../generation/model-adapter";
+import type { ModelAdapter, ModelMessage, ModelRequest, ModelResult, ModelStreamDelta, ModelToolCall, ModelToolDefinition } from "../generation/model-adapter";
 
 export interface AgentToolContext {
   round: number;
@@ -16,6 +16,11 @@ export interface ModelLoopOptions {
   tools?: readonly ModelToolDefinition[];
   executeTool?: AgentToolExecutor;
   maxRounds?: number;
+  /**
+   * 正文增量回调。提供时优先走适配器的 executeStream，让上层把 token 实时推给
+   * 客户端；未提供、或适配器不支持流式时，自动退回一次性调用，结果完全一致。
+   */
+  onDelta?: (delta: ModelStreamDelta) => void;
 }
 
 export interface ModelLoopResult extends ModelResult {
@@ -44,11 +49,16 @@ export async function runModelLoop(options: ModelLoopOptions): Promise<ModelLoop
     // A named tool choice is a first-turn gate. Once its result has been returned,
     // return to automatic selection so the model can synthesize a final answer.
     const namedToolChoice = typeof options.request.parameters?.toolChoice === "object";
-    const result = await options.adapter.execute({
+    const nextRequest: ModelRequest = {
       ...options.request,
       messages,
       parameters: { ...options.request.parameters, ...(round > 1 && namedToolChoice ? { toolChoice: "auto" } : {}), ...(definitions.length ? { tools: definitions } : {}) },
-    });
+    };
+    // 有增量回调且适配器支持流式就走流式；否则退回一次性调用，返回值同构。
+    const deltaSink = options.onDelta;
+    const result = deltaSink && options.adapter.executeStream
+      ? await options.adapter.executeStream(nextRequest, deltaSink)
+      : await options.adapter.execute(nextRequest);
     const toolCalls = result.toolCalls ?? [];
     if (!toolCalls.length) return { ...result, rounds: round, messages, toolCallCount };
     if (!options.executeTool) throw new Error("模型返回 tool call，但未提供工具执行器");

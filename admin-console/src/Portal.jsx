@@ -4,7 +4,7 @@ import {
   Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
-import { createAgentRun, executeAgentRun, getApiHealth, getPortalHome, runGenerationJob } from "./services/adminApi.js";
+import { createAgentRun, executeAgentRun, executeAgentRunStream, getApiHealth, getPortalHome, runGenerationJob } from "./services/adminApi.js";
 import { AiCreationLauncher } from "./AiCreationConsole.jsx";
 import { AiCreationWorkspace } from "./CreationWorkspace.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
@@ -138,7 +138,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const nextCourse = useMemo(() => data.courses.find((course) => course.progressPercent > 0 && course.progressPercent < 100) ?? data.courses[0], [data.courses]);
   const showToast = notify;
   // signal 由创作页下发：用户点「暂停输出」时中断在途请求。
-  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal) => {
+  // onDelta 同样由创作页下发：正文增量实时回到气泡里，实现逐字输出。
+  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal, onDelta) => {
     try {
       if (portalLoading || !isLive) throw new Error("平台服务尚未就绪，请等待加载完成后重试");
       const searchEnabled = parameters.searchEnabled === true;
@@ -153,7 +154,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       if (data.creation.enabled && agentScenario) {
         const scenario = agentScenario;
         const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters: { ...parameters, source: "portal-home" } }, { signal });
-        const completed = await executeAgentRun(run.id, {
+        const completed = await executeAgentRunStream(run.id, {
           mode: "server",
           providerId: modelConfigId,
           context,
@@ -167,7 +168,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
           // 首轮调用 search_web 由上面的 systemPrompt 明确要求，auto 下模型会遵守；
           // 强制反而会让开启搜索的每一轮对话都失败。
           model: { toolChoice: "auto" },
-        }, { signal });
+        }, { signal, onDelta });
         const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
         showToast(searchEnabled ? "已完成带搜索能力的 Agent 创作" : "已完成 Agent 创作", "success");
         const latestArtifact = [...(completed.artifacts ?? [])].reverse().find((item) => item.downloadUrl);
@@ -202,7 +203,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       throw error;
     }
   };
-  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal);
+  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal, onDelta) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal, onDelta);
 
   const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning", creation: "/create" }[nextSection] ?? "/");

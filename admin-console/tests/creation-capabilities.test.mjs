@@ -67,7 +67,8 @@ test("暂停输出：中断在途请求，且不当作失败处理", async () =>
   // 每一轮生成持有自己的 AbortController：暂停只中断当前这一轮。
   assert.ok(workspace.includes("const abortRef = useRef(null)"));
   assert.ok(workspace.includes("abortRef.current?.abort()"));
-  assert.ok(workspace.includes("}, controller.signal);"), "onCreate 必须收到 signal");
+  // 生成入口把 signal 与增量回调一起交给 onCreate：前者用于暂停，后者用于流式回填。
+  assert.ok(workspace.includes("}, controller.signal, onDelta);"), "onCreate 必须同时收到 signal 与 onDelta");
   // 暂停走独立分支：保留内容、回填输入，而不是走失败态。
   assert.ok(workspace.includes('if (error?.name === "AbortError")'));
   assert.ok(workspace.includes("settlePaused"));
@@ -97,4 +98,35 @@ test("联网检索来源以引用卡片渲染，且复用同一套 URL 安全规
   assert.ok(workspace.includes('className="ai-sources"'));
   // 没有可用来源时整块不渲染，不留空壳占位。
   assert.ok(workspace.includes("if (!safe.length) return null"));
+});
+
+test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条消息", async () => {
+  const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
+  const api = await readFile(new URL("../src/services/adminApi.js", import.meta.url), "utf8");
+  const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
+
+  // API 层：新增流式入口，逐帧解析 SSE，且服务端不支持时能退回一次性调用。
+  assert.ok(api.includes("export const executeAgentRunStream"));
+  assert.ok(api.includes("/execute-stream"));
+  assert.ok(api.includes('"text/event-stream"'));
+  assert.ok(api.includes('event === "delta"'));
+  assert.ok(api.includes('event === "done"'));
+  assert.ok(api.includes("return executeAgentRun(runId, input, { signal })"), "不支持流式时必须回退到老接口");
+
+  // 创作页：增量回填到最后一个气泡，气泡带 streaming 标记（CSS 光标据此显示）。
+  assert.ok(workspace.includes("const onDelta = (text) => {"));
+  assert.ok(workspace.includes("streaming: true"));
+  assert.ok(workspace.includes("ai-message--streaming"));
+  assert.ok(workspace.includes("message.content || message.placeholder"), "没有增量时仍显示占位文案");
+
+  // 门户：agent 分支必须走流式入口，并透传增量回调。
+  assert.ok(portal.includes("executeAgentRunStream(run.id"));
+  assert.ok(portal.includes("{ signal, onDelta }"));
+});
+
+test("「重新输出」清除上一轮回复后重新生成，而不是回填输入框", async () => {
+  const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
+  assert.ok(workspace.includes("baseMessages: messages.slice(0, Math.max(0, index - 1))"), "必须截断到该提问之前");
+  assert.ok(workspace.includes('onNotice?.("已清除上一轮输出，正在重新生成…", "success")'));
+  assert.ok(!workspace.includes("已将本轮问题带回输入框"), "旧的一次性回填行为应已移除");
 });

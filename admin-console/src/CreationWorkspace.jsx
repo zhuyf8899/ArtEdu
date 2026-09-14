@@ -130,46 +130,67 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   // 控制权已经交还用户，可以改完直接重新发送。
   const settlePaused = useCallback(async (conversationId, streaming, promptText) => {
     setPrompt(promptText);
-    const pausedMessages = [...streaming.slice(0, -1), { role: "assistant", content: "已暂停本次输出，输入已保留，可直接重新发送继续。", paused: true }];
+    // 已经流出来的正文要留住——暂停不等于丢弃，只补一句说明。
+    const partial = streaming[streaming.length - 1]?.content ?? "";
+    const pauseNote = "已暂停本次输出，输入已保留，可直接重新发送继续。";
+    const pausedMessages = [...streaming.slice(0, -1), {
+      role: "assistant",
+      content: partial ? `${partial}\n\n（${pauseNote}）` : pauseNote,
+      paused: true,
+    }];
     setMessages(pausedMessages);
     await persist(conversationId, { pending: null, messages: pausedMessages }).catch(() => {});
   }, [persist]);
 
-  const run = useCallback(async (conversation, job, modeDefinition, modelName) => {
+  /**
+   * 统一的生成入口：发送、起始页带过来的 pending 任务、「重新输出」都走这里。
+   *
+   * · baseMessages 决定"从哪一轮开始"——「重新输出」传入截断后的历史，
+   *   上一轮的回复就此被清除，而不是追加在它下面。
+   * · onDelta 接住服务端推来的正文增量，气泡逐字长出来，不再转圈等一整段。
+   */
+  const generate = useCallback(async ({ conversation, baseMessages, content, operationDefinition, methodId: usedMethodId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount, modelId, modelName }) => {
     setSending(true);
     setFailed(false);
     setArtifact(null);
     const controller = new AbortController();
     abortRef.current = controller;
-    const operationDefinition = creationMethod(job.operationMethodId ?? resolveCreationOperation(job.prompt, modeDefinition.id).id);
     const context = makeModelContext(conversation);
-    const placeholder = { role: "assistant", content: serviceReady
+    // 空气泡 + 占位文案：支持流式的场景一到增量就顶掉占位文案；
+    // 不支持流式的场景（生图/文档）继续显示占位，行为与改动前一致。
+    const placeholderText = serviceReady
       ? `正在用 ${modelName} 处理“${operationDefinition.label}”，请稍候……`
-      : `正在通过本地演示引擎处理“${operationDefinition.label}”，不会调用外部模型……` };
-    const streaming = [...(conversation.messages ?? []), { role: "user", content: job.prompt }, placeholder];
-    setMessages(streaming);
+      : `正在通过本地演示引擎处理“${operationDefinition.label}”，不会调用外部模型……`;
+    let rendered = [...baseMessages, { role: "user", content }, { role: "assistant", content: "", placeholder: placeholderText, streaming: true }];
+    setMessages(rendered);
+    const onDelta = (text) => {
+      const last = rendered[rendered.length - 1];
+      rendered = [...rendered.slice(0, -1), { ...last, content: `${last.content ?? ""}${text}` }];
+      setMessages(rendered);
+    };
     try {
-      await persist(conversation.id, { pending: null, methodId: modeDefinition.id, messages: streaming });
+      await persist(conversation.id, { pending: null, methodId: usedMethodId, messages: rendered });
       const result = await onCreate({
         jobType: operationDefinition.jobType,
-        prompt: job.prompt,
-        modelConfigId: job.modelId ?? undefined,
-        parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: modeDefinition.id, modelId: job.modelId, searchEnabled: job.searchEnabled, reference: job.reference, pageCount: job.pageCount }),
+        prompt: content,
+        modelConfigId: modelId ?? undefined,
+        parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),
         context,
-      }, controller.signal);
-      const finalMessages = [...streaming.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), artifact: result?.artifact ?? null, sources: result?.sources ?? null }];
+      }, controller.signal, onDelta);
+      const finalMessages = [...rendered.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), artifact: result?.artifact ?? null, sources: result?.sources ?? null }];
       setMessages(finalMessages);
       setArtifact(result?.artifact ?? null);
       setFailed(!result);
-      await persist(conversation.id, { messages: finalMessages, methodId: modeDefinition.id, pageCount: job.pageCount ?? "" });
+      if (!result) setPrompt(content);
+      await persist(conversation.id, { messages: finalMessages, methodId: usedMethodId, pageCount: usedPageCount ?? "" });
     } catch (error) {
       if (error?.name === "AbortError") {
-        await settlePaused(conversation.id, streaming, job.prompt);
+        await settlePaused(conversation.id, rendered, content);
         return;
       }
       setFailed(true);
-      setPrompt(job.prompt);
-      const failedMessages = [...streaming.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true }];
+      setPrompt(content);
+      const failedMessages = [...rendered.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true }];
       setMessages(failedMessages);
       await persist(conversation.id, { pending: null, messages: failedMessages }).catch(() => {});
       console.error("[creation] 生成失败", error);
@@ -179,6 +200,23 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       setSending(false);
     }
   }, [onCreate, onNotice, persist, serviceReady, settlePaused]);
+
+  // 起始页带过来的 pending 任务：转成统一入口的参数后执行。
+  const run = useCallback(async (conversation, job, modeDefinition, modelName) => {
+    const operationDefinition = creationMethod(job.operationMethodId ?? resolveCreationOperation(job.prompt, modeDefinition.id).id);
+    await generate({
+      conversation,
+      baseMessages: conversation.messages ?? [],
+      content: job.prompt,
+      operationDefinition,
+      methodId: modeDefinition.id,
+      searchEnabled: job.searchEnabled,
+      reference: job.reference,
+      pageCount: job.pageCount,
+      modelId: job.modelId,
+      modelName,
+    });
+  }, [generate]);
 
   // 起始页交过来的 pending 任务在此执行（StrictMode 下由 ranPendingRef 去重）。
   useEffect(() => {
@@ -222,48 +260,18 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       setActiveId(conversation.id);
     }
     setPrompt("");
-    setSending(true);
-    setFailed(false);
-    setArtifact(null);
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const context = makeModelContext(conversation);
-    const placeholder = { role: "assistant", content: serviceReady
-      ? `正在用 ${modelLabel} 处理“${operationDefinition.label}”，请稍候……`
-      : `正在通过本地演示引擎处理“${operationDefinition.label}”，不会调用外部模型……` };
-    const streaming = [...(conversation.messages ?? []), { role: "user", content }, placeholder];
-    setMessages(streaming);
-    try {
-      await persist(conversation.id, { messages: streaming, methodId, title: conversation.title });
-      const result = await onCreate({
-        jobType: operationDefinition.jobType,
-        prompt: content,
-        modelConfigId: serviceReady && modelSupportsOperation ? model?.id : undefined,
-        parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: methodId, modelId: model?.id, searchEnabled, reference, pageCount }),
-        context,
-      }, controller.signal);
-      const finalMessages = [...streaming.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), artifact: result?.artifact ?? null, sources: result?.sources ?? null }];
-      setMessages(finalMessages);
-      setArtifact(result?.artifact ?? null);
-      setFailed(!result);
-      if (!result) setPrompt(content);
-      await persist(conversation.id, { messages: finalMessages, methodId, pageCount });
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        await settlePaused(conversation.id, streaming, content);
-        return;
-      }
-      setFailed(true);
-      setPrompt(content);
-      const failedMessages = [...streaming.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true }];
-      setMessages(failedMessages);
-      await persist(conversation.id, { messages: failedMessages }).catch(() => {});
-      console.error("[creation] 生成失败", error);
-      onNotice?.(error.message || "创作请求失败", "error");
-    } finally {
-      if (abortRef.current === controller) abortRef.current = null;
-      setSending(false);
-    }
+    await generate({
+      conversation,
+      baseMessages: conversation.messages ?? [],
+      content,
+      operationDefinition,
+      methodId,
+      searchEnabled,
+      reference,
+      pageCount,
+      modelId: serviceReady && modelSupportsOperation ? model?.id : undefined,
+      modelName: modelLabel,
+    });
   };
 
   // 暂停输出：中断本轮在途请求。已渲染的内容与输入都保留，可直接重新发送继续。
@@ -280,12 +288,40 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     }
   }, [onNotice]);
 
-  const retryReply = useCallback((index) => {
+  /**
+   * 「重新输出」：**清除这一轮的回复**，然后用同一个问题直接重新生成，
+   * 而不是把问题回填输入框、等用户再点一次发送。
+   * 历史截断到该提问之前，所以这一轮之后的对话也一并作废——分支重置，语义干净。
+   */
+  const retryReply = useCallback(async (index) => {
+    if (sending || !ready) return;
     const previousUser = [...messages.slice(0, index)].reverse().find((message) => message.role === "user");
     if (!previousUser?.content) return;
-    setPrompt(previousUser.content);
-    onNotice?.("已将本轮问题带回输入框，可修改后重新发送", "success");
-  }, [messages, onNotice]);
+    const conversation = conversationsRef.current.find((item) => item.id === activeId);
+    if (!conversation) return;
+    const operationDefinition = resolveCreationOperation(previousUser.content, methodId);
+    const modelSupportsOperation = supportsCreationMethod(model, operationDefinition.jobType);
+    const operationNeedsSelectedModel = !["image", "pattern"].includes(operationDefinition.jobType);
+    if (serviceReady && operationNeedsSelectedModel && !modelSupportsOperation) { onNotice?.(`请选择支持${operationDefinition.label}的模型`, "error"); return; }
+    if (quotaBlocked) {
+      onNotice?.("当前生成额度或并发额度已达到上限，请稍后重试或联系管理员调整额度。", "error");
+      return;
+    }
+    onNotice?.("已清除上一轮输出，正在重新生成…", "success");
+    await generate({
+      conversation,
+      // 只保留这条提问之前的历史：上一轮的回复（连同它之后的对话）就地清除。
+      baseMessages: messages.slice(0, Math.max(0, index - 1)),
+      content: previousUser.content,
+      operationDefinition,
+      methodId,
+      searchEnabled,
+      reference,
+      pageCount,
+      modelId: serviceReady && modelSupportsOperation ? model?.id : undefined,
+      modelName: modelLabel,
+    });
+  }, [activeId, generate, messages, methodId, model, modelLabel, onNotice, pageCount, quotaBlocked, ready, reference, searchEnabled, sending, serviceReady]);
 
   const editPrompt = useCallback((content) => {
     setPrompt(content);
@@ -360,7 +396,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
                 const isLast = index === messages.length - 1;
                 return message.role === "user"
                   ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p><button type="button" className="ai-message__action" onClick={() => editPrompt(message.content)}><PencilSimple size={14} />编辑</button></div>
-                  : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span><AiMarkdown>{message.content}</AiMarkdown>{(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}{(message.artifact || (isLast && artifact)) && <ArtifactBlock artifact={message.artifact || artifact} />}<div className="ai-message__actions"><button type="button" onClick={() => copyReply(message.content)} title="复制回复"><Copy size={14} />复制</button><button type="button" onClick={() => retryReply(index)} title="将对应问题带回输入框"><ArrowClockwise size={14} />重新输出</button></div></div></div>;
+                  : <div className={`ai-message ai-message--assistant${message.streaming ? " ai-message--streaming" : ""}`} key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span><AiMarkdown>{message.content || message.placeholder}</AiMarkdown>{(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}{(message.artifact || (isLast && artifact)) && <ArtifactBlock artifact={message.artifact || artifact} />}<div className="ai-message__actions"><button type="button" onClick={() => copyReply(message.content)} title="复制回复"><Copy size={14} />复制</button><button type="button" onClick={() => retryReply(index)} title="清除这一轮的回复并重新生成"><ArrowClockwise size={14} />重新输出</button></div></div></div>;
               }) : <div className="ai-thread__empty creation-canvas__empty">
                 <span><Sparkle size={25} weight="fill" /></span>
                 <strong>今天，想弄明白什么？</strong>

@@ -27,6 +27,52 @@ export class AgentController {
     return this.harness.execute(await this.auth.getActor(request), runId, input);
   }
 
+  /**
+   * 流式执行：以 SSE 把正文增量实时推给前端，结束时把整条 run 放进 done 事件
+   * （结构与 /execute 的返回值一致，所以前端的映射逻辑不用区分流式与否）。
+   *
+   * 与 /execute 共用同一套持久化与审计路径——流式只改变"什么时候把正文交出去"，
+   * 落库仍然是流完拿全文写一条，DB 结构零变更。老的 /execute 一字不动。
+   */
+  @Post(":runId/execute-stream")
+  async executeStream(@Req() request: FastifyRequest, @Res() reply: FastifyReply, @Param("runId") runId: string, @Body() body: unknown) {
+    const input = parseInput(executeAgentRunSchema, body) as ExecuteAgentRunInput;
+    const actor = await this.auth.getActor(request);
+
+    // 直接接管原始响应：Nest 的 JSON 序列化会把整个响应体缓冲起来，SSE 必须逐帧写出。
+    const raw = reply.raw;
+    raw.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      // 反代会缓冲响应，不显式关掉的话增量会被攒成一大块，流式就白做了。
+      "X-Accel-Buffering": "no",
+    });
+
+    let settled = false;
+    const send = (event: string, data: unknown) => {
+      if (settled || raw.writableEnded) return;
+      raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const controller = new AbortController();
+    // 客户端断开（用户点「暂停输出」或关页面）→ 立即中断上游模型调用，不再继续烧 token。
+    request.raw.on("close", () => { if (!settled) controller.abort(); });
+
+    try {
+      const run = await this.harness.execute(actor, runId, input, {
+        signal: controller.signal,
+        onDelta: (text) => send("delta", { text }),
+      });
+      send("done", { run });
+    } catch (error) {
+      send("error", { message: error instanceof Error ? error.message : "生成失败" });
+    } finally {
+      settled = true;
+      raw.end();
+    }
+  }
+
   @Get(":runId")
   async get(@Req() request: FastifyRequest, @Param("runId") runId: string) {
     return this.agents.getRun(await this.auth.getActor(request), runId);

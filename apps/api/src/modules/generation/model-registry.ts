@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import { ModelScopeImageAdapter } from "./modelscope-image.adapter";
 import { ModelHttpError, UNUSABLE_KEY_HTTP_STATUSES, describeProviderApiKeyEnvs, providerApiKeyEnvNames, resolveProviderApiKeys } from "./provider-api-keys";
-import type { ModelAdapter, ModelCapability, ModelInvocationOptions, ModelMessage, ModelProviderConfig, ModelRequest, ModelResult } from "./model-adapter";
+import type { ModelAdapter, ModelCapability, ModelInvocationOptions, ModelMessage, ModelProviderConfig, ModelRequest, ModelResult, ModelStreamDelta } from "./model-adapter";
 
 const capabilitySchema = z.enum(["chat", "image", "video", "webpage", "pattern", "document", "knowledge_graph"]);
 const providerSchema = z.object({
@@ -73,6 +73,39 @@ function toOpenAiParameters(options: ModelInvocationOptions = {}) {
   };
 }
 
+type OpenAiToolCall = { id?: string; type?: string; function?: { name?: string; arguments?: string } };
+type OpenAiUsage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+type OpenAiStreamChunk = {
+  choices?: Array<{
+    finish_reason?: string;
+    delta?: {
+      content?: string | null;
+      tool_calls?: Array<{ index?: number; id?: string; type?: string; function?: { name?: string; arguments?: string } }>;
+    };
+  }>;
+  usage?: OpenAiUsage;
+};
+
+/** 非流式路径的 tool call 校验：宁可报错也不要带着半截调用进模型循环。 */
+function parseToolCalls(calls: readonly OpenAiToolCall[]) {
+  return calls.map((call) => {
+    if (call.type !== "function" || !call.id || !call.function?.name || call.function.arguments === undefined) {
+      throw new Error("模型接口返回了无效的 tool call");
+    }
+    return { id: call.id, type: "function" as const, function: { name: call.function.name, arguments: call.function.arguments } };
+  });
+}
+
+function usageMetadata(usage: OpenAiUsage | undefined, providerId: string, model: string) {
+  return {
+    providerId,
+    model,
+    inputTokens: Number(usage?.prompt_tokens ?? 0),
+    outputTokens: Number(usage?.completion_tokens ?? 0),
+    totalTokens: Number(usage?.total_tokens ?? 0),
+  };
+}
+
 class OpenAICompatibleAdapter implements ModelAdapter {
   constructor(private readonly config: ModelProviderConfig) {}
 
@@ -80,55 +113,91 @@ class OpenAICompatibleAdapter implements ModelAdapter {
   get capabilities() { return this.config.capabilities; }
 
   async execute(request: ModelRequest): Promise<ModelResult> {
+    this.assertSupports(request);
+    return this.withApiKey((apiKey) => this.invoke(request, apiKey));
+  }
+
+  async executeStream(request: ModelRequest, onDelta: (delta: ModelStreamDelta) => void): Promise<ModelResult> {
+    this.assertSupports(request);
+    return this.withApiKey((apiKey) => this.invokeStream(request, apiKey, onDelta));
+  }
+
+  private assertSupports(request: ModelRequest) {
     if (!this.config.capabilities.includes(request.jobType)) {
       throw new Error(`模型 ${this.config.id} 不支持任务类型 ${request.jobType}`);
     }
+  }
 
+  /**
+   * 按优先级依次尝试主 key 与备用 key。只有"这把 key 本身不可用"
+   * （401 失效 / 402 欠费 / 403 无权限，由 ModelHttpError 标记）才换下一把；
+   * 5xx、超时、内容为空等换 key 也救不回来，原样抛出，免得一次调用被放大成两次。
+   */
+  private async withApiKey<T>(attempt: (apiKey: string) => Promise<T>): Promise<T> {
     const apiKeys = resolveProviderApiKeys(this.config);
     if (apiKeys.length === 0) {
       throw new Error(`模型 ${this.config.id} 未配置环境变量 ${describeProviderApiKeyEnvs(this.config)}`);
     }
-
     let lastError: unknown;
     for (const [index, apiKey] of apiKeys.entries()) {
       try {
-        return await this.invoke(request, apiKey);
+        return await attempt(apiKey);
       } catch (error) {
         lastError = error;
         const status = error instanceof ModelHttpError ? error.status : undefined;
         const hasBackupKey = index < apiKeys.length - 1;
-        // 只有"这把 key 本身不可用"（失效/欠费/无权限）才切备用 key。
-        // 其余错误（5xx、超时、内容为空）换 key 也救不回来，原样抛出，
-        // 免得一次调用被放大成两次。
         if (!hasBackupKey || status === undefined || !UNUSABLE_KEY_HTTP_STATUSES.has(status)) throw error;
       }
     }
     throw lastError;
   }
 
-  private async invoke(request: ModelRequest, apiKey: string): Promise<ModelResult> {
+  /** 把适配器自身的超时与外部中断信号（用户暂停输出）合并成一个信号。 */
+  private requestSignal(external?: AbortSignal) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
+    const timer = setTimeout(() => controller.abort(new Error("模型调用超时")), this.config.timeoutMs);
+    const forward = () => controller.abort(external?.reason);
+    if (external) {
+      if (external.aborted) forward();
+      else external.addEventListener("abort", forward, { once: true });
+    }
+    return {
+      signal: controller.signal,
+      dispose: () => {
+        clearTimeout(timer);
+        external?.removeEventListener("abort", forward);
+      },
+    };
+  }
+
+  private endpoint() {
+    const baseUrl = this.config.baseUrl.endsWith("/") ? this.config.baseUrl : `${this.config.baseUrl}/`;
+    return new URL("chat/completions", baseUrl);
+  }
+
+  private requestBody(request: ModelRequest, stream: boolean) {
+    return JSON.stringify({
+      model: this.config.model,
+      messages: toOpenAiMessages(request),
+      ...toOpenAiParameters(request.parameters),
+      // include_usage：流式下 usage 只在最后一帧给出，不带这个参数就拿不到 token 计数。
+      ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
+    });
+  }
+
+  private async invoke(request: ModelRequest, apiKey: string): Promise<ModelResult> {
+    const { signal, dispose } = this.requestSignal(request.signal);
     try {
-      const baseUrl = this.config.baseUrl.endsWith("/") ? this.config.baseUrl : `${this.config.baseUrl}/`;
-      const response = await fetch(new URL("chat/completions", baseUrl), {
+      const response = await fetch(this.endpoint(), {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: this.config.model, messages: toOpenAiMessages(request), ...toOpenAiParameters(request.parameters) }),
-        signal: controller.signal,
+        body: this.requestBody(request, false),
+        signal,
       });
       if (!response.ok) throw new ModelHttpError(response.status, `模型接口返回 HTTP ${response.status}`);
-      const body = await response.json() as {
-        choices?: Array<{ finish_reason?: string; message?: { content?: string | null; tool_calls?: Array<{ id?: string; type?: string; function?: { name?: string; arguments?: string } }> } }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
-      };
+      const body = await response.json() as { choices?: Array<{ finish_reason?: string; message?: { content?: string | null; tool_calls?: OpenAiToolCall[] } }>; usage?: OpenAiUsage };
       const choice = body.choices?.[0];
-      const toolCalls = (choice?.message?.tool_calls ?? []).map((call) => {
-        if (call.type !== "function" || !call.id || !call.function?.name || call.function.arguments === undefined) {
-          throw new Error("模型接口返回了无效的 tool call");
-        }
-        return { id: call.id, type: "function" as const, function: { name: call.function.name, arguments: call.function.arguments } };
-      });
+      const toolCalls = parseToolCalls(choice?.message?.tool_calls ?? []);
       const content = choice?.message?.content ?? "";
       if (!content && toolCalls.length === 0) throw new Error("模型接口返回内容为空");
       return {
@@ -136,16 +205,100 @@ class OpenAICompatibleAdapter implements ModelAdapter {
         content,
         toolCalls: toolCalls.length ? toolCalls : undefined,
         finishReason: choice?.finish_reason,
-        metadata: {
-          providerId: this.id,
-          model: this.config.model,
-          inputTokens: Number(body.usage?.prompt_tokens ?? 0),
-          outputTokens: Number(body.usage?.completion_tokens ?? 0),
-          totalTokens: Number(body.usage?.total_tokens ?? 0),
-        },
+        metadata: usageMetadata(body.usage, this.id, this.config.model),
       };
     } finally {
-      clearTimeout(timer);
+      dispose();
+    }
+  }
+
+  /**
+   * 流式调用：逐块读 chat/completions 的 SSE，正文增量立刻回调给上层；
+   * tool_calls 会按 index 把分片拼回完整调用。返回的 ModelResult 与非流式
+   * 路径**完全同构**，所以上层落库/审计逻辑不需要区分是否流式。
+   */
+  private async invokeStream(request: ModelRequest, apiKey: string, onDelta: (delta: ModelStreamDelta) => void): Promise<ModelResult> {
+    const { signal, dispose } = this.requestSignal(request.signal);
+    try {
+      const response = await fetch(this.endpoint(), {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}`, accept: "text/event-stream" },
+        body: this.requestBody(request, true),
+        signal,
+      });
+      // 状态码校验发生在任何增量之前，所以这里仍可安全切换备用 key。
+      if (!response.ok) throw new ModelHttpError(response.status, `模型接口返回 HTTP ${response.status}`);
+      if (!response.body) throw new Error("模型接口未返回流式响应体");
+
+      let content = "";
+      let finishReason: string | undefined;
+      let usage: OpenAiUsage | undefined;
+      const toolCallParts = new Map<number, { id: string; name: string; args: string }>();
+
+      const consume = (chunk: OpenAiStreamChunk) => {
+        if (chunk.usage) usage = chunk.usage;
+        const choice = chunk.choices?.[0];
+        if (!choice) return;
+        if (choice.finish_reason) finishReason = choice.finish_reason;
+        const piece = choice.delta?.content ?? "";
+        if (piece) {
+          content += piece;
+          onDelta({ content: piece });
+        }
+        for (const [position, part] of (choice.delta?.tool_calls ?? []).entries()) {
+          const index = part.index ?? position;
+          const current = toolCallParts.get(index) ?? { id: "", name: "", args: "" };
+          toolCallParts.set(index, {
+            id: part.id ?? current.id,
+            name: part.function?.name ?? current.name,
+            args: current.args + (part.function?.arguments ?? ""),
+          });
+        }
+      };
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let boundary = buffer.indexOf("\n\n");
+        while (boundary !== -1) {
+          const frame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          for (const line of frame.split("\n")) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+            const payload = trimmed.slice(5).trim();
+            if (!payload || payload === "[DONE]") continue;
+            try {
+              consume(JSON.parse(payload) as OpenAiStreamChunk);
+            } catch {
+              // 忽略解析不了的心跳/噪声帧：不能因为一行杂音中断整轮生成。
+            }
+          }
+          boundary = buffer.indexOf("\n\n");
+        }
+      }
+
+      const toolCalls = [...toolCallParts.entries()]
+        .sort(([left], [right]) => left - right)
+        .map(([index, part]) => ({
+          id: part.id || `tool-call-${index}`,
+          type: "function" as const,
+          function: { name: part.name, arguments: part.args },
+        }));
+      if (!content && toolCalls.length === 0) throw new Error("模型接口返回内容为空");
+      return {
+        kind: "text",
+        content,
+        toolCalls: toolCalls.length ? toolCalls : undefined,
+        finishReason,
+        metadata: usageMetadata(usage, this.id, this.config.model),
+      };
+    } finally {
+      dispose();
     }
   }
 }

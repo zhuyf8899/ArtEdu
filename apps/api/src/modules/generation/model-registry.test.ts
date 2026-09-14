@@ -70,6 +70,21 @@ function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
+/** 造一个 SSE 响应：把给定分片一次性喂进 body，模拟 chat/completions 的流式返回。 */
+function sseResponse(chunks: string[]) {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const encoder = new TextEncoder();
+      for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+      controller.close();
+    },
+  });
+  return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
+}
+
+/** 用 JSON.stringify 拼 SSE 帧，避免手写转义出错。 */
+const frame = (payload: unknown) => `data: ${JSON.stringify(payload)}\n\n`;
+
 /** 起一个临时环境：设好 provider 与两把 key，并记录每次调用实际使用的 key。 */
 async function withKeyChain(
   keys: { primary?: string; backup?: string },
@@ -151,5 +166,67 @@ test("服务端故障（500）不误切备用 key，只调用一次", async () =
   await withKeyChain({ primary: "primary-key", backup: "backup-key" }, () => jsonResponse({ error: "boom" }, 500), async (used) => {
     await assert.rejects(runChat(), /HTTP 500/);
     assert.deepEqual(used, ["primary-key"]);
+  });
+});
+
+// ── 流式（executeStream）────────────────────────────────────────────────
+const streamChat = (onDelta: (delta: { content: string }) => void) =>
+  new ModelRegistry().getForJob({ jobType: "chat" }).executeStream!({ jobType: "chat", prompt: "ping" }, onDelta);
+
+test("流式：正文增量实时回调，最终结果与非流式同构", async () => {
+  const chunks = [
+    frame({ choices: [{ delta: { content: "你" } }] }),
+    frame({ choices: [{ delta: { content: "好" } }] }),
+    frame({ choices: [{ delta: {}, finish_reason: "stop" }], usage: { prompt_tokens: 3, completion_tokens: 2, total_tokens: 5 } }),
+    "data: [DONE]\n\n",
+  ];
+  await withKeyChain({ primary: "primary-key" }, () => sseResponse(chunks), async (used) => {
+    const deltas: string[] = [];
+    const result = await streamChat((delta) => deltas.push(delta.content));
+    assert.deepEqual(deltas, ["你", "好"]);
+    assert.equal(result.content, "你好");
+    assert.equal(result.finishReason, "stop");
+    assert.equal(result.metadata?.totalTokens, 5);
+    assert.deepEqual(used, ["primary-key"]);
+  });
+});
+
+test("流式：tool_calls 分片按 index 拼回完整调用", async () => {
+  const chunks = [
+    frame({ choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name: "search_web", arguments: '{"qu' } }] } }] }),
+    frame({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: 'ery":"梵高"}' } }] } }] }),
+    "data: [DONE]\n\n",
+  ];
+  await withKeyChain({ primary: "primary-key" }, () => sseResponse(chunks), async () => {
+    const result = await streamChat(() => {});
+    assert.equal(result.toolCalls?.length, 1);
+    assert.equal(result.toolCalls?.[0]?.id, "call_1");
+    assert.equal(result.toolCalls?.[0]?.function.name, "search_web");
+    assert.equal(result.toolCalls?.[0]?.function.arguments, '{"query":"梵高"}');
+  });
+});
+
+test("流式：主 key 建连就被拒（402）仍能切备用 key——校验发生在任何增量之前", async () => {
+  await withKeyChain({ primary: "primary-key", backup: "backup-key" },
+    (call) => (call === 1 ? jsonResponse({ error: { message: "Insufficient Balance" } }, 402) : sseResponse([frame({ choices: [{ delta: { content: "好" } }] })])),
+    async (used) => {
+      const deltas: string[] = [];
+      const result = await streamChat((delta) => deltas.push(delta.content));
+      assert.equal(result.content, "好");
+      assert.deepEqual(deltas, ["好"]);
+      assert.deepEqual(used, ["primary-key", "backup-key"]);
+    });
+});
+
+test("流式：噪声帧（非 JSON / 心跳）不中断整轮生成", async () => {
+  const chunks = [
+    ": keep-alive\n\n",
+    "data: not-json\n\n",
+    frame({ choices: [{ delta: { content: "好" } }] }),
+    "data: [DONE]\n\n",
+  ];
+  await withKeyChain({ primary: "primary-key" }, () => sseResponse(chunks), async () => {
+    const result = await streamChat(() => {});
+    assert.equal(result.content, "好");
   });
 });
