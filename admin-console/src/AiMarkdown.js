@@ -17,7 +17,7 @@ const components = {
   h2: ({ children }) => h("h3", null, children),
   h3: ({ children }) => h("h4", null, children),
   a: ({ href, children }) => href
-    ? h("a", { href, target: href.startsWith("#") ? undefined : "_blank", rel: "noopener noreferrer" }, children)
+    ? h("a", { href, target: href.startsWith("#") || href.startsWith("/") ? undefined : "_blank", rel: "noopener noreferrer" }, children)
     : h("span", null, children),
   // Model-supplied images are links, so rendering a reply makes no remote image requests.
   img: ({ src, alt }) => src

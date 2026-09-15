@@ -26,12 +26,14 @@ test("建议模式不强制执行操作，只有显式产物意图才切换通�
   assert.equal(resolveCreationOperation("生成一份 8 页 PPT 课堂汇报", "chat").id, "slides");
 });
 
-test("创作页绑定续写表单、键盘发送、历史文件入口与消息操作", async () => {
+test("创作页绑定续写表单、键盘发送、历史文件留存与消息操作", async () => {
   const source = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
   assert.ok(source.includes('<form className="creation-canvas__composer" onSubmit={send}>'));
   assert.ok(source.includes("onKeyDown={handlePromptKeyDown}"));
   assert.ok(source.includes("event.ctrlKey || event.shiftKey || event.altKey || event.metaKey"));
-  assert.ok(source.includes("artifact: result?.artifact ?? null"));
+  assert.ok(source.includes("downloadUrl: uploaded.downloadUrl"), "上传引用必须把私有文件地址写入本地会话");
+  assert.ok(source.includes("creation-canvas__history-menu-toggle"), "每个会话应有独立的更多操作入口");
+  assert.ok(!source.includes("ArtifactBlock"), "对话中不应再提供下载产物按钮");
   assert.ok(source.includes("creation-canvas__history"));
   assert.ok(!source.includes('aria-label="本轮 Agent 环境"'));
   assert.ok(source.includes("copyReply"));
@@ -56,7 +58,8 @@ test("开启智能搜索时不强制 tool_choice，且不把检索当成默认�
   // 保持 auto，具体是否检索由用户需求决定，而不是强制第一轮调用。
   assert.ok(!/toolChoice:\s*\{/.test(portal), "不得向模型发送对象形态的 tool_choice");
   assert.ok(portal.includes('model: { toolChoice: "auto" }'));
-  assert.ok(portal.includes("只有用户明确要求最新信息"));
+  assert.ok(portal.includes("仅当用户明确要求实时互联网资料"));
+  assert.ok(!portal.includes("promptWithSearchPolicy"), "系统策略不得污染用户原始提示词");
   assert.ok(!portal.includes("首轮必须调用 search_web"));
 });
 

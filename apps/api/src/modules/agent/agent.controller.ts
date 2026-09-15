@@ -1,14 +1,22 @@
-import { Body, Controller, Get, Param, Post, Req, Res } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
 import { createAgentRunSchema, executeAgentRunSchema, type CreateAgentRunInput, type ExecuteAgentRunInput } from "./agent.contracts";
 import { AgentHarnessService } from "./agent-harness.service";
 import { AgentService } from "./agent.service";
+import { AgentWorkspaceService } from "./agent-workspace.service";
 
 @Controller("agent-runs")
 export class AgentController {
-  constructor(private readonly agents: AgentService, private readonly harness: AgentHarnessService, private readonly auth: AuthService) {}
+  constructor(private readonly agents: AgentService, private readonly harness: AgentHarnessService, private readonly auth: AuthService, private readonly workspace: AgentWorkspaceService) {}
+
+  @Get("workspace-file")
+  async openWorkspaceFile(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Query("path") filePath: string) {
+    const asset = await this.workspace.open(await this.auth.getActor(request), filePath);
+    reply.header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff");
+    return asset.stream;
+  }
 
   @Post()
   async create(@Req() request: FastifyRequest, @Body() body: CreateAgentRunInput) {

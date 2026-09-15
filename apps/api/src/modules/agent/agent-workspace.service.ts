@@ -1,0 +1,90 @@
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { createReadStream } from "node:fs";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { getEnvironment } from "../../common/environment";
+import type { Actor } from "../auth/auth.service";
+
+const MAX_FILE_BYTES = 2 * 1024 * 1024;
+const MAX_LIST_ITEMS = 200;
+
+/**
+ * 每位用户拥有独立 Agent 工作区。路径永远相对该目录解析，因而 Agent 能管理
+ * 自己的文件，却无法借由 ../ 或符号路径触及服务程序、其他用户或环境变量。
+ */
+@Injectable()
+export class AgentWorkspaceService {
+  private root(actor: Actor) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id); }
+
+  async list(actor: Actor, directory = ".") {
+    const relative = this.relative(directory);
+    const target = this.resolve(actor, relative);
+    await mkdir(target, { recursive: true, mode: 0o700 });
+    const entries = await readdir(target, { withFileTypes: true });
+    return {
+      directory: relative || ".",
+      items: (await Promise.all(entries.slice(0, MAX_LIST_ITEMS).map(async (entry) => {
+        const info = await stat(path.join(target, entry.name));
+        return { name: entry.name, path: relative ? `${relative}/${entry.name}` : entry.name, kind: entry.isDirectory() ? "directory" : "file", sizeBytes: info.size, updatedAt: info.mtime.toISOString() };
+      }))).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name)),
+    };
+  }
+
+  async changeDirectory(actor: Actor, directory: string) {
+    const relative = this.relative(directory);
+    const target = this.resolve(actor, relative);
+    const info = await stat(target).catch(() => null);
+    if (!info?.isDirectory()) throw new NotFoundException("工作区目录不存在");
+    return { directory: relative || ".", message: "工作目录已切换；后续工具请以该目录作为 directory 或 path 前缀。" };
+  }
+
+  async read(actor: Actor, filePath: string) {
+    const target = this.resolve(actor, this.relative(filePath));
+    const info = await stat(target).catch(() => null);
+    if (!info?.isFile()) throw new NotFoundException("工作区文件不存在");
+    if (info.size > MAX_FILE_BYTES) throw new ForbiddenException("工作区文件超过 2 MB，不能直接读取");
+    return { path: this.relative(filePath), content: (await readFile(target, "utf8")).slice(0, 120000), sizeBytes: info.size };
+  }
+
+  async write(actor: Actor, filePath: string, content: string) {
+    const relative = this.relative(filePath);
+    if (!relative) throw new ForbiddenException("不能写入工作区根目录");
+    const target = this.resolve(actor, relative);
+    if (Buffer.byteLength(content, "utf8") > MAX_FILE_BYTES) throw new ForbiddenException("工作区单个文件不能超过 2 MB");
+    await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+    await writeFile(target, content, { encoding: "utf8", mode: 0o600 });
+    return { path: relative, sizeBytes: Buffer.byteLength(content, "utf8"), openUrl: this.openUrl(relative) };
+  }
+
+  async open(actor: Actor, filePath: string) {
+    const relative = this.relative(filePath);
+    const target = this.resolve(actor, relative);
+    const info = await stat(target).catch(() => null);
+    if (!info?.isFile()) throw new NotFoundException("工作区文件不存在");
+    return { path: relative, stream: createReadStream(target), contentType: contentType(relative), fileName: path.basename(relative) };
+  }
+
+  openUrl(filePath: string) { return `/api/agent-runs/workspace-file?path=${encodeURIComponent(filePath)}`; }
+
+  private relative(value: string) {
+    const normalized = String(value ?? ".").replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/$/, "");
+    if (normalized === "." || !normalized) return "";
+    if (normalized.split("/").some((part) => !part || part === "." || part === "..")) throw new ForbiddenException("工作区路径无效");
+    return normalized;
+  }
+
+  private resolve(actor: Actor, relative: string) {
+    const root = this.root(actor);
+    const candidate = path.resolve(root, ...relative.split("/"));
+    if (candidate !== root && !candidate.startsWith(`${root}${path.sep}`)) throw new ForbiddenException("工作区路径越界");
+    return candidate;
+  }
+}
+
+function contentType(filePath: string) {
+  if (/\.html?$/i.test(filePath)) return "text/html; charset=utf-8";
+  if (/\.css$/i.test(filePath)) return "text/css; charset=utf-8";
+  if (/\.js$/i.test(filePath)) return "text/javascript; charset=utf-8";
+  if (/\.json$/i.test(filePath)) return "application/json; charset=utf-8";
+  return "text/plain; charset=utf-8";
+}

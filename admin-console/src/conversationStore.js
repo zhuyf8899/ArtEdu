@@ -21,7 +21,7 @@ export async function getConversation(id) {
 }
 
 export function createConversation(userId, methodId = "ui", title = "新创作对话") {
-  return { id: randomId(), userId, methodId, title, messages: [], memory: "", pinned: [], pending: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  return { id: randomId(), userId, methodId, title, messages: [], memory: "", pinned: [], reference: null, attachments: [], pending: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 
 export async function saveConversation(conversation) {
@@ -42,7 +42,7 @@ export function makeModelContext(conversation) {
   return [...memory, ...conversation.messages.filter((message) => !message.failed && message.content?.trim()).map(({ role, content }) => ({ role, content: content.slice(0, 20000) }))].slice(-30);
 }
 
-export function estimateConversationBytes(conversation) { return bytes(conversation.messages) + bytes(conversation.memory ?? "") + bytes(conversation.pinned ?? []); }
+export function estimateConversationBytes(conversation) { return bytes(conversation.messages) + bytes(conversation.memory ?? "") + bytes(conversation.pinned ?? []) + bytes(conversation.reference ?? null) + bytes(conversation.attachments ?? []); }
 
 function compactConversation(conversation, otherConversations) {
   const totalBefore = estimateConversationBytes(conversation) + otherConversations.reduce((sum, item) => sum + estimateConversationBytes(item), 0);

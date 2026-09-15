@@ -29,7 +29,7 @@ export function parseDocumentContent(raw: string, pageCount?: number): DocumentC
     // 部分 OpenAI-compatible 模型即使被要求只输出 JSON，仍会包一层 ```json 围栏。
     // 围栏不改变内容结构，先安全剥离；其余前后说明文字仍会被 JSON.parse 拒绝，避免
     // 从任意自然语言里猜测对象而把错误文档落盘。
-    const parsed = documentContentSchema.parse(JSON.parse(stripJsonFence(raw)));
+    const parsed = documentContentSchema.parse(JSON.parse(extractJsonObject(stripJsonFence(raw))));
     if (pageCount !== undefined && parsed.sections.length + 1 !== pageCount) throw new Error("slide count");
     return parsed;
   } catch {
@@ -41,6 +41,34 @@ function stripJsonFence(raw: string) {
   const value = raw.trim();
   const fenced = value.match(/^```(?:json)?\s*\r?\n([\s\S]*?)\r?\n```$/i);
   return fenced ? fenced[1].trim() : value;
+}
+
+/**
+ * OpenAI-compatible 模型偶尔会在 JSON 前后加一句说明。只提取首个完整对象，
+ * 并按 JSON 字符串转义规则计数；不是“猜字段”或宽松接受残缺 JSON。
+ */
+function extractJsonObject(raw: string) {
+  const start = raw.indexOf("{");
+  if (start < 0) return raw;
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let index = start; index < raw.length; index += 1) {
+    const char = raw[index];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') quoted = false;
+      continue;
+    }
+    if (char === '"') quoted = true;
+    else if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return raw.slice(start, index + 1);
+    }
+  }
+  return raw;
 }
 
 export function documentPrompt(format: OfficeFormat, pageCount?: number) {

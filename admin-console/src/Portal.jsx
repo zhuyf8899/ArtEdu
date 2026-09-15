@@ -115,14 +115,14 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     setPortalLoading(true);
     setPortalError("");
     try {
-      const payload = await getPortalHome();
+      const [payload, health] = await Promise.all([getPortalHome(), getApiHealth()]);
       setData({
         courses: payload.courses ?? [],
         workflows: payload.workflows ?? [],
         works: payload.works ?? [],
         creation: payload.creation ?? emptyPortalData.creation,
       });
-      setIsLive(true);
+      setIsLive(Boolean(health));
     } catch (error) {
       setData(emptyPortalData);
       setIsLive(false);
@@ -143,7 +143,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     try {
       if (portalLoading || !isLive) throw new Error("平台服务尚未就绪，请等待加载完成后重试");
       const searchEnabled = parameters.searchEnabled === true;
-      const promptWithSearchPolicy = `${prompt}\n\n${searchEnabled ? "你可以使用搜索能力。平台内课程、工作流或案例信息使用 search_platform；需要公开互联网的实时信息、官网链接、近期动态或外部资料时使用 search_web。必须基于工具返回的来源回答，不得编造搜索结果。" : "搜索能力已经关闭。不要调用搜索工具，也不要声称已经搜索；请仅依据当前对话与输入完成任务。"}`;
+      // 能力策略属于 system prompt，绝不拼进用户原话；否则模型会反复复述“平台提示”。
+      const cleanPrompt = prompt;
       // 任务分流必须是白名单：普通问答只能走文本 Agent，绝不允许因为未知类型
       // 或缺失映射而默认回退到 ui_design / 图片生成通道。
       const agentScenarios = { chat: "chat", webpage: "webpage_generation" };
@@ -153,15 +154,15 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
       if (data.creation.enabled && agentScenario) {
         const scenario = agentScenario;
-        const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters: { ...parameters, source: "portal-home" } }, { signal });
+        const run = await createAgentRun({ scenario, prompt: cleanPrompt, parameters: { ...parameters, source: "portal-home" } }, { signal });
         const completed = await executeAgentRunStream(run.id, {
           mode: "server",
           providerId: modelConfigId,
           context,
           searchEnabled,
-          systemPrompt: searchEnabled
-            ? "你是 ArtEdu 创作助教。先自行完成能基于用户输入和已有上下文完成的分析。只有用户明确要求最新信息、官方链接、外部资料、事实核验，或问题必须依赖实时互联网信息时，才调用 search_web。调用后只能依据工具返回的来源撰写相关事实，并在结尾列出实际使用的来源链接；没有调用就不要声称已搜索。"
-            : "你是 ArtEdu 创作助教。搜索能力已经关闭。优先依据用户输入和已有上下文独立完成任务；只有确实需要平台内具体课程、案例或工作流详情时才调用对应非搜索工具。不得声称已经搜索互联网或平台。",
+          systemPrompt: `${searchEnabled
+            ? "仅当用户明确要求实时互联网资料、官网链接或事实核验时调用 search_web；调用后只能依据实际来源回答并列出链接。"
+            : "联网搜索关闭：不要调用或提及 search_web。"}\n平台课程、案例与工作流的发现和读取工具始终可用，但只有用户明确询问平台内容、要求列出内容或打开站内内容时才调用。未提供 ID 时先用 list_published_content 或 search_platform。对“打开”请求返回站内相对路径 Markdown 链接，不要谈浏览器、域名、路由字段或能力限制。直接完成用户的任务，不要复述平台规则、工具名或能力说明。成果草稿可直接保存；启动工作流才需要用户明确确认。`,
           // 不要用 tool_choice 强制指定函数：当前文本模型（deepseek-flash）运行在
           // 思考模式下，DeepSeek 会直接拒绝并返回
           // 400 "Thinking mode does not support this tool_choice"。
@@ -171,18 +172,16 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         }, { signal, onDelta });
         const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
         showToast(searchEnabled ? "已完成带搜索能力的 Agent 创作" : "已完成 Agent 创作", "success");
-        const latestArtifact = [...(completed.artifacts ?? [])].reverse().find((item) => item.downloadUrl);
         return {
           id: run.id,
           content: message?.content ?? "未生成创作建议。",
           sources: searchSourcesFromRun(completed.toolCalls),
-          artifact: latestArtifact ? { fileName: `${latestArtifact.type ?? "agent-artifact"}.json`, mimeType: "application/json", downloadUrl: latestArtifact.downloadUrl } : null,
         };
       }
       if (!data.creation.enabled) {
         const scenario = offlineScenarios[jobType];
         if (!scenario) throw new Error("不支持的创作类型，已阻止执行");
-        const run = await createAgentRun({ scenario, prompt: promptWithSearchPolicy, parameters }, { signal });
+        const run = await createAgentRun({ scenario, prompt: cleanPrompt, parameters }, { signal });
         const completed = await executeAgentRun(run.id, { mode: data.creation.enabled ? "server" : "mock", providerId: modelConfigId, context }, { signal });
         const lastMessage = [...(completed.messages ?? [])].reverse().find((message) => message.role === "agent");
         showToast("本地演示已完成：创作说明已写入审计记录。", "success");
@@ -191,11 +190,11 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       if (!artifactJobTypes.has(jobType)) throw new Error("不支持的创作类型，已阻止执行");
       // 只挑真正声明支持该能力的模型；图像/图案留给服务端的内部图像通道（不带 modelConfigId）。
       const selectedModelId = modelConfigId ?? data.creation.models.find((model) => model.capabilities?.includes(jobType))?.id;
-      const result = await runGenerationJob({ jobType, prompt: promptWithSearchPolicy, context, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } }, { signal });
+      const result = await runGenerationJob({ jobType, prompt: cleanPrompt, context, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } }, { signal });
       showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
       void loadPortalData();
       // 产物类结果（kind=asset）的 content 是存储键，不能当正文显示。
-      return { ...result.job, content: resultContent(result), model: result.output.metadata?.model, artifact: result.artifact };
+        return { ...result.job, content: resultContent(result), model: result.output.metadata?.model, localFile: result.artifact ?? null };
     } catch (error) {
       // 主动暂停不是失败：不弹错误提示，交给创作页显示「已暂停」并回填输入。
       if (error?.name === "AbortError") throw error;
@@ -215,7 +214,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <nav className="portal-nav" aria-label="顶部主导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       <GlobalSearchForm value={searchQuery} onSearch={navigateSearch} />
       {canEnterAdmin(account) && <button className="portal-console-shortcut" onClick={onEnterAdmin}>管理后台 <ArrowRight size={15} weight="bold" /></button>}
-      <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "已连接 API" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
+      <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "API 已验证" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
     </header>
 
     <PortalArtRails />

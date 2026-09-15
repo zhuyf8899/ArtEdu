@@ -34,12 +34,13 @@ test("平台 Agent 工具返回已发布课程和课时事实，而不是占位�
   });
 });
 
-test("保存成果和启动工作流必须等待用户明确确认", async () => {
-  const dependencies = { actor, runId: "run-1", database: {} as DatabaseService, agents: {} as AgentService, studio: {} as StudioService };
+test("成果草稿直接保存，启动工作流仍必须等待用户明确确认", async () => {
+  const agents = { async appendArtifact() { return "artifact-1"; } } as unknown as AgentService;
+  const dependencies = { actor, runId: "run-1", database: {} as DatabaseService, agents, studio: {} as StudioService };
   const artifact = await executePlatformTool(call("create_agent_artifact", { artifactType: "brief", content: "设计说明" }), baseContext, dependencies);
   const workflow = await executePlatformTool(call("start_workflow_run", { workflowId: "workflow-1" }), baseContext, dependencies);
 
-  assert.equal(artifact.status, "confirmation_required");
+  assert.equal(artifact.status, "succeeded");
   assert.equal(workflow.status, "confirmation_required");
 });
 

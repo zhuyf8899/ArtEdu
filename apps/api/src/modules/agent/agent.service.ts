@@ -91,6 +91,15 @@ export class AgentService {
     return artifactId;
   }
 
+  async listMyArtifacts(actor: Actor, limit = 30) {
+    const result = await this.database.query(`
+      SELECT artifact.id,artifact.run_id,artifact.artifact_type,artifact.storage_key,artifact.external_url,artifact.metadata_json,artifact.created_at
+      FROM agent_artifacts artifact JOIN agent_runs run ON run.id=artifact.run_id
+      WHERE run.user_id=$1 ORDER BY artifact.created_at DESC LIMIT $2
+    `, [actor.id, limit]);
+    return { items: result.rows.map((row: Record<string, any>) => ({ id: row.id, runId: row.run_id, type: row.artifact_type, metadata: row.metadata_json, openUrl: row.storage_key ? `/api/agent-runs/${row.run_id}/artifacts/${row.id}/download` : row.external_url, createdAt: row.created_at.toISOString() })) };
+  }
+
   async readArtifact(actor: Actor, runId: string, artifactId: string) {
     const run = await this.getOwnedRun(runId);
     if (run.user_id !== actor.id && !actor.roles.includes("admin")) throw new ForbiddenException("无权读取该 Agent 产物");
