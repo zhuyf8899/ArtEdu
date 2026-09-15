@@ -28,6 +28,8 @@ export const platformToolDefinitions: readonly ModelToolDefinition[] = [
   { type: "function", function: { name: "change_workspace_directory", description: "验证并切换 Agent 工作区目录。该工具返回后续操作应使用的目录前缀。", parameters: { type: "object", properties: { directory: { type: "string" } }, required: ["directory"] } } },
   { type: "function", function: { name: "read_workspace_file", description: "读取 Agent 自己工作区中的文本文件。", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } } },
   { type: "function", function: { name: "write_workspace_file", description: "在 Agent 自己工作区创建或覆盖文本文件；适用于生成 HTML、CSS、JS、JSON、Markdown 等。返回站内本地打开链接。", parameters: { type: "object", properties: { path: { type: "string" }, content: { type: "string", maxLength: 200000 } }, required: ["path", "content"] } } },
+  { type: "function", function: { name: "create_workspace_directory", description: "在 Agent 自己工作区创建目录。创建多文件网页前，先用它建立 assets、src 等目录；不能访问服务器其他位置。", parameters: { type: "object", properties: { directory: { type: "string" } }, required: ["directory"] } } },
+  { type: "function", function: { name: "write_workspace_files", description: "一次创建一组互相引用的文本文件，适合 HTML、CSS、JS 多文件网页。每次最多 30 个文件；返回每个文件的私有打开链接。", parameters: { type: "object", properties: { files: { type: "array", minItems: 1, maxItems: 30, items: { type: "object", properties: { path: { type: "string" }, content: { type: "string", maxLength: 200000 } }, required: ["path", "content"] } } }, required: ["files"] } } },
   { type: "function", function: { name: "open_workspace_file", description: "打开 Agent 自己工作区中的文件，返回站内私有链接；HTML 会在浏览器中预览。此操作不访问服务器工作区以外的文件。", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } } },
   { type: "function", function: { name: "create_agent_artifact", description: "将本轮设计说明、网页规格、图案提示词或学习笔记保存为私有成果草稿。保存草稿无需再次向用户索取确认。", parameters: { type: "object", properties: { artifactType: { type: "string", enum: ["brief", "webpage", "pattern", "document"] }, content: { type: "string", minLength: 1 } }, required: ["artifactType", "content"] } } },
   { type: "function", function: { name: "start_workflow_run", description: "在用户明确确认后启动已发布工作流，不执行任意外部 URL。", parameters: { type: "object", properties: { workflowId: { type: "string" }, context: { type: "object" } }, required: ["workflowId"] } } },
@@ -40,6 +42,7 @@ const readUploadedFileSchema = z.object({ uploadId: z.string().trim().min(1).max
 const workspacePathSchema = z.object({ path: z.string().trim().min(1).max(500) });
 const workspaceDirectorySchema = z.object({ directory: z.string().trim().min(1).max(500) });
 const writeWorkspaceFileSchema = workspacePathSchema.extend({ content: z.string().max(2_000_000) });
+const writeWorkspaceFilesSchema = z.object({ files: z.array(writeWorkspaceFileSchema).min(1).max(30) });
 const searchCasesSchema = z.object({ keyword: z.string().trim().max(100).optional(), tag: z.string().trim().max(100).optional(), medium: z.string().trim().max(100).optional(), author: z.string().trim().max(100).optional(), limit: z.number().int().min(1).max(20).default(10) });
 const limitSchema = z.object({ limit: z.number().int().min(1).max(50).default(10) });
 const workflowRunSchema = z.object({ runId: z.string().trim().min(1).max(160) });
@@ -186,6 +189,12 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
     case "write_workspace_file":
       if (!dependencies.workspace) throw new Error("Agent 工作区不可用");
       { const input = writeWorkspaceFileSchema.parse(raw); return { status: "succeeded", ...(await dependencies.workspace.write(dependencies.actor, input.path, input.content)) }; }
+    case "create_workspace_directory":
+      if (!dependencies.workspace) throw new Error("Agent 工作区不可用");
+      return { status: "succeeded", ...(await dependencies.workspace.createDirectory(dependencies.actor, workspaceDirectorySchema.parse(raw).directory)) };
+    case "write_workspace_files":
+      if (!dependencies.workspace) throw new Error("Agent 工作区不可用");
+      return { status: "succeeded", ...(await dependencies.workspace.writeMany(dependencies.actor, writeWorkspaceFilesSchema.parse(raw).files)) };
     case "open_workspace_file":
       if (!dependencies.workspace) throw new Error("Agent 工作区不可用");
       { const input = workspacePathSchema.parse(raw); const file = await dependencies.workspace.open(dependencies.actor, input.path); return { status: "succeeded", path: input.path, openUrl: dependencies.workspace.openUrl(input.path), fileName: file.fileName }; }

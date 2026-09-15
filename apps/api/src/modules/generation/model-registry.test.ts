@@ -37,7 +37,7 @@ test("仅向首页暴露已配置密钥的模型", () => {
 
 // 与生产部署同构：文本模型 + 内部图像通道，顺序也与线上一致。
 const deployedProviders = JSON.stringify([
-  { id: "model-deepseek-v4-flash", baseUrl: "https://api.deepseek.com", model: "deepseek-flash", capabilities: ["chat", "webpage", "document"], apiKeyEnv: "DEEPSEEK_API_KEY", timeoutMs: 60000 },
+  { id: "model-deepseek-v4-flash", baseUrl: "https://api.deepseek.com", model: "deepseek-flash", capabilities: ["chat", "vision", "webpage", "document"], apiKeyEnv: "DEEPSEEK_API_KEY", timeoutMs: 60000 },
   { id: "model-modelscope-qwen-image", baseUrl: "https://api-inference.modelscope.cn", model: "Qwen/Qwen-Image", capabilities: ["image", "pattern"], apiKeyEnv: "MODELSCOPE_API", timeoutMs: 120000, protocol: "modelscope-image", internal: true },
 ]);
 
@@ -48,6 +48,7 @@ test("问答路由到文本模型，图像/图案路由到内置图像通道", (
     process.env.MODEL_PROVIDERS_JSON = deployedProviders;
     const registry = new ModelRegistry();
     assert.equal(registry.getForJob({ jobType: "chat" }).id, "model-deepseek-v4-flash");
+    assert.equal(registry.getForJob({ jobType: "chat" }).capabilities.includes("vision"), true);
     assert.equal(registry.getForJob({ jobType: "document" }).id, "model-deepseek-v4-flash");
     assert.equal(registry.getForJob({ jobType: "image" }).id, "model-modelscope-qwen-image");
     assert.equal(registry.getForJob({ jobType: "pattern" }).id, "model-modelscope-qwen-image");
@@ -61,7 +62,7 @@ test("问答路由到文本模型，图像/图案路由到内置图像通道", (
 // 场景：主 key 是学校/老师那把，备用 key 是自费的平替。
 // 期望：主 key 能用就一直用主 key；主 key 失效/欠费才自动切备用 key。
 const fallbackProviders = JSON.stringify([
-  { id: "model-with-backup", baseUrl: "https://model.example.edu/v1", model: "chat-v1", capabilities: ["chat"], apiKeyEnv: "PRIMARY_KEY", apiKeyFallbackEnv: "BACKUP_KEY", timeoutMs: 5000 },
+  { id: "model-with-backup", baseUrl: "https://model.example.edu/v1", model: "chat-v1", capabilities: ["chat", "vision"], apiKeyEnv: "PRIMARY_KEY", apiKeyFallbackEnv: "BACKUP_KEY", timeoutMs: 5000 },
 ]);
 
 const okBody = { choices: [{ finish_reason: "stop", message: { content: "pong" } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } };
@@ -126,6 +127,30 @@ test("主 key 正常时不触碰备用 key", async () => {
   await withKeyChain({ primary: "primary-key", backup: "backup-key" }, () => jsonResponse(okBody), async (used) => {
     assert.equal((await runChat()).content, "pong");
     assert.deepEqual(used, ["primary-key"]);
+  });
+});
+
+test("视觉图片编码为 OpenAI-compatible 的 user image_url 分段", async () => {
+  await withKeyChain({ primary: "primary-key" }, () => jsonResponse(okBody), async () => {
+    const savedFetch = globalThis.fetch;
+    let body: Record<string, unknown> | undefined;
+    globalThis.fetch = (async (_input: unknown, init?: { body?: string }) => {
+      body = JSON.parse(init?.body ?? "{}") as Record<string, unknown>;
+      return jsonResponse(okBody);
+    }) as typeof fetch;
+    try {
+      await new ModelRegistry().getForJob({ jobType: "chat" }).execute({
+        jobType: "chat",
+        messages: [{ role: "user", content: "识别这张图", images: [{ dataUrl: "data:image/png;base64,aGVsbG8=", detail: "high" }] }],
+      });
+      const message = (body?.messages as Array<{ content: unknown }>)[0];
+      assert.deepEqual(message.content, [
+        { type: "text", text: "识别这张图" },
+        { type: "image_url", image_url: { url: "data:image/png;base64,aGVsbG8=", detail: "high" } },
+      ]);
+    } finally {
+      globalThis.fetch = savedFetch;
+    }
   });
 });
 

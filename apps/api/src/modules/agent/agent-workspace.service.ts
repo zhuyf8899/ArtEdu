@@ -7,6 +7,8 @@ import type { Actor } from "../auth/auth.service";
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_LIST_ITEMS = 200;
+const MAX_BATCH_FILES = 30;
+const MAX_BATCH_BYTES = 4 * 1024 * 1024;
 
 /**
  * 每位用户拥有独立 Agent 工作区。路径永远相对该目录解析，因而 Agent 能管理
@@ -54,6 +56,27 @@ export class AgentWorkspaceService {
     await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
     await writeFile(target, content, { encoding: "utf8", mode: 0o600 });
     return { path: relative, sizeBytes: Buffer.byteLength(content, "utf8"), openUrl: this.openUrl(relative) };
+  }
+
+  async createDirectory(actor: Actor, directory: string) {
+    const relative = this.relative(directory);
+    if (!relative) throw new ForbiddenException("不能重复创建工作区根目录");
+    await mkdir(this.resolve(actor, relative), { recursive: true, mode: 0o700 });
+    return { directory: relative, message: "工作区目录已创建。" };
+  }
+
+  /** 一次创建一组相互引用的文件，适合 index.html + CSS + JS 等网页项目。 */
+  async writeMany(actor: Actor, files: Array<{ path: string; content: string }>) {
+    if (!files.length || files.length > MAX_BATCH_FILES) throw new ForbiddenException(`一次最多创建 ${MAX_BATCH_FILES} 个工作区文件`);
+    const normalized = files.map((file) => ({ path: this.relative(file.path), content: file.content }));
+    if (normalized.some((file) => !file.path)) throw new ForbiddenException("不能写入工作区根目录");
+    if (new Set(normalized.map((file) => file.path)).size !== normalized.length) throw new ForbiddenException("批量写入中存在重复文件路径");
+    const totalBytes = normalized.reduce((total, file) => total + Buffer.byteLength(file.content, "utf8"), 0);
+    if (totalBytes > MAX_BATCH_BYTES) throw new ForbiddenException("一次批量写入不能超过 4 MB");
+    if (normalized.some((file) => Buffer.byteLength(file.content, "utf8") > MAX_FILE_BYTES)) throw new ForbiddenException("工作区单个文件不能超过 2 MB");
+    const written = [];
+    for (const file of normalized) written.push(await this.write(actor, file.path, file.content));
+    return { items: written, message: `已创建 ${written.length} 个工作区文件。` };
   }
 
   async open(actor: Actor, filePath: string) {

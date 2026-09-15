@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowRight, BookOpenText, Check, Clock, Plus, X } from "@phosphor-icons/react";
 import {
   createAdminCourse,
@@ -69,11 +70,11 @@ function CreateCourseModal({ busy, onClose, onCreate }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("视觉传达");
   const [lessonTitle, setLessonTitle] = useState("");
-  return <div className="course-modal-layer"><button className="drawer-scrim" aria-label="关闭" onClick={onClose} /><form className="course-modal" onSubmit={(event) => { event.preventDefault(); onCreate({ title, category, summary: "从课程资源管理端创建的课程。", difficulty: "beginner", lessons: [{ title: lessonTitle, summary: "课程第一课时", lessonType: "lesson", estimatedMinutes: 30, modelConfigIds: [] }] }); }}>
-    <header><div><p>// NEW COURSE</p><h2>新建课程草稿</h2></div><button type="button" onClick={onClose}><X size={20} /></button></header>
+  return createPortal(<div className="course-modal-layer"><button className="drawer-scrim" aria-label="关闭" onClick={onClose} /><form className="course-modal" role="dialog" aria-modal="true" aria-labelledby="create-course-title" onSubmit={(event) => { event.preventDefault(); onCreate({ title, category, summary: "从课程资源管理端创建的课程。", difficulty: "beginner", lessons: [{ title: lessonTitle, summary: "课程第一课时", lessonType: "lesson", estimatedMinutes: 30, modelConfigIds: [] }] }); }}>
+    <header><div><p>// NEW COURSE</p><h2 id="create-course-title">新建课程草稿</h2></div><button type="button" aria-label="关闭新建课程窗口" onClick={onClose}><X size={20} /></button></header>
     <label>课程名称<input required minLength="2" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：AI 辅助视觉创作基础" /></label>
     <label>学科分类<input required value={category} onChange={(event) => setCategory(event.target.value)} /></label>
     <label>第一课时<input required value={lessonTitle} onChange={(event) => setLessonTitle(event.target.value)} placeholder="例如：认识生成式设计工作流" /></label>
     <footer><button type="button" className="outline-button" onClick={onClose}>取消</button><button disabled={busy} className="primary-button" type="submit">保存课程草稿 <ArrowRight size={16} /></button></footer>
-  </form></div>;
+  </form></div>, document.body);
 }

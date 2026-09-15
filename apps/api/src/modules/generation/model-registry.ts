@@ -4,7 +4,7 @@ import { ModelScopeImageAdapter } from "./modelscope-image.adapter";
 import { ModelHttpError, UNUSABLE_KEY_HTTP_STATUSES, describeProviderApiKeyEnvs, providerApiKeyEnvNames, resolveProviderApiKeys } from "./provider-api-keys";
 import type { ModelAdapter, ModelCapability, ModelInvocationOptions, ModelMessage, ModelProviderConfig, ModelRequest, ModelResult, ModelStreamDelta } from "./model-adapter";
 
-const capabilitySchema = z.enum(["chat", "image", "video", "webpage", "pattern", "document", "knowledge_graph"]);
+const capabilitySchema = z.enum(["chat", "vision", "image", "video", "webpage", "pattern", "document", "knowledge_graph"]);
 const providerSchema = z.object({
   id: z.string().trim().min(1).max(80),
   baseUrl: z.string().url(),
@@ -49,7 +49,14 @@ function toMessages(request: ModelRequest): ModelMessage[] {
 function toOpenAiMessages(request: ModelRequest) {
   return toMessages(request).map((message) => ({
     role: message.role,
-    content: message.content,
+    // DeepSeek/OpenAI-compatible视觉模型要求图片作为 user content 的 image_url 分段，
+    // 不能把私有站内 URL 当作普通文字或让模型自行携带登录态去下载。
+    content: message.role === "user" && message.images?.length
+      ? [
+        { type: "text", text: message.content },
+        ...message.images.map((image) => ({ type: "image_url", image_url: { url: image.dataUrl, ...(image.detail ? { detail: image.detail } : {}) } })),
+      ]
+      : message.content,
     ...(message.name === undefined ? {} : { name: message.name }),
     ...(message.toolCallId === undefined ? {} : { tool_call_id: message.toolCallId }),
     ...(message.toolCalls === undefined ? {} : { tool_calls: message.toolCalls }),

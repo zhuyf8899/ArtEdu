@@ -1,5 +1,6 @@
 export type ModelCapability =
   | "chat"
+  | "vision"
   | "image"
   | "video"
   | "webpage"
@@ -15,6 +16,11 @@ export interface ModelMessage {
   name?: string;
   toolCallId?: string;
   toolCalls?: ModelToolCall[];
+  /**
+   * 用户私有图片的内联数据。只允许放在 user 消息中，适配器会转换成供应商的
+   * 多段 content 协议；绝不把需要登录 Cookie 的站内下载地址交给外部模型。
+   */
+  images?: Array<{ dataUrl: string; detail?: "low" | "high" | "original" | "auto" }>;
 }
 
 export interface ModelToolCall {

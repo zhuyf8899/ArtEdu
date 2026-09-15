@@ -7,6 +7,7 @@ import type { AgentToolContext } from "./agent-runtime";
 import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import { StudioService } from "../studio/studio.service";
+import { AgentWorkspaceService } from "./agent-workspace.service";
 
 const actor: Actor = { id: "student-1", username: "student-1", displayName: "测试学生", accountStatus: "active", roles: ["student"] };
 const baseContext: AgentToolContext = { round: 1, request: { jobType: "chat", prompt: "查询课程" }, messages: [{ role: "user", content: "查询课程" }] };
@@ -54,4 +55,20 @@ test("用户明确确认后才启动已发布工作流", async () => {
   });
 
   assert.deepEqual(result, { status: "succeeded", workflowRun: { receivedActor: "student-1", workflowId: "workflow-1", context: { theme: "宋锦" } }, message: "工作流已启动。" });
+});
+
+test("多文件工作区工具一次创建网页所需文件，并限制在当前用户工作区", async () => {
+  const received: Array<{ path: string; content: string }> = [];
+  const workspace = {
+    async writeMany(receivedActor: Actor, files: Array<{ path: string; content: string }>) {
+      assert.equal(receivedActor.id, actor.id);
+      received.push(...files);
+      return { items: files.map((file) => ({ path: file.path, openUrl: `/api/agent-runs/workspace-file?path=${encodeURIComponent(file.path)}` })), message: "已创建 2 个工作区文件。" };
+    },
+  } as unknown as AgentWorkspaceService;
+  const result = await executePlatformTool(call("write_workspace_files", { files: [{ path: "site/index.html", content: "<link rel=\"stylesheet\" href=\"style.css\">" }, { path: "site/style.css", content: "body { color: #111; }" }] }), baseContext, {
+    actor, runId: "run-1", database: {} as DatabaseService, agents: {} as AgentService, studio: {} as StudioService, workspace,
+  });
+  assert.equal(result.status, "succeeded");
+  assert.deepEqual(received.map((file) => file.path), ["site/index.html", "site/style.css"]);
 });

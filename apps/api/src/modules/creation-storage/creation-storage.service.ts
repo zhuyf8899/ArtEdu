@@ -15,6 +15,8 @@ import { storePrivateUpload } from "../studio/private-upload";
 interface UploadRow { id: string; user_id: string; file_name: string; mime_type: string; storage_key: string; size_bytes: number; expires_at: Date; }
 const execFile = promisify(execFileCallback);
 const MAX_AGENT_FILE_TEXT = 12000;
+const MAX_AGENT_VISION_IMAGE_BYTES = 8 * 1024 * 1024;
+const VISION_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 @Injectable()
 export class CreationStorageService implements OnModuleInit, OnModuleDestroy {
@@ -80,8 +82,24 @@ export class CreationStorageService implements OnModuleInit, OnModuleDestroy {
       ...this.present(row),
       content: content.slice(0, MAX_AGENT_FILE_TEXT),
       readable: Boolean(content),
-      note: content ? "文件内容已读取并加入本轮上下文。" : "文件已关联到本轮对话；该格式目前不提取文字内容。",
+      isVisionImage: VISION_MIME_TYPES.has(row.mime_type),
+      note: content ? "文件内容已读取并加入本轮上下文。" : VISION_MIME_TYPES.has(row.mime_type) ? "图片已关联到本轮对话；支持视觉能力的模型会收到原始图片数据。" : "文件已关联到本轮对话；该格式目前不提取文字内容。",
     };
+  }
+
+  /**
+   * 仅在选中的模型明确声明 vision 能力时调用。将已完成归属和过期校验的私有图片
+   * 编码为 data URL，供 OpenAI-compatible 的 image_url 分段使用。
+   */
+  async readImageForVision(actor: Actor, uploadId: string) {
+    const result = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE id=$1 AND deleted_at IS NULL AND expires_at > CURRENT_TIMESTAMP", [uploadId]);
+    const row = result.rows[0];
+    if (!row || row.user_id !== actor.id) throw new ForbiddenException("无权读取该临时文件");
+    if (!VISION_MIME_TYPES.has(row.mime_type)) throw new BadRequestException("视觉模型仅支持 JPEG、PNG、GIF 或 WebP 图片");
+    if (Number(row.size_bytes) > MAX_AGENT_VISION_IMAGE_BYTES) throw new PayloadTooLargeException("用于识图的图片不能超过 8 MB");
+    const bytes = await readFile(path.join(getEnvironment().uploadRoot, row.storage_key));
+    await this.database.query("UPDATE temporary_creation_uploads SET last_accessed_at=CURRENT_TIMESTAMP, expires_at=CURRENT_TIMESTAMP + ($2 * INTERVAL '1 hour') WHERE id=$1", [uploadId, getEnvironment().temporaryUploadRetentionHours]);
+    return { fileName: row.file_name, dataUrl: `data:${row.mime_type};base64,${bytes.toString("base64")}` };
   }
 
   async cleanupExpired() {
