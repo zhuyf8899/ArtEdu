@@ -11,6 +11,6 @@ import { OfficeExportService } from "./office-export.service";
   imports: [AuthModule],
   controllers: [GenerationController],
   providers: [GenerationRepository, GenerationService, GenerationWorkerService, ModelRegistry, OfficeExportService],
-  exports: [GenerationWorkerService, ModelRegistry],
+  exports: [GenerationWorkerService, ModelRegistry, GenerationService],
 })
 export class GenerationModule {}

@@ -214,6 +214,8 @@ export class StudioService {
     return { items: result.rows.map((row) => this.mapRun(row)) };
   }
 
+  async getWorkflowRun(actor: Actor, runId: string) { return this.getRun(actor, runId); }
+
   async updateRun(actor: Actor, runId: string, input: WorkflowRunProgressInput) {
     const current = await this.getRun(actor, runId) as Record<string, any>;
     if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");

@@ -93,7 +93,7 @@ export function titleFromPrompt(prompt) {
 // 模式只影响建议语气；真正执行什么能力，由用户本轮话语里的显式意图决定。
 export function resolveCreationOperation(prompt, advisoryMethodId = DEFAULT_METHOD_ID) {
   const text = String(prompt ?? "").trim().toLowerCase();
-  const wantsDocument = /(生成|输出|制作|创建|导出|写一份|整理成).*(word|docx|ppt|pptx|pdf|文档|教案|课件|讲义|方案)|\b(word|docx|ppt|pptx|pdf)\b/.test(text);
+  const wantsDocument = /\b(word|docx|ppt|pptx|pdf)\b|(?:生成|输出|制作|创建|导出|写|做|整理).*(?:文档|教案|课件|讲义|方案|汇报)/.test(text);
   if (wantsDocument) {
     if (/\b(ppt|pptx)\b|课件|演示/.test(text)) return creationMethod("slides");
     if (/\bpdf\b|打印|讲义/.test(text)) return creationMethod("pdf");

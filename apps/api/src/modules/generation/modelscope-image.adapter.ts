@@ -3,6 +3,7 @@ import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getEnvironment } from "../../common/environment";
 import type { ModelAdapter, ModelProviderConfig, ModelRequest, ModelResult } from "./model-adapter";
+import { describeProviderApiKeyEnvs, resolveProviderApiKeys } from "./provider-api-keys";
 
 // ModelScope（魔搭）文生图不是 OpenAI 的 chat/completions：
 //   1. POST {base}/v1/images/generations （带 X-ModelScope-Async-Mode: true）提交异步任务，拿 task_id
@@ -25,8 +26,8 @@ export class ModelScopeImageAdapter implements ModelAdapter {
     if (!this.config.capabilities.includes(request.jobType)) {
       throw new Error(`模型 ${this.config.id} 不支持任务类型 ${request.jobType}`);
     }
-    const apiKey = this.config.apiKeyEnv ? process.env[this.config.apiKeyEnv]?.trim() : undefined;
-    if (!apiKey) throw new Error(`模型 ${this.config.id} 未配置环境变量 ${this.config.apiKeyEnv ?? "API key"}`);
+    const [apiKey] = resolveProviderApiKeys(this.config);
+    if (!apiKey) throw new Error(`模型 ${this.config.id} 未配置环境变量 ${describeProviderApiKeyEnvs(this.config)}`);
 
     const prompt = this.resolvePrompt(request);
     const size = this.resolveSize(request);

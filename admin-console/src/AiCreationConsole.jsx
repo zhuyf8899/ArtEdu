@@ -76,6 +76,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
           searchEnabled,
           pageCount,
           reference: reference ?? null,
+          attachments: reference ? [reference] : [],
           createdAt: new Date().toISOString(),
         },
       });
@@ -124,12 +125,12 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
           <div><strong>{method.label}</strong><span>点击左侧圆钮可切换建议模式 · {method.eyebrow}</span></div>
         </div>
         <div className="ai-launcher__actions">
-          <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx" onChange={async (event) => {
+          <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx,.txt,.md,.csv" onChange={async (event) => {
             const file = event.target.files?.[0];
             if (!file) return;
             try {
               const uploaded = await uploadTemporaryCreationFile(file);
-              setReference({ id: uploaded.id, fileName: uploaded.fileName, sizeBytes: uploaded.sizeBytes, expiresAt: uploaded.expiresAt });
+              setReference({ id: uploaded.id, fileName: uploaded.fileName, sizeBytes: uploaded.sizeBytes, expiresAt: uploaded.expiresAt, downloadUrl: uploaded.downloadUrl });
               onNotice?.(`“${uploaded.fileName}”已临时上传，72 小时未活动后自动删除`, "success");
             } catch (error) { onNotice?.(error.message || "文件上传失败", "error"); }
             event.target.value = "";

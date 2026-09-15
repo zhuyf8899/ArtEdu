@@ -120,6 +120,53 @@ export const executeAgentRun = (runId, input = {}, options = {}) => request(`/ag
   signal: options.signal,
 });
 
+/**
+ * 流式执行：POST /agent-runs/:id/execute-stream，逐帧解析 SSE。
+ * 正文增量经 options.onDelta 实时回调；最终返回的 run 对象与 executeAgentRun
+ * 完全同构（放在 done 事件里），所以调用方的映射逻辑不用区分是否流式。
+ * 服务端或反代不支持流式时自动退回一次性调用，行为一致（只是没有增量）。
+ */
+export const executeAgentRunStream = async (runId, input = {}, options = {}) => {
+  const { onDelta, signal } = options;
+  const response = await fetch(`${API_BASE_URL}/agent-runs/${encodeURIComponent(runId)}/execute-stream`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify({ mode: "server", ...input }),
+    signal,
+  });
+  if (!response.ok || !response.body || !String(response.headers.get("content-type") ?? "").includes("text/event-stream")) {
+    return executeAgentRun(runId, input, { signal });
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let completed = null;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary !== -1) {
+      const frame = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const event = /^event:\s*(.+)$/m.exec(frame)?.[1]?.trim() ?? "message";
+      const payloadText = frame.split("\n").filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("");
+      if (payloadText) {
+        let payload = null;
+        try { payload = JSON.parse(payloadText); } catch { payload = null; }
+        if (event === "delta" && typeof payload?.text === "string") onDelta?.(payload.text);
+        else if (event === "done") completed = payload?.run ?? null;
+        else if (event === "error") throw new Error(payload?.message || "生成失败");
+      }
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
+  if (!completed) throw new Error("生成未完成：连接已中断");
+  return completed;
+};
+
 export const getTemporaryCreationFiles = () => request("/creation-files");
 export const deleteTemporaryCreationFile = (fileId) => request(`/creation-files/${encodeURIComponent(fileId)}`, { method: "DELETE" });
 export const uploadTemporaryCreationFile = (file, conversationLocalId) => {

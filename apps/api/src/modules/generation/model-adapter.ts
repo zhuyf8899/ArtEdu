@@ -1,5 +1,6 @@
 export type ModelCapability =
   | "chat"
+  | "vision"
   | "image"
   | "video"
   | "webpage"
@@ -15,6 +16,11 @@ export interface ModelMessage {
   name?: string;
   toolCallId?: string;
   toolCalls?: ModelToolCall[];
+  /**
+   * 用户私有图片的内联数据。只允许放在 user 消息中，适配器会转换成供应商的
+   * 多段 content 协议；绝不把需要登录 Cookie 的站内下载地址交给外部模型。
+   */
+  images?: Array<{ dataUrl: string; detail?: "low" | "high" | "original" | "auto" }>;
 }
 
 export interface ModelToolCall {
@@ -55,6 +61,8 @@ export interface ModelRequest {
   providerId?: string | null;
   /** 生成任务 id：产物类适配器（图像/视频）据此把文件写进上传目录。 */
   jobId?: string;
+  /** 外部中断信号（用户暂停输出）。适配器会把它和自身超时合并。 */
+  signal?: AbortSignal;
 }
 
 export interface ModelResult {
@@ -70,6 +78,18 @@ export interface ModelAdapter {
   readonly id: string;
   readonly capabilities: readonly ModelCapability[];
   execute(request: ModelRequest): Promise<ModelResult>;
+  /**
+   * 可选的流式调用：正文增量经 onDelta 实时回调，**返回值与 execute 完全一致**
+   * （同样的 content / toolCalls / metadata），所以调用方的落库与审计逻辑
+   * 不需要区分流式与否。
+   * 未实现的适配器不提供此方法，调用方自动退回 execute。
+   */
+  executeStream?(request: ModelRequest, onDelta: (delta: ModelStreamDelta) => void): Promise<ModelResult>;
+}
+
+/** 流式增量：目前只承载正文片段（工具调用在内部累积，最终随 ModelResult 一并返回）。 */
+export interface ModelStreamDelta {
+  content: string;
 }
 
 /**
@@ -84,6 +104,11 @@ export interface ModelProviderConfig {
   model: string;
   capabilities: ModelCapability[];
   apiKeyEnv?: string;
+  /**
+   * 备用 key 的环境变量名。主 key 缺失，或主 key 被判为不可用
+   * （鉴权失败 401 / 余额不足 402 / 无权限 403）时自动切换过来。
+   */
+  apiKeyFallbackEnv?: string;
   timeoutMs: number;
   protocol?: ModelProtocol;
   /**

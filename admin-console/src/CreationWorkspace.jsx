@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, ChatCircleDots, PaperPlaneTilt, Paperclip, Plus, Sparkle, Stop, Trash } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
 import { AiMarkdown, safeReplyUrl } from "./AiMarkdown.js";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
 import { DocumentOptions } from "./DocumentOptions.jsx";
@@ -26,10 +26,10 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   const [prompt, setPrompt] = useState("");
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [artifact, setArtifact] = useState(null);
   const [reference, setReference] = useState(null);
   const [pageCount, setPageCount] = useState("");
   const [searchEnabled, setSearchEnabled] = useState(false);
+  const [openConversationMenuId, setOpenConversationMenuId] = useState("");
   const { confirmAction } = useFeedback();
 
   const conversationsRef = useRef([]);
@@ -95,7 +95,6 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     setActiveId("");
     setMessages([]);
     setFailed(false);
-    setArtifact(null);
     setReference(null);
     setPrompt("");
     setSearchEnabled(false);
@@ -111,8 +110,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     setMessages(target.messages ?? []);
     setMethodId(target.methodId ?? DEFAULT_METHOD_ID);
     setFailed(false);
-    setArtifact(null);
-    setReference(target.pending?.reference ?? null);
+    setReference(target.reference ?? target.pending?.reference ?? null);
     setPageCount(target.pending?.pageCount ?? target.pageCount ?? "");
     setSearchEnabled(target.pending?.searchEnabled === true);
   }, [activeId, conversations, loaded]);
@@ -130,46 +128,66 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   // 控制权已经交还用户，可以改完直接重新发送。
   const settlePaused = useCallback(async (conversationId, streaming, promptText) => {
     setPrompt(promptText);
-    const pausedMessages = [...streaming.slice(0, -1), { role: "assistant", content: "已暂停本次输出，输入已保留，可直接重新发送继续。", paused: true }];
+    // 已经流出来的正文要留住——暂停不等于丢弃，只补一句说明。
+    const partial = streaming[streaming.length - 1]?.content ?? "";
+    const pauseNote = "已暂停本次输出，输入已保留，可直接重新发送继续。";
+    const pausedMessages = [...streaming.slice(0, -1), {
+      role: "assistant",
+      content: partial ? `${partial}\n\n（${pauseNote}）` : pauseNote,
+      paused: true,
+    }];
     setMessages(pausedMessages);
     await persist(conversationId, { pending: null, messages: pausedMessages }).catch(() => {});
   }, [persist]);
 
-  const run = useCallback(async (conversation, job, modeDefinition, modelName) => {
+  /**
+   * 统一的生成入口：发送、起始页带过来的 pending 任务、「重新输出」都走这里。
+   *
+   * · baseMessages 决定"从哪一轮开始"——「重新输出」传入截断后的历史，
+   *   上一轮的回复就此被清除，而不是追加在它下面。
+   * · onDelta 接住服务端推来的正文增量，气泡逐字长出来，不再转圈等一整段。
+   */
+  const generate = useCallback(async ({ conversation, baseMessages, content, operationDefinition, methodId: usedMethodId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount, modelId, modelName }) => {
     setSending(true);
     setFailed(false);
-    setArtifact(null);
     const controller = new AbortController();
     abortRef.current = controller;
-    const operationDefinition = creationMethod(job.operationMethodId ?? resolveCreationOperation(job.prompt, modeDefinition.id).id);
     const context = makeModelContext(conversation);
-    const placeholder = { role: "assistant", content: serviceReady
+    // 空气泡 + 占位文案：支持流式的场景一到增量就顶掉占位文案；
+    // 不支持流式的场景（生图/文档）继续显示占位，行为与改动前一致。
+    const placeholderText = serviceReady
       ? `正在用 ${modelName} 处理“${operationDefinition.label}”，请稍候……`
-      : `正在通过本地演示引擎处理“${operationDefinition.label}”，不会调用外部模型……` };
-    const streaming = [...(conversation.messages ?? []), { role: "user", content: job.prompt }, placeholder];
-    setMessages(streaming);
+      : `正在通过本地演示引擎处理“${operationDefinition.label}”，不会调用外部模型……`;
+    const attachmentName = usedReference?.fileName ? `\n\n📎 已附参考文件：${usedReference.fileName}` : "";
+    let rendered = [...baseMessages, { role: "user", content: `${content}${attachmentName}`, attachment: usedReference ?? null }, { role: "assistant", content: "", placeholder: placeholderText, streaming: true }];
+    setMessages(rendered);
+    const onDelta = (text) => {
+      const last = rendered[rendered.length - 1];
+      rendered = [...rendered.slice(0, -1), { ...last, content: `${last.content ?? ""}${text}` }];
+      setMessages(rendered);
+    };
     try {
-      await persist(conversation.id, { pending: null, methodId: modeDefinition.id, messages: streaming });
+      await persist(conversation.id, { pending: null, methodId: usedMethodId, messages: rendered });
       const result = await onCreate({
         jobType: operationDefinition.jobType,
-        prompt: job.prompt,
-        modelConfigId: job.modelId ?? undefined,
-        parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: modeDefinition.id, modelId: job.modelId, searchEnabled: job.searchEnabled, reference: job.reference, pageCount: job.pageCount }),
+        prompt: content,
+        modelConfigId: modelId ?? undefined,
+        parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),
         context,
-      }, controller.signal);
-      const finalMessages = [...streaming.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), artifact: result?.artifact ?? null, sources: result?.sources ?? null }];
+      }, controller.signal, onDelta);
+      const finalMessages = [...rendered.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), sources: result?.sources ?? null, localFile: result?.localFile ?? null }];
       setMessages(finalMessages);
-      setArtifact(result?.artifact ?? null);
       setFailed(!result);
-      await persist(conversation.id, { messages: finalMessages, methodId: modeDefinition.id, pageCount: job.pageCount ?? "" });
+      if (!result) setPrompt(content);
+      await persist(conversation.id, { messages: finalMessages, methodId: usedMethodId, pageCount: usedPageCount ?? "" });
     } catch (error) {
       if (error?.name === "AbortError") {
-        await settlePaused(conversation.id, streaming, job.prompt);
+        await settlePaused(conversation.id, rendered, content);
         return;
       }
       setFailed(true);
-      setPrompt(job.prompt);
-      const failedMessages = [...streaming.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true }];
+      setPrompt(content);
+      const failedMessages = [...rendered.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true }];
       setMessages(failedMessages);
       await persist(conversation.id, { pending: null, messages: failedMessages }).catch(() => {});
       console.error("[creation] 生成失败", error);
@@ -179,6 +197,23 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       setSending(false);
     }
   }, [onCreate, onNotice, persist, serviceReady, settlePaused]);
+
+  // 起始页带过来的 pending 任务：转成统一入口的参数后执行。
+  const run = useCallback(async (conversation, job, modeDefinition, modelName) => {
+    const operationDefinition = creationMethod(job.operationMethodId ?? resolveCreationOperation(job.prompt, modeDefinition.id).id);
+    await generate({
+      conversation,
+      baseMessages: conversation.messages ?? [],
+      content: job.prompt,
+      operationDefinition,
+      methodId: modeDefinition.id,
+      searchEnabled: job.searchEnabled,
+      reference: job.reference,
+      pageCount: job.pageCount,
+      modelId: job.modelId,
+      modelName,
+    });
+  }, [generate]);
 
   // 起始页交过来的 pending 任务在此执行（StrictMode 下由 ranPendingRef 去重）。
   useEffect(() => {
@@ -211,7 +246,8 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     let conversation = conversationsRef.current.find((item) => item.id === activeId) ?? null;
     if (!conversation) {
       try {
-        conversation = await saveConversation(createConversation(account.id, methodId, titleFromPrompt(content)));
+        const created = createConversation(account.id, methodId, titleFromPrompt(content));
+        conversation = await saveConversation({ ...created, reference: reference ?? null, attachments: reference ? [reference] : [] });
       } catch {
         onNotice?.("本地对话空间不可用，无法创建新的创作对话", "error");
         return;
@@ -222,48 +258,18 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       setActiveId(conversation.id);
     }
     setPrompt("");
-    setSending(true);
-    setFailed(false);
-    setArtifact(null);
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const context = makeModelContext(conversation);
-    const placeholder = { role: "assistant", content: serviceReady
-      ? `正在用 ${modelLabel} 处理“${operationDefinition.label}”，请稍候……`
-      : `正在通过本地演示引擎处理“${operationDefinition.label}”，不会调用外部模型……` };
-    const streaming = [...(conversation.messages ?? []), { role: "user", content }, placeholder];
-    setMessages(streaming);
-    try {
-      await persist(conversation.id, { messages: streaming, methodId, title: conversation.title });
-      const result = await onCreate({
-        jobType: operationDefinition.jobType,
-        prompt: content,
-        modelConfigId: serviceReady && modelSupportsOperation ? model?.id : undefined,
-        parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: methodId, modelId: model?.id, searchEnabled, reference, pageCount }),
-        context,
-      }, controller.signal);
-      const finalMessages = [...streaming.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), artifact: result?.artifact ?? null, sources: result?.sources ?? null }];
-      setMessages(finalMessages);
-      setArtifact(result?.artifact ?? null);
-      setFailed(!result);
-      if (!result) setPrompt(content);
-      await persist(conversation.id, { messages: finalMessages, methodId, pageCount });
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        await settlePaused(conversation.id, streaming, content);
-        return;
-      }
-      setFailed(true);
-      setPrompt(content);
-      const failedMessages = [...streaming.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true }];
-      setMessages(failedMessages);
-      await persist(conversation.id, { messages: failedMessages }).catch(() => {});
-      console.error("[creation] 生成失败", error);
-      onNotice?.(error.message || "创作请求失败", "error");
-    } finally {
-      if (abortRef.current === controller) abortRef.current = null;
-      setSending(false);
-    }
+    await generate({
+      conversation,
+      baseMessages: conversation.messages ?? [],
+      content,
+      operationDefinition,
+      methodId,
+      searchEnabled,
+      reference,
+      pageCount,
+      modelId: serviceReady && modelSupportsOperation ? model?.id : undefined,
+      modelName: modelLabel,
+    });
   };
 
   // 暂停输出：中断本轮在途请求。已渲染的内容与输入都保留，可直接重新发送继续。
@@ -271,8 +277,57 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     abortRef.current?.abort();
   }, []);
 
-  const removeConversation = async () => {
-    const target = conversationsRef.current.find((item) => item.id === activeId);
+  const copyReply = useCallback(async (content) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      onNotice?.("回复已复制", "success");
+    } catch {
+      onNotice?.("浏览器未授予复制权限，请手动选择文本复制", "error");
+    }
+  }, [onNotice]);
+
+  /**
+   * 「重新输出」：**清除这一轮的回复**，然后用同一个问题直接重新生成，
+   * 而不是把问题回填输入框、等用户再点一次发送。
+   * 历史截断到该提问之前，所以这一轮之后的对话也一并作废——分支重置，语义干净。
+   */
+  const retryReply = useCallback(async (index) => {
+    if (sending || !ready) return;
+    const previousUser = [...messages.slice(0, index)].reverse().find((message) => message.role === "user");
+    if (!previousUser?.content) return;
+    const conversation = conversationsRef.current.find((item) => item.id === activeId);
+    if (!conversation) return;
+    const operationDefinition = resolveCreationOperation(previousUser.content, methodId);
+    const modelSupportsOperation = supportsCreationMethod(model, operationDefinition.jobType);
+    const operationNeedsSelectedModel = !["image", "pattern"].includes(operationDefinition.jobType);
+    if (serviceReady && operationNeedsSelectedModel && !modelSupportsOperation) { onNotice?.(`请选择支持${operationDefinition.label}的模型`, "error"); return; }
+    if (quotaBlocked) {
+      onNotice?.("当前生成额度或并发额度已达到上限，请稍后重试或联系管理员调整额度。", "error");
+      return;
+    }
+    onNotice?.("已清除上一轮输出，正在重新生成…", "success");
+    await generate({
+      conversation,
+      // 只保留这条提问之前的历史：上一轮的回复（连同它之后的对话）就地清除。
+      baseMessages: messages.slice(0, Math.max(0, index - 1)),
+      content: previousUser.content,
+      operationDefinition,
+      methodId,
+      searchEnabled,
+      reference,
+      pageCount,
+      modelId: serviceReady && modelSupportsOperation ? model?.id : undefined,
+      modelName: modelLabel,
+    });
+  }, [activeId, generate, messages, methodId, model, modelLabel, onNotice, pageCount, quotaBlocked, ready, reference, searchEnabled, sending, serviceReady]);
+
+  const editPrompt = useCallback((content) => {
+    setPrompt(content);
+    onNotice?.("已带回输入框，可修改后重新发送", "success");
+  }, [onNotice]);
+
+  const removeConversation = async (targetId = activeId) => {
+    const target = conversationsRef.current.find((item) => item.id === targetId);
     if (!target) return;
     const confirmed = await confirmAction({ title: "删除创作对话", message: `确认删除“${target.title}”吗？删除后本地记录无法恢复。`, confirmLabel: "确认删除", danger: true });
     if (!confirmed) return;
@@ -280,7 +335,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     const remaining = conversationsRef.current.filter((item) => item.id !== target.id);
     updateConversations(remaining);
     startBlank();
-    if (remaining[0]) setActiveId(remaining[0].id);
+    if (target.id === activeId && remaining[0]) setActiveId(remaining[0].id);
   };
 
   const openConversation = (id) => {
@@ -290,6 +345,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     setActiveId(id);
     setReference(null);
     setPrompt("");
+    setOpenConversationMenuId("");
   };
 
   // Enter 提交；Ctrl+Enter（以及 Shift/Alt/Meta+Enter）保留为换行。
@@ -316,19 +372,18 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     <nav className="creation-canvas__history" aria-label="历次创作对话">
       <div className="creation-canvas__history-label"><ChatCircleDots size={17} weight="bold" /><span>会话</span><b>{conversations.length}</b></div>
       <div className="creation-canvas__history-list">
-        {conversations.length ? conversations.map((item) => <button
-          type="button"
-          key={item.id}
-          className={item.id === activeId ? "is-active" : ""}
-          onClick={() => openConversation(item.id)}
-          title={item.title}
-        >
-          <span>{creationMethod(item.methodId).label}</span>
-          <strong>{item.title}</strong>
-          <small>{item.pending ? "处理中" : formatConversationTime(item.updatedAt)}</small>
-        </button>) : <p>新对话会保存在这里。</p>}
+        {conversations.length ? conversations.map((item) => <div className={`creation-canvas__history-item${item.id === activeId ? " is-active" : ""}`} key={item.id}>
+          <button type="button" className="creation-canvas__history-open" onClick={() => openConversation(item.id)} title={item.title}>
+            <span>{creationMethod(item.methodId).label}</span>
+            <strong>{item.title}</strong>
+            <small>{item.pending ? "处理中" : formatConversationTime(item.updatedAt)}</small>
+          </button>
+          <button type="button" className="creation-canvas__history-menu-toggle" aria-label={`打开“${item.title}”的更多操作`} aria-expanded={openConversationMenuId === item.id} onClick={() => setOpenConversationMenuId((current) => current === item.id ? "" : item.id)}><DotsThreeVertical size={17} weight="bold" /></button>
+          {openConversationMenuId === item.id && <div className="creation-canvas__history-menu" role="menu">
+            <button type="button" role="menuitem" onClick={() => { setOpenConversationMenuId(""); void removeConversation(item.id); }}><Trash size={15} />删除对话</button>
+          </div>}
+        </div>) : <p>新对话会保存在这里。</p>}
       </div>
-      {activeConversation && <button type="button" className="creation-canvas__delete" onClick={removeConversation} aria-label="删除当前对话" title="删除当前对话"><Trash size={16} weight="bold" /></button>}
     </nav>
 
     <main className="creation-canvas__main">
@@ -336,10 +391,9 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         <header className="creation-canvas__conversation-title"><div><p>{method.eyebrow}</p><h1>{activeConversation?.title ?? "新的创作对话"}</h1></div><span>建议模式：{method.label}</span></header>
         <div className="ai-thread creation-canvas__thread" ref={scrollRef} aria-busy={sending} aria-live="polite">
               {messages.length ? messages.map((message, index) => {
-                const isLast = index === messages.length - 1;
                 return message.role === "user"
-                  ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p></div>
-                  : <div className="ai-message ai-message--assistant" key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span><AiMarkdown>{message.content}</AiMarkdown>{(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}{(message.artifact || (isLast && artifact)) && <ArtifactBlock artifact={message.artifact || artifact} />}</div></div>;
+                  ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p><button type="button" className="ai-message__action" onClick={() => editPrompt(message.content)}><PencilSimple size={14} />编辑</button></div>
+                  : <div className={`ai-message ai-message--assistant${message.streaming ? " ai-message--streaming" : ""}`} key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span><AiMarkdown>{message.content || message.placeholder}</AiMarkdown>{(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}<div className="ai-message__actions"><button type="button" onClick={() => copyReply(message.content)} title="复制回复"><Copy size={14} />复制</button><button type="button" onClick={() => retryReply(index)} title="清除这一轮的回复并重新生成"><ArrowClockwise size={14} />重新输出</button></div></div></div>;
               }) : <div className="ai-thread__empty creation-canvas__empty">
                 <span><Sparkle size={25} weight="fill" /></span>
                 <strong>今天，想弄明白什么？</strong>
@@ -352,24 +406,19 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       </section>
 
       <form className="creation-canvas__composer" onSubmit={send}>
-        <div className="creation-canvas__environment" aria-label="本轮 Agent 环境">
-          <span>建议模式：{method.label}</span>
-          <span>实际操作：按本轮输入自动判断</span>
-          <span>模型：{modelLabel}</span>
-          <span>{searchEnabled ? "搜索：开" : "搜索：关"}</span>
-          {reference && <span title={reference.fileName}>参考：{reference.fileName}</span>}
-        </div>
         <div className="creation-canvas__input">
               <label htmlFor="artedu-thread-prompt" className="sr-only">继续描述你的创作想法</label>
               <textarea id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={2} disabled={sending} />
               <div className="creation-canvas__toolbar">
                 <div className="creation-canvas__tools">
-                <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx" onChange={async (event) => {
+                <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx,.txt,.md,.csv" onChange={async (event) => {
                   const file = event.target.files?.[0];
                   if (!file) return;
                   try {
                     const uploaded = await uploadTemporaryCreationFile(file, activeConversation?.id);
-                    setReference({ id: uploaded.id, fileName: uploaded.fileName, sizeBytes: uploaded.sizeBytes, expiresAt: uploaded.expiresAt });
+                    const nextReference = { id: uploaded.id, fileName: uploaded.fileName, sizeBytes: uploaded.sizeBytes, expiresAt: uploaded.expiresAt, downloadUrl: uploaded.downloadUrl };
+                    setReference(nextReference);
+                    if (activeConversation) await persist(activeConversation.id, { reference: nextReference, attachments: [...(activeConversation.attachments ?? []).filter((item) => item.id !== nextReference.id), nextReference] });
                     onNotice?.(`“${uploaded.fileName}”已临时上传，72 小时未活动后自动删除`, "success");
                   } catch (error) { onNotice?.(error.message || "文件上传失败", "error"); }
                   event.target.value = "";
@@ -380,13 +429,17 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
                 <button type="button" className={`search-toggle ${searchEnabled ? "is-active" : ""}`} aria-pressed={searchEnabled} onClick={() => setSearchEnabled((enabled) => !enabled)} title={searchEnabled ? "搜索能力已开启" : "搜索能力已关闭"}>搜索 <b>{searchEnabled ? "开" : "关"}</b></button>
                 <DocumentOptions method={method} pageCount={pageCount} onChange={setPageCount} disabled={sending} />
                 </div>
-                {sending && <button type="button" className="ai-pause" onClick={pauseOutput} title="中断本次输出；已渲染的内容与输入都会保留">
-                  <Stop size={15} weight="fill" />暂停输出
-                </button>}
                 <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked}>
                   {sending ? "生成中" : quotaBlocked ? "额度已用尽" : "发送"} <PaperPlaneTilt size={18} weight="fill" />
                 </button>
+                {sending && <button type="button" className="ai-pause" onClick={pauseOutput} title="中断本次输出；已渲染的内容与输入都会保留">
+                  <Stop size={15} weight="fill" />暂停输出
+                </button>}
               </div>
+              {reference && <div className="creation-canvas__attachment" title="该文件会保存在当前浏览器的对话记录中，并作为本轮模型参考资料。">
+                <Paperclip size={15} weight="bold" /><span>{reference.fileName}</span><small>已加入本轮上下文</small>
+                <button type="button" aria-label="移除参考文件" title="只移除对话关联，不删除服务器上的临时文件" onClick={() => { setReference(null); if (activeConversation) void persist(activeConversation.id, { reference: null }); }}><X size={14} /></button>
+              </div>}
             </div>
       </form>
     </main>
@@ -396,7 +449,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
 function responseText(result, methodDefinition) {
   if (!result) return "创作请求失败，输入已保留。请根据错误提示重试。";
   if (result.local) return `${result.content}\n\n本次为本地演示结果，任务已写入数据库并完成审计；接入正式模型后可沿用同一创作入口。`;
-  if (result.content) return result.content;
+  if (result.content) return result.localFile?.downloadUrl ? `${result.content}\n\n[打开本次生成的 ${result.localFile.fileName ?? methodDefinition.label}](${result.localFile.downloadUrl})` : result.content;
   return `任务 ${String(result.id).slice(0, 8)} 已创建（${methodDefinition.label}）。你可以继续输入下一步。`;
 }
 
@@ -423,17 +476,3 @@ function SourcesBlock({ sources }) {
 }
 
 // 图片产物直接内联展示（下载路由对该类型返回 inline），文档仍只给下载入口。
-function ArtifactBlock({ artifact }) {
-  if (!String(artifact?.mimeType ?? "").startsWith("image/")) {
-    return <a className="ai-download" href={artifact.downloadUrl} download>{`下载 ${artifact.fileName}`}</a>;
-  }
-  return <figure className="ai-artifact">
-    <a href={artifact.downloadUrl} target="_blank" rel="noopener noreferrer" title="打开原图">
-      <img src={artifact.downloadUrl} alt={artifact.fileName} loading="lazy" />
-    </a>
-    <figcaption>
-      <span>{artifact.fileName}</span>
-      <a href={artifact.downloadUrl} download>下载原图</a>
-    </figcaption>
-  </figure>;
-}

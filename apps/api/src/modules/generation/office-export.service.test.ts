@@ -49,6 +49,7 @@ test("将模型结构化正文导出为 DOCX、PPTX 及已配置的 PDF", async 
 
 test("统一文档结构校验页数、长度及非法模型输出", () => {
   assert.equal(parseDocumentContent(JSON.stringify(fixture), 3).sections.length, 2);
+  assert.equal(parseDocumentContent(`模型结果如下：\n${JSON.stringify(fixture)}\n请查收。`, 3).title, fixture.title);
   assert.throws(() => parseDocumentContent(JSON.stringify(fixture), 8), /页数/);
   assert.throws(() => parseDocumentContent("not json"), /结构/);
   assert.equal(documentContentSchema.safeParse({ ...fixture, sections: [{ heading: "超长", paragraphs: ["字".repeat(361)], bullets: [] }] }).success, false);

@@ -4,6 +4,8 @@ import remarkGfm from "remark-gfm";
 
 export function safeReplyUrl(value) {
   if (value.startsWith("#")) return value;
+  // 站内路由无需知道部署域名；只接受单个绝对路径，拒绝 protocol-relative URL。
+  if (/^\/(?!\/)/.test(value)) return value;
   try {
     const url = new URL(value);
     return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password ? url.href : "";
@@ -15,7 +17,7 @@ const components = {
   h2: ({ children }) => h("h3", null, children),
   h3: ({ children }) => h("h4", null, children),
   a: ({ href, children }) => href
-    ? h("a", { href, target: href.startsWith("#") ? undefined : "_blank", rel: "noopener noreferrer" }, children)
+    ? h("a", { href, target: href.startsWith("#") || href.startsWith("/") ? undefined : "_blank", rel: "noopener noreferrer" }, children)
     : h("span", null, children),
   // Model-supplied images are links, so rendering a reply makes no remote image requests.
   img: ({ src, alt }) => src

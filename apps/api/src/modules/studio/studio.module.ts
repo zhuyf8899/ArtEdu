@@ -8,5 +8,6 @@ import { StudioService } from "./studio.service";
   imports: [AuthModule, DatabaseModule],
   controllers: [StudioController],
   providers: [StudioService],
+  exports: [StudioService],
 })
 export class StudioModule {}

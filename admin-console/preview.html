@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ArtEdu · 创作区布局预览</title>
+    <script>
+      // 仅用于本地截图验收：headless Chrome 下 IndexedDB 回调不触发，
+      // 用内存实现顶替，让对话存储的代码路径照常走通。
+      (function () {
+        var data = new Map();
+        function run(fn) {
+          var req = { onsuccess: null, onerror: null, result: undefined };
+          setTimeout(function () {
+            try { req.result = fn(); if (req.onsuccess) req.onsuccess(); }
+            catch (error) { req.error = error; if (req.onerror) req.onerror(); }
+          }, 0);
+          return req;
+        }
+        function makeStore() {
+          return {
+            getAll: function () { return run(function () { return Array.from(data.values()); }); },
+            get: function (key) { return run(function () { return data.get(key); }); },
+            put: function (value) { return run(function () { data.set(value.id, value); return value.id; }); },
+            delete: function (key) { return run(function () { data.delete(key); }); },
+          };
+        }
+        var shim = {
+          open: function () {
+            var req = { onsuccess: null, onupgradeneeded: null, onerror: null, result: null };
+            setTimeout(function () {
+              req.result = {
+                objectStore: makeStore,
+                transaction: function () { return { objectStore: makeStore, onerror: null }; },
+                createObjectStore: function () { return makeStore(); },
+              };
+              if (req.onupgradeneeded) req.onupgradeneeded();
+              if (req.onsuccess) req.onsuccess();
+            }, 0);
+            return req;
+          },
+        };
+        // window.indexedDB 是只读访问器，必须 defineProperty 才能覆盖。
+        Object.defineProperty(window, "indexedDB", { value: shim, configurable: true, writable: true });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/preview-main.jsx"></script>
+  </body>
+</html>

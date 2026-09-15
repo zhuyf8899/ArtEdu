@@ -26,14 +26,19 @@ test("建议模式不强制执行操作，只有显式产物意图才切换通�
   assert.equal(resolveCreationOperation("生成一份 8 页 PPT 课堂汇报", "chat").id, "slides");
 });
 
-test("创作页绑定续写表单、键盘发送与历史文件入口", async () => {
+test("创作页绑定续写表单、键盘发送、历史文件留存与消息操作", async () => {
   const source = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
   assert.ok(source.includes('<form className="creation-canvas__composer" onSubmit={send}>'));
   assert.ok(source.includes("onKeyDown={handlePromptKeyDown}"));
   assert.ok(source.includes("event.ctrlKey || event.shiftKey || event.altKey || event.metaKey"));
-  assert.ok(source.includes("artifact: result?.artifact ?? null"));
+  assert.ok(source.includes("downloadUrl: uploaded.downloadUrl"), "上传引用必须把私有文件地址写入本地会话");
+  assert.ok(source.includes("creation-canvas__history-menu-toggle"), "每个会话应有独立的更多操作入口");
+  assert.ok(!source.includes("ArtifactBlock"), "对话中不应再提供下载产物按钮");
   assert.ok(source.includes("creation-canvas__history"));
-  assert.ok(source.includes("creation-canvas__environment"));
+  assert.ok(!source.includes('aria-label="本轮 Agent 环境"'));
+  assert.ok(source.includes("copyReply"));
+  assert.ok(source.includes("retryReply"));
+  assert.ok(source.includes("editPrompt"));
   assert.ok(source.includes("resolveCreationOperation(content, methodId)"));
 });
 
@@ -46,15 +51,16 @@ test("普通问答具备显式 Agent 场景，未知任务不会回退到 UI 创
   assert.ok(contracts.includes('"chat", "ui_design"'));
 });
 
-test("开启智能搜索时不强制 tool_choice，避免思考模式模型接口 400", async () => {
+test("开启智能搜索时不强制 tool_choice，且不把检索当成默认动作", async () => {
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   // 当前文本模型（deepseek-flash）运行在思考模式下，DeepSeek 会直接拒绝具名
   // tool_choice 并返回 400 "Thinking mode does not support this tool_choice"。
-  // 首轮调用 search_web 由 systemPrompt 明确要求，auto 下模型同样会遵守，
-  // 因此这里不允许再出现对象形态的 toolChoice。
+  // 保持 auto，具体是否检索由用户需求决定，而不是强制第一轮调用。
   assert.ok(!/toolChoice:\s*\{/.test(portal), "不得向模型发送对象形态的 tool_choice");
   assert.ok(portal.includes('model: { toolChoice: "auto" }'));
-  assert.ok(portal.includes("首轮必须调用 search_web"), "首轮检索要求仍须由系统提示词承担");
+  assert.ok(portal.includes("仅当用户明确要求实时互联网资料"));
+  assert.ok(!portal.includes("promptWithSearchPolicy"), "系统策略不得污染用户原始提示词");
+  assert.ok(!portal.includes("首轮必须调用 search_web"));
 });
 
 test("暂停输出：中断在途请求，且不当作失败处理", async () => {
@@ -64,7 +70,8 @@ test("暂停输出：中断在途请求，且不当作失败处理", async () =>
   // 每一轮生成持有自己的 AbortController：暂停只中断当前这一轮。
   assert.ok(workspace.includes("const abortRef = useRef(null)"));
   assert.ok(workspace.includes("abortRef.current?.abort()"));
-  assert.ok(workspace.includes("}, controller.signal);"), "onCreate 必须收到 signal");
+  // 生成入口把 signal 与增量回调一起交给 onCreate：前者用于暂停，后者用于流式回填。
+  assert.ok(workspace.includes("}, controller.signal, onDelta);"), "onCreate 必须同时收到 signal 与 onDelta");
   // 暂停走独立分支：保留内容、回填输入，而不是走失败态。
   assert.ok(workspace.includes('if (error?.name === "AbortError")'));
   assert.ok(workspace.includes("settlePaused"));
@@ -94,4 +101,35 @@ test("联网检索来源以引用卡片渲染，且复用同一套 URL 安全规
   assert.ok(workspace.includes('className="ai-sources"'));
   // 没有可用来源时整块不渲染，不留空壳占位。
   assert.ok(workspace.includes("if (!safe.length) return null"));
+});
+
+test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条消息", async () => {
+  const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
+  const api = await readFile(new URL("../src/services/adminApi.js", import.meta.url), "utf8");
+  const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
+
+  // API 层：新增流式入口，逐帧解析 SSE，且服务端不支持时能退回一次性调用。
+  assert.ok(api.includes("export const executeAgentRunStream"));
+  assert.ok(api.includes("/execute-stream"));
+  assert.ok(api.includes('"text/event-stream"'));
+  assert.ok(api.includes('event === "delta"'));
+  assert.ok(api.includes('event === "done"'));
+  assert.ok(api.includes("return executeAgentRun(runId, input, { signal })"), "不支持流式时必须回退到老接口");
+
+  // 创作页：增量回填到最后一个气泡，气泡带 streaming 标记（CSS 光标据此显示）。
+  assert.ok(workspace.includes("const onDelta = (text) => {"));
+  assert.ok(workspace.includes("streaming: true"));
+  assert.ok(workspace.includes("ai-message--streaming"));
+  assert.ok(workspace.includes("message.content || message.placeholder"), "没有增量时仍显示占位文案");
+
+  // 门户：agent 分支必须走流式入口，并透传增量回调。
+  assert.ok(portal.includes("executeAgentRunStream(run.id"));
+  assert.ok(portal.includes("{ signal, onDelta }"));
+});
+
+test("「重新输出」清除上一轮回复后重新生成，而不是回填输入框", async () => {
+  const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
+  assert.ok(workspace.includes("baseMessages: messages.slice(0, Math.max(0, index - 1))"), "必须截断到该提问之前");
+  assert.ok(workspace.includes('onNotice?.("已清除上一轮输出，正在重新生成…", "success")'));
+  assert.ok(!workspace.includes("已将本轮问题带回输入框"), "旧的一次性回填行为应已移除");
 });

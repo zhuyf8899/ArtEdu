@@ -5,7 +5,7 @@ import "@xyflow/react/dist/style.css";
 import { createWorkflow, createWorkflowVersion, getAdminWorkflow, getAdminWorkflows, updateWorkflow } from "./services/adminApi.js";
 import { shortId } from "./randomId.js";
 
-const blankWorkflow = { name: "", description: "", category: "视觉创作", entryType: "workbench", entryUrl: "" };
+const blankWorkflow = { name: "", description: "", category: "视觉创作", entryType: "workbench" };
 const palette = {
   input: { title: "输入", hint: "接收文字、图片或参数", color: "#4b87ff" },
   prompt: { title: "提示词", hint: "整理创作指令", color: "#b268ff" },

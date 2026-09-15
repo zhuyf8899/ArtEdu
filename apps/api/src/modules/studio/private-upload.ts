@@ -17,6 +17,9 @@ const allowedTypes = {
   "application/pdf": "document",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "document",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation": "document",
+  "text/plain": "document",
+  "text/markdown": "document",
+  "text/csv": "document",
 } as const;
 
 export type PrivateUploadMimeType = keyof typeof allowedTypes;
@@ -61,7 +64,8 @@ export async function storePrivateUpload(
     await pipeline(part.file, inspect, createWriteStream(temporaryPath, { flags: "wx", mode: 0o600 }));
     if (part.file.truncated) throw new PayloadTooLargeException("文件不能超过 10 MB");
     // DOCX/PPTX are ZIP containers. Inspecting their entry names avoids extracting untrusted content.
-    const mimeType = detectUploadMimeType(header) ?? detectOfficeMimeType(await readFile(temporaryPath));
+    const fileBytes = await readFile(temporaryPath);
+    const mimeType = detectUploadMimeType(header) ?? detectOfficeMimeType(fileBytes) ?? detectTextMimeType(part.mimetype, fileBytes);
     if (!mimeType || mimeType !== part.mimetype || !permittedMimeTypes.includes(mimeType)) {
       throw new BadRequestException("文件内容与声明类型不一致，或类型不被允许");
     }
@@ -109,8 +113,16 @@ function detectOfficeMimeType(file: Buffer): PrivateUploadMimeType | undefined {
   return undefined;
 }
 
+function detectTextMimeType(declaredMimeType: string, file: Buffer): PrivateUploadMimeType | undefined {
+  if (!["text/plain", "text/markdown", "text/csv"].includes(declaredMimeType)) return undefined;
+  // 拒绝 NUL 字节，避免把二进制伪装成文本；再通过 UTF-8 round-trip 验证。
+  if (file.includes(0)) return undefined;
+  const text = file.toString("utf8");
+  return Buffer.from(text, "utf8").equals(file) ? declaredMimeType as PrivateUploadMimeType : undefined;
+}
+
 function safeFileName(value: string | undefined, mimeType: StoredUpload["mimeType"]) {
-  const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4", "video/webm": ".webm", "application/pdf": ".pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx" } as const)[mimeType];
+  const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4", "video/webm": ".webm", "application/pdf": ".pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx", "text/plain": ".txt", "text/markdown": ".md", "text/csv": ".csv" } as const)[mimeType];
   const base = path.basename(value ?? "upload").replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 120) || "upload";
   return base.toLowerCase().endsWith(extension) ? base : `${base}${extension}`;
 }
