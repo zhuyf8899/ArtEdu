@@ -199,6 +199,7 @@ export const createWork = (input) => request("/works", {
   body: JSON.stringify(input),
 });
 export const submitWork = (workId) => request(`/works/${workId}/submit`, { method: "POST" });
+export const updateWork = (workId, input) => request(`/works/${workId}`, { method: "PUT", body: JSON.stringify(input) });
 export const uploadWorkAsset = (workId, file) => {
   const form = new FormData();
   form.append("file", file);
