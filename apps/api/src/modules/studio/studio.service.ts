@@ -9,6 +9,8 @@ import { AuthService } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import { getEnvironment } from "../../common/environment";
 import { storePrivateUpload } from "./private-upload";
+import { resolveWorkAssetPath } from "./work-asset-path";
+import { assertCasePublication, caseStorySchema, type CaseStory } from "./case-story";
 import type {
   CatalogQuery,
   WorkflowInput,
@@ -19,6 +21,7 @@ import type {
 } from "./studio.contracts";
 
 interface WorkRow {
+  story_json: Partial<CaseStory>;
   id: string;
   title: string;
   summary: string | null;
@@ -271,13 +274,20 @@ export class StudioService {
       this.database.query("SELECT wf.id,wf.name,wf.category FROM workflows wf JOIN work_workflows ww ON ww.workflow_id=wf.id WHERE ww.work_id=$1", [workId]),
       this.database.query("SELECT c.id,c.content,c.created_at,u.display_name AS author FROM comments c JOIN users u ON u.id=c.author_id WHERE c.work_id=$1 AND c.status='published' ORDER BY c.created_at", [workId]),
     ]);
-    return { ...this.mapWork(result.rows[0]), assets: assets.rows, tags: tags.rows, workflows: workflows.rows, comments: comments.rows };
+    const privileged = result.rows[0].author_id === actor.id || this.canReview(actor);
+    const story = caseStorySchema.parse(result.rows[0].story_json ?? {});
+    const visibleAssets = assets.rows.map(asset => ({ ...asset,
+      url: `/api/works/${encodeURIComponent(workId)}/assets/${encodeURIComponent(asset.id)}/download`,
+      canDownload: asset.asset_type !== "document" || privileged || story.allowDocumentDownload,
+    }));
+    return { ...this.mapWork(result.rows[0]), story: privileged ? story : { ...story, authorizationNote: "" }, assets: visibleAssets, tags: tags.rows, workflows: workflows.rows, comments: comments.rows };
   }
 
   async createWork(actor: Actor, input: WorkInput) {
     const id = `work-${randomUUID()}`;
     await this.database.transaction(async (client) => {
-      await client.query("INSERT INTO works (id,author_id,title,summary,discipline,status) VALUES ($1,$2,$3,$4,$5,'draft')", [id, actor.id, input.title, input.summary, input.discipline]);
+      if (input.story?.coverAssetId || input.story?.steps.some(step => step.assetIds.length)) throw new BadRequestException("请先保存草稿并上传文件，再关联案例图片");
+      await client.query("INSERT INTO works (id,author_id,title,summary,discipline,status,story_json) VALUES ($1,$2,$3,$4,$5,'draft',$6::jsonb)", [id, actor.id, input.title, input.summary, input.discipline, JSON.stringify(input.story ?? {})]);
       await this.replaceWorkRelations(client, id, input);
     });
     return this.getWork(actor, id);
@@ -285,10 +295,12 @@ export class StudioService {
 
   async submitWork(actor: Actor, workId: string) {
     const result = await this.database.transaction(async (client) => {
-      const work = await client.query<{ status: string; author_id: string }>("SELECT status,author_id FROM works WHERE id=$1 FOR UPDATE", [workId]);
+      const work = await client.query<{ status: string; author_id: string; story_json: CaseStory }>("SELECT status,author_id,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
       if (!work.rows[0]) throw new NotFoundException("作品不存在");
       if (work.rows[0].author_id !== actor.id) throw new ForbiddenException("只能提交自己的作品");
       if (!["draft", "rejected"].includes(work.rows[0].status)) throw new ConflictException("当前作品不能重复提交");
+      try { assertCasePublication(caseStorySchema.parse(work.rows[0].story_json ?? {})); }
+      catch (error) { throw new BadRequestException((error as Error).message); }
       const assets = await client.query("SELECT 1 FROM work_assets WHERE work_id=$1 LIMIT 1", [workId]);
       if (!assets.rowCount) throw new BadRequestException("至少添加一个作品资源后才能提交审核");
       await client.query("UPDATE works SET status='pending',published_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId]);
@@ -296,6 +308,25 @@ export class StudioService {
       return true;
     });
     if (!result) throw new ConflictException("提交失败");
+    return this.getWork(actor, workId);
+  }
+
+  async updateWork(actor: Actor, workId: string, input: WorkInput) {
+    await this.database.transaction(async client => {
+      const result = await client.query("SELECT author_id,status FROM works WHERE id=$1 FOR UPDATE", [workId]);
+      const work = result.rows[0];
+      if (!work) throw new NotFoundException("作品不存在");
+      if (work.author_id !== actor.id) throw new ForbiddenException("只能编辑自己的草稿");
+      if (!["draft", "rejected"].includes(work.status)) throw new ConflictException("审核中或已发布案例不能直接修改");
+      if (input.story) {
+        const assets = await client.query("SELECT id,asset_type FROM work_assets WHERE work_id=$1", [workId]);
+        const ids = new Set(assets.rows.filter(asset => asset.asset_type === "image").map(asset => asset.id));
+        const referenced = [input.story.coverAssetId, ...input.story.steps.flatMap(step => step.assetIds)].filter(Boolean);
+        if (referenced.some(id => !ids.has(id))) throw new BadRequestException("封面与步骤只能引用本案例的图片");
+      }
+      await client.query("UPDATE works SET title=$2,summary=$3,discipline=$4,story_json=COALESCE($5::jsonb,story_json),updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId, input.title, input.summary, input.discipline, input.story ? JSON.stringify(input.story) : null]);
+      await this.replaceWorkRelations(client, workId, input);
+    });
     return this.getWork(actor, workId);
   }
 
@@ -331,8 +362,8 @@ export class StudioService {
   }
 
   async openWorkAsset(actor: Actor, workId: string, assetId: string) {
-    const result = await this.database.query<{ storage_key: string; file_name: string; mime_type: string; status: string; author_id: string; moderation_status: string }>(`
-      SELECT asset.storage_key,asset.file_name,asset.mime_type,asset.moderation_status,work.status,work.author_id
+    const result = await this.database.query<{ storage_key: string; file_name: string; mime_type: string; status: string; author_id: string; moderation_status: string; asset_type: string; story_json: Partial<CaseStory> }>(`
+      SELECT asset.storage_key,asset.file_name,asset.mime_type,asset.asset_type,asset.moderation_status,work.status,work.author_id,work.story_json
       FROM work_assets asset JOIN works work ON work.id=asset.work_id
       WHERE asset.id=$1 AND asset.work_id=$2
     `, [assetId, workId]);
@@ -341,9 +372,9 @@ export class StudioService {
     const canReview = this.canReview(actor);
     const canRead = asset.author_id === actor.id || canReview || (asset.status === "approved" && asset.moderation_status === "approved");
     if (!canRead) throw new ForbiddenException("无权访问该文件");
+    if (asset.asset_type === "document" && asset.author_id !== actor.id && !canReview && !asset.story_json?.allowDocumentDownload) throw new ForbiddenException("作者未开放原件下载");
     const storageKey = asset.storage_key;
-    if (!/^[a-f0-9-]{36}-[a-f0-9-]{36}$/i.test(storageKey)) throw new NotFoundException("资源存储记录无效");
-    const filePath = path.join(getEnvironment().uploadRoot, storageKey);
+    const filePath = await resolveWorkAssetPath(getEnvironment().uploadRoot, storageKey, asset.author_id, workId);
     return { fileName: asset.file_name, mimeType: asset.mime_type, stream: createReadStream(filePath) };
   }
 
@@ -392,10 +423,14 @@ export class StudioService {
   }
 
   private workSelect(actorParameter: string) {
-    return `SELECT w.id,w.title,w.summary,w.discipline,w.status,w.author_id,author.display_name AS author,w.published_at,w.created_at,
+    return `SELECT w.id,w.title,w.summary,w.discipline,w.status,w.author_id,w.story_json,author.display_name AS author,w.published_at,w.created_at,
       COUNT(DISTINCT likes.user_id)::int AS like_count,COUNT(DISTINCT favorites.user_id)::int AS favorite_count,
       BOOL_OR(likes.user_id=${actorParameter}) AS liked,BOOL_OR(favorites.user_id=${actorParameter}) AS favorited,
-      MIN(assets.external_url) FILTER (WHERE assets.asset_type='image') AS preview_url
+      COALESCE((SELECT '/api/works/' || w.id || '/assets/' || cover.id || '/download' FROM work_assets cover
+        WHERE cover.work_id=w.id AND cover.asset_type='image' AND cover.storage_key IS NOT NULL
+        AND (w.status<>'approved' OR cover.moderation_status='approved')
+        ORDER BY (cover.id=COALESCE(w.story_json->>'coverAssetId','')) DESC,cover.sort_order,cover.created_at LIMIT 1),
+        MIN(assets.external_url) FILTER (WHERE assets.asset_type='image')) AS preview_url
       FROM works w JOIN users author ON author.id=w.author_id
       LEFT JOIN work_likes likes ON likes.work_id=w.id LEFT JOIN work_favorites favorites ON favorites.work_id=w.id
       LEFT JOIN work_assets assets ON assets.work_id=w.id`;
@@ -510,7 +545,7 @@ export class StudioService {
   }
 
   private mapWork(row: WorkRow) {
-    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, authorId: row.author_id, author: row.author, likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
+    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
   }
 
   private canReview(actor: Actor) { return actor.roles.some((role) => ["admin", "operator", "teacher"].includes(role)); }

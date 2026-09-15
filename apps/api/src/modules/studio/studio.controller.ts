@@ -97,6 +97,11 @@ export class StudioController {
     return this.studio.submitWork(await this.auth.getActor(request), workId);
   }
 
+  @Put("works/:workId")
+  async updateWork(@Req() request: FastifyRequest, @Param("workId") workId: string, @Body() body: unknown) {
+    return this.studio.updateWork(await this.auth.getActor(request), workId, parseInput(workInputSchema, body) as WorkInput);
+  }
+
   @Post("works/:workId/assets")
   async uploadWorkAsset(@Req() request: FastifyRequest, @Param("workId") workId: string) {
     return this.studio.uploadWorkAsset(await this.auth.getActor(request), workId, request);
@@ -107,7 +112,9 @@ export class StudioController {
     const asset = await this.studio.openWorkAsset(await this.auth.getActor(request), workId, assetId);
     const encodedName = encodeURIComponent(asset.fileName).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
     reply.header("Content-Type", asset.mimeType);
-    reply.header("Content-Disposition", `attachment; filename*=UTF-8''${encodedName}`);
+    const disposition = asset.mimeType.startsWith("image/") || asset.mimeType.startsWith("video/") ? "inline" : "attachment";
+    reply.header("Content-Disposition", `${disposition}; filename*=UTF-8''${encodedName}`);
+    reply.header("Cache-Control", "private, no-store");
     reply.header("X-Content-Type-Options", "nosniff");
     return asset.stream;
   }

@@ -5,6 +5,42 @@ import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { detectUploadMimeType, storePrivateUpload } from "./private-upload";
+import { resolveWorkAssetPath } from "./work-asset-path";
+import { StudioService } from "./studio.service";
+
+test("作品新分层与旧 UUID 路径均可读取；越权、穿越和丢失文件被拒绝", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "artedu-case-path-"));
+  const previous = process.env.UPLOAD_ROOT;
+  process.env.UPLOAD_ROOT = root;
+  try {
+    const file = () => ({fieldname:"file",filename:"case.pdf",mimetype:"application/pdf",file:Readable.from([Buffer.from("%PDF-1.7\n")])}) as any;
+    const nested = await storePrivateUpload(file(), root, undefined, "users/student-a/works/work-a");
+    const legacy = await storePrivateUpload(file(), root);
+    assert.equal((await readFile(await resolveWorkAssetPath(root,nested.storageKey,"student-a","work-a"))).subarray(0,5).toString(), "%PDF-");
+    await resolveWorkAssetPath(root,legacy.storageKey,"student-a","work-a");
+    for (const key of ["../outside", "C:/outside", "/etc/passwd", nested.storageKey.replace("student-a","student-b"), nested.storageKey.replace("work-a","work-b"), nested.storageKey.replaceAll("/","\\"), "%2e%2e/file"]) {
+      await assert.rejects(resolveWorkAssetPath(root,key,"student-a","work-a"));
+    }
+    const asset = {storage_key:nested.storageKey, file_name:"case.pdf", mime_type:"application/pdf", asset_type:"document", status:"draft", author_id:"student-a", moderation_status:"pending",story_json:{allowDocumentDownload:false}};
+    const service = new StudioService({query: async () => ({rows:[asset]})} as any, {} as any);
+    const owner = {id:"student-a",roles:["student"]} as any;
+    const stranger = {id:"student-b",roles:["student"]} as any;
+    await assert.rejects(service.openWorkAsset(stranger,"work-a","asset-a"), /无权/);
+    const output = await service.openWorkAsset(owner,"work-a","asset-a");
+    const chunks = []; for await (const chunk of output.stream) chunks.push(chunk);
+    assert.equal(Buffer.concat(chunks).subarray(0,5).toString(), "%PDF-");
+    asset.status = "approved"; asset.moderation_status = "approved";
+    await assert.rejects(service.openWorkAsset(stranger,"work-a","asset-a"), /未开放/);
+    asset.story_json.allowDocumentDownload = true;
+    const permitted = await service.openWorkAsset(stranger,"work-a","asset-a");
+    for await (const chunk of permitted.stream) assert.ok(chunk.length);
+    await rm(await resolveWorkAssetPath(root,nested.storageKey,"student-a","work-a"));
+    await assert.rejects(service.openWorkAsset(owner,"work-a","asset-a"), /不存在/);
+  } finally {
+    if (previous === undefined) delete process.env.UPLOAD_ROOT; else process.env.UPLOAD_ROOT = previous;
+    await rm(root,{recursive:true,force:true});
+  }
+});
 
 test("上传文件按真实魔数识别，并拒绝伪装内容", () => {
   assert.equal(detectUploadMimeType(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), "image/png");

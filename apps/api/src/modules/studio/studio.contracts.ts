@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { caseStorySchema } from "./case-story";
 
 export const catalogQuerySchema = z.object({
   query: z.string().trim().max(100).optional(),
@@ -112,6 +113,7 @@ export const workflowRunProgressSchema = z.object({
 });
 
 export const workInputSchema = z.object({
+  story: caseStorySchema.optional(),
   title: z.string().trim().min(2).max(160),
   summary: z.string().trim().min(2).max(3000),
   discipline: z.string().trim().min(1).max(100),

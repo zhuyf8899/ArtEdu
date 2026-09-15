@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { workflowInputSchema, workflowVersionInputSchema, workInputSchema } from "./studio.contracts";
+import { assertCasePublication, caseStorySchema } from "./case-story";
+
+test("收集案例可存草稿，缺少原作者或授权不能提交审核", () => {
+  const draft = caseStorySchema.parse({ origin: "collected", creators: ["匿名作者"] });
+  assert.equal(draft.allowDocumentDownload, false);
+  assert.throws(() => assertCasePublication(draft), /授权/);
+  assert.throws(() => assertCasePublication({ ...draft, authorization: "confirmed" }), /授权说明/);
+  assert.doesNotThrow(() => assertCasePublication({ ...draft, authorization: "confirmed", authorizationNote: "已获校内展示授权" }));
+  assert.doesNotThrow(() => assertCasePublication(caseStorySchema.parse({})));
+  assert.equal(caseStorySchema.safeParse({ steps: Array.from({length: 21}, () => ({title:"步骤"})) }).success, false);
+  assert.equal(caseStorySchema.safeParse({ steps: [{ title: "步骤", execute: true }] }).success, false);
+});
 
 test("作品投稿不接受客户端提供的资源地址或资源元数据", () => {
   const base = { title: "测试作品", summary: "用于验证投稿输入", discipline: "视觉传达" };
