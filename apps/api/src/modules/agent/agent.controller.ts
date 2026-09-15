@@ -18,6 +18,21 @@ export class AgentController {
     return asset.stream;
   }
 
+  /**
+   * 工作区预览使用包含文件路径的 URL，令 HTML 内的相对 CSS/JS/图片路径按项目目录
+   * 解析。保留 workspace-file 查询接口，避免已落库的旧链接失效。
+   */
+  @Get("workspace-preview/*")
+  async previewWorkspaceFile(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    const filePath = String((request.params as Record<string, string>)["*"] ?? "");
+    const asset = await this.workspace.open(await this.auth.getActor(request), filePath);
+    reply.header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff").header("Cache-Control", "private, no-store");
+    // Agent 生成的 HTML 是不可信内容：允许它运行自己的 JS，但不给它同源身份，
+    // 也禁止它联网、提交表单或借机调用平台 API。
+    if (asset.contentType.startsWith("text/html")) reply.header("Content-Security-Policy", "sandbox allow-scripts; default-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'");
+    return asset.stream;
+  }
+
   @Post()
   async create(@Req() request: FastifyRequest, @Body() body: CreateAgentRunInput) {
     const input = parseInput(createAgentRunSchema, body);

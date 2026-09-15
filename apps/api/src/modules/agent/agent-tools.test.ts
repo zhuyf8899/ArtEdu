@@ -63,7 +63,7 @@ test("多文件工作区工具一次创建网页所需文件，并限制在当�
     async writeMany(receivedActor: Actor, files: Array<{ path: string; content: string }>) {
       assert.equal(receivedActor.id, actor.id);
       received.push(...files);
-      return { items: files.map((file) => ({ path: file.path, openUrl: `/api/agent-runs/workspace-file?path=${encodeURIComponent(file.path)}` })), message: "已创建 2 个工作区文件。" };
+      return { items: files.map((file) => ({ path: file.path, openUrl: `/api/agent-runs/workspace-preview/${file.path}` })), message: "已创建 2 个工作区文件。" };
     },
   } as unknown as AgentWorkspaceService;
   const result = await executePlatformTool(call("write_workspace_files", { files: [{ path: "site/index.html", content: "<link rel=\"stylesheet\" href=\"style.css\">" }, { path: "site/style.css", content: "body { color: #111; }" }] }), baseContext, {

@@ -87,7 +87,14 @@ export class AgentWorkspaceService {
     return { path: relative, stream: createReadStream(target), contentType: contentType(relative), fileName: path.basename(relative) };
   }
 
-  openUrl(filePath: string) { return `/api/agent-runs/workspace-file?path=${encodeURIComponent(filePath)}`; }
+  /**
+   * 使用目录型 URL 托管预览文件。浏览器由此会把 `assets/style.css`、`src/main.js`
+   * 解析到同一工作区目录，而不是错误地解析到 /api/agent-runs/ 下。
+   */
+  openUrl(filePath: string) {
+    const relative = this.relative(filePath);
+    return `/api/agent-runs/workspace-preview/${relative.split("/").map(encodeURIComponent).join("/")}`;
+  }
 
   private relative(value: string) {
     const normalized = String(value ?? ".").replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/$/, "");
