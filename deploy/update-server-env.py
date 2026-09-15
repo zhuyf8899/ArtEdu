@@ -8,7 +8,7 @@ import sys
 
 PROVIDERS = (
     '[{"id":"model-deepseek-v4-flash","baseUrl":"https://api.deepseek.com","model":"deepseek-flash",'
-    '"capabilities":["chat","vision","webpage","document"],"apiKeyEnv":"DEEPSEEK_API_KEY","timeoutMs":60000},'
+    '"capabilities":["chat","vision","webpage","document"],"apiKeyEnv":"DEEPSEEK_API_KEY","timeoutMs":180000},'
     '{"id":"model-modelscope-qwen-image","baseUrl":"https://api-inference.modelscope.cn","model":"Qwen/Qwen-Image",'
     '"capabilities":["image","pattern"],"apiKeyEnv":"MODELSCOPE_API","timeoutMs":120000,'
     '"protocol":"modelscope-image","internal":true}]'

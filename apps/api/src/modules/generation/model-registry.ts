@@ -13,7 +13,8 @@ const providerSchema = z.object({
   apiKeyEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/).optional(),
   // 备用 key：主 key 缺失、或主 key 返回 401/402/403（失效/欠费）时自动切换。
   apiKeyFallbackEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/).optional(),
-  timeoutMs: z.coerce.number().int().min(1000).max(120000).default(30000),
+  // Agent 可经历工具调用和视觉理解；三分钟是单次上游模型调用的硬上限。
+  timeoutMs: z.coerce.number().int().min(1000).max(180000).default(30000),
   // 默认沿用 OpenAI 兼容的 chat/completions；图像等专用协议在此显式声明。
   protocol: z.enum(["openai-chat", "modelscope-image"]).default("openai-chat"),
   // 内部通道（如平台内置图像生成）：只用于后端路由，不出现在前台模型列表。

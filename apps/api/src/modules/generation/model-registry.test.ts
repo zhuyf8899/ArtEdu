@@ -37,7 +37,7 @@ test("仅向首页暴露已配置密钥的模型", () => {
 
 // 与生产部署同构：文本模型 + 内部图像通道，顺序也与线上一致。
 const deployedProviders = JSON.stringify([
-  { id: "model-deepseek-v4-flash", baseUrl: "https://api.deepseek.com", model: "deepseek-flash", capabilities: ["chat", "vision", "webpage", "document"], apiKeyEnv: "DEEPSEEK_API_KEY", timeoutMs: 60000 },
+  { id: "model-deepseek-v4-flash", baseUrl: "https://api.deepseek.com", model: "deepseek-flash", capabilities: ["chat", "vision", "webpage", "document"], apiKeyEnv: "DEEPSEEK_API_KEY", timeoutMs: 180000 },
   { id: "model-modelscope-qwen-image", baseUrl: "https://api-inference.modelscope.cn", model: "Qwen/Qwen-Image", capabilities: ["image", "pattern"], apiKeyEnv: "MODELSCOPE_API", timeoutMs: 120000, protocol: "modelscope-image", internal: true },
 ]);
 
