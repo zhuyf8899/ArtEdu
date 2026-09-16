@@ -21,7 +21,7 @@ export class HealthController {
     const environment = getEnvironment();
     let database = false, uploads = !environment.fileUploadsEnabled;
     try {
-      const result = await this.database.query("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='works' AND column_name='story_json' AND table_schema='public') AS ready");
+      const result = await this.database.query("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='works' AND column_name='story_json' AND table_schema='public') AND to_regclass('public.content_reports') IS NOT NULL AS ready");
       database = result.rows[0]?.ready === true;
     } catch { /* Never leak database addresses or connection errors. */ }
     if (environment.fileUploadsEnabled) {

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
 import { DatabaseService } from "../database/database.service";
-import type { QuotaInput, ReviewDecisionInput } from "./admin.contracts";
+import type { QuotaInput, ReportDecisionInput, ReviewDecisionInput } from "./admin.contracts";
 
 export interface AdminUser {
   id: string;
@@ -35,6 +35,20 @@ export interface AdminReview {
   assets: number;
   assetLinks: Array<{ id: string; fileName: string; mimeType: string; url: string }>;
   status: "pending" | "approved" | "rejected";
+}
+
+export interface AdminReport {
+  id: string;
+  targetType: "work" | "comment";
+  targetId: string;
+  title: string;
+  excerpt: string;
+  reporter: string;
+  reason: string;
+  description: string;
+  status: "pending" | "resolved" | "dismissed";
+  contentAction: "keep" | "hide";
+  createdAt: string;
 }
 
 interface UserRow {
@@ -301,6 +315,36 @@ export class AdminRepository {
       INSERT INTO audit_records (id, target_type, target_id, reviewer_id, action, reason)
       VALUES ($1, 'work', $2, $3, $4, $5)
     `, [randomUUID(), workId, reviewerId, decision.status === "approved" ? "approve" : "reject", decision.note || null]);
+    return true;
+  }
+
+  async listReports(): Promise<AdminReport[]> {
+    const result = await this.database.query<{
+      id: string; target_type: AdminReport["targetType"]; target_id: string; title: string; excerpt: string; reporter: string;
+      reason: string; description: string; status: AdminReport["status"]; content_action: AdminReport["contentAction"]; created_at: Date;
+    }>(`
+      SELECT r.id,r.target_type,r.target_id,r.reason,r.description,r.status,r.content_action,r.created_at,
+        reporter.display_name AS reporter,
+        CASE WHEN r.target_type='work' THEN w.title ELSE CONCAT('评论：', LEFT(COALESCE(c.content,''), 48)) END AS title,
+        CASE WHEN r.target_type='work' THEN COALESCE(w.summary,'') ELSE COALESCE(c.content,'') END AS excerpt
+      FROM content_reports r
+      JOIN users reporter ON reporter.id=r.reporter_id
+      LEFT JOIN works w ON r.target_type='work' AND w.id=r.target_id
+      LEFT JOIN comments c ON r.target_type='comment' AND c.id=r.target_id
+      ORDER BY CASE r.status WHEN 'pending' THEN 0 ELSE 1 END,r.created_at DESC
+    `);
+    return result.rows.map((row) => ({ id: row.id, targetType: row.target_type, targetId: row.target_id, title: row.title, excerpt: row.excerpt, reporter: row.reporter, reason: row.reason, description: row.description, status: row.status, contentAction: row.content_action, createdAt: row.created_at.toISOString() }));
+  }
+
+  async decideReport(client: PoolClient, reportId: string, handlerId: string, decision: ReportDecisionInput): Promise<boolean> {
+    const report = await client.query<{ target_type: "work" | "comment"; target_id: string }>("SELECT target_type,target_id FROM content_reports WHERE id=$1 AND status='pending' FOR UPDATE", [reportId]);
+    const target = report.rows[0];
+    if (!target) return false;
+    await client.query("UPDATE content_reports SET status=$2,content_action=$3,handled_by=$4,handled_note=$5,handled_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=$1", [reportId, decision.status, decision.contentAction, handlerId, decision.note]);
+    if (decision.status === "resolved" && decision.contentAction === "hide") {
+      if (target.target_type === "work") await client.query("UPDATE works SET status='archived',updated_at=CURRENT_TIMESTAMP WHERE id=$1", [target.target_id]);
+      else await client.query("UPDATE comments SET status='hidden',updated_at=CURRENT_TIMESTAMP WHERE id=$1", [target.target_id]);
+    }
     return true;
   }
 

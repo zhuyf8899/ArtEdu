@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { ADMIN_MANAGEMENT_ROLES, PLATFORM_ADMIN_ROLES, REVIEW_ROLES } from "../../common/constants";
 import { AuthService, type Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
-import type { BulkQuotaInput, QuotaInput, ReviewDecisionInput } from "./admin.contracts";
+import type { BulkQuotaInput, QuotaInput, ReportDecisionInput, ReviewDecisionInput } from "./admin.contracts";
 import { AdminRepository } from "./admin.repository";
 
 @Injectable()
@@ -89,5 +89,17 @@ export class AdminService {
     const changed = await this.database.transaction((client) => this.repository.decideReview(client, reviewId, actor.id, decision));
     if (!changed) throw new NotFoundException("待审核作品不存在，或已被其他审核人员处理");
     return (await this.repository.listReviews()).find((item) => item.id === reviewId);
+  }
+
+  async getReports(actor: Actor) {
+    this.authService.requireAnyRole(actor, REVIEW_ROLES);
+    return { items: await this.repository.listReports() };
+  }
+
+  async decideReport(actor: Actor, reportId: string, decision: ReportDecisionInput) {
+    this.authService.requireAnyRole(actor, REVIEW_ROLES);
+    const changed = await this.database.transaction((client) => this.repository.decideReport(client, reportId, actor.id, decision));
+    if (!changed) throw new NotFoundException("待处理举报不存在，或已被其他审核人员处理");
+    return (await this.repository.listReports()).find((item) => item.id === reportId);
   }
 }

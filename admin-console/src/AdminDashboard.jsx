@@ -4,13 +4,15 @@ import { RuntimeStatus } from "./RuntimeStatus.jsx";
 import {
   ArrowRight, Bell, CaretDown, ChartBar, Check, Clock, Coins, Eye,
   BookOpenText, CirclesThreePlus, FileImage, Gauge, List, MagnifyingGlass, Robot, ShieldCheck,
-  PlugsConnected, SlidersHorizontal, Sparkle, Users, Warning, X,
+  Flag, PlugsConnected, SlidersHorizontal, Sparkle, Users, Warning, X,
 } from "@phosphor-icons/react";
 import {
   getAdminDashboard,
+  getAdminReports,
   getAdminReviews,
   getAdminUsers,
   reviewSubmission,
+  decideReport,
   updateUserQuota,
   updateUsersQuota,
   updateUserStatus,
@@ -26,6 +28,7 @@ const navItems = [
   { id: "courses", label: "课程资源", icon: BookOpenText },
   { id: "workflows", label: "工作流管理", icon: CirclesThreePlus },
   { id: "reviews", label: "作品审核", icon: ShieldCheck },
+  { id: "reports", label: "举报处理", icon: Flag },
   { id: "bridges", label: "本地 Bridge", icon: PlugsConnected },
 ];
 
@@ -63,7 +66,7 @@ function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items,
 }
 
 function Topbar({ section, onOpenMenu, actor, onBack, users, reviews, dashboard, onNavigate }) {
-  const titles = { overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], courses: ["课程资源", "创建课程、配置课时并完成发布审核"], workflows: ["工作流管理", "创建教学与创作路径，编辑版本并发布到学生端"], reviews: ["作品审核", "审核用户提交到资源库的作品与案例"], bridges: ["本地 Bridge", "管理本机模型执行器与访问令牌"] };
+  const titles = { overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], courses: ["课程资源", "创建课程、配置课时并完成发布审核"], workflows: ["工作流管理", "创建教学与创作路径，编辑版本并发布到学生端"], reviews: ["作品审核", "审核用户提交到资源库的作品与案例"], reports: ["举报处理", "核对社区举报并决定保留或隐藏内容"], bridges: ["本地 Bridge", "管理本机模型执行器与访问令牌"] };
   const [query, setQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const results = useMemo(() => {
@@ -172,6 +175,13 @@ function ReviewsPage({ reviews, selectedReview, onSelectReview }) {
   </div>;
 }
 
+function ReportsPage({ reports, onDecision }) {
+  const [filter, setFilter] = useState("pending");
+  const visible = reports.filter((item) => filter === "all" || item.status === filter);
+  const labels = { violence: "暴力内容", pornography: "色情内容", harassment: "辱骂/骚扰", spam: "广告/垃圾信息", other: "其他" };
+  return <div className="page-content"><section className="page-intro"><div><p>// COMMUNITY REPORTS</p><h1>举报处理</h1><span>举报不会自动下架；请结合原内容和举报说明作出处理。</span></div><div className="review-summary"><Flag size={19} weight="bold" /><div><strong>{reports.filter((item) => item.status === "pending").length} 项待处理</strong><span>可保留、隐藏内容或驳回举报</span></div></div></section><section className="panel"><div className="review-tabs">{[["pending", "待处理"], ["resolved", "已处理"], ["dismissed", "已驳回"], ["all", "全部"]].map(([value, label]) => <button key={value} className={filter === value ? "is-active" : ""} onClick={() => setFilter(value)}>{label}</button>)}</div><div className="report-list">{visible.map((item) => <article key={item.id} className="report-item"><div><span>{item.targetType === "work" ? "作品" : "评论"} · {labels[item.reason]}</span><h3>{item.title || "原内容已删除"}</h3><p>{item.excerpt}</p><small>举报人：{item.reporter}　说明：{item.description}</small></div>{item.status === "pending" ? <div className="report-item__actions"><button onClick={() => onDecision(item.id, { status: "dismissed", contentAction: "keep" })}>驳回举报</button><button onClick={() => onDecision(item.id, { status: "resolved", contentAction: "keep" })}>处理并保留</button><button className="reject-button" onClick={() => onDecision(item.id, { status: "resolved", contentAction: "hide" })}>隐藏内容</button></div> : <em>{item.status === "resolved" ? (item.contentAction === "hide" ? "已隐藏内容" : "已保留内容") : "已驳回举报"}</em>}</article>)}{!visible.length && <div className="empty-state"><Check size={32} /><strong>暂无举报</strong><span>用户提交的举报会显示在这里。</span></div>}</div></section></div>;
+}
+
 function QuotaDrawer({ user, onClose, onSave }) {
   const [daily, setDaily] = useState(user?.dailyLimit ?? 30); const [monthly, setMonthly] = useState(user?.monthlyLimit ?? 600); const [concurrent, setConcurrent] = useState(user?.concurrentLimit ?? 2);
   if (!user) return null;
@@ -188,17 +198,18 @@ function ReviewDrawer({ review, onClose, onDecision }) {
 export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSection = "overview" }) {
   const operatorOnly = actor?.role === "operator";
   const canManageQuota = actor?.role === "admin" || actor?.roles?.includes("admin");
-  const availableNavItems = operatorOnly ? navItems.filter((item) => item.id === "reviews") : navItems;
-  const [section, setSection] = useState(operatorOnly ? "reviews" : initialSection); const [sidebarOpen, setSidebarOpen] = useState(false); const [users, setUsers] = useState([]); const [reviews, setReviews] = useState([]); const [dashboard, setDashboard] = useState(null); const [quotaUser, setQuotaUser] = useState(null); const [selectedUserIds, setSelectedUserIds] = useState(new Set()); const [bulkQuotaOpen, setBulkQuotaOpen] = useState(false); const [selectedReview, setSelectedReview] = useState(null); const [adminLoading, setAdminLoading] = useState(true); const [adminLoadError, setAdminLoadError] = useState("");
+  const availableNavItems = operatorOnly ? navItems.filter((item) => item.id === "reviews" || item.id === "reports") : navItems;
+  const [section, setSection] = useState(operatorOnly ? "reviews" : initialSection); const [sidebarOpen, setSidebarOpen] = useState(false); const [users, setUsers] = useState([]); const [reviews, setReviews] = useState([]); const [reports, setReports] = useState([]); const [dashboard, setDashboard] = useState(null); const [quotaUser, setQuotaUser] = useState(null); const [selectedUserIds, setSelectedUserIds] = useState(new Set()); const [bulkQuotaOpen, setBulkQuotaOpen] = useState(false); const [selectedReview, setSelectedReview] = useState(null); const [adminLoading, setAdminLoading] = useState(true); const [adminLoadError, setAdminLoadError] = useState("");
   const { notify: showToast, confirmAction } = useFeedback();
   useEffect(() => setSection(operatorOnly ? "reviews" : initialSection), [initialSection, operatorOnly]);
   const changeSection = (nextSection) => { setSection(nextSection); onNavigate(nextSection); };
   const loadAdminData = useCallback(async () => {
     setAdminLoading(true); setAdminLoadError("");
-    const [userResult, reviewResult, dashboardResult] = await Promise.allSettled([operatorOnly ? Promise.resolve(null) : getAdminUsers(), getAdminReviews(), operatorOnly ? Promise.resolve(null) : getAdminDashboard()]);
+    const [userResult, reviewResult, reportResult, dashboardResult] = await Promise.allSettled([operatorOnly ? Promise.resolve(null) : getAdminUsers(), getAdminReviews(), getAdminReports(), operatorOnly ? Promise.resolve(null) : getAdminDashboard()]);
     const failures = [];
     if (userResult.status === "fulfilled" && userResult.value) setUsers(userResult.value.items ?? []); else if (!operatorOnly) failures.push("用户数据");
     if (reviewResult.status === "fulfilled") setReviews(reviewResult.value.items ?? []); else failures.push("审核数据");
+    if (reportResult.status === "fulfilled") setReports(reportResult.value.items ?? []); else failures.push("举报数据");
     if (dashboardResult.status === "fulfilled" && dashboardResult.value) setDashboard(dashboardResult.value); else if (!operatorOnly) failures.push("统计数据");
     if (failures.length) { const message = `${failures.join("、")}加载失败`; setAdminLoadError(message); showToast(message, "error"); }
     setAdminLoading(false);
@@ -219,5 +230,6 @@ export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSe
   };
   const toggleUserStatus = async (target) => { const status = target.status === "suspended" ? "active" : "suspended"; const confirmed = await confirmAction({ title: status === "active" ? "重新启用账户" : "停用用户账户", message: status === "active" ? `确认恢复“${target.name}”的登录与创作权限吗？` : `确认停用“${target.name}”吗？该用户将无法继续登录或创建任务。`, confirmLabel: status === "active" ? "确认启用" : "确认停用", danger: status !== "active" }); if (!confirmed) return; try { const updated = await updateUserStatus(target.id, status); setUsers((current) => current.map((user) => user.id === target.id ? updated : user)); showToast(status === "active" ? "用户账户已重新启用" : "用户账户已停用"); } catch (error) { showToast(error.message); } };
   const decideReview = async (id, status, note) => { if (status === "rejected" && !note.trim()) { showToast("驳回作品前请填写修改原因", "error"); return; } const confirmed = await confirmAction({ title: status === "approved" ? "通过并发布作品" : "驳回作品", message: status === "approved" ? "作品通过后会立即出现在案例社区，确认继续吗？" : "作品将退回作者修改，审核原因会同步给作者。", confirmLabel: status === "approved" ? "确认发布" : "确认驳回", danger: status === "rejected" }); if (!confirmed) return; try { const updated = await reviewSubmission(id, { status, note }); setReviews((current) => current.map((item) => item.id === id ? updated : item)); setSelectedReview(null); showToast(status === "approved" ? "作品已通过并发布到资源库" : "作品已驳回并退回作者修改"); } catch (error) { showToast(error.message); } };
-  return <div className="admin-shell"><Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} dashboard={dashboard} /><div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} /><main><RuntimeStatus /><div key={section} className="route-transition">{(adminLoading || adminLoadError) && <div className={`admin-load-state ${adminLoadError ? "is-error" : ""}`} aria-busy={adminLoading}><span>{adminLoading ? "正在同步管理数据…" : adminLoadError}</span>{!adminLoading && <button onClick={loadAdminData}>重新加载</button>}</div>}{section === "overview" && <Overview users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} onEditQuota={setQuotaUser} />}{section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} selectedIds={selectedUserIds} onSelectionChange={setSelectedUserIds} onOpenBulkQuota={() => setBulkQuotaOpen(true)} canManageQuota={canManageQuota} />}{section === "courses" && <AdminCourses showToast={showToast} />}{section === "workflows" && <WorkflowAdmin showToast={showToast} />}{section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}{section === "bridges" && <BridgeDevices showToast={showToast} confirmAction={confirmAction} />}</div></main></div><QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} />{bulkQuotaOpen && <BulkQuotaDrawer count={selectedUserIds.size} onClose={() => setBulkQuotaOpen(false)} onSave={saveBulkQuota} />}<ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} /></div>;
+  const resolveReport = async (id, decision) => { try { const updated = await decideReport(id, decision); setReports((current) => current.map((item) => item.id === id ? updated : item)); showToast(decision.contentAction === "hide" ? "已隐藏被举报内容" : "举报已处理"); } catch (error) { showToast(error.message); } };
+  return <div className="admin-shell"><Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} dashboard={dashboard} /><div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} /><main><RuntimeStatus /><div key={section} className="route-transition">{(adminLoading || adminLoadError) && <div className={`admin-load-state ${adminLoadError ? "is-error" : ""}`} aria-busy={adminLoading}><span>{adminLoading ? "正在同步管理数据…" : adminLoadError}</span>{!adminLoading && <button onClick={loadAdminData}>重新加载</button>}</div>}{section === "overview" && <Overview users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} onEditQuota={setQuotaUser} />}{section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} selectedIds={selectedUserIds} onSelectionChange={setSelectedUserIds} onOpenBulkQuota={() => setBulkQuotaOpen(true)} canManageQuota={canManageQuota} />}{section === "courses" && <AdminCourses showToast={showToast} />}{section === "workflows" && <WorkflowAdmin showToast={showToast} />}{section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}{section === "reports" && <ReportsPage reports={reports} onDecision={resolveReport} />}{section === "bridges" && <BridgeDevices showToast={showToast} confirmAction={confirmAction} />}</div></main></div><QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} />{bulkQuotaOpen && <BulkQuotaDrawer count={selectedUserIds.size} onClose={() => setBulkQuotaOpen(false)} onSave={saveBulkQuota} />}<ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} /></div>;
 }

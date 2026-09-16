@@ -11,6 +11,29 @@ import { detectUploadMimeType, storePrivateUpload } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { StudioService } from "./studio.service";
 
+test('上传已落库后 OCR 审计异常不得删除素材', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(),'artedu-ocr-commit-'));
+  const oldRoot = process.env.UPLOAD_ROOT, oldEnabled = process.env.ENABLE_FILE_UPLOADS;
+  process.env.UPLOAD_ROOT=root; process.env.ENABLE_FILE_UPLOADS='true';
+  let savedKey = '';
+  const query = async (sql: string, values: unknown[] = []) => {
+    if(sql.includes('sha256=$2'))return {rows:[]};
+    if(sql.includes('COUNT(*)'))return {rows:[{count:0}]};
+    if(sql.includes('INSERT INTO work_assets')) {savedKey=String(values[4]);return {rows:[]};}
+    return {rows:[{status:'draft',author_id:'user-a',title:'test'}]};
+  };
+  const service = new StudioService({query,transaction:async(fn:any)=>fn({query})} as any,{} as any);
+  (service as any).autoModerateImageAsset = async()=>{throw new Error('audit unavailable');};
+  try {
+    await assert.rejects(service.uploadWorkAsset({id:'user-a'} as any,'work-a',{file:async()=>({fieldname:'file',filename:'test.png',mimetype:'image/png',file:Readable.from([Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])])})} as any),/audit unavailable/);
+    assert.equal((await readFile(path.join(root,savedKey))).length,8);
+  } finally {
+    if(oldRoot===undefined)delete process.env.UPLOAD_ROOT;else process.env.UPLOAD_ROOT=oldRoot;
+    if(oldEnabled===undefined)delete process.env.ENABLE_FILE_UPLOADS;else process.env.ENABLE_FILE_UPLOADS=oldEnabled;
+    await rm(root,{recursive:true,force:true});
+  }
+});
+
 test('案例视频分类型限额、超限清理、伪装拒绝；其他上传保持 10 MiB', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(),'artedu-video-limits-'));
   const part = (size: number, type = 'video/mp4', header = '....ftypisom') => ({fieldname:'file',filename:'test.mp4',mimetype:type,file:Readable.from((function* () {

@@ -26,6 +26,13 @@ export const reviewDecisionSchema = z.object({
   note: z.string().trim().max(1000).optional().default(""),
 });
 
+export const reportDecisionSchema = z.object({
+  status: z.enum(["resolved", "dismissed"]),
+  contentAction: z.enum(["keep", "hide"]).default("keep"),
+  note: z.string().trim().max(1000).optional().default(""),
+});
+
 export type QuotaInput = z.infer<typeof quotaSchema>;
 export type BulkQuotaInput = z.infer<typeof bulkQuotaSchema>;
 export type ReviewDecisionInput = z.infer<typeof reviewDecisionSchema>;
+export type ReportDecisionInput = z.infer<typeof reportDecisionSchema>;

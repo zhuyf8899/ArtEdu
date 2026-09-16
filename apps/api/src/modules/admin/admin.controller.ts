@@ -8,6 +8,7 @@ import {
   listUsersQuerySchema,
   quotaSchema,
   reviewDecisionSchema,
+  reportDecisionSchema,
 } from "./admin.contracts";
 import { AdminService } from "./admin.service";
 
@@ -74,5 +75,16 @@ export class AdminController {
       ...decision,
       note: decision.note ?? "",
     });
+  }
+
+  @Get("reports")
+  async getReports(@Req() request: FastifyRequest) {
+    return this.adminService.getReports(await this.authService.getActor(request));
+  }
+
+  @Post("reports/:reportId/decision")
+  async decideReport(@Req() request: FastifyRequest, @Param("reportId") reportId: string, @Body() body: unknown) {
+    const decision = parseInput(reportDecisionSchema, body);
+    return this.adminService.decideReport(await this.authService.getActor(request), reportId, { status: decision.status, contentAction: decision.contentAction ?? "keep", note: decision.note ?? "" });
   }
 }

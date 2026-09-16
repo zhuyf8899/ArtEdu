@@ -125,9 +125,15 @@ export const commentInputSchema = z.object({
   content: z.string().trim().min(1).max(2000),
 });
 
+export const reportInputSchema = z.object({
+  reason: z.enum(["violence", "pornography", "harassment", "spam", "other"]),
+  description: z.string().trim().min(2).max(1000),
+});
+
 export type CatalogQuery = z.infer<typeof catalogQuerySchema>;
 export type WorkflowInput = z.infer<typeof workflowInputSchema>;
 export type WorkflowVersionInput = z.infer<typeof workflowVersionInputSchema>;
 export type WorkflowRunInput = z.infer<typeof workflowRunInputSchema>;
 export type WorkflowRunProgressInput = z.infer<typeof workflowRunProgressSchema>;
 export type WorkInput = z.infer<typeof workInputSchema>;
+export type ReportInput = z.infer<typeof reportInputSchema>;
