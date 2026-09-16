@@ -7,7 +7,7 @@ import { caseUploadPolicy } from '../../common/upload-policy';
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { detectUploadMimeType, storePrivateUpload } from "./private-upload";
+import { detectUploadMimeType, safeFileName, storePrivateUpload } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { StudioService } from "./studio.service";
 
@@ -147,4 +147,22 @@ test("课程资料上传接受安全识别的 PDF、DOCX，并在拒绝时清理
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+// 回归：以前用 /[^A-Za-z0-9._-]/ 过滤文件名，中文名会整段变成下划线，
+// 审核区和下载下来的文件都显示成 "_____.png"。
+test("上传文件名保留中文，只清洗危险字符并统一扩展名", () => {
+  assert.equal(safeFileName("纹样设计.png", "image/png"), "纹样设计.png");
+  assert.equal(safeFileName("作品 最终版.jpeg", "image/png"), "作品 最终版.png");
+  assert.equal(safeFileName("课堂演示.pptx", "application/pdf"), "课堂演示.pdf");
+  assert.equal(safeFileName("图.png", "video/mp4"), "图.mp4");
+  // 路径片段不能带进文件名，控制字符与文件系统保留字符也不允许保留。
+  assert.equal(safeFileName("../../etc/passwd", "image/png"), "passwd.png");
+  assert.equal(safeFileName("a:b*c?.png", "image/png"), "a_b_c_.png");
+  assert.equal(safeFileName("...隐藏文件", "image/png"), "隐藏文件.png");
+  assert.equal(safeFileName("", "image/png"), "upload.png");
+  // 超长中文名按码位截断，不截出半个字符。
+  const long = safeFileName(`${"纹".repeat(200)}.png`, "image/png");
+  assert.ok([...long].length <= 124, long.length.toString());
+  assert.ok(long.endsWith(".png"));
 });

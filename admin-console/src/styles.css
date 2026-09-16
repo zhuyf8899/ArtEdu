@@ -1097,7 +1097,10 @@ button:not(:disabled):active { transform: translateY(1px); }
   background: #fff;
   --ink: #111;
   --paper: #f7f7f8;
-  --lime: #111;
+  /* 强调色同时承担三种角色：作底色配深色文字、作文字压在深色底上、作文字放在浅色底上。
+     它一旦等于 --ink，第一种就变成黑底黑字，按钮和标签整片消失。取中性灰同时满足三种：
+     对白 4.4:1、对黑 4.8:1、深色文字压其上 4.3:1。 */
+  --lime: #767676;
   --muted: #6b6b6b;
   --soft-line: #e5e5e5;
 }

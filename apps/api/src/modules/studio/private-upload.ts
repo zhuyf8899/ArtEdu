@@ -128,8 +128,25 @@ function detectTextMimeType(declaredMimeType: string, file: Buffer): PrivateUplo
   return Buffer.from(text, "utf8").equals(file) ? declaredMimeType as PrivateUploadMimeType : undefined;
 }
 
-function safeFileName(value: string | undefined, mimeType: StoredUpload["mimeType"]) {
+/**
+ * 上传时保留原始文件名，只做安全清洗。
+ *
+ * 之前的实现用 /[^A-Za-z0-9._-]/ 过滤，中文名会被整段替换成下划线，
+ * 审核区和下载下来的文件都变成 "_____.png"，看起来像是文件坏了。
+ * 现在只清除控制字符、路径分隔符和文件系统保留字符，其余（含中文）原样保留。
+ */
+export function safeFileName(value: string | undefined, mimeType: StoredUpload["mimeType"]) {
   const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4", "video/webm": ".webm", "application/pdf": ".pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx", "text/plain": ".txt", "text/markdown": ".md", "text/csv": ".csv" } as const)[mimeType];
-  const base = path.basename(value ?? "upload").replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 120) || "upload";
-  return base.toLowerCase().endsWith(extension) ? base : `${base}${extension}`;
+  // 统一分隔符后再取最后一段，这样 Windows 反斜杠路径也不会被当成文件名。
+  const leaf = String(value ?? "").replace(/\\/g, "/").split("/").pop() ?? "";
+  const cleaned = leaf
+    .replace(/[\u0000-\u001f\u007f]/g, "")            // 控制字符
+    .replace(/[<>:"|?*]/g, "_")                        // 文件系统保留字符（含 / 已被拆分）
+    .replace(/^\.+/, "")                               // 前导点：避免隐藏文件与 .. 语义
+    .trim();
+  // 去掉原有扩展名后统一补上按真实类型判定的扩展名，避免 "图.jpg" 变成 "图.jpg.png"。
+  // 截断按码位进行，别把 emoji 之类的代理对劈成半个字符。
+  const withoutExtension = cleaned.replace(/\.[A-Za-z0-9]{1,5}$/u, "");
+  const base = Array.from(withoutExtension || cleaned).slice(0, 120).join("") || "upload";
+  return `${base}${extension}`;
 }

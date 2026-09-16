@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import {
   getAdminDashboard,
+  getCourseReviews,
   getAdminReports,
   getAdminReviews,
   getAdminUsers,
@@ -49,14 +50,14 @@ function AppLogo() {
   return <div className="brand"><div className="brand__mark">A</div><div><strong>AIGC 管理台</strong><span>清华美院 AI 实验场</span></div></div>;
 }
 
-function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items, actor, onBack, dashboard }) {
+function Sidebar({ section, onSectionChange, open, onClose, pendingCounts = {}, items, actor, onBack, dashboard }) {
   return <>
     {open && <button className="scrim" aria-label="关闭菜单" onClick={onClose} />}
     <aside className={`sidebar ${open ? "is-open" : ""}`}>
       <div className="sidebar__top"><AppLogo /><button className="icon-button sidebar__close" onClick={onClose} aria-label="关闭导航"><X size={20} weight="bold" /></button></div>
       <div className="sidebar__eyebrow">// ADMIN CONSOLE</div>
       <nav className="side-nav" aria-label="管理员导航">
-        {items.map((item, index) => { const Icon = item.icon; return <button key={item.id} className={section === item.id ? "is-active" : ""} onClick={() => { onSectionChange(item.id); onClose(); }}><span className="side-nav__index">0{index + 1}</span><Icon size={20} weight={section === item.id ? "fill" : "regular"} /><span>{item.label}</span>{item.id === "reviews" && <b>{pendingCount}</b>}</button>; })}
+        {items.map((item, index) => { const Icon = item.icon; const pending = pendingCounts[item.id] ?? 0; return <button key={item.id} className={section === item.id ? "is-active" : ""} onClick={() => { onSectionChange(item.id); onClose(); }}><span className="side-nav__index">0{index + 1}</span><Icon size={20} weight={section === item.id ? "fill" : "regular"} /><span>{item.label}</span>{pending > 0 && <b aria-label={`${pending} 项待处理`}>{pending}</b>}</button>; })}
       </nav>
       <button className="sidebar__back" onClick={onBack}>← 返回 ArtEdu 测试站</button>
       <div className="sidebar__notice"><div className="sidebar__notice-label"><Sparkle size={15} weight="fill" /> 系统状态</div><strong>本地模型执行未启用</strong><div className="status-line"><span /> {dashboard ? `${dashboard.activeModels} 个模型配置已启用` : "正在读取模型配置"}</div></div>
@@ -65,7 +66,7 @@ function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items,
   </>;
 }
 
-function Topbar({ section, onOpenMenu, actor, onBack, users, reviews, dashboard, onNavigate }) {
+function Topbar({ section, onOpenMenu, actor, onBack, users, reviews, reports = [], courseReviews = [], dashboard, onNavigate }) {
   const titles = { overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], courses: ["课程资源", "创建课程、配置课时并完成发布审核"], workflows: ["工作流管理", "创建教学与创作路径，编辑版本并发布到学生端"], reviews: ["作品审核", "审核用户提交到资源库的作品与案例"], reports: ["举报处理", "核对社区举报并决定保留或隐藏内容"], bridges: ["本地 Bridge", "管理本机模型执行器与访问令牌"] };
   const [query, setQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
@@ -79,12 +80,16 @@ function Topbar({ section, onOpenMenu, actor, onBack, users, reviews, dashboard,
   const notifications = useMemo(() => {
     const items = [];
     const pending = reviews.filter((item) => item.status === "pending").length;
+    const pendingReports = reports.filter((item) => item.status === "pending").length;
+    const pendingCourses = courseReviews.filter((item) => item.status === "pending").length;
     const quotaAlerts = users.filter((user) => user.monthlyLimit > 0 && user.monthlyUsed / user.monthlyLimit >= 0.7).length;
     if (pending) items.push({ id: "reviews", title: `${pending} 项作品等待审核`, detail: "进入审核队列处理投稿", section: "reviews" });
+    if (pendingReports) items.push({ id: "reports", title: `${pendingReports} 条举报待处理`, detail: "核对社区举报并决定保留或隐藏", section: "reports" });
+    if (pendingCourses) items.push({ id: "courses", title: `${pendingCourses} 门课程等待发布审核`, detail: "进入课程资源完成发布审核", section: "courses" });
     if (quotaAlerts) items.push({ id: "quota", title: `${quotaAlerts} 个账户额度接近上限`, detail: "检查并调整用户额度", section: "users" });
     if (dashboard && dashboard.activeModels === 0) items.push({ id: "models", title: "模型服务尚未启用", detail: "创作任务会保存草稿，不会调用外部模型", section: "overview" });
     return items;
-  }, [dashboard, reviews, users]);
+  }, [courseReviews, dashboard, reports, reviews, users]);
   return <header className="topbar">
     <button className="icon-button menu-button" onClick={onOpenMenu} aria-label="打开导航"><List size={22} weight="bold" /></button>
     <div className="topbar__title"><p>// CONTROL CENTER</p><div><strong>{titles[section][0]}</strong><span>{titles[section][1]}</span></div></div>
@@ -201,14 +206,17 @@ export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSe
   const availableNavItems = operatorOnly ? navItems.filter((item) => item.id === "reviews" || item.id === "reports") : navItems;
   const [section, setSection] = useState(operatorOnly ? "reviews" : initialSection); const [sidebarOpen, setSidebarOpen] = useState(false); const [users, setUsers] = useState([]); const [reviews, setReviews] = useState([]); const [reports, setReports] = useState([]); const [dashboard, setDashboard] = useState(null); const [quotaUser, setQuotaUser] = useState(null); const [selectedUserIds, setSelectedUserIds] = useState(new Set()); const [bulkQuotaOpen, setBulkQuotaOpen] = useState(false); const [selectedReview, setSelectedReview] = useState(null); const [adminLoading, setAdminLoading] = useState(true); const [adminLoadError, setAdminLoadError] = useState("");
   const { notify: showToast, confirmAction } = useFeedback();
+  const [courseReviews, setCourseReviews] = useState([]);
   useEffect(() => setSection(operatorOnly ? "reviews" : initialSection), [initialSection, operatorOnly]);
   const changeSection = (nextSection) => { setSection(nextSection); onNavigate(nextSection); };
   const loadAdminData = useCallback(async () => {
     setAdminLoading(true); setAdminLoadError("");
-    const [userResult, reviewResult, reportResult, dashboardResult] = await Promise.allSettled([operatorOnly ? Promise.resolve(null) : getAdminUsers(), getAdminReviews(), getAdminReports(), operatorOnly ? Promise.resolve(null) : getAdminDashboard()]);
+    const [userResult, reviewResult, reportResult, dashboardResult, courseReviewResult] = await Promise.allSettled([operatorOnly ? Promise.resolve(null) : getAdminUsers(), getAdminReviews(), getAdminReports(), operatorOnly ? Promise.resolve(null) : getAdminDashboard(), operatorOnly ? Promise.resolve(null) : getCourseReviews()]);
     const failures = [];
     if (userResult.status === "fulfilled" && userResult.value) setUsers(userResult.value.items ?? []); else if (!operatorOnly) failures.push("用户数据");
     if (reviewResult.status === "fulfilled") setReviews(reviewResult.value.items ?? []); else failures.push("审核数据");
+    // 课程发布审核也是「等待处理」，漏掉它侧栏和通知中心就少一个提醒。
+    if (courseReviewResult.status === "fulfilled" && courseReviewResult.value) setCourseReviews(courseReviewResult.value.items ?? []);
     if (reportResult.status === "fulfilled") setReports(reportResult.value.items ?? []); else failures.push("举报数据");
     if (dashboardResult.status === "fulfilled" && dashboardResult.value) setDashboard(dashboardResult.value); else if (!operatorOnly) failures.push("统计数据");
     if (failures.length) { const message = `${failures.join("、")}加载失败`; setAdminLoadError(message); showToast(message, "error"); }
@@ -231,5 +239,34 @@ export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSe
   const toggleUserStatus = async (target) => { const status = target.status === "suspended" ? "active" : "suspended"; const confirmed = await confirmAction({ title: status === "active" ? "重新启用账户" : "停用用户账户", message: status === "active" ? `确认恢复“${target.name}”的登录与创作权限吗？` : `确认停用“${target.name}”吗？该用户将无法继续登录或创建任务。`, confirmLabel: status === "active" ? "确认启用" : "确认停用", danger: status !== "active" }); if (!confirmed) return; try { const updated = await updateUserStatus(target.id, status); setUsers((current) => current.map((user) => user.id === target.id ? updated : user)); showToast(status === "active" ? "用户账户已重新启用" : "用户账户已停用"); } catch (error) { showToast(error.message); } };
   const decideReview = async (id, status, note) => { if (status === "rejected" && !note.trim()) { showToast("驳回作品前请填写修改原因", "error"); return; } const confirmed = await confirmAction({ title: status === "approved" ? "通过并发布作品" : "驳回作品", message: status === "approved" ? "作品通过后会立即出现在案例社区，确认继续吗？" : "作品将退回作者修改，审核原因会同步给作者。", confirmLabel: status === "approved" ? "确认发布" : "确认驳回", danger: status === "rejected" }); if (!confirmed) return; try { const updated = await reviewSubmission(id, { status, note }); setReviews((current) => current.map((item) => item.id === id ? updated : item)); setSelectedReview(null); showToast(status === "approved" ? "作品已通过并发布到资源库" : "作品已驳回并退回作者修改"); } catch (error) { showToast(error.message); } };
   const resolveReport = async (id, decision) => { try { const updated = await decideReport(id, decision); setReports((current) => current.map((item) => item.id === id ? updated : item)); showToast(decision.contentAction === "hide" ? "已隐藏被举报内容" : "举报已处理"); } catch (error) { showToast(error.message); } };
-  return <div className="admin-shell"><Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} dashboard={dashboard} /><div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} /><main><RuntimeStatus /><div key={section} className="route-transition">{(adminLoading || adminLoadError) && <div className={`admin-load-state ${adminLoadError ? "is-error" : ""}`} aria-busy={adminLoading}><span>{adminLoading ? "正在同步管理数据…" : adminLoadError}</span>{!adminLoading && <button onClick={loadAdminData}>重新加载</button>}</div>}{section === "overview" && <Overview users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} onEditQuota={setQuotaUser} />}{section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} selectedIds={selectedUserIds} onSelectionChange={setSelectedUserIds} onOpenBulkQuota={() => setBulkQuotaOpen(true)} canManageQuota={canManageQuota} />}{section === "courses" && <AdminCourses showToast={showToast} />}{section === "workflows" && <WorkflowAdmin showToast={showToast} />}{section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}{section === "reports" && <ReportsPage reports={reports} onDecision={resolveReport} />}{section === "bridges" && <BridgeDevices showToast={showToast} confirmAction={confirmAction} />}</div></main></div><QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} />{bulkQuotaOpen && <BulkQuotaDrawer count={selectedUserIds.size} onClose={() => setBulkQuotaOpen(false)} onSave={saveBulkQuota} />}<ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} /></div>;
+  // 侧栏角标按栏目分别统计：以前只统计作品审核，举报和课程审核的待办完全没有提示。
+  // 从 state 派生，处理完一条就立刻减少，不需要重新拉取数据。
+  const pendingCounts = useMemo(() => ({
+    reviews: reviews.filter((item) => item.status === "pending").length,
+    reports: reports.filter((item) => item.status === "pending").length,
+    courses: courseReviews.filter((item) => item.status === "pending").length,
+  }), [courseReviews, reports, reviews]);
+
+  return <div className="admin-shell">
+    <Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCounts={pendingCounts} items={availableNavItems} actor={actor} onBack={onBack} dashboard={dashboard} />
+    <div className="admin-main">
+      <Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} users={users} reviews={reviews} reports={reports} courseReviews={courseReviews} dashboard={dashboard} onNavigate={changeSection} />
+      <main>
+        <RuntimeStatus />
+        <div key={section} className="route-transition">
+          {(adminLoading || adminLoadError) && <div className={`admin-load-state ${adminLoadError ? "is-error" : ""}`} aria-busy={adminLoading}><span>{adminLoading ? "正在同步管理数据…" : adminLoadError}</span>{!adminLoading && <button onClick={loadAdminData}>重新加载</button>}</div>}
+          {section === "overview" && <Overview users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} onEditQuota={setQuotaUser} />}
+          {section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} selectedIds={selectedUserIds} onSelectionChange={setSelectedUserIds} onOpenBulkQuota={() => setBulkQuotaOpen(true)} canManageQuota={canManageQuota} />}
+          {section === "courses" && <AdminCourses showToast={showToast} />}
+          {section === "workflows" && <WorkflowAdmin showToast={showToast} />}
+          {section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} onSelectReview={setSelectedReview} />}
+          {section === "reports" && <ReportsPage reports={reports} onDecision={resolveReport} />}
+          {section === "bridges" && <BridgeDevices showToast={showToast} confirmAction={confirmAction} />}
+        </div>
+      </main>
+    </div>
+    <QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} />
+    {bulkQuotaOpen && <BulkQuotaDrawer count={selectedUserIds.size} onClose={() => setBulkQuotaOpen(false)} onSave={saveBulkQuota} />}
+    <ReviewDrawer review={selectedReview} onClose={() => setSelectedReview(null)} onDecision={decideReview} />
+  </div>;
 }
