@@ -25,6 +25,20 @@
 .case-gallery { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
 .case-gallery figure { margin: 0; min-width: 0; }
 .case-gallery img,.case-gallery video { width: 100%; max-height: 560px; object-fit: contain; border-radius: 10px; background: #f6f6f5; }
+.case-image-button { display: block; width: 100%; padding: 0; border: 0; border-radius: 10px; background: transparent; cursor: zoom-in; }
+.case-image-button--hero { height: 100%; }
+.case-image-button--hero img { height: 100%; }
+.case-related-assets { display: grid; gap: 10px; }
+.case-related-assets article { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #dededb; border-radius: 10px; }
+.case-related-assets span,.case-related-assets em { color: #666; font-size: 14px; font-style: normal; }
+.case-related-assets a { color: #1e5fbe; }
+.case-image-viewer { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; }
+.case-image-viewer__backdrop { position: absolute; inset: 0; border: 0; background: rgb(0 0 0 / .78); }
+.case-image-viewer__content { position: relative; display: grid; gap: 12px; width: min(1100px,100%); max-height: calc(100dvh - 40px); color: #fff; }
+.case-image-viewer__content img { display: block; width: 100%; max-height: calc(100dvh - 112px); object-fit: contain; background: #111; }
+.case-image-viewer__content > div { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.case-image-viewer__content span { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-image-viewer__content a,.case-image-viewer__content button { border: 1px solid #fff; border-radius: 7px; padding: 8px 12px; color: #fff; background: transparent; }
 .case-gallery figcaption { color: #666; font-size: 14px; }
 .case-step { margin: 20px 0; padding: 20px 0; border-top: 1px solid #e5e5e5; }
 .case-step > span { font-size: 14px; color: #666; letter-spacing: .12em; }
@@ -36,4 +50,4 @@
 .case-draft-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
 .case-draft-actions small { flex-basis: 100%; color: #666; }
 .case-draft-note { padding: 12px; background: #f5f3ed; border-radius: 8px; }
-@media (max-width: 640px) { .case-gallery { grid-template-columns: 1fr; } .case-editor .publish-form__row { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .case-gallery { grid-template-columns: 1fr; } .case-editor .publish-form__row { grid-template-columns: 1fr; } .case-related-assets article { grid-template-columns: 1fr auto; } .case-related-assets article strong { grid-column: 1 / -1; } }
