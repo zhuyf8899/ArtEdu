@@ -32,9 +32,9 @@ test("创作页绑定续写表单、键盘发送、历史文件留存与消息�
   assert.ok(source.includes("onKeyDown={handlePromptKeyDown}"));
   assert.ok(source.includes("event.ctrlKey || event.shiftKey || event.altKey || event.metaKey"));
   assert.ok(source.includes("downloadUrl: uploaded.downloadUrl"), "上传引用必须把私有文件地址写入本地会话");
-  assert.ok(source.includes("creation-canvas__history-menu-toggle"), "每个会话应有独立的更多操作入口");
+  assert.ok(source.includes("creation-canvas__menu-toggle"), "每个会话应有独立的更多操作入口");
   assert.ok(!source.includes("ArtifactBlock"), "对话中不应再提供下载产物按钮");
-  assert.ok(source.includes("creation-canvas__history"));
+  assert.ok(source.includes("creation-canvas__sidebar"));
   assert.ok(!source.includes('aria-label="本轮 Agent 环境"'));
   assert.ok(source.includes("copyReply"));
   assert.ok(source.includes("retryReply"));
@@ -132,4 +132,38 @@ test("「重新输出」清除上一轮回复后重新生成，而不是回填�
   assert.ok(workspace.includes("baseMessages: messages.slice(0, Math.max(0, index - 1))"), "必须截断到该提问之前");
   assert.ok(workspace.includes('onNotice?.("已清除上一轮输出，正在重新生成…", "success")'));
   assert.ok(!workspace.includes("已将本轮问题带回输入框"), "旧的一次性回填行为应已移除");
+});
+
+test("对话按工作区分组，每个工作区维护自己的对话，三个点可打开工作区", async () => {
+  const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
+  const store = await readFile(new URL("../src/conversationStore.js", import.meta.url), "utf8");
+  const api = await readFile(new URL("../src/services/adminApi.js", import.meta.url), "utf8");
+  const harness = await readFile(new URL("../../apps/api/src/modules/agent/agent-harness.service.ts", import.meta.url), "utf8");
+
+  // 侧栏是「工作区列表 + 当前工作区的对话」两层结构。
+  assert.ok(workspace.includes("creation-canvas__workspace-list"));
+  assert.ok(workspace.includes("conversationsInWorkspace(conversations, activeWorkspace)"), "会话列表必须按当前工作区过滤");
+  assert.ok(workspace.includes("creation-canvas__conversation-list"));
+
+  // 工作区行与对话行的三个点菜单都提供「打开工作区」。
+  assert.ok(workspace.includes("void openWorkspacePanel(entry.directory)"), "工作区菜单要能打开工作区");
+  assert.ok(workspace.includes("void openWorkspacePanel(conversationWorkspace(item))"), "对话菜单要能打开它所属的工作区");
+  assert.ok(workspace.includes("打开工作区"));
+  assert.ok(workspace.includes("workspace-panel__list"), "打开工作区后要能看到文件");
+
+  // 新对话归属当前工作区；下发模型时按对话自身的工作区，而不是界面上选中的那个。
+  assert.ok(workspace.includes("createConversation(account.id, methodId, titleFromPrompt(content), activeWorkspace)"));
+  assert.ok(workspace.includes("workspaceDirectory: conversationWorkspace(conversation)"));
+
+  // 存储层：没有工作区字段的历史对话归入默认工作区。
+  assert.ok(store.includes("export function conversationWorkspace"));
+  assert.ok(store.includes("export const DEFAULT_WORKSPACE"));
+
+  // 接口层：清单、新建、列目录。
+  assert.ok(api.includes('request("/agent-runs/workspaces")'));
+  assert.ok(api.includes('`/agent-runs/workspace-files?directory='));
+
+  // 服务端把工作区目录约束写进系统提示，避免不同工作区的产物混在一起。
+  assert.ok(harness.includes("ensureWorkspace"));
+  assert.ok(harness.includes("workspaceNotice"));
 });

@@ -9,6 +9,11 @@ export const createAgentRunSchema = z.object({
   parameters: z.record(z.string(), z.unknown()).default({}),
 });
 
+// 工作区名会长成目录名，长度上限与 AgentWorkspaceService 的校验保持一致。
+export const createAgentWorkspaceSchema = z.object({
+  name: z.string().trim().min(1, "工作区名称不能为空").max(60),
+});
+
 const modelMessageSchema = z.object({
   role: z.enum(["system", "user", "assistant", "tool"]),
   content: z.string().trim().min(1).max(20000),

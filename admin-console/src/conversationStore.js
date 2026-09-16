@@ -8,20 +8,42 @@ const COMPRESS_AT_BYTES = USER_CONVERSATION_QUOTA_BYTES / 2;
 const HARDEN_AT_BYTES = USER_CONVERSATION_QUOTA_BYTES * .75;
 const MAX_RAW_MESSAGES = 48; // 24 轮
 const KEEP_RECENT_MESSAGES = 16; // 最近 8 轮
+// 空字符串代表工作区根目录：默认工作区在服务端始终存在，不需要额外创建。
+export const DEFAULT_WORKSPACE = "";
 
 export async function listConversations(userId) {
   const db = await openDatabase();
   const records = await transaction(db, "readonly", (store) => store.getAll());
-  return records.filter((item) => item.userId === userId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  // 早于工作区分组的记录没有 workspace 字段，读出来一律算默认工作区，不丢历史对话。
+  return records.filter((item) => item.userId === userId)
+    .map((item) => ({ ...item, workspace: conversationWorkspace(item) }))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export async function getConversation(id) {
   const db = await openDatabase();
-  return (await transaction(db, "readonly", (store) => store.get(id))) ?? null;
+  const record = (await transaction(db, "readonly", (store) => store.get(id))) ?? null;
+  return record ? { ...record, workspace: conversationWorkspace(record) } : null;
 }
 
-export function createConversation(userId, methodId = "ui", title = "新创作对话") {
-  return { id: randomId(), userId, methodId, title, messages: [], memory: "", pinned: [], reference: null, attachments: [], pending: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+export function createConversation(userId, methodId = "ui", title = "新创作对话", workspace = DEFAULT_WORKSPACE) {
+  return { id: randomId(), userId, methodId, title, workspace: conversationWorkspace({ workspace }), messages: [], memory: "", pinned: [], reference: null, attachments: [], pending: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+}
+
+/** 对话所属工作区；缺失或空值一律归入默认工作区，保证分组名永远可用。 */
+export function conversationWorkspace(conversation) {
+  const workspace = conversation?.workspace;
+  return typeof workspace === "string" && workspace.trim() ? workspace.trim() : DEFAULT_WORKSPACE;
+}
+
+export function workspaceLabel(workspace) {
+  return conversationWorkspace({ workspace }) || "默认工作区";
+}
+
+/** 只保留指定工作区的对话，供侧栏按工作区分组渲染。 */
+export function conversationsInWorkspace(conversations, workspace) {
+  const target = conversationWorkspace({ workspace });
+  return conversations.filter((item) => conversationWorkspace(item) === target);
 }
 
 export async function saveConversation(conversation) {

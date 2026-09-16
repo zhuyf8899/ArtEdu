@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Query, Req, Res } from "@nestjs/com
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
-import { createAgentRunSchema, executeAgentRunSchema, type CreateAgentRunInput, type ExecuteAgentRunInput } from "./agent.contracts";
+import { createAgentRunSchema, createAgentWorkspaceSchema, executeAgentRunSchema, type CreateAgentRunInput, type ExecuteAgentRunInput } from "./agent.contracts";
 import { AgentHarnessService } from "./agent-harness.service";
 import { AgentService } from "./agent.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
@@ -37,6 +37,24 @@ export class AgentController {
   async create(@Req() request: FastifyRequest, @Body() body: CreateAgentRunInput) {
     const input = parseInput(createAgentRunSchema, body);
     return this.agents.createRun(await this.auth.getActor(request), { ...input, parameters: input.parameters ?? {} });
+  }
+
+  /** 工作区清单：对话按工作区分组，界面据此渲染工作区列表与文件数。 */
+  @Get("workspaces")
+  async listWorkspaces(@Req() request: FastifyRequest) {
+    return this.workspace.listWorkspaces(await this.auth.getActor(request));
+  }
+
+  @Post("workspaces")
+  async createWorkspace(@Req() request: FastifyRequest, @Body() body: unknown) {
+    const input = parseInput(createAgentWorkspaceSchema, body);
+    return this.workspace.createWorkspace(await this.auth.getActor(request), input.name);
+  }
+
+  /** 打开工作区：列出该目录下的文件与子目录，供前端渲染工作区面板。 */
+  @Get("workspace-files")
+  async listWorkspaceFiles(@Req() request: FastifyRequest, @Query("directory") directory: string) {
+    return this.workspace.list(await this.auth.getActor(request), directory || ".");
   }
 
   @Get("me")

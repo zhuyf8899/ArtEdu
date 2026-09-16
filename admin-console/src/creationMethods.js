@@ -106,7 +106,7 @@ export function resolveCreationOperation(prompt, advisoryMethodId = DEFAULT_METH
 }
 
 // 组装一次生成请求：实际操作、模型、搜索开关决定 jobType 与模型参数。
-export function buildCreationParameters({ methodId, advisoryMethodId, modelId, searchEnabled, reference, pageCount }) {
+export function buildCreationParameters({ methodId, advisoryMethodId, modelId, searchEnabled, reference, pageCount, workspaceDirectory = "" }) {
   const method = creationMethod(methodId);
   const advisoryMethod = creationMethod(advisoryMethodId);
   return {
@@ -114,6 +114,8 @@ export function buildCreationParameters({ methodId, advisoryMethodId, modelId, s
     methodLabel: method.label,
     advisoryMode: advisoryMethod.id,
     advisoryModeLabel: advisoryMethod.label,
+    // 对话按工作区隔离：服务端据此把本轮的文件读写限制在该目录内。
+    workspaceDirectory,
     model: modelId,
     searchEnabled,
     ...(method.outputFormat ? { outputFormat: method.outputFormat } : {}),

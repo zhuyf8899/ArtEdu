@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowClockwise, ArrowLeft, ArrowRight, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowSquareOut, ChatCircleDots, Copy, DotsThreeVertical, FileText, FolderOpen, FolderSimple, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
 import { AiMarkdown, safeReplyUrl } from "./AiMarkdown.js";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
 import { DocumentOptions } from "./DocumentOptions.jsx";
@@ -8,9 +8,9 @@ import {
   DEFAULT_METHOD_ID, FALLBACK_MODELS, buildCreationParameters, creationMethod, formatConversationTime, resolveCreationOperation, titleFromPrompt,
 } from "./creationMethods.js";
 import {
-  createConversation, deleteConversation, listConversations, makeModelContext, saveConversation,
+  DEFAULT_WORKSPACE, conversationWorkspace, conversationsInWorkspace, createConversation, deleteConversation, listConversations, makeModelContext, saveConversation, workspaceLabel,
 } from "./conversationStore.js";
-import { uploadTemporaryCreationFile } from "./services/adminApi.js";
+import { createAgentWorkspace, listAgentWorkspaceFiles, listAgentWorkspaces, uploadTemporaryCreationFile, workspacePreviewUrl } from "./services/adminApi.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
 
 // 专用创作对话页：左侧历次对话，右侧长文本阅读区与续写输入。
@@ -30,6 +30,16 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   const [pageCount, setPageCount] = useState("");
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [openConversationMenuId, setOpenConversationMenuId] = useState("");
+  // 对话按工作区分组：工作区对应服务端 agent-workspaces/<用户>/<目录> 下的一个目录。
+  const [workspaces, setWorkspaces] = useState([]);
+  const [activeWorkspace, setActiveWorkspace] = useState(DEFAULT_WORKSPACE);
+  // null 表示没有展开的菜单：默认工作区的目录名是空字符串，用 "" 会导致它开局就是展开态。
+  const [workspaceMenu, setWorkspaceMenu] = useState(null);
+  const [workspacePanel, setWorkspacePanel] = useState(null);
+  const [workspaceCreating, setWorkspaceCreating] = useState(false);
+  const [workspaceDraft, setWorkspaceDraft] = useState("");
+  const [workspaceBusy, setWorkspaceBusy] = useState(false);
+  const [workspaceError, setWorkspaceError] = useState("");
   const { confirmAction } = useFeedback();
 
   const conversationsRef = useRef([]);
@@ -52,6 +62,30 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
 
   const activeConversation = conversations.find((item) => item.id === activeId) ?? null;
   const method = useMemo(() => creationMethod(methodId), [methodId]);
+
+  // 工作区清单来自服务端，同时并入本地对话里出现过的工作区：
+  // 服务端暂时读不到时，历史对话仍然能被正确归类，而不是全部掉进默认工作区。
+  const workspaceEntries = useMemo(() => {
+    const map = new Map();
+    const ensure = (directory) => {
+      const key = directory ?? DEFAULT_WORKSPACE;
+      if (!map.has(key)) map.set(key, { directory: key, name: workspaceLabel(key), isDefault: key === DEFAULT_WORKSPACE, fileCount: 0, conversationCount: 0, updatedAt: null });
+      return map.get(key);
+    };
+    ensure(DEFAULT_WORKSPACE);
+    for (const item of workspaces) {
+      const entry = ensure(item?.directory ?? DEFAULT_WORKSPACE);
+      entry.name = item?.name || entry.name;
+      entry.isDefault = Boolean(item?.isDefault);
+      entry.fileCount = Number.isFinite(item?.fileCount) ? item.fileCount : 0;
+      entry.updatedAt = item?.updatedAt ?? null;
+    }
+    for (const conversation of conversations) ensure(conversationWorkspace(conversation)).conversationCount += 1;
+    return [...map.values()];
+  }, [conversations, workspaces]);
+
+  const visibleConversations = useMemo(() => conversationsInWorkspace(conversations, activeWorkspace), [conversations, activeWorkspace]);
+  const activeWorkspaceEntry = workspaceEntries.find((entry) => entry.directory === activeWorkspace) ?? { directory: activeWorkspace, name: workspaceLabel(activeWorkspace), fileCount: 0, conversationCount: 0 };
 
   const updateConversations = useCallback((updater) => {
     setConversations((current) => {
@@ -85,9 +119,25 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     if (!loaded) return;
     if (startNew) { loadedIdRef.current = ""; setActiveId(""); setMessages([]); return; }
     const items = conversationsRef.current;
-    if (conversationId && items.some((item) => item.id === conversationId)) { setActiveId(conversationId); return; }
-    setActiveId(items[0]?.id ?? "");
+    const target = (conversationId ? items.find((item) => item.id === conversationId) : null) ?? items[0] ?? null;
+    if (!target) { setActiveId(""); return; }
+    // 打开指定对话时连带切到它所在的工作区，否则它会出现在另一个工作区的列表里。
+    setActiveWorkspace(conversationWorkspace(target));
+    setActiveId(target.id);
   }, [loaded, startNew, conversationId]);
+
+  // 拉取服务端工作区清单。失败不阻断对话：界面退化为「只显示已有对话的工作区」。
+  const refreshWorkspaces = useCallback(async () => {
+    try {
+      const result = await listAgentWorkspaces();
+      setWorkspaces(result?.items ?? []);
+      setWorkspaceError("");
+    } catch (error) {
+      setWorkspaceError(error?.message || "工作区清单读取失败，暂只显示已有对话的工作区");
+    }
+  }, []);
+
+  useEffect(() => { void refreshWorkspaces(); }, [refreshWorkspaces]);
 
   const startBlank = useCallback(() => {
     loadedIdRef.current = "";
@@ -172,7 +222,9 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         jobType: operationDefinition.jobType,
         prompt: content,
         modelConfigId: modelId ?? undefined,
-        parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),
+        // 工作区取对话自身的归属，而不是界面上当前选中的那个：
+        // 起始页带过来的 pending 任务可能属于别的工作区。
+        parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount, workspaceDirectory: conversationWorkspace(conversation) }),
         context,
       }, controller.signal, onDelta);
       const finalMessages = [...rendered.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), sources: result?.sources ?? null, localFile: result?.localFile ?? null }];
@@ -246,7 +298,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     let conversation = conversationsRef.current.find((item) => item.id === activeId) ?? null;
     if (!conversation) {
       try {
-        const created = createConversation(account.id, methodId, titleFromPrompt(content));
+        const created = createConversation(account.id, methodId, titleFromPrompt(content), activeWorkspace);
         conversation = await saveConversation({ ...created, reference: reference ?? null, attachments: reference ? [reference] : [] });
       } catch {
         onNotice?.("本地对话空间不可用，无法创建新的创作对话", "error");
@@ -348,6 +400,72 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     setOpenConversationMenuId("");
   };
 
+  /**
+   * 切换工作区：直接选中该工作区最近的一次对话，没有就回到空白输入。
+   * 与「打开工作区」分开——切换只改变当前对话归属，不打开文件面板。
+   */
+  const switchWorkspace = useCallback((directory) => {
+    const key = directory ?? DEFAULT_WORKSPACE;
+    setWorkspaceMenu(null);
+    setOpenConversationMenuId("");
+    setActiveWorkspace(key);
+    const next = conversationsRef.current.find((item) => conversationWorkspace(item) === key) ?? null;
+    loadedIdRef.current = "";
+    ranPendingRef.current = "";
+    setReference(null);
+    setPrompt("");
+    setFailed(false);
+    setActiveId(next?.id ?? "");
+    setMessages(next?.messages ?? []);
+  }, []);
+
+  /**
+   * 打开工作区：读取该目录下的文件与子目录，在右侧面板里展示。
+   * 读取失败只影响面板内容，不改动当前对话。
+   */
+  const openWorkspacePanel = useCallback(async (directory) => {
+    const key = directory ?? DEFAULT_WORKSPACE;
+    setWorkspaceMenu(null);
+    setOpenConversationMenuId("");
+    setWorkspacePanel({ root: key, directory: key, name: workspaceLabel(key), loading: true, items: [], error: "" });
+    try {
+      const result = await listAgentWorkspaceFiles(key);
+      setWorkspacePanel((current) => current && current.root === key ? { ...current, loading: false, items: result?.items ?? [], error: "" } : current);
+    } catch (error) {
+      setWorkspacePanel((current) => current && current.root === key ? { ...current, loading: false, items: [], error: error?.message || "工作区内容读取失败" } : current);
+    }
+  }, []);
+
+  const browseWorkspaceDirectory = useCallback(async (directory) => {
+    setWorkspacePanel((current) => current ? { ...current, directory, loading: true, items: [], error: "" } : current);
+    try {
+      const result = await listAgentWorkspaceFiles(directory);
+      setWorkspacePanel((current) => current && current.directory === directory ? { ...current, loading: false, items: result?.items ?? [], error: "" } : current);
+    } catch (error) {
+      setWorkspacePanel((current) => current && current.directory === directory ? { ...current, loading: false, items: [], error: error?.message || "目录读取失败" } : current);
+    }
+  }, []);
+
+  const submitWorkspace = async (event) => {
+    event.preventDefault();
+    const name = workspaceDraft.trim();
+    if (!name || workspaceBusy) return;
+    setWorkspaceBusy(true);
+    setWorkspaceError("");
+    try {
+      const created = await createAgentWorkspace(name);
+      setWorkspaceDraft("");
+      setWorkspaceCreating(false);
+      await refreshWorkspaces();
+      switchWorkspace(created?.directory ?? name);
+      onNotice?.(`工作区「${created?.name ?? name}」已创建`, "success");
+    } catch (error) {
+      setWorkspaceError(error?.message || "工作区创建失败");
+    } finally {
+      setWorkspaceBusy(false);
+    }
+  };
+
   // Enter 提交；Ctrl+Enter（以及 Shift/Alt/Meta+Enter）保留为换行。
   // isComposing 防止中文输入法确认候选词时被误判为发送。
   const handlePromptKeyDown = (event) => {
@@ -369,24 +487,55 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       </div>
     </header>
 
-    <nav className="creation-canvas__history" aria-label="历次创作对话">
-      <div className="creation-canvas__history-label"><ChatCircleDots size={17} weight="bold" /><span>会话</span><b>{conversations.length}</b></div>
-      <div className="creation-canvas__history-list">
-        {conversations.length ? conversations.map((item) => <div className={`creation-canvas__history-item${item.id === activeId ? " is-active" : ""}`} key={item.id}>
-          <button type="button" className="creation-canvas__history-open" onClick={() => openConversation(item.id)} title={item.title}>
-            <span>{creationMethod(item.methodId).label}</span>
-            <strong>{item.title}</strong>
-            <small>{item.pending ? "处理中" : formatConversationTime(item.updatedAt)}</small>
-          </button>
-          <button type="button" className="creation-canvas__history-menu-toggle" aria-label={`打开“${item.title}”的更多操作`} aria-expanded={openConversationMenuId === item.id} onClick={() => setOpenConversationMenuId((current) => current === item.id ? "" : item.id)}><DotsThreeVertical size={17} weight="bold" /></button>
-          {openConversationMenuId === item.id && <div className="creation-canvas__history-menu" role="menu">
-            <button type="button" role="menuitem" onClick={() => { setOpenConversationMenuId(""); void removeConversation(item.id); }}><Trash size={15} />删除对话</button>
-          </div>}
-        </div>) : <p>新对话会保存在这里。</p>}
-      </div>
-    </nav>
+    <div className="creation-canvas__body">
+      <aside className="creation-canvas__sidebar" aria-label="工作区与创作对话">
+        <div className="creation-canvas__sidebar-head">
+          <span><FolderSimple size={16} weight="bold" />工作区</span>
+          <button type="button" aria-label="新建工作区" aria-expanded={workspaceCreating} title="新建工作区" onClick={() => { setWorkspaceCreating((open) => !open); setWorkspaceError(""); }}><Plus size={15} weight="bold" /></button>
+        </div>
 
-    <main className="creation-canvas__main">
+        {workspaceCreating && <form className="creation-canvas__workspace-form" onSubmit={submitWorkspace}>
+          <input value={workspaceDraft} onChange={(event) => setWorkspaceDraft(event.target.value)} placeholder="工作区名称" maxLength={40} aria-label="工作区名称" />
+          <button type="submit" disabled={workspaceBusy || !workspaceDraft.trim()}>{workspaceBusy ? "创建中" : "创建"}</button>
+        </form>}
+        {workspaceError && <p className="creation-canvas__sidebar-error" role="alert">{workspaceError}</p>}
+
+        <div className="creation-canvas__workspace-list">
+          {workspaceEntries.map((entry) => <div className={`creation-canvas__workspace-item${entry.directory === activeWorkspace ? " is-active" : ""}`} key={entry.directory || "__default__"}>
+            <button type="button" className="creation-canvas__workspace-open" onClick={() => switchWorkspace(entry.directory)} title={entry.directory || "工作区根目录"}>
+              <span><FolderSimple size={15} weight={entry.directory === activeWorkspace ? "fill" : "bold"} />{entry.name}</span>
+              <small>{entry.conversationCount} 个对话 · {entry.fileCount} 个文件</small>
+            </button>
+            <button type="button" className="creation-canvas__menu-toggle" aria-label={`打开“${entry.name}”的更多操作`} aria-expanded={workspaceMenu === entry.directory} onClick={() => setWorkspaceMenu((current) => current === entry.directory ? null : entry.directory)}><DotsThreeVertical size={17} weight="bold" /></button>
+            {workspaceMenu === entry.directory && <div className="creation-canvas__menu" role="menu">
+              <button type="button" role="menuitem" onClick={() => void openWorkspacePanel(entry.directory)}><FolderOpen size={15} />打开工作区</button>
+              <button type="button" role="menuitem" onClick={() => { switchWorkspace(entry.directory); startBlank(); }}><Plus size={15} />在此新建对话</button>
+            </div>}
+          </div>)}
+        </div>
+
+        <div className="creation-canvas__sidebar-head">
+          <span><ChatCircleDots size={16} weight="bold" />会话<b>{visibleConversations.length}</b></span>
+          <button type="button" aria-label="新建对话" title="在当前工作区新建对话" onClick={startBlank}><Plus size={15} weight="bold" /></button>
+        </div>
+
+        <div className="creation-canvas__conversation-list">
+          {visibleConversations.length ? visibleConversations.map((item) => <div className={`creation-canvas__conversation-item${item.id === activeId ? " is-active" : ""}`} key={item.id}>
+            <button type="button" className="creation-canvas__conversation-open" onClick={() => openConversation(item.id)} title={item.title}>
+              <span>{creationMethod(item.methodId).label}</span>
+              <strong>{item.title}</strong>
+              <small>{item.pending ? "处理中" : formatConversationTime(item.updatedAt)}</small>
+            </button>
+            <button type="button" className="creation-canvas__menu-toggle" aria-label={`打开“${item.title}”的更多操作`} aria-expanded={openConversationMenuId === item.id} onClick={() => setOpenConversationMenuId((current) => current === item.id ? "" : item.id)}><DotsThreeVertical size={17} weight="bold" /></button>
+            {openConversationMenuId === item.id && <div className="creation-canvas__menu" role="menu">
+              <button type="button" role="menuitem" onClick={() => void openWorkspacePanel(conversationWorkspace(item))}><FolderOpen size={15} />打开工作区</button>
+              <button type="button" role="menuitem" className="is-danger" onClick={() => { setOpenConversationMenuId(""); void removeConversation(item.id); }}><Trash size={15} />删除对话</button>
+            </div>}
+          </div>) : <p>这个工作区还没有对话。新对话会保存在这里。</p>}
+        </div>
+      </aside>
+
+      <main className="creation-canvas__main">
       <section className="creation-canvas__conversation ai-conversation">
         <header className="creation-canvas__conversation-title"><div><p>{method.eyebrow}</p><h1>{activeConversation?.title ?? "新的创作对话"}</h1></div><span>建议模式：{method.label}</span></header>
         <div className="ai-thread creation-canvas__thread" ref={scrollRef} aria-busy={sending} aria-live="polite">
@@ -442,8 +591,49 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
               </div>}
             </div>
       </form>
-    </main>
+      </main>
+    </div>
+
+    {workspacePanel && <div className="workspace-panel-layer" role="presentation">
+      <button type="button" className="workspace-panel-scrim" aria-label="关闭工作区面板" onClick={() => setWorkspacePanel(null)} />
+      <aside className="workspace-panel" role="dialog" aria-modal="true" aria-label={`工作区 ${workspacePanel.name}`}>
+        <header>
+          <div>
+            <p>// WORKSPACE</p>
+            <h2>{workspacePanel.name}</h2>
+            <span>{workspacePanel.directory || "工作区根目录"}</span>
+          </div>
+          <button type="button" className="icon-button" aria-label="关闭工作区面板" onClick={() => setWorkspacePanel(null)}><X size={18} weight="bold" /></button>
+        </header>
+        <div className="workspace-panel__bar">
+          <button type="button" onClick={() => { setWorkspacePanel(null); switchWorkspace(workspacePanel.root); startBlank(); }}><Plus size={15} weight="bold" />在此工作区新建对话</button>
+          {workspacePanel.directory !== workspacePanel.root && <button type="button" onClick={() => void browseWorkspaceDirectory(workspacePanel.directory.split("/").slice(0, -1).join("/"))}>返回上级</button>}
+        </div>
+        <div className="workspace-panel__body">
+          {workspacePanel.loading && <p className="workspace-panel__hint">正在读取工作区…</p>}
+          {!workspacePanel.loading && workspacePanel.error && <p className="workspace-panel__hint is-error" role="alert">{workspacePanel.error}</p>}
+          {!workspacePanel.loading && !workspacePanel.error && !workspacePanel.items.length && <p className="workspace-panel__hint">这个工作区还没有文件。让助教在这里生成网页、文档或代码后，文件会出现在这里。</p>}
+          {!workspacePanel.loading && workspacePanel.items.length > 0 && <ul className="workspace-panel__list">
+            {workspacePanel.items.map((item) => <li key={item.path}>
+              <span className="workspace-panel__icon">{item.kind === "directory" ? <FolderSimple size={17} weight="bold" /> : <FileText size={17} weight="bold" />}</span>
+              <div><strong>{item.name}</strong><small>{item.kind === "directory" ? "目录" : `${formatBytes(item.sizeBytes)} · ${formatConversationTime(item.updatedAt)}`}</small></div>
+              {item.kind === "directory"
+                ? <button type="button" onClick={() => void browseWorkspaceDirectory(item.path)}>进入</button>
+                : <a href={workspacePreviewUrl(item.path)} target="_blank" rel="noreferrer">打开<ArrowSquareOut size={13} weight="bold" /></a>}
+            </li>)}
+          </ul>}
+        </div>
+      </aside>
+    </div>}
   </section>;
+}
+
+function formatBytes(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function responseText(result, methodDefinition) {

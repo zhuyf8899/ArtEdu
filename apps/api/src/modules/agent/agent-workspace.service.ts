@@ -9,6 +9,32 @@ const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_LIST_ITEMS = 200;
 const MAX_BATCH_FILES = 30;
 const MAX_BATCH_BYTES = 4 * 1024 * 1024;
+const MAX_WORKSPACE_NAME_LENGTH = 40;
+const MAX_WORKSPACE_ITEMS = 50;
+
+/**
+ * 工作区名会同时作为目录名和界面标签，因此只允许单层、可读、无路径语义的名字。
+ * 拒绝 `.`/`..`、以点开头的名字、路径分隔符和 Windows 保留字符，避免它变成路径。
+ */
+export function normalizeWorkspaceName(value: unknown): string {
+  const name = String(value ?? "").trim();
+  if (!name) throw new ForbiddenException("工作区名称不能为空");
+  if (name.length > MAX_WORKSPACE_NAME_LENGTH) throw new ForbiddenException(`工作区名称不能超过 ${MAX_WORKSPACE_NAME_LENGTH} 个字符`);
+  if (name === "." || name === ".." || name.startsWith(".")) throw new ForbiddenException("工作区名称不能以点开头");
+  // eslint-disable-next-line no-control-regex
+  if (/[/\\:*?"<>|\u0000-\u001f]/.test(name)) throw new ForbiddenException("工作区名称不能包含路径分隔符或特殊字符");
+  return name;
+}
+
+/**
+ * 工作区目录：空值代表工作区根目录（默认工作区），其余按 `/` 分层后逐段校验。
+ * 与文件路径的区别在于这里逐段套用更严的工作区命名规则。
+ */
+export function normalizeWorkspaceDirectory(value: unknown): string {
+  const normalized = String(value ?? "").replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, "");
+  if (!normalized || normalized === ".") return "";
+  return normalized.split("/").map((part) => normalizeWorkspaceName(part)).join("/");
+}
 
 /**
  * 每位用户拥有独立 Agent 工作区。路径永远相对该目录解析，因而 Agent 能管理
@@ -17,6 +43,54 @@ const MAX_BATCH_BYTES = 4 * 1024 * 1024;
 @Injectable()
 export class AgentWorkspaceService {
   private root(actor: Actor) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id); }
+
+  /**
+   * 对话按工作区分组，所以界面需要一份"我有哪些工作区、各自有多少文件"的清单。
+   * 默认工作区就是根目录本身，始终存在，排在第一位。
+   */
+  async listWorkspaces(actor: Actor) {
+    const root = this.root(actor);
+    await mkdir(root, { recursive: true, mode: 0o700 });
+    const entries = await readdir(root, { withFileTypes: true });
+    const directories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort((a, b) => a.localeCompare(b, "zh-CN"));
+    const items = [{ directory: "", name: "默认工作区", isDefault: true, ...(await this.summary(root)) }];
+    for (const name of directories.slice(0, MAX_WORKSPACE_ITEMS)) {
+      // 目录名可能是历史遗留或外部写入的，无法通过命名校验时也不能让整个清单失败。
+      if (name.startsWith(".")) continue;
+      items.push({ directory: name, name, isDefault: false, ...(await this.summary(path.join(root, name))) });
+    }
+    return { items };
+  }
+
+  async createWorkspace(actor: Actor, name: unknown) {
+    const directory = normalizeWorkspaceName(name);
+    const target = this.resolve(actor, directory);
+    await mkdir(target, { recursive: true, mode: 0o700 });
+    return { directory, name: directory, isDefault: false, ...(await this.summary(target)) };
+  }
+
+  /**
+   * 一次对话只能在自己的工作区里读写文件：这里把模型传来的目录规范化后确保存在，
+   * 返回值会被写进系统提示，避免不同工作区的成果混在一起。
+   */
+  async ensureWorkspace(actor: Actor, directory: unknown) {
+    const relative = normalizeWorkspaceDirectory(directory);
+    if (relative) await mkdir(this.resolve(actor, relative), { recursive: true, mode: 0o700 });
+    return relative;
+  }
+
+  private async summary(target: string) {
+    const entries = await readdir(target, { withFileTypes: true }).catch(() => []);
+    let fileCount = 0;
+    let updatedAt: Date | null = null;
+    for (const entry of entries.slice(0, MAX_LIST_ITEMS)) {
+      const info = await stat(path.join(target, entry.name)).catch(() => null);
+      if (!info) continue;
+      if (entry.isFile()) fileCount += 1;
+      if (!updatedAt || info.mtime > updatedAt) updatedAt = info.mtime;
+    }
+    return { fileCount, directoryCount: entries.filter((entry) => entry.isDirectory()).length, updatedAt: updatedAt ? updatedAt.toISOString() : null };
+  }
 
   async list(actor: Actor, directory = ".") {
     const relative = this.relative(directory);

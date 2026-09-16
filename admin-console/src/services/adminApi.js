@@ -121,6 +121,22 @@ export const executeAgentRun = (runId, input = {}, options = {}) => request(`/ag
   signal: options.signal,
 });
 
+// —— Agent 工作区：对话按工作区分组，工作区对应服务端的同名目录 ——
+export const listAgentWorkspaces = () => request("/agent-runs/workspaces");
+
+export const createAgentWorkspace = (name) => request("/agent-runs/workspaces", {
+  method: "POST",
+  body: JSON.stringify({ name }),
+});
+
+export const listAgentWorkspaceFiles = (directory = "") => request(`/agent-runs/workspace-files?directory=${encodeURIComponent(directory || ".")}`);
+
+/**
+ * 工作区文件的站内预览地址。直接拼 API 基址而不是写死 `/api`，
+ * 这样前端走代理或直连独立 API 域名时链接都指向同一处。
+ */
+export const workspacePreviewUrl = (filePath) => `${API_BASE_URL}/agent-runs/workspace-preview/${String(filePath ?? "").split("/").filter(Boolean).map(encodeURIComponent).join("/")}`;
+
 /**
  * 流式执行：POST /agent-runs/:id/execute-stream，逐帧解析 SSE。
  * 正文增量经 options.onDelta 实时回调；最终返回的 run 对象与 executeAgentRun

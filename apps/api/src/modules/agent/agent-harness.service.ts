@@ -146,7 +146,13 @@ export class AgentHarnessService {
     }] : [];
     const modelContext = [...input.context, ...attachmentContext];
     const scenario = run.scenario as keyof typeof scenarioInstruction;
-    const systemPrompt = input.systemPrompt ?? `${toolUsePolicy}\n${scenarioInstruction[scenario]}\n输出应清晰、可执行，并避免编造文件、链接或已完成的生成结果。`;
+    // 对话按工作区隔离：本轮目录先规范化并确保存在，再把目录约束写进系统提示，
+    // 否则模型会把不同工作区的成果写到同一个根目录里，界面就无法按工作区归类。
+    const workspaceDirectory = await this.workspace.ensureWorkspace(actor, runParameters?.workspaceDirectory).catch(() => "");
+    const workspaceNotice = workspaceDirectory
+      ? `用户当前的工作区是「${workspaceDirectory}」。所有工作区工具的 directory/path 必须以 ${workspaceDirectory}/ 开头，返回给用户的文件链接也必须指向该工作区；不要写入工作区根目录或其他工作区。`
+      : "用户当前处于默认工作区（工作区根目录）。工作区工具的 directory/path 使用相对根目录的路径，不要写入其他工作区子目录。";
+    const systemPrompt = `${input.systemPrompt ?? `${toolUsePolicy}\n${scenarioInstruction[scenario]}\n输出应清晰、可执行，并避免编造文件、链接或已完成的生成结果。`}\n${workspaceNotice}`;
     await this.agents.appendAgentMessage(runId, "正在整理创作需求并准备调用模型。");
 
     try {
