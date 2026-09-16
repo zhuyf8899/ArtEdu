@@ -22,4 +22,5 @@ test('保存草稿不提交审核；案例提示词按文本渲染', async () =>
   assert.ok(editor.includes('document.body'));
   assert.ok(!view.includes('dangerouslySetInnerHTML'));
   assert.ok(view.includes('<pre>{step.prompt}</pre>'));
+  assert.ok(view.includes('<video controls'), '附件整理后仍保留视频预览');
 });

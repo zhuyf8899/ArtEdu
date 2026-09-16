@@ -1,3 +1,4 @@
+import { uploadFile } from "./uploadFile.js";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
 async function request(path, options = {}) {
@@ -200,11 +201,9 @@ export const createWork = (input) => request("/works", {
 });
 export const submitWork = (workId) => request(`/works/${workId}/submit`, { method: "POST" });
 export const updateWork = (workId, input) => request(`/works/${workId}`, { method: "PUT", body: JSON.stringify(input) });
-export const uploadWorkAsset = (workId, file) => {
-  const form = new FormData();
-  form.append("file", file);
-  return request(`/works/${workId}/assets`, { method: "POST", body: form });
-};
+export const getWorkUploadPolicy = () => request('/work-upload-policy');
+export const getRuntimeStatus = () => request('/health/runtime');
+export const uploadWorkAsset = (workId, file, options) => uploadFile(`${API_BASE_URL}/works/${encodeURIComponent(workId)}/assets`, file, options);
 export const addWorkComment = (workId, content) => request(`/works/${workId}/comments`, {
   method: "POST",
   body: JSON.stringify({ content }),

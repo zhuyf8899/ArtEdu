@@ -213,6 +213,7 @@ coverage/
 
 # ArtEdu local private-upload storage
 apps/api/data/
+backups/
 
 # Ruff stuff:
 .ruff_cache/

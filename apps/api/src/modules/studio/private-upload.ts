@@ -38,8 +38,11 @@ export async function storePrivateUpload(
   root: string,
   permittedMimeTypes: readonly PrivateUploadMimeType[] = Object.keys(allowedTypes) as PrivateUploadMimeType[],
   storagePrefix = "",
+  videoMaxBytes = MAX_UPLOAD_BYTES,
 ): Promise<StoredUpload> {
   if (part.fieldname !== "file") throw new BadRequestException("只允许提交名为 file 的单个文件字段");
+  const maxBytes = ["video/mp4", "video/webm"].includes(part.mimetype) ? videoMaxBytes : MAX_UPLOAD_BYTES;
+  const sizeError = () => new PayloadTooLargeException(`该类型文件不能超过 ${maxBytes / 1024 / 1024} MiB`);
   const uploadRoot = path.resolve(root);
   await mkdir(uploadRoot, { recursive: true, mode: 0o700 });
   const storageKey = createStorageKey(storagePrefix);
@@ -53,7 +56,7 @@ export async function storePrivateUpload(
   const inspect = new Transform({
     transform(chunk: Buffer, _encoding, callback) {
       bytes += chunk.length;
-      if (bytes > MAX_UPLOAD_BYTES) return callback(new PayloadTooLargeException("文件不能超过 10 MB"));
+      if (bytes > maxBytes) return callback(sizeError());
       if (header.length < 16) header = Buffer.concat([header, chunk]).subarray(0, 16);
       digest.update(chunk);
       callback(null, chunk);
@@ -62,10 +65,14 @@ export async function storePrivateUpload(
 
   try {
     await pipeline(part.file, inspect, createWriteStream(temporaryPath, { flags: "wx", mode: 0o600 }));
-    if (part.file.truncated) throw new PayloadTooLargeException("文件不能超过 10 MB");
+    if (part.file.truncated) throw sizeError();
     // DOCX/PPTX are ZIP containers. Inspecting their entry names avoids extracting untrusted content.
-    const fileBytes = await readFile(temporaryPath);
-    const mimeType = detectUploadMimeType(header) ?? detectOfficeMimeType(fileBytes) ?? detectTextMimeType(part.mimetype, fileBytes);
+    // Large videos are streamed to disk: never read the full 100 MiB into memory.
+    let mimeType = detectUploadMimeType(header);
+    if (!mimeType && bytes <= MAX_UPLOAD_BYTES) {
+      const fileBytes = await readFile(temporaryPath);
+      mimeType = detectOfficeMimeType(fileBytes) ?? detectTextMimeType(part.mimetype, fileBytes);
+    }
     if (!mimeType || mimeType !== part.mimetype || !permittedMimeTypes.includes(mimeType)) {
       throw new BadRequestException("文件内容与声明类型不一致，或类型不被允许");
     }

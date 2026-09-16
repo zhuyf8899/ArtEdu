@@ -5,6 +5,8 @@ import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
 import multipart from "@fastify/multipart";
 import { randomUUID } from "node:crypto";
+import { mkdir } from "node:fs/promises";
+import { caseUploadPolicy } from "./common/upload-policy";
 import { AppModule } from "./app.module";
 import { getEnvironment } from "./common/environment";
 import { ApiExceptionFilter } from "./common/api-exception.filter";
@@ -12,6 +14,7 @@ import { apiRateLimitHook } from "./common/rate-limit";
 
 async function bootstrap() {
   const environment = getEnvironment();
+  caseUploadPolicy(); // Fail fast on invalid configured video limits.
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: environment.nodeEnv !== "test", bodyLimit: 1_048_576, genReqId: () => randomUUID() }),
@@ -26,6 +29,7 @@ async function bootstrap() {
   });
 
   if (environment.fileUploadsEnabled) {
+    await mkdir(environment.uploadRoot, { recursive: true, mode: 0o700 });
     await app.register(multipart, {
       limits: { files: 1, fields: 0, parts: 1, fileSize: 10 * 1024 * 1024 },
       throwFileSizeLimit: true,

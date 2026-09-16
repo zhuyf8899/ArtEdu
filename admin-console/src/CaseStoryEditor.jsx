@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { createWork, getWork, updateWork, uploadWorkAsset } from "./services/adminApi.js";
+import { createWork, getWork, updateWork, uploadWorkAsset, getWorkUploadPolicy } from "./services/adminApi.js";
 import { caseUploadError, emptyStep, emptyStory, splitCaseLabels } from "./caseStory.js";
 
 export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice }) {
@@ -8,6 +8,14 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
   const [assets, setAssets] = useState(initial?.assets ?? []);
   const [files, setFiles] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [policy, setPolicy] = useState(null);
+  const [progress, setProgress] = useState(null);
+  const cancellation = useRef(null);
+  useEffect(() => {
+    let active = true;
+    getWorkUploadPolicy().then(value => { if (active) setPolicy(value); }).catch(() => { if (active) setError('无法读取上传限制，请关闭后重新打开编辑器。'); });
+    return () => { active = false; cancellation.current?.abort(); };
+  }, []);
   const dialog = useRef(null);
   const closeState = useRef({ busy, onClose });
   closeState.current = { busy, onClose };
@@ -35,6 +43,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
   }, []);
   const workId = useRef(initial?.id);
   const uploaded = useRef(new Set());
+  const originalAssetCount = useRef(initial?.assets?.length ?? 0);
   const [error, setError] = useState("");
   const [labelFields, setLabelFields] = useState(() => ({ creators: (initial?.story?.creators ?? []).join("，"), tools: (initial?.story?.tools ?? []).join("，"), methods: (initial?.story?.methods ?? []).join("，") }));
   const change = (key, value) => setForm(current => ({ ...current, [key]: value }));
@@ -44,15 +53,20 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
     event.preventDefault();
     if (busy) return;
     const remaining = files.filter(file => !uploaded.current.has(file));
-    const invalid = caseUploadError(remaining, assets.length);
+    if (!policy) { setError('请等待上传限制加载完成'); return; }
+    const invalid = caseUploadError(remaining, originalAssetCount.current + uploaded.current.size, policy);
     if (invalid) { setError(invalid); return; }
     setBusy(true); setError("");
+    cancellation.current = new AbortController();
+    const signal = cancellation.current.signal;
     try {
       const payload = { title: form.title, summary: form.summary, discipline: form.discipline, workflowIds: form.workflowId ? [form.workflowId] : [], tagNames: splitCaseLabels(form.tags), story: { ...form.story, ...Object.fromEntries(Object.entries(labelFields).map(([key,value]) => [key,splitCaseLabels(value)])) } };
       if (!workId.current) workId.current = (await createWork(payload)).id;
       else await updateWork(workId.current, payload);
       for (const file of remaining) {
-        await uploadWorkAsset(workId.current, file);
+        if (signal.aborted) throw new DOMException('已取消上传', 'AbortError');
+        setProgress({ name: file.name, percent: 0 });
+        await uploadWorkAsset(workId.current, file, { signal, onProgress: percent => setProgress({ name: file.name, percent }) });
         uploaded.current.add(file); // Preserve successful uploads when a later upload fails.
       }
       const saved = await getWork(workId.current);
@@ -63,9 +77,9 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
       if (workId.current) {
         try { setAssets((await getWork(workId.current)).assets ?? []); } catch { /* Keep form recoverable offline. */ }
       }
-      setError(`${failure.message}。输入和已上传文件已保留，可重试保存。`);
+      setError(`${failure.name === 'AbortError' ? '已取消后续上传，已完成的文件不会删除' : failure.message}。输入已保留，可重试保存；相同文件会自动复用。`);
       onNotice("草稿未完全保存，请查看表单提示");
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setProgress(null); cancellation.current = null; }
   };
   // Mount outside route animations: transformed ancestors otherwise trap fixed dialogs.
   return createPortal(<div className="publish-layer case-editor-layer" role="dialog" aria-modal="true" aria-label="编辑案例">
@@ -82,7 +96,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
         <label>创作方式<input maxLength={720} value={labelFields.methods} onChange={e => setLabelFields({...labelFields,methods:e.target.value})} placeholder="概念探索，品牌设计，图像生成" /></label>
         <label>主题标签<input value={form.tags} maxLength={480} onChange={e => change("tags", e.target.value)} placeholder="咖啡，传统文化，材料实验" /></label>
         <label>关联教学工作流<select value={form.workflowId} onChange={e => change("workflowId", e.target.value)}><option value="">未关联／尚未整理</option>{workflows.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
-        <label>添加成果与过程文件<input type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,application/pdf,.docx,.pptx" onChange={e => { setFiles([...e.target.files]); uploaded.current.clear(); }} /><small>每个文件不超过 10 MiB，共最多 10 个；ZIP、MOV、webloc 请先处理。保存后可将图片关联到步骤。</small></label>
+        <label>添加成果与过程文件<input type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,application/pdf,.docx,.pptx" onChange={e => { setFiles([...e.target.files]); uploaded.current.clear(); }} /><small>{policy ? `视频最多 ${policy.videoBytes / 1024 / 1024} MiB，图片及文档最多 10 MiB，共最多 10 个` : '正在读取上传限制…'}；ZIP、MOV、webloc 请先处理。保存后可将图片关联到步骤。</small></label>
         {!!files.length && <p>待上传：{files.map(file => file.name).join("、")}</p>}
         {!!assets.length && <><p>已上传 {assets.length} 个文件</p><label>封面<select value={form.story.coverAssetId} onChange={e => storyChange("coverAssetId", e.target.value)}><option value="">使用第一张图片</option>{assets.filter(a => a.asset_type === "image").map(a => <option key={a.id} value={a.id}>{a.file_name}</option>)}</select></label></>}
         <h3>创作过程</h3>
@@ -100,7 +114,9 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
         <label className="case-checkbox"><input type="checkbox" checked={form.story.allowDocumentDownload} onChange={e => storyChange("allowDocumentDownload",e.target.checked)} />允许已发布案例的读者下载文档原件（需另获授权）</label>
       </fieldset>
       {error && <p role="alert" className="case-error">{error}</p>}
-      <button className="publish-submit" disabled={busy}>{busy ? "正在保存…" : "保存草稿并预览"}</button>
+      {progress && <div role="status"><p>{progress.name}：{progress.percent === 100 ? '传输完成，服务器校验中…' : `${progress.percent}%`}</p><progress aria-label="文件上传进度" max="100" value={progress.percent} /></div>}
+      {busy && <button type="button" onClick={() => cancellation.current?.abort()}>取消后续上传</button>}
+      <button className="publish-submit" disabled={busy || !policy}>{busy ? "正在保存…" : "保存草稿并预览"}</button>
     </form>
   </div>, document.body);
 }

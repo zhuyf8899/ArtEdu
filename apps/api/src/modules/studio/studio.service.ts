@@ -10,6 +10,7 @@ import { DatabaseService } from "../database/database.service";
 import { getEnvironment } from "../../common/environment";
 import { storePrivateUpload } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
+import { caseUploadPolicy } from "../../common/upload-policy";
 import { assertCasePublication, caseStorySchema, type CaseStory } from "./case-story";
 import { extractImageText, findOcrRiskKeywords } from "./content-moderation";
 import type {
@@ -341,13 +342,22 @@ export class StudioService {
     if (!work) throw new NotFoundException("作品不存在");
     if (work.author_id !== actor.id) throw new ForbiddenException("只能为自己的作品上传资源");
     if (!["draft", "rejected"].includes(work.status)) throw new ConflictException("当前作品不能继续上传资源");
-    const part = await request.file();
+    const policy = caseUploadPolicy();
+    const part = await request.file({ limits: { fileSize: policy.videoBytes } });
     if (!part) throw new BadRequestException("请选择一个文件");
-    const upload = await storePrivateUpload(part, environment.uploadRoot, undefined, `users/${actor.id}/works/${workId}`);
+    const upload = await storePrivateUpload(part, environment.uploadRoot, undefined, `users/${actor.id}/works/${workId}`, policy.videoBytes);
+    let committed = false;
     try {
       const asset = await this.database.transaction(async (client) => {
         const locked = await client.query<{ status: string; author_id: string }>("SELECT status,author_id FROM works WHERE id=$1 FOR UPDATE", [workId]);
         if (!locked.rows[0] || locked.rows[0].author_id !== actor.id || !["draft", "rejected"].includes(locked.rows[0].status)) throw new ConflictException("作品状态已变化，请刷新后重试");
+        // A lost response or cancellation may occur after commit. Retrying identical bytes
+        // must reuse the asset, under the same work lock, instead of consuming another slot.
+        const existing = await client.query("SELECT id,file_name,mime_type,file_size FROM work_assets WHERE work_id=$1 AND sha256=$2 LIMIT 1", [workId, upload.sha256]);
+        if (existing.rows[0]) {
+          const row = existing.rows[0];
+          return { id: row.id, fileName: row.file_name, mimeType: row.mime_type, sizeBytes: Number(row.file_size), status: "pending", reused: true };
+        }
         const count = await client.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM work_assets WHERE work_id=$1", [workId]);
         if (count.rows[0].count >= 10) throw new BadRequestException("每个作品最多上传 10 个文件");
         const id = `work-asset-${randomUUID()}`;
@@ -357,10 +367,13 @@ export class StudioService {
         `, [id, workId, upload.fileName, upload.mimeType, upload.storageKey, upload.sizeBytes, upload.sha256, upload.assetType, work.title, count.rows[0].count]);
         return { id, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes, status: "pending" };
       });
-      if (upload.assetType === "image") await this.autoModerateImageAsset(asset.id, upload.storageKey, actor.id, workId);
+      committed = true;
+      if ("reused" in asset) await import("node:fs/promises").then(({ rm }) => rm(path.join(environment.uploadRoot, upload.storageKey), { force: true }));
+      else if (upload.assetType === "image") await this.autoModerateImageAsset(asset.id, upload.storageKey, actor.id, workId);
       return asset;
     } catch (error) {
-      await import("node:fs/promises").then(({ rm }) => rm(path.join(environment.uploadRoot, upload.storageKey), { force: true }));
+      // OCR auditing happens after commit. Its failure must not delete a persisted asset.
+      if (!committed) await import("node:fs/promises").then(({ rm }) => rm(path.join(environment.uploadRoot, upload.storageKey), { force: true }));
       throw error;
     }
   }
