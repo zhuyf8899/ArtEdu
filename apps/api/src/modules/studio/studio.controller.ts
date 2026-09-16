@@ -5,6 +5,7 @@ import { AuthService } from "../auth/auth.service";
 import {
   catalogQuerySchema,
   commentInputSchema,
+  reportInputSchema,
   workflowInputSchema,
   workflowRunInputSchema,
   workflowRunProgressSchema,
@@ -14,7 +15,7 @@ import {
 } from "./studio.contracts";
 import type {
   CatalogQuery, WorkflowInput, WorkflowRunInput, WorkflowRunProgressInput,
-  WorkflowVersionInput, WorkInput,
+  WorkflowVersionInput, WorkInput, ReportInput,
 } from "./studio.contracts";
 import { StudioService } from "./studio.service";
 
@@ -123,6 +124,16 @@ export class StudioController {
   async addComment(@Req() request: FastifyRequest, @Param("workId") workId: string, @Body() body: unknown) {
     const input = parseInput(commentInputSchema, body);
     return this.studio.addComment(await this.auth.getActor(request), workId, input.content);
+  }
+
+  @Post("works/:workId/reports")
+  async reportWork(@Req() request: FastifyRequest, @Param("workId") workId: string, @Body() body: unknown) {
+    return this.studio.reportWork(await this.auth.getActor(request), workId, parseInput(reportInputSchema, body) as ReportInput);
+  }
+
+  @Post("comments/:commentId/reports")
+  async reportComment(@Req() request: FastifyRequest, @Param("commentId") commentId: string, @Body() body: unknown) {
+    return this.studio.reportComment(await this.auth.getActor(request), commentId, parseInput(reportInputSchema, body) as ReportInput);
   }
 
   @Post("works/:workId/like")

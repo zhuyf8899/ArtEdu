@@ -209,6 +209,8 @@ export const addWorkComment = (workId, content) => request(`/works/${workId}/com
   method: "POST",
   body: JSON.stringify({ content }),
 });
+export const reportWork = (workId, input) => request(`/works/${workId}/reports`, { method: "POST", body: JSON.stringify(input) });
+export const reportComment = (commentId, input) => request(`/comments/${commentId}/reports`, { method: "POST", body: JSON.stringify(input) });
 export const toggleWorkReaction = (workId, reaction) => request(`/works/${workId}/${reaction}`, { method: "POST" });
 
 export const updateUserQuota = (userId, quota) => request(`/admin/users/${userId}/quota`, {
@@ -230,3 +232,5 @@ export const reviewSubmission = (reviewId, decision) => request(`/admin/reviews/
   method: "POST",
   body: JSON.stringify(decision),
 });
+export const getAdminReports = () => request("/admin/reports");
+export const decideReport = (reportId, decision) => request(`/admin/reports/${reportId}/decision`, { method: "POST", body: JSON.stringify(decision) });

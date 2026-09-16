@@ -11,13 +11,14 @@ import { getEnvironment } from "../../common/environment";
 import { storePrivateUpload } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { assertCasePublication, caseStorySchema, type CaseStory } from "./case-story";
+import { extractImageText, findOcrRiskKeywords } from "./content-moderation";
 import type {
   CatalogQuery,
   WorkflowInput,
   WorkflowRunInput,
   WorkflowRunProgressInput,
   WorkflowVersionInput,
-  WorkInput,
+  WorkInput, ReportInput,
 } from "./studio.contracts";
 
 interface WorkRow {
@@ -356,6 +357,7 @@ export class StudioService {
         `, [id, workId, upload.fileName, upload.mimeType, upload.storageKey, upload.sizeBytes, upload.sha256, upload.assetType, work.title, count.rows[0].count]);
         return { id, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes, status: "pending" };
       });
+      if (upload.assetType === "image") await this.autoModerateImageAsset(asset.id, upload.storageKey, actor.id, workId);
       return asset;
     } catch (error) {
       await import("node:fs/promises").then(({ rm }) => rm(path.join(environment.uploadRoot, upload.storageKey), { force: true }));
@@ -387,6 +389,20 @@ export class StudioService {
     return { id, content, author: actor.displayName, createdAt: new Date().toISOString() };
   }
 
+  async reportWork(actor: Actor, workId: string, input: ReportInput) {
+    const result = await this.database.query<{ author_id: string }>("SELECT author_id FROM works WHERE id=$1 AND status='approved'", [workId]);
+    if (!result.rows[0]) throw new NotFoundException("已发布作品不存在");
+    if (result.rows[0].author_id === actor.id) throw new BadRequestException("不能举报自己的作品");
+    return this.createReport(actor.id, "work", workId, input);
+  }
+
+  async reportComment(actor: Actor, commentId: string, input: ReportInput) {
+    const result = await this.database.query<{ author_id: string }>("SELECT c.author_id FROM comments c JOIN works w ON w.id=c.work_id WHERE c.id=$1 AND c.status='published' AND w.status='approved'", [commentId]);
+    if (!result.rows[0]) throw new NotFoundException("可举报的评论不存在");
+    if (result.rows[0].author_id === actor.id) throw new BadRequestException("不能举报自己的评论");
+    return this.createReport(actor.id, "comment", commentId, input);
+  }
+
   async toggleReaction(actor: Actor, workId: string, reaction: string) {
     await this.requireApprovedWork(workId);
     const table = reaction === "like" ? "work_likes" : reaction === "favorite" ? "work_favorites" : null;
@@ -395,6 +411,39 @@ export class StudioService {
     if (result.rowCount) return { active: false };
     await this.database.query(`INSERT INTO ${table} (work_id,user_id) VALUES ($1,$2)`, [workId, actor.id]);
     return { active: true };
+  }
+
+  private async createReport(reporterId: string, targetType: "work" | "comment", targetId: string, input: ReportInput) {
+    const id = `report-${randomUUID()}`;
+    const result = await this.database.query<{ id: string; status: string }>(`
+      INSERT INTO content_reports (id,target_type,target_id,reporter_id,reason,description)
+      VALUES ($1,$2,$3,$4,$5,$6)
+      ON CONFLICT (target_type,target_id,reporter_id) DO UPDATE SET
+        reason=EXCLUDED.reason,description=EXCLUDED.description,status='pending',content_action='keep',handled_by=NULL,handled_note='',handled_at=NULL,updated_at=CURRENT_TIMESTAMP
+      RETURNING id,status
+    `, [id, targetType, targetId, reporterId, input.reason, input.description]);
+    return { id: result.rows[0].id, status: result.rows[0].status };
+  }
+
+  private async autoModerateImageAsset(assetId: string, storageKey: string, authorId: string, workId: string) {
+    let result: "approved" | "manual_review" = "approved";
+    let reason = "OCR 未发现暴力或色情风险词";
+    try {
+      const filePath = await resolveWorkAssetPath(getEnvironment().uploadRoot, storageKey, authorId, workId);
+      const matches = findOcrRiskKeywords(await extractImageText(filePath));
+      if (matches.length) {
+        result = "manual_review";
+        reason = `OCR 命中高风险词：${matches.map((match) => `${match.category}/${match.keyword}`).join("、")}`;
+      }
+    } catch {
+      // OCR 故障不阻断用户上传，但必须显式进入管理员的人工复核队列。
+      result = "manual_review";
+      reason = "OCR 未完成，需要人工核验图片内容";
+    }
+    await this.database.query(`
+      INSERT INTO asset_moderation_records (id,asset_type,asset_id,result,reason)
+      VALUES ($1,'work_asset',$2,$3,$4)
+    `, [`asset-ocr-${randomUUID()}`, assetId, result, reason]);
   }
 
   private async getRun(actor: Actor, runId: string) {

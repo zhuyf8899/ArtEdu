@@ -117,7 +117,13 @@
 | POST | `/api/works` | 创建作品草稿并登记标签、工作流和资源 |
 | POST | `/api/works/:workId/submit` | 提交管理员审核 |
 | POST | `/api/works/:workId/comments` | 评论已发布案例 |
+| POST | `/api/works/:workId/reports` | 举报已发布作品；提交类型与 2–1000 字说明 |
+| POST | `/api/comments/:commentId/reports` | 举报已发布作品下的评论；同一用户重复举报会更新为待处理状态 |
 | POST | `/api/works/:workId/like` | 点赞或取消点赞 |
 | POST | `/api/works/:workId/favorite` | 收藏或取消收藏 |
+
+管理员和运营审核账号可使用 `GET /api/admin/reports` 查看举报队列，及 `POST /api/admin/reports/:reportId/decision` 决定保留、隐藏内容或驳回举报。隐藏作品会归档，隐藏评论会变为不可见；举报本身不会自动下架内容。
+
+图片上传后在服务端使用中文／英文 OCR 提取文字，仅持久化风险词命中结果，不保存完整 OCR 文本。命中暴力或色情风险词、或 OCR 无法完成时，资源会标记为“需要人工复核”并显示在作品审核队列。
 
 当前作品资源支持安全的 HTTP(S) 外部地址，不由服务端抓取远程文件。接入学校对象存储后，资源地址将由上传签名接口生成。

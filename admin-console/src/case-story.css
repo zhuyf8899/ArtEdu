@@ -39,6 +39,18 @@
 .case-image-viewer__content > div { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .case-image-viewer__content span { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .case-image-viewer__content a,.case-image-viewer__content button { border: 1px solid #fff; border-radius: 7px; padding: 8px 12px; color: #fff; background: transparent; }
+.community-report-row { display: flex; justify-content: flex-end; margin: 18px 0 -12px; }
+.community-report-row button,.comment-report { border: 0; background: transparent; color: #777; font-size: 14px; cursor: pointer; }
+.community-report-row button { display: inline-flex; align-items: center; gap: 5px; }
+.comment-section article > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.report-dialog { position: relative; width: min(440px,100%); display: grid; gap: 16px; padding: 24px; border-radius: 12px; background: #fff; color: #222; }
+.report-dialog h3 { margin: 0; }
+.report-dialog label { display: grid; gap: 7px; font-size: 14px; }
+.report-dialog select,.report-dialog textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 7px; font: inherit; }
+.report-dialog textarea { min-height: 110px; resize: vertical; }
+.report-dialog > div { display: flex; justify-content: flex-end; gap: 10px; }
+.report-dialog button { padding: 9px 14px; border: 1px solid #333; border-radius: 7px; background: #fff; cursor: pointer; }
+.report-dialog button[type="submit"] { background: #222; color: #fff; }
 .case-gallery figcaption { color: #666; font-size: 14px; }
 .case-step { margin: 20px 0; padding: 20px 0; border-top: 1px solid #e5e5e5; }
 .case-step > span { font-size: 14px; color: #666; letter-spacing: .12em; }

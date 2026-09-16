@@ -3,7 +3,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # RAG 使用 pdftotext；PDF 导出则由 Chromium 在同一受限容器中完成。
-RUN apk add --no-cache poppler-utils chromium font-noto-cjk
+RUN apk add --no-cache poppler-utils chromium font-noto-cjk tesseract-ocr tesseract-ocr-data-chi_sim tesseract-ocr-data-eng
 
 COPY apps/api/package.json apps/api/package-lock.json ./apps/api/
 COPY apps/api/vendor ./apps/api/vendor
