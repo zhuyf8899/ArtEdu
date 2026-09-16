@@ -17,10 +17,14 @@ import type {
   WorkflowVersionInput, WorkInput,
 } from "./studio.contracts";
 import { StudioService } from "./studio.service";
+import { caseUploadPolicy } from "../../common/upload-policy";
 
 @Controller()
 export class StudioController {
   constructor(private readonly auth: AuthService, private readonly studio: StudioService) {}
+
+  @Get("work-upload-policy")
+  getUploadPolicy() { return caseUploadPolicy(); }
 
   @Get("workflows")
   listWorkflows(@Query() query: unknown) {

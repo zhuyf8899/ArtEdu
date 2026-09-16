@@ -13,8 +13,9 @@
 #   因此第 2 步显式补建 rag-worker；同 Dockerfile 走层缓存，几乎不额外耗时。
 set -euo pipefail
 
-cd "$HOME/artedu"
+cd "$(dirname "$0")/.."
 COMPOSE="docker compose -f docker-compose.staging.yml"
+export ARTEDU_VERSION="$(git rev-parse --short HEAD)"
 
 echo "[0/7] 部署前版本"
 git log --oneline -1
@@ -47,13 +48,19 @@ $COMPOSE build web
 
 echo "[4/7] 确保 postgres 运行并健康"
 $COMPOSE up -d postgres
+db_ready=0
 for _ in $(seq 1 30); do
-  if docker exec artedu-postgres-1 pg_isready -U artedu -d artedu >/dev/null 2>&1; then
+  if $COMPOSE exec -T postgres pg_isready -U artedu -d artedu >/dev/null 2>&1; then
     echo "  postgres 就绪"
+    db_ready=1
     break
   fi
   sleep 2
 done
+if [ "$db_ready" != 1 ]; then echo '数据库未就绪，停止部署' >&2; exit 1; fi
+
+# Keep data and media together before any schema migration. Existing backups are never overwritten.
+bash deploy/backup-staging.sh "$(pwd -P)/backups/predeploy-$(date +%Y%m%d-%H%M%S)-$$"
 
 echo "[5/7] 应用数据库迁移"
 $COMPOSE run --rm api npm run db:migrate
@@ -64,9 +71,15 @@ $COMPOSE up -d api rag-worker web
 echo "[7/7] 容器状态与健康检查"
 $COMPOSE ps
 sleep 5
-if curl -fsS -m 15 http://127.0.0.1:8080/api/health >/dev/null; then
+ready=0
+for _ in $(seq 1 12); do
+  if curl -fsS -m 10 "http://127.0.0.1:${ARTEDU_HTTP_PORT:-8080}/api/health/ready" >/dev/null; then ready=1; break; fi
+  sleep 5
+done
+if [ "$ready" = 1 ]; then
   echo "  健康检查通过"
 else
   echo "  ! 健康检查未通过，请查看：$COMPOSE logs --tail=80 api rag-worker web"
+  exit 1
 fi
 echo "DEPLOY_DONE"

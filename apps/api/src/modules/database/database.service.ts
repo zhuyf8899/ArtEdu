@@ -10,7 +10,7 @@ export class DatabaseService implements OnModuleDestroy {
     if (!connectionString) {
       throw new Error("DATABASE_URL is required. Copy apps/api/.env.example before starting the API.");
     }
-    this.pool = new Pool({ connectionString, max: Number(process.env.DATABASE_POOL_SIZE ?? 10) });
+    this.pool = new Pool({ connectionString, max: Number(process.env.DATABASE_POOL_SIZE ?? 10), connectionTimeoutMillis: 5000 });
   }
 
   query<T extends QueryResultRow = QueryResultRow>(text: string, values: unknown[] = []) {

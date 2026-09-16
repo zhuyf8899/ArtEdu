@@ -6,16 +6,17 @@
     1. 检查 Node/npm 与本地环境文件（缺 .env 自动从示例复制）
     2. 缺依赖时自动 npm ci
     3. 启动 PostgreSQL（自动拉起 Docker Desktop 并等待就绪）
-    4. 应用数据库迁移 + 写入演示数据
+    4. 应用数据库迁移；仅 -SeedDemo 时写入演示数据
     5. 确保 4 个演示账号可以登录（缺则自动生成）
     6. 启动 API(4000) + 前端(4173) + 生成 Worker
-    7. 自检：健康检查 + 真实登录一次，然后打开浏览器
+    7. 自检：数据库/素材就绪、前端代理 + 真实登录一次，然后打开浏览器
 
   用法（在仓库根目录）：
     powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
     powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -Stop           # 停止
     powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -NoBrowser      # 不自动开浏览器
     powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -ForceAccounts  # 强制重建演示账号
+    powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -SeedDemo       # 仅首次空环境初始化演示数据
 
   演示账号（密码都是 123456）：student.demo / teacher.demo / operator.demo / admin.demo
 #>
@@ -23,7 +24,8 @@
 param(
   [switch]$Stop,
   [switch]$NoBrowser,
-  [switch]$ForceAccounts
+  [switch]$ForceAccounts,
+  [switch]$SeedDemo
 )
 
 $ErrorActionPreference = 'Stop'
@@ -168,9 +170,11 @@ Step 4 '应用数据库迁移'
 Invoke-Npm -WorkingDir $root -NpmArgs @('run', 'db:migrate')
 Ok '迁移已应用到最新版本'
 
-Step 5 '写入演示数据（幂等，可重复执行）'
-Invoke-Npm -WorkingDir $root -NpmArgs @('run', 'db:seed')
-Ok '演示课程 / 学习空间 / 案例数据就绪'
+Step 5 '演示数据初始化（默认跳过）'
+if ($SeedDemo) {
+  Invoke-Npm -WorkingDir $root -NpmArgs @('run', 'db:seed')
+  Ok '已按 -SeedDemo 显式要求初始化演示数据'
+} else { Ok '保留现有数据；首次空环境可显式传入 -SeedDemo' }
 
 # ------------------------------------------------------------------ 5. 演示账号
 Step 6 '确保 4 个演示账号可以登录'
@@ -200,17 +204,21 @@ foreach ($port in 4000, 4173) { if (Test-Listening -Port $port) { $busy += $port
 if ($busy.Count -gt 0) {
   Warn "端口 $($busy -join '/') 已被占用，跳过启动（如需重启请先执行 -Stop）"
 } else {
-  Start-Process -FilePath 'cmd.exe' -WorkingDirectory $root -ArgumentList @('/k', 'title ArtEdu dev && npm run dev') | Out-Null
-  Ok '已在新窗口启动 npm run dev（那个窗口就是运行日志，关掉即停止）'
+  $env:ARTEDU_ENV_LABEL = 'local-4173'
+  $env:ARTEDU_VERSION = (git rev-parse --short HEAD)
+  New-Item -ItemType Directory -Force -Path (Join-Path $root 'apps/api/data') | Out-Null
+  Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -WorkingDirectory $root -ArgumentList @('/c', 'npm run dev') -RedirectStandardOutput (Join-Path $root 'apps/api/data/local-dev.log') -RedirectStandardError (Join-Path $root 'apps/api/data/local-dev-error.log') | Out-Null
+  Ok '已后台启动，日志位于 apps/api/data/local-dev*.log'
 }
 
 # ------------------------------------------------------------------ 7. 自检
 Step 8 '自检'
-$apiOk = Wait-Http -Url "$API_URL/health" -TimeoutSeconds 120 -Label 'API 健康检查'
+$apiOk = Wait-Http -Url "$API_URL/health/ready" -TimeoutSeconds 120 -Label 'API 数据库与素材就绪检查'
 if ($apiOk) { Ok 'API 健康检查通过' } else { Fail 'API 未就绪，请看 dev 窗口日志' }
 
 $webOk = Wait-Http -Url $WEB_URL -TimeoutSeconds 60 -Label '前端页面'
 if ($webOk) { Ok '前端页面可访问' } else { Fail '前端未就绪，请看 dev 窗口日志' }
+Invoke-Npm -WorkingDir $root -NpmArgs @('run', 'check:runtime')
 
 $loginOk = $false
 try {

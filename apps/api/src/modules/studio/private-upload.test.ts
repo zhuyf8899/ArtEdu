@@ -1,12 +1,50 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, readdir } from "node:fs/promises";
+import Fastify from 'fastify';
+import multipart from '@fastify/multipart';
+import { caseUploadPolicy } from '../../common/upload-policy';
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { detectUploadMimeType, storePrivateUpload } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { StudioService } from "./studio.service";
+
+test('案例视频分类型限额、超限清理、伪装拒绝；其他上传保持 10 MiB', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(),'artedu-video-limits-'));
+  const part = (size: number, type = 'video/mp4', header = '....ftypisom') => ({fieldname:'file',filename:'test.mp4',mimetype:type,file:Readable.from((function* () {
+    yield Buffer.from(header); let left = size - header.length;
+    while(left > 0) { const bytes = Math.min(left,65536); yield Buffer.alloc(bytes); left -= bytes; }
+  })())}) as any;
+  try {
+    const policy = caseUploadPolicy();
+    const video = await storePrivateUpload(part(11*1024*1024),root,undefined,'',policy.videoBytes);
+    assert.equal(video.sizeBytes,11*1024*1024);
+    await assert.rejects(storePrivateUpload(part(11*1024*1024),root),/10 MiB/);
+    await assert.rejects(storePrivateUpload(part(policy.videoBytes+1),root,undefined,'',policy.videoBytes),/100 MiB/);
+    await assert.rejects(storePrivateUpload(part(11*1024*1024,'image/png'),root,undefined,'',policy.videoBytes),/10 MiB/);
+    await assert.rejects(storePrivateUpload(part(1024,'video/mp4','not-a-video'),root,undefined,'',policy.videoBytes),/不一致/);
+    assert.equal((await readdir(root)).length,1);
+  } finally { await rm(root,{recursive:true,force:true}); }
+});
+
+test('Fastify 单路由覆盖 multipart 上限，普通路由仍拒绝大文件', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(),'artedu-video-http-'));
+  const app = Fastify();
+  await app.register(multipart,{limits:{files:1,fileSize:10*1024*1024}});
+  app.post('/case',async request => {
+    const part = await request.file({limits:{fileSize:100*1024*1024}});
+    return storePrivateUpload(part!,root,undefined,'',100*1024*1024);
+  });
+  app.post('/other',async request => storePrivateUpload((await request.file())!,root));
+  const payload = Buffer.concat([Buffer.from('--boundary\r\nContent-Disposition: form-data; name="file"; filename="test.mp4"\r\nContent-Type: video/mp4\r\n\r\n....ftypisom'),Buffer.alloc(11*1024*1024),Buffer.from('\r\n--boundary--\r\n')]);
+  try {
+    const options = {method:'POST' as const,headers:{'content-type':'multipart/form-data; boundary=boundary'},payload};
+    assert.equal((await app.inject({...options,url:'/case'})).statusCode,200);
+    assert.notEqual((await app.inject({...options,url:'/other'})).statusCode,200);
+  } finally { await app.close(); await rm(root,{recursive:true,force:true}); }
+});
 
 test("作品新分层与旧 UUID 路径均可读取；越权、穿越和丢失文件被拒绝", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "artedu-case-path-"));
