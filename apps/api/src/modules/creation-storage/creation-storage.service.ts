@@ -16,6 +16,11 @@ interface UploadRow { id: string; user_id: string; file_name: string; mime_type:
 const execFile = promisify(execFileCallback);
 const MAX_AGENT_FILE_TEXT = 12000;
 const MAX_AGENT_VISION_IMAGE_BYTES = 8 * 1024 * 1024;
+// Office 文件是 ZIP 容器。上传大小限制的是压缩后的字节数，不能据此推断解压规模。
+// 先按中央目录声明的大小拒绝异常归档，避免 Agent 解析参考文件时触发解压炸弹。
+const MAX_OFFICE_ARCHIVE_ENTRIES = 500;
+const MAX_OFFICE_ENTRY_UNCOMPRESSED_BYTES = 2 * 1024 * 1024;
+const MAX_OFFICE_TOTAL_UNCOMPRESSED_BYTES = 4 * 1024 * 1024;
 const VISION_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 @Injectable()
@@ -131,11 +136,35 @@ async function extractAgentText(filePath: string, mimeType: string) {
     return result.stdout;
   }
   if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
-    const zip = new AdmZip(await readFile(filePath));
-    return zip.getEntries()
-      .filter((entry) => /^(word\/document|word\/header|word\/footer|ppt\/slides\/slide)\d*\.xml$/i.test(entry.entryName))
-      .map((entry) => entry.getData().toString("utf8").replace(/<[^>]+>/g, " ").replace(/\s+/g, " "))
-      .join("\n");
+    return extractOfficeText(await readFile(filePath));
   }
   return "";
+}
+
+export function extractOfficeText(archive: Buffer) {
+  const zip = new AdmZip(archive);
+  const entries = zip.getEntries();
+  if (entries.length > MAX_OFFICE_ARCHIVE_ENTRIES) throw new PayloadTooLargeException("Office 文档包含过多归档条目");
+
+  const relevant = entries.filter((entry) => /^(word\/document|word\/header|word\/footer|ppt\/slides\/slide)\d*\.xml$/i.test(entry.entryName));
+  let declaredTotal = 0;
+  for (const entry of relevant) {
+    const declaredSize = Number(entry.header.size);
+    if (!Number.isSafeInteger(declaredSize) || declaredSize < 0 || declaredSize > MAX_OFFICE_ENTRY_UNCOMPRESSED_BYTES) {
+      throw new PayloadTooLargeException("Office 文档包含过大的解压条目");
+    }
+    declaredTotal += declaredSize;
+    if (declaredTotal > MAX_OFFICE_TOTAL_UNCOMPRESSED_BYTES) throw new PayloadTooLargeException("Office 文档解压后的总大小超过限制");
+  }
+
+  let extractedBytes = 0;
+  const text = relevant.map((entry) => {
+    const data = entry.getData();
+    extractedBytes += data.length;
+    if (data.length > MAX_OFFICE_ENTRY_UNCOMPRESSED_BYTES || extractedBytes > MAX_OFFICE_TOTAL_UNCOMPRESSED_BYTES) {
+      throw new PayloadTooLargeException("Office 文档解压后的总大小超过限制");
+    }
+    return data.toString("utf8").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  }).join("\n");
+  return text.slice(0, MAX_AGENT_FILE_TEXT);
 }

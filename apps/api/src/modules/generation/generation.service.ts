@@ -44,6 +44,48 @@ export class GenerationService {
     });
   }
 
+  /**
+   * Agent 直接调用文本模型时也必须纳入平台额度。未配置额度仍沿用既有语义：不限额。
+   * 调用方须在同一用户 advisory lock 的事务内调用，保证并发检查和任务领取一致。
+   */
+  async assertAgentQuotaAvailable(client: PoolClient, userId: string) {
+    const result = await client.query<QuotaRow>(`
+      WITH limits AS (
+        SELECT
+          MAX(limit_value) FILTER (WHERE period_type = 'daily') AS daily_limit,
+          MAX(limit_value) FILTER (WHERE period_type = 'monthly') AS monthly_limit,
+          MAX(limit_value) FILTER (WHERE period_type = 'concurrent') AS concurrent_limit
+        FROM user_usage_limits
+        WHERE user_id = $1 AND capability = $2 AND enabled = TRUE
+      ), usage AS (
+        SELECT
+          COUNT(*) FILTER (
+            WHERE created_at >= date_trunc('day', NOW())
+              AND status IN ('queued', 'running', 'waiting_user', 'succeeded')
+          )::int AS daily_used,
+          COUNT(*) FILTER (
+            WHERE created_at >= date_trunc('month', NOW())
+              AND status IN ('queued', 'running', 'waiting_user', 'succeeded')
+          )::int AS monthly_used,
+          COUNT(*) FILTER (WHERE status IN ('running', 'waiting_user'))::int AS in_flight
+        FROM agent_runs
+        WHERE user_id = $1
+      )
+      SELECT
+        limits.daily_limit,
+        limits.monthly_limit,
+        limits.concurrent_limit,
+        usage.daily_used,
+        usage.monthly_used,
+        usage.in_flight
+      FROM limits CROSS JOIN usage
+    `, [userId, MANAGED_QUOTA_CAPABILITY]);
+    this.assertQuotaAvailable(result.rows[0] ?? {
+      daily_limit: null, monthly_limit: null, concurrent_limit: null,
+      daily_used: 0, monthly_used: 0, in_flight: 0,
+    });
+  }
+
   private async validateReferences(client: PoolClient, actor: Actor, input: CreateGenerationJobInput) {
     if (input.conversationId) {
       const conversation = await client.query("SELECT id FROM conversations WHERE id = $1 AND user_id = $2", [input.conversationId, actor.id]);

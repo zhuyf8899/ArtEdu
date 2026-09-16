@@ -6,6 +6,7 @@ import type { PoolClient, QueryResultRow } from "pg";
 import { getEnvironment } from "../../common/environment";
 import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
+import { GenerationService } from "../generation/generation.service";
 import type { CreateAgentRunInput } from "./agent.contracts";
 import { scanText } from "./agent.scanner";
 
@@ -18,7 +19,7 @@ interface RunRow extends QueryResultRow {
 
 @Injectable()
 export class AgentService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(private readonly database: DatabaseService, private readonly generation: GenerationService) {}
 
   async createRun(actor: Actor, input: CreateAgentRunInput) {
     const runId = `agent-run-${randomUUID()}`;
@@ -57,7 +58,12 @@ export class AgentService {
   async claimForExecution(actor: Actor, runId: string) {
     const run = await this.getOwnedRun(runId);
     if (run.user_id !== actor.id && !actor.roles.includes("admin")) throw new ForbiddenException("无权执行该 Agent Run");
-    const result = await this.database.query<RunRow>(`UPDATE agent_runs SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='queued' RETURNING *`, [runId]);
+    const result = await this.database.transaction(async (client) => {
+      // 与生成任务一样按用户串行化额度检查，防止多标签页同时绕过并发上限。
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [run.user_id]);
+      await this.generation.assertAgentQuotaAvailable(client, run.user_id);
+      return client.query<RunRow>(`UPDATE agent_runs SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='queued' RETURNING *`, [runId]);
+    });
     if (!result.rows[0]) throw new ConflictException("该 Agent Run 已被执行或不能再次执行");
     return this.mapRun(result.rows[0]);
   }

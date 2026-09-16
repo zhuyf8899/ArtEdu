@@ -7,6 +7,8 @@ import { caseUploadPolicy } from '../../common/upload-policy';
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
+import AdmZip from "adm-zip";
+import { extractOfficeText } from "../creation-storage/creation-storage.service";
 import { detectUploadMimeType, storePrivateUpload } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { StudioService } from "./studio.service";
@@ -147,4 +149,10 @@ test("课程资料上传接受安全识别的 PDF、DOCX，并在拒绝时清理
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("Agent 解析 Office 附件时拒绝超过解压上限的 ZIP 条目", () => {
+  const zip = new AdmZip();
+  zip.addFile("word/document.xml", Buffer.from(`<document>${"A".repeat(2 * 1024 * 1024 + 1)}</document>`, "utf8"));
+  assert.throws(() => extractOfficeText(zip.toBuffer()), /过大的解压条目/);
 });
