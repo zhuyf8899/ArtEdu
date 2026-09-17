@@ -50,7 +50,12 @@ async function bootstrap() {
   fastify.addHook("onRequest", apiRateLimitHook);
   fastify.addHook("onSend", async (_request, reply, payload) => {
     reply.header("Cache-Control", "no-store");
-    reply.header("Content-Security-Policy", "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+    // 默认策略只覆盖"没有自己声明 CSP"的接口。工作区预览页需要放行同源 CSS/JS，
+    // 如果在 onSend 里无条件重设，就会把路由设置的策略覆盖掉——那样沙箱页面
+    // 会连自己的样式表和脚本都加载不了，表现为"生成的网页完全没有样式"。
+    if (!reply.getHeader("Content-Security-Policy")) {
+      reply.header("Content-Security-Policy", "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+    }
     reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
     reply.header("X-Content-Type-Options", "nosniff");

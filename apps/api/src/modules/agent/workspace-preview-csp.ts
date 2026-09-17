@@ -10,6 +10,10 @@
  * 这里改为显式写出预览自身的主机名（任意端口、http/https 都允许）：
  * 资源匹配是按 URL 判定的，不受不透明来源影响，所以工作区内的文件能正常加载，
  * 而沙箱、断网这些限制一条都没有放松。
+ *
+ * 注意：这条策略还必须真的落到响应上。main.ts 的全局 onSend 钩子只在响应
+ * 没有声明 CSP 时才补默认值，否则会把这里的策略覆盖成 default-src 'none'，
+ * 页面依然会退化成没有样式的裸 HTML。
  */
 export function workspacePreviewCsp(hostHeader: string | string[] | undefined) {
   const host = normalizeHost(hostHeader);
