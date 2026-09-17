@@ -19,11 +19,16 @@ export class AgentWorkspaceService {
   private root(actor: Actor) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id); }
 
   /**
-   * 只读渲染服务需要把整个工作区目录挂到一个临时 HTTP 服务上，
-   * 让 HTML 里的相对路径（assets/css/style.css 之类）按原样解析。
-   * 这里只暴露目录本身，具体文件仍由工作区服务做越界校验。
+   * 自检工具需要知道页面引用的文件是否存在、多大——只做 stat，不读内容，
+   * 这样即使引用了 100 MB 的视频也不会把内存打满。
    */
-  rootPathFor(actor: Actor) { return this.root(actor); }
+  async statFile(actor: Actor, filePath: string) {
+    const relative = this.relative(filePath);
+    if (!relative) return null;
+    const info = await stat(this.resolve(actor, relative)).catch(() => null);
+    if (!info?.isFile()) return null;
+    return { path: relative, exists: true as const, sizeBytes: info.size };
+  }
 
   async list(actor: Actor, directory = ".") {
     const relative = this.relative(directory);
