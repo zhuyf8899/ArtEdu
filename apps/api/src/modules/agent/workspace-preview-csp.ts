@@ -14,6 +14,16 @@
  * 注意：这条策略还必须真的落到响应上。main.ts 的全局 onSend 钩子只在响应
  * 没有声明 CSP 时才补默认值，否则会把这里的策略覆盖成 default-src 'none'，
  * 页面依然会退化成没有样式的裸 HTML。
+ *
+ * 另外必须带 allow-same-origin（见 buildPolicy 下方说明）：只声明 allow-scripts
+ * 时文档是不透明来源，"加载同目录样式表/脚本"会被当成跨站请求——SameSite=Lax 的
+ * 会话 cookie 不发送 → 接口返回 401 JSON → Chrome 的 ORB 以
+ * net::ERR_BLOCKED_BY_ORB 拦掉，页面永远是裸 HTML、脚本也不执行。
+ * 这是实测结论（绕过 CSP 渲染同一页面时样式与脚本都正常）。
+ *
+ * 代价：生成页与平台同源，能读到本站 localStorage / IndexedDB。仍保留的限制是
+ * 不能联网（connect-src 'none'）、不能提交表单、不能内嵌框架与插件、不能下载、不能开弹窗。
+ * 后续更干净的方案是给预览资源发签名令牌（不依赖 cookie），再恢复不透明来源。
  */
 export function workspacePreviewCsp(hostHeader: string | string[] | undefined) {
   const host = normalizeHost(hostHeader);
@@ -22,7 +32,8 @@ export function workspacePreviewCsp(hostHeader: string | string[] | undefined) {
   const assetSources = host ? `http://${host}:* https://${host}:*` : "";
   const sources = (...parts: string[]) => parts.filter((part) => part.length > 0).join(" ");
   return [
-    "sandbox allow-scripts",
+    // 必须带 allow-same-origin，见下方说明：只写 allow-scripts 会让同目录 CSS/JS 全被 ORB 拦掉。
+    "sandbox allow-scripts allow-same-origin",
     "default-src 'none'",
     sources("style-src", assetSources, "'unsafe-inline'"),
     sources("script-src", assetSources, "'unsafe-inline'"),
