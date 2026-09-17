@@ -142,8 +142,11 @@ test("工作区预览页能加载同目录资源，并明确禁止外部 CDN", a
   // 控制器必须走统一的策略构造函数，不能退回内联写死的一段 CSP。
   assert.ok(controller.includes('workspacePreviewCsp(request.headers["x-forwarded-host"] ?? request.headers.host)'));
   assert.ok(!controller.includes("default-src 'self'"), "沙箱文档是不透明来源，'self' 什么都匹配不到");
-  assert.ok(csp.includes("sandbox allow-scripts"));
-  assert.ok(!csp.includes("allow-same-origin"));
+  // allow-same-origin 是必需的：缺了它，同目录 CSS/JS 会被当成跨站请求
+  // （cookie 不发送 → 401 JSON → ORB 拦截），页面永远是裸 HTML。
+  assert.ok(csp.includes("sandbox allow-scripts allow-same-origin"));
+  assert.ok(csp.includes("connect-src 'none'"), "同源也不代表可以联网");
+  assert.ok(csp.includes("form-action 'none'"));
 
   // 模型必须知道预览页离线：否则它照样会写 Tailwind CDN，页面还是裸 HTML。
   assert.ok(harness.includes("绝对不能引用外部 CDN"), "系统提示要说明预览环境禁止外部资源");
