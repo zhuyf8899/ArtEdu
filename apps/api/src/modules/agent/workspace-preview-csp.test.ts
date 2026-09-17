@@ -6,8 +6,10 @@ import { workspacePreviewCsp } from "./workspace-preview-csp";
 
 test("预览页保留沙箱与断网限制", () => {
   const csp = workspacePreviewCsp("artedu.example.edu");
-  assert.ok(csp.startsWith("sandbox allow-scripts; default-src 'none'"));
-  assert.ok(!csp.includes("allow-same-origin"), "放开同源身份后生成页就能带着 cookie 调用平台接口");
+  // allow-same-origin 是必需的：没有它，文档是不透明来源，同目录 CSS/JS 会被
+  // 当成跨站请求（cookie 不发送 → 401 JSON → ORB 拦截），页面永远是裸 HTML。
+  assert.ok(csp.startsWith("sandbox allow-scripts allow-same-origin; default-src 'none'"));
+  // 即使同源，这几条硬限制也必须保留。
   assert.ok(csp.includes("connect-src 'none'"), "生成页不得发起 fetch/XHR/WebSocket");
   assert.ok(csp.includes("form-action 'none'"));
   assert.ok(csp.includes("base-uri 'none'"));
