@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import test from "node:test";
 import { workspacePreviewCsp } from "./workspace-preview-csp";
 
@@ -41,4 +43,16 @@ test("Host 头不可信时退回只允许内联资源，不把原样字符串拼
   assert.ok(workspacePreviewCsp("").includes("style-src 'unsafe-inline'"));
   // 逗号分隔的转发链只取最靠近浏览器的那一跳。
   assert.ok(workspacePreviewCsp("artedu.example.edu, inner.local").includes("http://artedu.example.edu:*"));
+});
+
+test("全局 onSend 不得覆盖路由自己声明的 CSP", async () => {
+  // 曾经这里无条件重设 CSP，把预览页的策略盖成 default-src 'none'，
+  // 于是页面连自己的样式表都加载不了——表现就是"生成的网页完全没有样式"。
+  const main = await readFile(path.join(process.cwd(), "src", "main.ts"), "utf8");
+  assert.ok(
+    main.includes('if (!reply.getHeader("Content-Security-Policy"))'),
+    "全局钩子只能在响应没有声明 CSP 时补默认值",
+  );
+  // 默认值本身也要保留，API 的普通 JSON 响应仍然是最严格的策略。
+  assert.ok(main.includes('"default-src \'none\'; base-uri \'none\'; form-action \'none\'; frame-ancestors \'none\'"'));
 });
