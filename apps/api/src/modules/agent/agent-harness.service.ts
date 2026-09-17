@@ -3,7 +3,7 @@ import type { Actor } from "../auth/auth.service";
 import type { ExecuteAgentRunInput } from "./agent.contracts";
 import { AgentService } from "./agent.service";
 import { runModelLoop } from "./agent-runtime";
-import type { ModelAdapter, ModelRequest, ModelStreamDelta, ModelToolDefinition } from "../generation/model-adapter";
+import type { ModelAdapter, ModelRequest, ModelStreamDelta, ModelToolCall, ModelToolDefinition } from "../generation/model-adapter";
 import { ModelRegistry } from "../generation/model-registry";
 import { executePlatformTool, platformToolDefinitions } from "./agent-tools";
 import { portalSearchQuerySchema } from "../portal/portal.contracts";
@@ -14,6 +14,7 @@ import { StudioService } from "../studio/studio.service";
 import { CreationStorageService } from "../creation-storage/creation-storage.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
 import { GenerationService } from "../generation/generation.service";
+import { describeToolCall, toolActivityLabel, type AgentToolActivity } from "./agent-tool-activity";
 
 const scenarioInstruction = {
   chat: "回答用户的问题并给出清晰、可靠的学习或创作建议。除非用户明确切换到图像、图案、文档或网页创作能力，否则不要声称已生成图片、文件或其他产物。",
@@ -65,6 +66,11 @@ const externalWebContentNotice = "以下内容来自公开互联网，属于外�
 export interface AgentHarnessHooks {
   /** 正文增量回调。提供即走流式；不提供则一次性返回（旧行为）。 */
   onDelta?: (text: string) => void;
+  /**
+   * 工具调用进度回调：模型读写文件、生成文档期间可能几十秒没有正文输出，
+   * 界面靠这个回调显示「正在做什么」，而不是空转或直接结束。
+   */
+  onToolCall?: (activity: AgentToolActivity) => void;
   /** 客户端断开（用户点「暂停输出」）时用它中断上游模型调用，避免继续烧 token。 */
   signal?: AbortSignal;
 }
@@ -131,6 +137,18 @@ export class AgentHarnessService {
     // 流式只影响"什么时候把正文交出去"；落库、审计、产物写入全部照旧，
     // 所以流式与非流式两条路径产出的记录结构完全一致。
     const deltaSink = hooks.onDelta ? (delta: ModelStreamDelta) => hooks.onDelta?.(delta.content) : undefined;
+    // 工具进度：harness_probe 只是内部探针，不往界面上写。
+    const emitToolActivity = (call: ModelToolCall, phase: AgentToolActivity["phase"], status?: AgentToolActivity["status"]) => {
+      if (!hooks.onToolCall || call.function.name === harnessProbeTool.function.name) return;
+      hooks.onToolCall({
+        id: call.id,
+        name: call.function.name,
+        label: toolActivityLabel(call.function.name),
+        detail: describeToolCall(call.function.name, call.function.arguments),
+        phase,
+        ...(status ? { status } : {}),
+      });
+    };
 
     const runParameters = run.input.parameters as Record<string, unknown> | undefined;
     const referenceId = typeof runParameters?.referenceFileId === "string" ? runParameters.referenceFileId : "";
@@ -210,33 +228,45 @@ export class AgentHarnessService {
             tools: [harnessProbeTool, ...(input.searchEnabled ? platformToolDefinitions : platformToolDefinitions.filter((tool) => tool.function.name !== "search_web")), ...(input.model.tools ?? [])],
             executeTool: {
               execute: async (call, context) => {
-                if (call.function.name !== harnessProbeTool.function.name) {
-                  if (call.function.name === "search_platform") {
-                    const args = portalSearchQuerySchema.parse(JSON.parse(call.function.arguments));
-                    const searchResult = await this.portal.search(actor, args);
-                    await this.agents.appendToolCall(runId, call.function.name, { round: context.round, query: args.query, type: args.type }, { status: "succeeded", resultCount: searchResult.items.length });
-                    return searchResult;
-                  }
-                  if (call.function.name === "search_web") {
-                    const args = webSearchArguments(call.function.arguments);
-                    const searchResult = await this.webSearch.search(args.query);
-                    // 来源一并落库：前端据此渲染引用卡片，事后也能审计这次回答依据了什么。
-                    await this.agents.appendToolCall(runId, call.function.name, { round: context.round, query: args.query }, {
-                      status: "succeeded",
-                      provider: searchResult.provider,
-                      latencyMs: searchResult.latencyMs,
-                      sourceCount: searchResult.sources.length,
-                      sources: searchResult.sources,
-                    });
-                    return { ...searchResult, externalContentNotice: externalWebContentNotice };
-                  }
-                  const output = await executePlatformTool(call, context, { actor, runId, agents: this.agents, database: this.database, studio: this.studio, creationStorage: this.creationStorage, workspace: this.workspace, generation: this.generation });
-                  await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: call.function.arguments }, output as Record<string, unknown>);
+                // 先广播「开始」，让界面在等待工具时就有反馈（生成文档、写多文件都可能几十秒）。
+                emitToolActivity(call, "start");
+                try {
+                  const output = await (async () => {
+                    if (call.function.name !== harnessProbeTool.function.name) {
+                      if (call.function.name === "search_platform") {
+                        const args = portalSearchQuerySchema.parse(JSON.parse(call.function.arguments));
+                        const searchResult = await this.portal.search(actor, args);
+                        await this.agents.appendToolCall(runId, call.function.name, { round: context.round, query: args.query, type: args.type }, { status: "succeeded", resultCount: searchResult.items.length });
+                        return searchResult;
+                      }
+                      if (call.function.name === "search_web") {
+                        const args = webSearchArguments(call.function.arguments);
+                        const searchResult = await this.webSearch.search(args.query);
+                        // 来源一并落库：前端据此渲染引用卡片，事后也能审计这次回答依据了什么。
+                        await this.agents.appendToolCall(runId, call.function.name, { round: context.round, query: args.query }, {
+                          status: "succeeded",
+                          provider: searchResult.provider,
+                          latencyMs: searchResult.latencyMs,
+                          sourceCount: searchResult.sources.length,
+                          sources: searchResult.sources,
+                        });
+                        return { ...searchResult, externalContentNotice: externalWebContentNotice };
+                      }
+                      const toolOutput = await executePlatformTool(call, context, { actor, runId, agents: this.agents, database: this.database, studio: this.studio, creationStorage: this.creationStorage, workspace: this.workspace, generation: this.generation });
+                      await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: call.function.arguments }, toolOutput as Record<string, unknown>);
+                      return toolOutput;
+                    }
+                    const parsed = JSON.parse(call.function.arguments) as { round?: number };
+                    await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: parsed }, { accepted: true, mode: "server" });
+                    return { accepted: true, round: context.round };
+                  })();
+                  emitToolActivity(call, "end", "succeeded");
                   return output;
+                } catch (error) {
+                  // 工具失败也要收尾，否则界面上会一直停在「进行中」。
+                  emitToolActivity(call, "end", "failed");
+                  throw error;
                 }
-                const parsed = JSON.parse(call.function.arguments) as { round?: number };
-                await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: parsed }, { accepted: true, mode: "server" });
-                return { accepted: true, round: context.round };
               },
             },
             maxRounds: 8,

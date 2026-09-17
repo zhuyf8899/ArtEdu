@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowClockwise, ArrowLeft, ArrowRight, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, Check, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, SpinnerGap, Stop, Trash, WarningCircle, X } from "@phosphor-icons/react";
 import { AiMarkdown, safeReplyUrl } from "./AiMarkdown.js";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
 import { DocumentOptions } from "./DocumentOptions.jsx";
@@ -135,6 +135,8 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       role: "assistant",
       content: partial ? `${partial}\n\n（${pauseNote}）` : pauseNote,
       paused: true,
+      // 暂停也要保留已发生的工具记录，否则看不出它在暂停前做了什么。
+      tools: streaming[streaming.length - 1]?.tools ?? [],
     }];
     setMessages(pausedMessages);
     await persist(conversationId, { pending: null, messages: pausedMessages }).catch(() => {});
@@ -159,11 +161,33 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       ? `正在用 ${modelName} 处理“${operationDefinition.label}”，请稍候……`
       : `正在通过本地演示引擎处理“${operationDefinition.label}”，不会调用外部模型……`;
     const attachmentName = usedReference?.fileName ? `\n\n📎 已附参考文件：${usedReference.fileName}` : "";
-    let rendered = [...baseMessages, { role: "user", content: `${content}${attachmentName}`, attachment: usedReference ?? null }, { role: "assistant", content: "", placeholder: placeholderText, streaming: true }];
+    let rendered = [...baseMessages, { role: "user", content: `${content}${attachmentName}`, attachment: usedReference ?? null }, { role: "assistant", content: "", placeholder: placeholderText, streaming: true, tools: [] }];
     setMessages(rendered);
     const onDelta = (text) => {
       const last = rendered[rendered.length - 1];
       rendered = [...rendered.slice(0, -1), { ...last, content: `${last.content ?? ""}${text}` }];
+      setMessages(rendered);
+    };
+    /**
+     * 工具进度：模型读上传文件、写工作区、生成文档时正文可能几十秒没有增量。
+     * 把服务端推来的开始/结束事件挂到当前气泡上，界面就能显示它在做什么，
+     * 而不是空转、也不至于让人以为「直接结束了」。
+     */
+    const onToolCall = (activity) => {
+      const last = rendered[rendered.length - 1];
+      if (!last || typeof activity?.id !== "string") return;
+      const tools = [...(last.tools ?? [])];
+      const index = tools.findIndex((item) => item.id === activity.id);
+      const entry = {
+        id: activity.id,
+        name: String(activity.name ?? ""),
+        label: String(activity.label ?? "调用工具"),
+        detail: String(activity.detail ?? ""),
+        status: activity.phase !== "end" ? "running" : activity.status === "failed" ? "failed" : "succeeded",
+      };
+      if (index === -1) tools.push(entry);
+      else tools[index] = { ...tools[index], ...entry };
+      rendered = [...rendered.slice(0, -1), { ...last, tools }];
       setMessages(rendered);
     };
     try {
@@ -174,8 +198,10 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         modelConfigId: modelId ?? undefined,
         parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),
         context,
-      }, controller.signal, onDelta);
-      const finalMessages = [...rendered.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), sources: result?.sources ?? null, localFile: result?.localFile ?? null }];
+      }, controller.signal, onDelta, onToolCall);
+      // 工具记录随正文一起写进本地会话：重开这次对话仍然能看到当时做了哪些操作。
+      const tools = rendered[rendered.length - 1]?.tools ?? [];
+      const finalMessages = [...rendered.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), sources: result?.sources ?? null, localFile: result?.localFile ?? null, tools }];
       setMessages(finalMessages);
       setFailed(!result);
       if (!result) setPrompt(content);
@@ -187,7 +213,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       }
       setFailed(true);
       setPrompt(content);
-      const failedMessages = [...rendered.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true }];
+      const failedMessages = [...rendered.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true, tools: rendered[rendered.length - 1]?.tools ?? [] }];
       setMessages(failedMessages);
       await persist(conversation.id, { pending: null, messages: failedMessages }).catch(() => {});
       console.error("[creation] 生成失败", error);
@@ -393,7 +419,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
               {messages.length ? messages.map((message, index) => {
                 return message.role === "user"
                   ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p><button type="button" className="ai-message__action" onClick={() => editPrompt(message.content)}><PencilSimple size={14} />编辑</button></div>
-                  : <div className={`ai-message ai-message--assistant${message.streaming ? " ai-message--streaming" : ""}`} key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span><AiMarkdown>{message.content || message.placeholder}</AiMarkdown>{(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}<div className="ai-message__actions"><button type="button" onClick={() => copyReply(message.content)} title="复制回复"><Copy size={14} />复制</button><button type="button" onClick={() => retryReply(index)} title="清除这一轮的回复并重新生成"><ArrowClockwise size={14} />重新输出</button></div></div></div>;
+                  : <div className={`ai-message ai-message--assistant${message.streaming ? " ai-message--streaming" : ""}`} key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span>{(message.tools?.length ?? 0) > 0 && <ToolActivityList tools={message.tools} />}<AiMarkdown>{message.content || message.placeholder}</AiMarkdown>{(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}<div className="ai-message__actions"><button type="button" onClick={() => copyReply(message.content)} title="复制回复"><Copy size={14} />复制</button><button type="button" onClick={() => retryReply(index)} title="清除这一轮的回复并重新生成"><ArrowClockwise size={14} />重新输出</button></div></div></div>;
               }) : <div className="ai-thread__empty creation-canvas__empty">
                 <span><Sparkle size={25} weight="fill" /></span>
                 <strong>今天，想弄明白什么？</strong>
@@ -460,6 +486,20 @@ function responseText(result, methodDefinition) {
  * 链接统一走 safeReplyUrl（与模型回复共用同一套 URL 安全规则），
  * 非 http(s) 或带凭据的地址一律不渲染成可点链接。
  */
+/**
+ * 工具调用进度：正文还没流出来（或正在流）时，用户能看到它在读什么、写什么。
+ * 状态由服务端的 tool 事件驱动：running → succeeded / failed。
+ */
+function ToolActivityList({ tools }) {
+  return <ul className="ai-tools" aria-label="工具调用记录" aria-live="polite">
+    {tools.map((tool) => <li className={`ai-tools__item is-${tool.status ?? "running"}`} key={tool.id}>
+      <span className="ai-tools__icon" aria-hidden="true">{tool.status === "running" ? <SpinnerGap className="spin" size={13} weight="bold" /> : tool.status === "failed" ? <WarningCircle size={13} weight="bold" /> : <Check size={13} weight="bold" />}</span>
+      <span className="ai-tools__label">{tool.label}</span>
+      {tool.detail ? <code className="ai-tools__detail">{tool.detail}</code> : null}
+    </li>)}
+  </ul>;
+}
+
 function SourcesBlock({ sources }) {
   const safe = sources
     .map((source) => ({ title: String(source?.title ?? ""), href: safeReplyUrl(String(source?.url ?? "")) }))

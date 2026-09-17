@@ -86,6 +86,8 @@ export class AgentController {
       const run = await this.harness.execute(actor, runId, input, {
         signal: controller.signal,
         onDelta: (text) => send("delta", { text }),
+        // 工具进度单独走一类事件：正文可能长时间没有增量，界面靠它显示「正在做什么」。
+        onToolCall: (activity) => send("tool", activity),
       });
       send("done", { run });
     } catch (error) {

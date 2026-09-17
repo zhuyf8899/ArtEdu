@@ -71,7 +71,7 @@ test("暂停输出：中断在途请求，且不当作失败处理", async () =>
   assert.ok(workspace.includes("const abortRef = useRef(null)"));
   assert.ok(workspace.includes("abortRef.current?.abort()"));
   // 生成入口把 signal 与增量回调一起交给 onCreate：前者用于暂停，后者用于流式回填。
-  assert.ok(workspace.includes("}, controller.signal, onDelta);"), "onCreate 必须同时收到 signal 与 onDelta");
+  assert.ok(workspace.includes("}, controller.signal, onDelta, onToolCall);"), "onCreate 必须同时收到 signal、正文增量与工具进度回调");
   // 暂停走独立分支：保留内容、回填输入，而不是走失败态。
   assert.ok(workspace.includes('if (error?.name === "AbortError")'));
   assert.ok(workspace.includes("settlePaused"));
@@ -124,7 +124,7 @@ test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条
 
   // 门户：agent 分支必须走流式入口，并透传增量回调。
   assert.ok(portal.includes("executeAgentRunStream(run.id"));
-  assert.ok(portal.includes("{ signal, onDelta }"));
+  assert.ok(portal.includes("{ signal, onDelta, onToolCall }"));
 });
 
 test("「重新输出」清除上一轮回复后重新生成，而不是回填输入框", async () => {
@@ -132,4 +132,45 @@ test("「重新输出」清除上一轮回复后重新生成，而不是回填�
   assert.ok(workspace.includes("baseMessages: messages.slice(0, Math.max(0, index - 1))"), "必须截断到该提问之前");
   assert.ok(workspace.includes('onNotice?.("已清除上一轮输出，正在重新生成…", "success")'));
   assert.ok(!workspace.includes("已将本轮问题带回输入框"), "旧的一次性回填行为应已移除");
+});
+
+test("工具调用与写文件过程实时显示，而不是直接结束", async () => {
+  const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
+  const api = await readFile(new URL("../src/services/adminApi.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  const harness = await readFile(new URL("../../apps/api/src/modules/agent/agent-harness.service.ts", import.meta.url), "utf8");
+  const controller = await readFile(new URL("../../apps/api/src/modules/agent/agent.controller.ts", import.meta.url), "utf8");
+  const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
+
+  // 回调必须一路透传：创作页 → 门户 → 流式执行，中间断一层界面就又没有进度了。
+  assert.ok(portal.includes("context, signal, onDelta, onToolCall)"), "startGeneration 要接收工具进度回调");
+  assert.ok(portal.includes("}, { signal, onDelta, onToolCall });"), "流式执行要带上工具进度回调");
+
+  // 服务端在工具开始/成功/失败时都要广播：少任何一种，界面就会一直停在「进行中」。
+  assert.ok(harness.includes('emitToolActivity(call, "start")'));
+  assert.ok(harness.includes('emitToolActivity(call, "end", "succeeded")'));
+  assert.ok(harness.includes('emitToolActivity(call, "end", "failed")'));
+  assert.ok(harness.includes("call.function.name === harnessProbeTool.function.name) return"), "内部探针不该出现在用户可见记录里");
+  assert.ok(controller.includes('onToolCall: (activity) => send("tool", activity)'));
+
+  // SSE 解析出 tool 事件并交给回调，回调一路传到生成请求。
+  assert.ok(api.includes("const { onDelta, onToolCall, signal } = options;"));
+  assert.ok(api.includes('else if (event === "tool" && payload?.id) onToolCall?.(payload);'));
+  assert.ok(workspace.includes("}, controller.signal, onDelta, onToolCall);"), "onCreate 必须同时收到工具进度回调");
+
+  // 服务端的开始/结束事件映射成运行中/成功/失败三种状态。
+  assert.ok(workspace.includes('status: activity.phase !== "end" ? "running"'));
+  assert.ok(workspace.includes('activity.status === "failed" ? "failed" : "succeeded"'));
+
+  // 气泡里渲染工具列表，并且三种状态各有图标。
+  assert.ok(workspace.includes("<ToolActivityList tools={message.tools} />"));
+  assert.ok(workspace.includes('className="ai-tools"'));
+  assert.ok(workspace.includes("SpinnerGap"), "进行中的工具要有转圈图标");
+  assert.ok(workspace.includes("WarningCircle"), "失败的工具要有提示图标");
+  assert.ok(css.includes(".ai-tools__item"));
+
+  // 工具记录随正文一起落库：重开对话、暂停、失败都要保留，不能只活在内存里。
+  assert.ok(workspace.includes("const tools = rendered[rendered.length - 1]?.tools ?? [];"));
+  assert.ok(workspace.includes("tools: streaming[streaming.length - 1]?.tools ?? []"), "暂停时要保留工具记录");
+  assert.ok(workspace.includes("failed: true, tools: rendered[rendered.length - 1]?.tools ?? []"), "失败时要保留工具记录");
 });

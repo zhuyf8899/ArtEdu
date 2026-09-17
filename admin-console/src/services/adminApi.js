@@ -128,7 +128,7 @@ export const executeAgentRun = (runId, input = {}, options = {}) => request(`/ag
  * 服务端或反代不支持流式时自动退回一次性调用，行为一致（只是没有增量）。
  */
 export const executeAgentRunStream = async (runId, input = {}, options = {}) => {
-  const { onDelta, signal } = options;
+  const { onDelta, onToolCall, signal } = options;
   const response = await fetch(`${API_BASE_URL}/agent-runs/${encodeURIComponent(runId)}/execute-stream`, {
     method: "POST",
     credentials: "include",
@@ -158,6 +158,8 @@ export const executeAgentRunStream = async (runId, input = {}, options = {}) => 
         let payload = null;
         try { payload = JSON.parse(payloadText); } catch { payload = null; }
         if (event === "delta" && typeof payload?.text === "string") onDelta?.(payload.text);
+        // 工具开始/结束：界面据此显示「正在写入工作区文件 index.html」这类进度。
+        else if (event === "tool" && payload?.id) onToolCall?.(payload);
         else if (event === "done") completed = payload?.run ?? null;
         else if (event === "error") throw new Error(payload?.message || "生成失败");
       }

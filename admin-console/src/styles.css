@@ -660,6 +660,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .spin { animation: studio-spin .8s linear infinite; }
 @keyframes studio-spin { to { transform: rotate(360deg); } }
 
+/* 工具调用进度：模型读写文件、生成文档期间正文可能长时间没有增量，
+   这一行行记录就是"它正在做什么"，避免用户看到空气泡以为已经结束。 */
+.ai-tools { margin: 0 0 11px; padding: 0; display: flex; flex-direction: column; gap: 4px; list-style: none; }
+.ai-tools__item { min-height: 27px; padding: 4px 9px; display: flex; align-items: center; gap: 7px; color: #5c5e66; background: #f4f4ef; border: 1px solid #e5e5df; border-radius: 8px; font-size: 11px; line-height: 1.5; }
+.ai-tools__item.is-failed { color: #a2453f; background: #fbedeb; border-color: #f0d3cf; }
+.ai-tools__icon { flex: none; display: inline-flex; color: #6f7d6c; }
+.ai-tools__item.is-running .ai-tools__icon { color: #9d7a22; }
+.ai-tools__item.is-failed .ai-tools__icon { color: #b04a45; }
+.ai-tools__label { flex: none; font-weight: 650; }
+.ai-tools__detail { min-width: 0; overflow: hidden; color: #7d7f86; background: transparent; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+
 @media (max-width: 760px) {
   .ai-creation { min-height: 0; padding: 30px 18px; }
   .ai-composer__footer { align-items: stretch; flex-direction: column; }

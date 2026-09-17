@@ -139,7 +139,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const showToast = notify;
   // signal 由创作页下发：用户点「暂停输出」时中断在途请求。
   // onDelta 同样由创作页下发：正文增量实时回到气泡里，实现逐字输出。
-  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal, onDelta) => {
+  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal, onDelta, onToolCall) => {
     try {
       if (portalLoading || !isLive) throw new Error("平台服务尚未就绪，请等待加载完成后重试");
       const searchEnabled = parameters.searchEnabled === true;
@@ -169,7 +169,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
           // 首轮调用 search_web 由上面的 systemPrompt 明确要求，auto 下模型会遵守；
           // 强制反而会让开启搜索的每一轮对话都失败。
           model: { toolChoice: "auto" },
-        }, { signal, onDelta });
+        }, { signal, onDelta, onToolCall });
         const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
         showToast(searchEnabled ? "已完成带搜索能力的 Agent 创作" : "已完成 Agent 创作", "success");
         return {
@@ -202,7 +202,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       throw error;
     }
   };
-  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal, onDelta) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal, onDelta);
+  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal, onDelta, onToolCall) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal, onDelta, onToolCall);
 
   const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning", creation: "/create" }[nextSection] ?? "/");
