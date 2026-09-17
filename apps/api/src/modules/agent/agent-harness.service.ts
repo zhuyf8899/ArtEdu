@@ -14,7 +14,7 @@ import { StudioService } from "../studio/studio.service";
 import { CreationStorageService } from "../creation-storage/creation-storage.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
 import { GenerationService } from "../generation/generation.service";
-import { describeToolCall, toolActivityLabel, type AgentToolActivity } from "./agent-tool-activity";
+import { describeToolCall, sanitizeToolArguments, summarizeToolResult, toolActivityLabel, type AgentToolActivity } from "./agent-tool-activity";
 
 const scenarioInstruction = {
   chat: "回答用户的问题并给出清晰、可靠的学习或创作建议。除非用户明确切换到图像、图案、文档或网页创作能力，否则不要声称已生成图片、文件或其他产物。",
@@ -138,15 +138,18 @@ export class AgentHarnessService {
     // 所以流式与非流式两条路径产出的记录结构完全一致。
     const deltaSink = hooks.onDelta ? (delta: ModelStreamDelta) => hooks.onDelta?.(delta.content) : undefined;
     // 工具进度：harness_probe 只是内部探针，不往界面上写。
-    const emitToolActivity = (call: ModelToolCall, phase: AgentToolActivity["phase"], status?: AgentToolActivity["status"]) => {
+    const emitToolActivity = (call: ModelToolCall, phase: AgentToolActivity["phase"], extra: Partial<AgentToolActivity> = {}) => {
       if (!hooks.onToolCall || call.function.name === harnessProbeTool.function.name) return;
+      // 参数一并推给前端：界面默认折叠，展开后能看到这次到底传了什么。
+      const argumentSummary = sanitizeToolArguments(call.function.arguments);
       hooks.onToolCall({
         id: call.id,
         name: call.function.name,
         label: toolActivityLabel(call.function.name),
         detail: describeToolCall(call.function.name, call.function.arguments),
         phase,
-        ...(status ? { status } : {}),
+        ...(argumentSummary ? { arguments: argumentSummary } : {}),
+        ...extra,
       });
     };
 
@@ -230,6 +233,7 @@ export class AgentHarnessService {
               execute: async (call, context) => {
                 // 先广播「开始」，让界面在等待工具时就有反馈（生成文档、写多文件都可能几十秒）。
                 emitToolActivity(call, "start");
+                const startedAt = Date.now();
                 try {
                   const output = await (async () => {
                     if (call.function.name !== harnessProbeTool.function.name) {
@@ -260,11 +264,11 @@ export class AgentHarnessService {
                     await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: parsed }, { accepted: true, mode: "server" });
                     return { accepted: true, round: context.round };
                   })();
-                  emitToolActivity(call, "end", "succeeded");
+                  emitToolActivity(call, "end", { status: "succeeded", result: summarizeToolResult(output), durationMs: Date.now() - startedAt });
                   return output;
                 } catch (error) {
                   // 工具失败也要收尾，否则界面上会一直停在「进行中」。
-                  emitToolActivity(call, "end", "failed");
+                  emitToolActivity(call, "end", { status: "failed", result: error instanceof Error ? error.message : "执行失败", durationMs: Date.now() - startedAt });
                   throw error;
                 }
               },

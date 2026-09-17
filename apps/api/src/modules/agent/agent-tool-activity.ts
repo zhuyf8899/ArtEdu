@@ -7,11 +7,24 @@
  */
 export interface AgentToolActivity {
   id: string;
+  /** 真实工具名（如 write_workspace_files），界面用来显示"到底调了什么"。 */
   name: string;
+  /** 中文一句话说明，便于快速扫读。 */
   label: string;
+  /** 一行参数摘要（文件名、检索词、格式）。 */
   detail: string;
   phase: "start" | "end";
   status?: "succeeded" | "failed";
+  /**
+   * 调用参数（已压缩：超长字符串截断、数组截断）。
+   * 界面默认只显示 label/detail，展开后才看这份原始参数——
+   * 与 Codex/Trae 那种"折叠式工具调用"一致。
+   */
+  arguments?: string;
+  /** 结果摘要（成功看要点、失败看原因）。 */
+  result?: string;
+  /** 本次工具耗时，毫秒。 */
+  durationMs?: number;
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -111,4 +124,69 @@ function firstString(args: Record<string, unknown>, keys: readonly string[]) {
 
 function clip(value: string) {
   return value.length > 80 ? `${value.slice(0, 79)}…` : value;
+}
+
+const MAX_ARGUMENT_CHARS = 700;
+const MAX_ARGUMENT_STRING = 120;
+const MAX_ARGUMENT_ITEMS = 8;
+
+/**
+ * 参数用于"展开查看"，因此要保留结构但压掉体积：
+ * 写入网页时 content 可能上万字符，直接传会让气泡和会话存储一起膨胀。
+ * 这里截断长字符串、截断长数组，并限制嵌套深度。
+ */
+export function sanitizeToolArguments(rawArguments: string | undefined) {
+  const parsed = parseArguments(rawArguments);
+  if (!parsed) return "";
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(shrinkValue(parsed));
+  } catch {
+    return "";
+  }
+  if (!serialized || serialized === "{}") return "";
+  return serialized.length > MAX_ARGUMENT_CHARS ? `${serialized.slice(0, MAX_ARGUMENT_CHARS)}…` : serialized;
+}
+
+function shrinkValue(value: unknown, depth = 0): unknown {
+  if (typeof value === "string") {
+    return value.length > MAX_ARGUMENT_STRING ? `${value.slice(0, MAX_ARGUMENT_STRING)}…（共 ${value.length} 字符）` : value;
+  }
+  if (Array.isArray(value)) {
+    const items = value.slice(0, MAX_ARGUMENT_ITEMS).map((item) => shrinkValue(item, depth + 1));
+    if (value.length > MAX_ARGUMENT_ITEMS) items.push(`…共 ${value.length} 项`);
+    return items;
+  }
+  if (value && typeof value === "object") {
+    if (depth >= 3) return "…";
+    const entries = Object.entries(value as Record<string, unknown>).slice(0, 12).map(([key, item]) => [key, shrinkValue(item, depth + 1)]);
+    return Object.fromEntries(entries);
+  }
+  return value;
+}
+
+/**
+ * 结果摘要：只挑用户能看懂的那一句。
+ * 工具返回结构五花八门，这里按"有 message 用 message、有列表报条数、
+ * 有链接给链接"的顺序取，取不到就留空，不编造。
+ */
+export function summarizeToolResult(output: unknown) {
+  if (!output || typeof output !== "object") return "";
+  const value = output as Record<string, unknown>;
+  if (typeof value.message === "string" && value.message.trim()) return clipLong(value.message.trim(), 160);
+  if (Array.isArray(value.items)) return `返回 ${value.items.length} 项`;
+  const document = value.document;
+  if (document && typeof document === "object") {
+    const fileName = (document as { fileName?: unknown }).fileName;
+    return typeof fileName === "string" && fileName ? `已生成 ${fileName}` : "已生成文档";
+  }
+  if (value.workflowRun && typeof value.workflowRun === "object") return "已启动工作流";
+  if (typeof value.path === "string" && value.path) return value.path;
+  if (typeof value.openUrl === "string" && value.openUrl) return value.openUrl;
+  if (value.status === "failed") return "执行失败";
+  return "";
+}
+
+function clipLong(value: string, max: number) {
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }

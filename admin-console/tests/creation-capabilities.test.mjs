@@ -148,8 +148,8 @@ test("工具调用与写文件过程实时显示，而不是直接结束", async
 
   // 服务端在工具开始/成功/失败时都要广播：少任何一种，界面就会一直停在「进行中」。
   assert.ok(harness.includes('emitToolActivity(call, "start")'));
-  assert.ok(harness.includes('emitToolActivity(call, "end", "succeeded")'));
-  assert.ok(harness.includes('emitToolActivity(call, "end", "failed")'));
+  assert.ok(harness.includes('emitToolActivity(call, "end", { status: "succeeded"'));
+  assert.ok(harness.includes('emitToolActivity(call, "end", { status: "failed"'));
   assert.ok(harness.includes("call.function.name === harnessProbeTool.function.name) return"), "内部探针不该出现在用户可见记录里");
   assert.ok(controller.includes('onToolCall: (activity) => send("tool", activity)'));
 
@@ -173,4 +173,33 @@ test("工具调用与写文件过程实时显示，而不是直接结束", async
   assert.ok(workspace.includes("const tools = rendered[rendered.length - 1]?.tools ?? [];"));
   assert.ok(workspace.includes("tools: streaming[streaming.length - 1]?.tools ?? []"), "暂停时要保留工具记录");
   assert.ok(workspace.includes("failed: true, tools: rendered[rendered.length - 1]?.tools ?? []"), "失败时要保留工具记录");
+});
+
+test("工具调用记录可展开查看真实工具名、参数与结果", async () => {
+  const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  const harness = await readFile(new URL("../../apps/api/src/modules/agent/agent-harness.service.ts", import.meta.url), "utf8");
+  const activity = await readFile(new URL("../../apps/api/src/modules/agent/agent-tool-activity.ts", import.meta.url), "utf8");
+
+  // 服务端在事件里带上参数、结果与耗时，而不只是一句中文说明。
+  assert.ok(harness.includes("sanitizeToolArguments(call.function.arguments)"));
+  assert.ok(harness.includes("result: summarizeToolResult(output)"));
+  assert.ok(harness.includes("durationMs: Date.now() - startedAt"));
+  assert.ok(activity.includes("export function sanitizeToolArguments"));
+  assert.ok(activity.includes("export function summarizeToolResult"));
+
+  // 展开内容：真实工具名、参数、结果三行，参数超长时由服务端压缩。
+  assert.ok(workspace.includes("<details>"));
+  assert.ok(workspace.includes("<summary>"));
+  assert.ok(workspace.includes("<span>工具</span><code>{tool.name}</code>"));
+  assert.ok(workspace.includes("<span>参数</span><code>{tool.arguments}</code>"));
+  assert.ok(workspace.includes("<span>结果</span><code>{tool.result}</code>"));
+  assert.ok(workspace.includes("arguments: typeof activity.arguments === \"string\""), "前端要接住参数");
+  assert.ok(workspace.includes("durationMs: Number.isFinite(activity.durationMs)"), "前端要接住耗时");
+  assert.ok(workspace.includes("formatDuration(tool.durationMs)"));
+
+  // 折叠态的样式与展开箭头。
+  assert.ok(css.includes(".ai-tools__body"));
+  assert.ok(css.includes(".ai-tools__item summary::-webkit-details-marker"));
+  assert.ok(css.includes(".ai-tools__caret"));
 });

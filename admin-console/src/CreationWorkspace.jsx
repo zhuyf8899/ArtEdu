@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowClockwise, ArrowLeft, ArrowRight, Check, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, SpinnerGap, Stop, Trash, WarningCircle, X } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, CaretRight, Check, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, SpinnerGap, Stop, Trash, WarningCircle, X } from "@phosphor-icons/react";
 import { AiMarkdown, safeReplyUrl } from "./AiMarkdown.js";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
 import { DocumentOptions } from "./DocumentOptions.jsx";
@@ -183,6 +183,10 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         name: String(activity.name ?? ""),
         label: String(activity.label ?? "调用工具"),
         detail: String(activity.detail ?? ""),
+        // 展开后能看到真实工具名、参数与结果，与 Codex/Trae 的调用记录同级。
+        arguments: typeof activity.arguments === "string" ? activity.arguments : "",
+        result: typeof activity.result === "string" ? activity.result : "",
+        durationMs: Number.isFinite(activity.durationMs) ? Number(activity.durationMs) : null,
         status: activity.phase !== "end" ? "running" : activity.status === "failed" ? "failed" : "succeeded",
       };
       if (index === -1) tools.push(entry);
@@ -493,11 +497,28 @@ function responseText(result, methodDefinition) {
 function ToolActivityList({ tools }) {
   return <ul className="ai-tools" aria-label="工具调用记录" aria-live="polite">
     {tools.map((tool) => <li className={`ai-tools__item is-${tool.status ?? "running"}`} key={tool.id}>
-      <span className="ai-tools__icon" aria-hidden="true">{tool.status === "running" ? <SpinnerGap className="spin" size={13} weight="bold" /> : tool.status === "failed" ? <WarningCircle size={13} weight="bold" /> : <Check size={13} weight="bold" />}</span>
-      <span className="ai-tools__label">{tool.label}</span>
-      {tool.detail ? <code className="ai-tools__detail">{tool.detail}</code> : null}
+      {/* 摘要一行、明细折叠：默认扫读成本低，需要时能查到底调了什么、传了什么、返回了什么。 */}
+      <details>
+        <summary>
+          <CaretRight className="ai-tools__caret" size={11} weight="bold" aria-hidden="true" />
+          <span className="ai-tools__icon" aria-hidden="true">{tool.status === "running" ? <SpinnerGap className="spin" size={13} weight="bold" /> : tool.status === "failed" ? <WarningCircle size={13} weight="bold" /> : <Check size={13} weight="bold" />}</span>
+          <span className="ai-tools__label">{tool.label}</span>
+          {tool.detail ? <code className="ai-tools__detail">{tool.detail}</code> : null}
+          {tool.durationMs ? <em className="ai-tools__time">{formatDuration(tool.durationMs)}</em> : null}
+        </summary>
+        <div className="ai-tools__body">
+          <p><span>工具</span><code>{tool.name}</code></p>
+          {tool.arguments ? <p><span>参数</span><code>{tool.arguments}</code></p> : null}
+          {tool.result ? <p><span>结果</span><code>{tool.result}</code></p> : null}
+        </div>
+      </details>
     </li>)}
   </ul>;
+}
+
+function formatDuration(milliseconds) {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) return "";
+  return milliseconds < 1000 ? `${milliseconds} ms` : `${(milliseconds / 1000).toFixed(1)} s`;
 }
 
 function SourcesBlock({ sources }) {
