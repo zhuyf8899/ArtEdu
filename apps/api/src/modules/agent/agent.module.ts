@@ -11,11 +11,12 @@ import { AgentService } from "./agent.service";
 import { AgentHarnessService } from "./agent-harness.service";
 import { WebSearchService } from "./web-search.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
+import { AgentPageRenderService } from "./agent-page-render.service";
 
 @Module({
   imports: [AuthModule, DatabaseModule, GenerationModule, PortalModule, StudioModule, CreationStorageModule],
   controllers: [AgentController, AgentAdminController],
-  providers: [AgentService, AgentHarnessService, WebSearchService, AgentWorkspaceService],
+  providers: [AgentService, AgentHarnessService, WebSearchService, AgentWorkspaceService, AgentPageRenderService],
   exports: [AgentService, WebSearchService],
 })
 export class AgentModule {}

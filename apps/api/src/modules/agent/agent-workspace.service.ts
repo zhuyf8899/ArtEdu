@@ -18,6 +18,13 @@ const MAX_BATCH_BYTES = 4 * 1024 * 1024;
 export class AgentWorkspaceService {
   private root(actor: Actor) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id); }
 
+  /**
+   * 只读渲染服务需要把整个工作区目录挂到一个临时 HTTP 服务上，
+   * 让 HTML 里的相对路径（assets/css/style.css 之类）按原样解析。
+   * 这里只暴露目录本身，具体文件仍由工作区服务做越界校验。
+   */
+  rootPathFor(actor: Actor) { return this.root(actor); }
+
   async list(actor: Actor, directory = ".") {
     const relative = this.relative(directory);
     const target = this.resolve(actor, relative);

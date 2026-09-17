@@ -8,6 +8,7 @@ import { AgentService } from "./agent.service";
 import { CreationStorageService } from "../creation-storage/creation-storage.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
 import { GenerationService } from "../generation/generation.service";
+import { AgentPageRenderService } from "./agent-page-render.service";
 
 export const platformToolDefinitions: readonly ModelToolDefinition[] = [
   { type: "function", function: { name: "search_platform", description: "搜索当前用户可见的课程、工作流和案例作品。", parameters: { type: "object", properties: { query: { type: "string", minLength: 1 }, type: { type: "string", enum: ["all", "course", "workflow", "work"] }, limit: { type: "integer", minimum: 1, maximum: 10 } }, required: ["query"] } } },
@@ -31,6 +32,7 @@ export const platformToolDefinitions: readonly ModelToolDefinition[] = [
   { type: "function", function: { name: "create_workspace_directory", description: "在 Agent 自己工作区创建目录。创建多文件网页前，先用它建立 assets、src 等目录；不能访问服务器其他位置。", parameters: { type: "object", properties: { directory: { type: "string" } }, required: ["directory"] } } },
   { type: "function", function: { name: "write_workspace_files", description: "一次创建一组互相引用的文本文件，适合 HTML、CSS、JS 多文件网页。每次最多 30 个文件；返回每个文件的私有打开链接。", parameters: { type: "object", properties: { files: { type: "array", minItems: 1, maxItems: 30, items: { type: "object", properties: { path: { type: "string" }, content: { type: "string", maxLength: 200000 } }, required: ["path", "content"] } } }, required: ["files"] } } },
   { type: "function", function: { name: "open_workspace_file", description: "打开 Agent 自己工作区中的文件，返回站内私有链接；HTML 会在浏览器中预览。此操作不访问服务器工作区以外的文件。", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } } },
+  { type: "function", function: { name: "render_page_screenshot", description: "把工作区里的 HTML 真正渲染一遍并截图，返回截图路径与自检诊断：控制台报错、加载失败的资源、引用的外部地址、生效的 CSS 规则数、页面高度。写完网页后必须调用它自检——CSS 规则数为 0、有控制台报错、有资源加载失败或引用了外部地址，都说明页面在用户那里同样是坏的，必须先修复再汇报。渲染环境与线上预览一致：不联网，外部 CDN、外部字体、外部图片一律加载不到。", parameters: { type: "object", properties: { path: { type: "string" }, width: { type: "integer", minimum: 320, maximum: 1920 }, height: { type: "integer", minimum: 240, maximum: 2400 }, fullPage: { type: "boolean" } }, required: ["path"] } } },
   { type: "function", function: { name: "create_agent_artifact", description: "将本轮设计说明、网页规格、图案提示词或学习笔记保存为私有成果草稿。保存草稿无需再次向用户索取确认。", parameters: { type: "object", properties: { artifactType: { type: "string", enum: ["brief", "webpage", "pattern", "document"] }, content: { type: "string", minLength: 1 } }, required: ["artifactType", "content"] } } },
   { type: "function", function: { name: "start_workflow_run", description: "在用户明确确认后启动已发布工作流，不执行任意外部 URL。", parameters: { type: "object", properties: { workflowId: { type: "string" }, context: { type: "object" } }, required: ["workflowId"] } } },
 ];
@@ -41,6 +43,12 @@ const getCaseDetailSchema = z.object({ workId: z.string().trim().min(1).max(160)
 const readUploadedFileSchema = z.object({ uploadId: z.string().trim().min(1).max(160) });
 const workspacePathSchema = z.object({ path: z.string().trim().min(1).max(500) });
 const workspaceDirectorySchema = z.object({ directory: z.string().trim().min(1).max(500) });
+const pageRenderSchema = z.object({
+  path: z.string().trim().min(1).max(500),
+  width: z.number().int().min(320).max(1920).default(1280),
+  height: z.number().int().min(240).max(2400).default(900),
+  fullPage: z.boolean().default(false),
+});
 const writeWorkspaceFileSchema = workspacePathSchema.extend({ content: z.string().max(2_000_000) });
 const writeWorkspaceFilesSchema = z.object({ files: z.array(writeWorkspaceFileSchema).min(1).max(30) });
 const searchCasesSchema = z.object({ keyword: z.string().trim().max(100).optional(), tag: z.string().trim().max(100).optional(), medium: z.string().trim().max(100).optional(), author: z.string().trim().max(100).optional(), limit: z.number().int().min(1).max(20).default(10) });
@@ -62,6 +70,7 @@ export interface PlatformToolDependencies {
   studio: StudioService;
   creationStorage?: CreationStorageService;
   workspace?: AgentWorkspaceService;
+  pageRender?: AgentPageRenderService;
   generation?: GenerationService;
 }
 
@@ -164,6 +173,12 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
     }
     case "get_course_lesson":
       return getCourseLesson(getCourseLessonSchema.parse(raw), dependencies);
+    case "render_page_screenshot": {
+      if (!dependencies.pageRender) throw new Error("页面渲染服务不可用");
+      const input = pageRenderSchema.parse(raw);
+      // 返回值里带 status 与 diagnostics，模型据此判断是否需要返工。
+      return await dependencies.pageRender.render(dependencies.actor, input.path, { width: input.width, height: input.height, fullPage: input.fullPage });
+    }
     case "get_workflow_detail":
       {
         const workflow = await dependencies.studio.getWorkflow(getWorkflowDetailSchema.parse(raw).workflowId);
