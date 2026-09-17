@@ -6,7 +6,7 @@ import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import type { CreateGenerationJobInput, RunGenerationJobInput } from "./generation.contracts";
 import { GenerationRepository } from "./generation.repository";
-import type { ModelResult } from "./model-adapter";
+import type { ModelMessage, ModelResult } from "./model-adapter";
 import { ModelRegistry } from "./model-registry";
 import { OfficeExportService, type OfficeFormat } from "./office-export.service";
 import { DocumentContentError, documentMarkdown, documentPrompt, officeFormatSchema, parseDocumentContent, type DocumentContent } from "./document-content";
@@ -100,16 +100,17 @@ export class GenerationService {
     let inputUnits = 0;
     let outputUnits = 0;
     try {
-      const output = await adapter.execute({
+      const messages: ModelMessage[] = [
+        { role: "system", content: systemPrompt },
+        ...(input.context ?? []),
+        { role: "user", content: input.prompt },
+      ];
+      const invokeModel = (nextMessages: ModelMessage[]) => adapter.execute({
         jobType: input.jobType,
         modelConfigId: input.modelConfigId,
         // 产物类适配器（图像/视频）需要 jobId 决定文件落盘目录。
         jobId: job.id,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...(input.context ?? []),
-          { role: "user", content: input.prompt },
-        ],
+        messages: nextMessages,
         parameters: {
           temperature: 0.4,
           // 文档要写满整篇；问答比普通创作需要更多余地，否则长答案会被截断。
@@ -118,10 +119,35 @@ export class GenerationService {
           providerOptions: { thinking: { type: "disabled" } },
         },
       });
+      let output = await invokeModel(messages);
       inputUnits = Number(output.metadata?.inputTokens ?? 0);
       outputUnits = Number(output.metadata?.outputTokens ?? 0);
       if (input.jobType === "document" && output.finishReason === "length") throw new DocumentContentError("文档正文被模型截断，未生成不完整文件，请减少页数或内容后重试");
-      const document = input.jobType === "document" ? parseDocumentContent(output.content, pageCount) : undefined;
+      let document: DocumentContent | undefined;
+      if (input.jobType === "document") {
+        try {
+          document = parseDocumentContent(output.content, pageCount);
+        } catch (error) {
+          if (!(error instanceof DocumentContentError)) throw error;
+          // 结构不合格时把具体原因回喂给模型自修复一次：模型常见的失败是段落写超字数
+          // 或多给了字段，重来一次几乎都能过。仍不合格才按失败返回，不让用户白跑一遍。
+          const repaired = await invokeModel([
+            ...messages,
+            { role: "assistant", content: output.content.slice(0, 8000) },
+            {
+              role: "user",
+              content: `上面的 JSON 未通过服务端校验：${error.detail ?? "结构与长度不符合要求"}。`
+                + "请保留原有内容要点，只修正结构与长度，重新输出一个合法 JSON 对象；"
+                + "不要输出解释、代码围栏或额外字段。字数上限：概述 160 字，每段 180 字，每节正文合计 360 字。",
+            },
+          ]);
+          inputUnits += Number(repaired.metadata?.inputTokens ?? 0);
+          outputUnits += Number(repaired.metadata?.outputTokens ?? 0);
+          if (repaired.finishReason === "length") throw new DocumentContentError("文档正文被模型截断，未生成不完整文件，请减少页数或内容后重试");
+          document = parseDocumentContent(repaired.content, pageCount);
+          output = repaired;
+        }
+      }
       const artifact = document ? await this.createOfficeArtifact(job.id, document, format) : await this.createArtifact(job.id, output);
       const completed = await this.repository.completeJob(job.id);
       await this.repository.recordUsage({

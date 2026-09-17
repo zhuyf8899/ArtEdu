@@ -41,21 +41,67 @@ test("文档结构失败保留实际模型用量，且不创建残缺下载文�
   const usage: Array<Record<string, unknown>> = [];
   let exported = false;
   let failed = false;
+  let attempts = 0;
   const repository = {
     markRunning: async () => true,
     failJob: async () => { failed = true; },
     recordUsage: async (input: Record<string, unknown>) => { usage.push(input); },
   };
-  const registry = { getForJob: () => ({ execute: async () => ({ content: "invalid JSON", metadata: { inputTokens: 40, outputTokens: 20 } }) }) };
+  const registry = { getForJob: () => ({ execute: async () => {
+    attempts += 1;
+    return { content: "invalid JSON", metadata: { inputTokens: 40, outputTokens: 20 } };
+  } }) };
   const exporter = { create: async () => { exported = true; } };
   const service = new GenerationService({} as never, repository as never, registry as never, exporter as never);
   service.createJob = async () => ({ id: "job-invalid-document" } as GenerationJob);
   await assert.rejects(service.runJob(actor, { jobType: "document", prompt: "教案", modelConfigId: "model", parameters: { outputFormat: "docx" } }), /结构/);
   assert.equal(failed, true);
   assert.equal(exported, false);
-  assert.equal(usage[0].inputUnits, 40);
-  assert.equal(usage[0].outputUnits, 20);
+  // 首轮不合格后会再按失败原因自修复一次，两次调用都必须计入用量。
+  assert.equal(attempts, 2);
+  assert.equal(usage[0].inputUnits, 80);
+  assert.equal(usage[0].outputUnits, 40);
   assert.equal(usage[0].status, "failed");
+  assert.equal(usage[0].errorCode, "document_content_error");
+});
+
+test("文档结构不合格时按校验原因自修复一次，修好才落盘", async () => {
+  const valid = JSON.stringify({
+    schemaVersion: 1,
+    title: "传统纹样教案",
+    summary: "面向本科一年级的 45 分钟课程。",
+    sections: [{ heading: "学习目标", paragraphs: ["理解连续纹样与单独纹样的区别。"], bullets: ["识别四种连续方式"] }],
+  });
+  const attempts: ModelRequest[] = [];
+  let saved: unknown;
+  const repository = {
+    markRunning: async () => true,
+    completeJob: async () => ({ id: "job-repair", status: "succeeded" }),
+    createOutput: async (_id: string, artifact: unknown) => { saved = artifact; },
+    recordUsage: async () => undefined,
+  };
+  const registry = { getForJob: () => ({ execute: async (request: ModelRequest) => {
+    attempts.push(request);
+    return attempts.length === 1
+      // 概述写超 160 字且章节为空：正是线上最常见的两种不合格。
+      ? { kind: "text" as const, content: JSON.stringify({ schemaVersion: 1, title: "传统纹样教案", summary: "长".repeat(200), sections: [] }), metadata: { inputTokens: 30, outputTokens: 18 } }
+      : { kind: "text" as const, content: valid, metadata: { inputTokens: 45, outputTokens: 60 } };
+  } }) };
+  const exporter = {
+    create: async () => ({ storageKey: "docx/key.docx", fileName: "传统纹样教案.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fileSize: 2048 }),
+    remove: async () => undefined,
+  };
+  const service = new GenerationService({} as never, repository as never, registry as never, exporter as never);
+  service.createJob = async () => ({ id: "job-repair" } as GenerationJob);
+
+  const result = await service.runJob(actor, { jobType: "document", prompt: "写一份教案", modelConfigId: "model", parameters: { outputFormat: "docx" } });
+
+  assert.equal(attempts.length, 2);
+  // 自修复请求必须带上具体失败原因，模型才知道要改哪里。
+  assert.match(JSON.stringify(attempts[1].messages ?? []), /超出上限/);
+  assert.equal(result.job.status, "succeeded");
+  assert.equal(result.artifact?.fileName, "传统纹样教案.docx");
+  assert.ok(saved);
 });
 
 test("同步创作完成后返回模型正文并记录 token 用量", async () => {

@@ -22,19 +22,62 @@ export const documentContentSchema = z.object({
 }).strict();
 export type DocumentContent = z.infer<typeof documentContentSchema>;
 
-export class DocumentContentError extends Error {}
+export const DOCUMENT_CONTENT_MESSAGE = "文档内容结构或页数不符合要求，未生成文件，请重试或简化要求";
+
+export class DocumentContentError extends Error {
+  /**
+   * 具体校验失败原因。它同时用于两个地方：拼进用户可见的错误信息，
+   * 以及作为"自修复重试"回喂给模型的修正提示。没有它时上层只能看到一句兜底文案，
+   * 既没法定位也无法自动修复。
+   */
+  readonly detail?: string;
+  constructor(message: string, detail?: string) {
+    super(detail ? `${message}（原因：${detail}）` : message);
+    this.detail = detail;
+  }
+}
 
 export function parseDocumentContent(raw: string, pageCount?: number): DocumentContent {
+  // 部分 OpenAI-compatible 模型即使被要求只输出 JSON，仍会包一层 ```json 围栏。
+  // 围栏不改变内容结构，先安全剥离；其余前后说明文字仍会被 JSON.parse 拒绝，避免
+  // 从任意自然语言里猜测对象而把错误文档落盘。
+  let parsed: unknown;
   try {
-    // 部分 OpenAI-compatible 模型即使被要求只输出 JSON，仍会包一层 ```json 围栏。
-    // 围栏不改变内容结构，先安全剥离；其余前后说明文字仍会被 JSON.parse 拒绝，避免
-    // 从任意自然语言里猜测对象而把错误文档落盘。
-    const parsed = documentContentSchema.parse(JSON.parse(extractJsonObject(stripJsonFence(raw))));
-    if (pageCount !== undefined && parsed.sections.length + 1 !== pageCount) throw new Error("slide count");
-    return parsed;
+    parsed = JSON.parse(extractJsonObject(stripJsonFence(raw)));
   } catch {
-    throw new DocumentContentError("文档内容结构或页数不符合要求，未生成文件，请重试或简化要求");
+    throw new DocumentContentError(DOCUMENT_CONTENT_MESSAGE, "模型返回的内容不是合法 JSON");
   }
+  const result = documentContentSchema.safeParse(parsed);
+  if (!result.success) throw new DocumentContentError(DOCUMENT_CONTENT_MESSAGE, describeIssues(result.error));
+  if (pageCount !== undefined && result.data.sections.length + 1 !== pageCount) {
+    throw new DocumentContentError(DOCUMENT_CONTENT_MESSAGE, `PPT 页数不匹配：要求 ${pageCount} 页（含封面），模型返回 ${result.data.sections.length} 节`);
+  }
+  return result.data;
+}
+
+/** 把首个失败点翻译成中文原因，最多列三条，避免错误信息被刷屏。 */
+function describeIssues(error: z.ZodError) {
+  const reasons = error.issues.slice(0, 3).map((rawIssue) => {
+    const issue = rawIssue as unknown as {
+      code: string;
+      path: Array<string | number>;
+      message: string;
+      keys?: string[];
+      expected?: unknown;
+      minimum?: number;
+      maximum?: number;
+      type?: string;
+    };
+    const path = issue.path.length ? issue.path.map(String).join(".") : "根对象";
+    if (issue.code === "unrecognized_keys") return `${path} 出现多余字段「${issue.keys?.join("、") ?? ""}」`;
+    if (issue.code === "invalid_literal") return `${path} 必须等于 ${JSON.stringify(issue.expected)}`;
+    if (issue.code === "invalid_type") return `${path} 缺失或类型错误`;
+    if (issue.code === "too_big") return `${path} 超出上限（最多 ${issue.maximum ?? "?"}${issue.type === "string" ? " 字" : " 项"}）`;
+    if (issue.code === "too_small") return `${path} 低于下限（至少 ${issue.minimum ?? "?"}${issue.type === "string" ? " 字" : " 项"}）`;
+    return `${path}：${issue.message}`;
+  });
+  if (error.issues.length > reasons.length) reasons.push(`另有 ${error.issues.length - reasons.length} 处问题`);
+  return reasons.join("；");
 }
 
 function stripJsonFence(raw: string) {
