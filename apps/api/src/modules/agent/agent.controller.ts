@@ -6,6 +6,7 @@ import { createAgentRunSchema, executeAgentRunSchema, type CreateAgentRunInput, 
 import { AgentHarnessService } from "./agent-harness.service";
 import { AgentService } from "./agent.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
+import { workspacePreviewCsp } from "./workspace-preview-csp";
 
 @Controller("agent-runs")
 export class AgentController {
@@ -29,7 +30,11 @@ export class AgentController {
     reply.header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff").header("Cache-Control", "private, no-store");
     // Agent 生成的 HTML 是不可信内容：允许它运行自己的 JS，但不给它同源身份，
     // 也禁止它联网、提交表单或借机调用平台 API。
-    if (asset.contentType.startsWith("text/html")) reply.header("Content-Security-Policy", "sandbox allow-scripts; default-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'");
+    // 资源来源必须显式写成主机名：沙箱下文档是不透明来源，CSP 里的 'self' 什么都不匹配，
+    // 于是同目录的 CSS/JS 全被拦掉，页面会变成没有样式的裸 HTML。
+    if (asset.contentType.startsWith("text/html")) {
+      reply.header("Content-Security-Policy", workspacePreviewCsp(request.headers["x-forwarded-host"] ?? request.headers.host));
+    }
     return asset.stream;
   }
 

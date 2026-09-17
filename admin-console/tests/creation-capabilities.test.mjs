@@ -133,3 +133,18 @@ test("「重新输出」清除上一轮回复后重新生成，而不是回填�
   assert.ok(workspace.includes('onNotice?.("已清除上一轮输出，正在重新生成…", "success")'));
   assert.ok(!workspace.includes("已将本轮问题带回输入框"), "旧的一次性回填行为应已移除");
 });
+
+test("工作区预览页能加载同目录资源，并明确禁止外部 CDN", async () => {
+  const controller = await readFile(new URL("../../apps/api/src/modules/agent/agent.controller.ts", import.meta.url), "utf8");
+  const harness = await readFile(new URL("../../apps/api/src/modules/agent/agent-harness.service.ts", import.meta.url), "utf8");
+  const csp = await readFile(new URL("../../apps/api/src/modules/agent/workspace-preview-csp.ts", import.meta.url), "utf8");
+
+  // 控制器必须走统一的策略构造函数，不能退回内联写死的一段 CSP。
+  assert.ok(controller.includes('workspacePreviewCsp(request.headers["x-forwarded-host"] ?? request.headers.host)'));
+  assert.ok(!controller.includes("default-src 'self'"), "沙箱文档是不透明来源，'self' 什么都匹配不到");
+  assert.ok(csp.includes("sandbox allow-scripts"));
+  assert.ok(!csp.includes("allow-same-origin"));
+
+  // 模型必须知道预览页离线：否则它照样会写 Tailwind CDN，页面还是裸 HTML。
+  assert.ok(harness.includes("绝对不能引用外部 CDN"), "系统提示要说明预览环境禁止外部资源");
+});
