@@ -22,6 +22,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
   const [pageCount, setPageCount] = useState(() => storedDraft?.pageCount ?? "");
   const [recent, setRecent] = useState([]);
   const referenceInput = useRef(null);
+  const modelRef = useRef(null);
 
   const method = useMemo(() => creationMethod(methodId), [methodId]);
   const models = useMemo(() => creation?.enabled && creation?.models?.length
@@ -35,6 +36,13 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
     || (quota.concurrentLimit !== null && quota.concurrentLimit !== undefined && quota.inFlight >= quota.concurrentLimit);
 
   const modelLabel = model?.name ?? "未选择模型";
+  // 只有真的超出标签位时才启用渐隐，短名称保持原样不被吃掉尾字。
+  const [modelClipped, setModelClipped] = useState(false);
+  useEffect(() => {
+    const node = modelRef.current;
+    if (!node) return;
+    setModelClipped(node.scrollWidth > node.clientWidth + 1);
+  }, [modelLabel]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -136,7 +144,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
             event.target.value = "";
           }} />
           <button type="button" className="ai-attach" aria-label="添加本机参考文件" title={reference ? `已选择：${reference.fileName}` : "本机临时参考文件"} onClick={() => referenceInput.current?.click()}><Paperclip size={18} weight="bold" /></button>
-          <select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>{models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+          <span className="ai-launcher__model-select"><select aria-label="选择大模型" value={model?.id ?? ""} onChange={(event) => setModelId(event.target.value)}>{models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></span>
           <button type="button" className={`search-toggle ${searchEnabled ? "is-active" : ""}`} aria-pressed={searchEnabled} onClick={() => setSearchEnabled((enabled) => !enabled)} title={searchEnabled ? "搜索能力已开启：模型可以调用平台搜索工具" : "搜索能力已关闭：本轮不会向模型提供搜索工具"}>智能搜索 <b>{searchEnabled ? "开" : "关"}</b></button>
           <button type="submit" className="ai-submit" disabled={!prompt.trim() || sending || quotaBlocked}>
             {sending ? "正在打开" : quotaBlocked ? "额度已用尽" : "进入对话"} <ArrowRight size={18} weight="bold" />
@@ -145,7 +153,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
       </footer>
 
       <div className="ai-launcher__status">
-        <span><ImageSquare size={13} /> {account.shortName} · 建议模式：{method.label} · {modelLabel}</span>
+        <span><ImageSquare size={13} /> {account.shortName} · 建议模式：{method.label} · <b ref={modelRef} className={`ai-launcher__model${modelClipped ? " is-clipped" : ""}`} title={modelLabel}>{modelLabel}</b></span>
         {reference && <span title="临时文件独立占用服务器配额">临时文件：{reference.fileName} · 72 小时未活动自动删除</span>}
         <span>{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
         {prompt.trim() && <button type="button" onClick={() => { setPrompt(""); setDraftSaved(false); clearDraft(account.id); }}><Trash size={13} /> 清空草稿</button>}

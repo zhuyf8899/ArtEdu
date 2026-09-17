@@ -1548,6 +1548,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .ai-launcher__status > span, .ai-launcher__status > em, .ai-launcher__status > button { display: inline-flex; align-items: center; gap: 5px; }
 .ai-launcher__status > em { margin-left: auto; color: #8b8b8b; font-style: normal; }
 .ai-launcher__status > button { padding: 0; color: #555; background: transparent; border: 0; border-bottom: 1px solid #aaa; font: inherit; font-size: 10px; cursor: pointer; }
+/* 模型名过长时渐隐 + 省略号；is-clipped 由组件实测溢出后才加上，短名称不受影响。 */
+.ai-launcher__model { flex: 0 0 auto; max-width: 15em; overflow: hidden; color: inherit; font-weight: inherit; text-overflow: ellipsis; white-space: nowrap; }
+.ai-launcher__model.is-clipped { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), rgba(0, 0, 0, .35) 100%); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), rgba(0, 0, 0, .35) 100%); }
+.ai-launcher__model-select { position: relative; min-width: 0; display: inline-flex; flex: 0 1 auto; }
+/* 给原生下拉箭头留出专用空间，模型名再长也不会压到箭头（原先 9px 内边距会顶到）。 */
+.ai-launcher__model-select select { max-width: 140px; padding-right: 22px; }
+@media (max-width: 780px) { .ai-launcher__model-select { flex: 1 1 auto; } .ai-launcher__model-select select { width: 100%; max-width: none; } }
 .ai-launcher__hint { width: min(920px, 100%); margin: 12px auto 0; color: #8a8a8a; font-size: 11px; line-height: 1.7; text-align: center; }
 .ai-launcher__actions .ai-attach { flex: 0 0 auto; }
 .ai-history-strip { width: min(920px, 100%); margin: 14px auto 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
