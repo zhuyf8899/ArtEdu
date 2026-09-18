@@ -17,10 +17,10 @@ cd "$(dirname "$0")/.."
 COMPOSE="docker compose -f docker-compose.staging.yml"
 export ARTEDU_VERSION="$(git rev-parse --short HEAD)"
 
-echo "[0/7] 部署前版本"
+echo "[0/11] 部署前版本"
 git log --oneline -1
 
-echo "[0/7] 资源检查"
+echo "[1/11] 资源检查"
 free -m | head -2
 SWAP_TOTAL=$(free -m | awk '/^Swap:/ {print $2}')
 TOTAL_MB=$(free -m | awk '/^Mem:/ {print $2}')
@@ -37,16 +37,22 @@ WARN
   exit 1
 fi
 
-echo "[1/7] 构建 api 镜像（串行，避免同时占用内存）"
+echo "[2/11] 构建 api 镜像（串行，避免同时占用内存）"
 $COMPOSE build api
 
-echo "[2/7] 构建 rag-worker 镜像（与 api 同 Dockerfile，走层缓存，几乎不耗时）"
+echo "[3/11] 构建 rag-worker 镜像（与 api 同 Dockerfile，走层缓存，几乎不耗时）"
 $COMPOSE build rag-worker
 
-echo "[3/7] 构建 web 镜像（串行）"
+echo "[4/11] 准备本地 embedding 模型（缺失时下载约 100MB 并校验 SHA-256）"
+ARTEDU_MODEL_DIR="${ARTEDU_MODEL_DIR:-}" bash deploy/fetch-embedding-model.sh
+
+echo "[5/11] 构建 embedding 镜像（与 api/web 串行，避免同时占用内存）"
+$COMPOSE build embedding
+
+echo "[6/11] 构建 web 镜像（串行）"
 $COMPOSE build web
 
-echo "[4/7] 确保 postgres 运行并健康"
+echo "[7/11] 确保 postgres 运行并健康"
 $COMPOSE up -d postgres
 db_ready=0
 for _ in $(seq 1 30); do
@@ -62,13 +68,13 @@ if [ "$db_ready" != 1 ]; then echo '数据库未就绪，停止部署' >&2; exit
 # Keep data and media together before any schema migration. Existing backups are never overwritten.
 bash deploy/backup-staging.sh "$(pwd -P)/backups/predeploy-$(date +%Y%m%d-%H%M%S)-$$"
 
-echo "[5/7] 应用数据库迁移"
+echo "[8/11] 应用数据库迁移"
 $COMPOSE run --rm api npm run db:migrate
 
-echo "[6/7] 重建应用与 RAG Worker"
-$COMPOSE up -d api rag-worker web
+echo "[9/11] 重建 embedding、应用与 RAG Worker"
+$COMPOSE up -d embedding api rag-worker web
 
-echo "[7/7] 容器状态与健康检查"
+echo "[10/11] 容器状态与健康检查"
 $COMPOSE ps
 sleep 5
 ready=0
@@ -82,4 +88,13 @@ else
   echo "  ! 健康检查未通过，请查看：$COMPOSE logs --tail=80 api rag-worker web"
   exit 1
 fi
+
+# embedding 是独立服务：未就绪只影响课程 RAG 检索，不阻断站点。
+embedding_health=$($COMPOSE ps --format '{{.Health}}' embedding 2>/dev/null | head -1)
+if [ "$embedding_health" = "healthy" ]; then
+  echo "  embedding 服务健康（模型：${RAG_EMBEDDING_MODEL:-bge-base-zh-v1.5}，维度：${RAG_EMBEDDING_DIMENSIONS:-768}）"
+else
+  echo "  ! embedding 服务未就绪（RAG 检索暂不可用，其它功能不受影响），请查看：$COMPOSE logs --tail=40 embedding"
+fi
+
 echo "DEPLOY_DONE"

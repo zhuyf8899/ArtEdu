@@ -213,6 +213,9 @@ coverage/
 
 # ArtEdu local private-upload storage
 apps/api/data/
+
+# 本地 embedding 模型权重：由 deploy/fetch-embedding-model.sh 下载，不进版本库
+models/
 backups/
 
 # Ruff stuff:
