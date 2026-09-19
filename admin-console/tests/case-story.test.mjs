@@ -24,3 +24,14 @@ test('保存草稿不提交审核；案例提示词按文本渲染', async () =>
   assert.ok(view.includes('<pre>{step.prompt}</pre>'));
   assert.ok(view.includes('<video controls'), '附件整理后仍保留视频预览');
 });
+
+test('视频附件的名称、预览和下载独立成行，保留下载权限', async () => {
+  const view = await readFile(new URL('../src/CaseStoryView.jsx',import.meta.url),'utf8');
+  const css = await readFile(new URL('../src/case-story.css',import.meta.url),'utf8');
+  assert.match(view, /className="case-attachment__header"/);
+  assert.match(view, /<video controls preload="metadata" className="case-attachment__video"/);
+  assert.match(view, /className="case-attachment__actions">\{asset.canDownload \?/);
+  assert.match(css, /\.case-related-assets article \{[^}]*grid-template-columns: minmax\(0,1fr\);/);
+  assert.match(css, /\.case-attachment__header strong \{[^}]*min-width: 0;[^}]*overflow-wrap: anywhere;/);
+  assert.match(css, /\.case-attachment__video \{[^}]*max-width: 100%;/);
+});
