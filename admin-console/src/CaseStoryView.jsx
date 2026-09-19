@@ -16,7 +16,11 @@ export function CaseStoryView({ work, onOpenImage }) {
       <div className="case-gallery">{(step.assetIds ?? []).map(id => assets.find(a => a.id === id && a.asset_type === "image")).filter(Boolean).map(a => <button className="case-image-button" key={a.id} onClick={() => onOpenImage?.({ url: a.url, fileName: a.file_name, alt: `${step.title}配图` })}><img loading="lazy" src={a.url} alt={`${step.title}配图`} /></button>)}</div>
     </article>)}</section>}
     {story.reflection && <section><h3>经验与反思</h3><p>{story.reflection}</p></section>}
-    {!!relatedAssets.length && <section><h3>相关内容</h3><div className="case-related-assets">{relatedAssets.map(asset => <article key={asset.id}><strong>{asset.file_name}</strong>{asset.asset_type === "video" && <video controls preload="metadata" src={asset.url} style={{width:"100%",maxHeight:420}} aria-label={asset.file_name} />}<span>{asset.asset_type === "video" ? "视频文件" : "附件"}</span>{asset.canDownload ? <a href={asset.url} download>下载文件</a> : <em>作者未开放下载</em>}</article>)}</div></section>}
+    {!!relatedAssets.length && <section><h3>相关内容</h3><div className="case-related-assets">{relatedAssets.map(asset => <article key={asset.id}>
+      <header className="case-attachment__header"><strong>{asset.file_name}</strong><span>{asset.asset_type === "video" ? "视频文件" : "附件"}</span></header>
+      {asset.asset_type === "video" && <video controls preload="metadata" className="case-attachment__video" src={asset.url} aria-label={asset.file_name} />}
+      <footer className="case-attachment__actions">{asset.canDownload ? <a href={asset.url} download>下载文件</a> : <em>作者未开放下载</em>}</footer>
+    </article>)}</div></section>}
     {work.status !== "approved" && <p className="case-draft-note">当前为{work.status === "pending" ? "审核中" : "未发布"}案例，仅本人和审核人员可查看。</p>}
   </div>;
 }

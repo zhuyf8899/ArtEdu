@@ -29,7 +29,14 @@
 .case-image-button--hero { height: 100%; }
 .case-image-button--hero img { height: 100%; }
 .case-related-assets { display: grid; gap: 10px; }
-.case-related-assets article { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #dededb; border-radius: 10px; }
+.case-related-assets article { display: grid; grid-template-columns: minmax(0,1fr); min-width: 0; gap: 12px; padding: 12px 14px; border: 1px solid #dededb; border-radius: 10px; }
+/* Media owns a full row so its intrinsic width cannot squeeze the file name into a column. */
+.case-attachment__header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; min-width: 0; }
+.case-attachment__header strong { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+.case-attachment__header span { flex: 0 0 auto; }
+.case-attachment__video { display: block; width: 100%; min-width: 0; max-width: 100%; max-height: 420px; border-radius: 8px; background: #111; }
+.case-attachment__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px; min-width: 0; }
+.case-attachment__actions a { display: inline-flex; align-items: center; min-height: 44px; }
 .case-related-assets span,.case-related-assets em { color: #666; font-size: 14px; font-style: normal; }
 .case-related-assets a { color: #1e5fbe; }
 .case-image-viewer { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; }
@@ -62,4 +69,4 @@
 .case-draft-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
 .case-draft-actions small { flex-basis: 100%; color: #666; }
 .case-draft-note { padding: 12px; background: #f5f3ed; border-radius: 8px; }
-@media (max-width: 640px) { .case-gallery { grid-template-columns: 1fr; } .case-editor .publish-form__row { grid-template-columns: 1fr; } .case-related-assets article { grid-template-columns: 1fr auto; } .case-related-assets article strong { grid-column: 1 / -1; } }
+@media (max-width: 640px) { .case-gallery { grid-template-columns: 1fr; } .case-editor .publish-form__row { grid-template-columns: 1fr; } }
