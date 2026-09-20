@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowClockwise, ArrowLeft, ArrowRight, BookOpenText, CheckCircle, Clock, Funnel, PlayCircle, SpinnerGap, Wrench } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, Wrench } from "@phosphor-icons/react";
 import { enrollCourse, getCourse, getCourses, updateLessonProgress } from "./services/adminApi.js";
 
 const COURSE_PROFILES = {
@@ -95,7 +95,7 @@ export function LearningLibrary({ onNotice }) {
     <button className="learning-back" onClick={() => setSelected(null)}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
     <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟 · {selected.lessonCount} 个课时 · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div><aside><strong>{selected.progressPercent}%</strong><span>学习进度</span><i><b style={{ width: `${selected.progressPercent}%` }} /></i>{selected.enrollmentStatus ? <em>已加入学习</em> : <button disabled={loading} onClick={enroll}><PlayCircle size={18} weight="fill" /> 加入课程</button>}</aside></div>
     <div className="lesson-list">{selected.lessons.map((lesson, index) => <article key={lesson.id}><span>{String(index + 1).padStart(2, "0")}</span><div><small>{lesson.lessonType === "workflow" ? "AI 工作流实践" : "课程课时"}</small><strong>{lesson.title}</strong><p>{lesson.summary}</p></div><div><em>{lesson.estimatedMinutes} 分钟</em>{lesson.progressPercent >= 100 ? <b><CheckCircle size={17} weight="fill" /> 已完成</b> : <button disabled={loading} onClick={() => completeLesson(lesson.id)}>标记完成 <ArrowRight size={15} /></button>}</div></article>)}</div>
-    {selected.resources?.length > 0 && <section className="course-materials"><p>// COURSE MATERIALS</p><h3>课程资料</h3>{selected.resources.map((resource) => resource.resourceType === "video" ? <article className="course-material course-material--video" key={resource.id}>{resource.downloadUrl || resource.externalUrl ? <video controls preload="metadata" src={resource.downloadUrl ?? resource.externalUrl} aria-label={resource.title} /> : <div className="course-video-locked"><BookOpenText size={20} weight="bold" /><span>加入课程后可播放</span></div>}<div><strong>{resource.title}</strong><small>视频课程 · 仅已加入课程的账号可播放</small>{resource.transcriptText && <details><summary>查看文字稿</summary><p>{resource.transcriptText}</p></details>}</div></article> : <article className="course-material" key={resource.id}><BookOpenText size={18} weight="bold" /><span><strong>{resource.title}</strong><small>{({ pdf: "PDF", word: "WORD", ppt: "PPT" }[resource.resourceType] ?? resource.resourceType?.toUpperCase() ?? "FILE")} · 已纳入 AI 教学检索，学生端不开放原文件</small></span></article>)}</section>}
+    {selected.resources?.length > 0 && <CourseMaterials resources={selected.resources} />}
   </section>;
 
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载教学资源</strong><p>正在同步课程、作者和工具标签。</p></section>;
@@ -127,4 +127,131 @@ function FilterRow({ label, items, value, onChange }) {
 
 function difficultyName(value) {
   return { beginner: "入门", intermediate: "进阶", advanced: "高级" }[value] ?? "入门";
+}
+
+const MATERIAL_KINDS = {
+  pdf: { label: "PDF 课件", icon: FilePdf },
+  ppt: { label: "PPT 课件", icon: Presentation },
+  word: { label: "Word 文档", icon: BookOpenText },
+  video: { label: "教学视频", icon: PlayCircle },
+  image: { label: "图片素材", icon: ImageSquare },
+  web: { label: "前端界面", icon: Code },
+  book: { label: "参考书", icon: BookOpenText },
+  link: { label: "外部链接", icon: ArrowRight },
+  other: { label: "课程资料", icon: BookOpenText },
+};
+
+const OFFICE_TYPES = ["ppt", "word"];
+
+/**
+ * 课程资料区按课件类型分别渲染：
+ * 视频用播放器、图片直接铺开、PDF 与网页课件内嵌、Office 原件浏览器无法内嵌预览，
+ * 因此给出下载入口由学生本地打开。没有 previewUrl 说明账号还没加入课程。
+ */
+function CourseMaterials({ resources }) {
+  return <section className="course-materials">
+    <p>// COURSE MATERIALS</p>
+    <h3>课程资料</h3>
+    <small className="course-materials__note">课件默认在线预览，不提倡下载；只有 PPT / Word 因为浏览器无法渲染，需要下载后用本机软件打开。</small>
+    <div className="course-material-list">{resources.map((resource) => <CourseMaterial key={resource.id} resource={resource} />)}</div>
+  </section>;
+}
+
+function CourseMaterial({ resource }) {
+  const kind = MATERIAL_KINDS[resource.resourceType] ?? MATERIAL_KINDS.other;
+  const Icon = kind.icon;
+  const preview = resource.previewUrl || resource.externalUrl || "";
+  const download = resource.downloadUrl || "";
+  const source = preview || download;
+  const fileName = resource.fileName ? ` · ${resource.fileName}` : "";
+  const meta = (note) => <span className="course-material__meta">
+    <strong>{resource.title}</strong>
+    <small>{kind.label}{fileName}</small>
+    {note && <small>{note}</small>}
+  </span>;
+  // 下载是备选方案，统一做成弱化的小字链接；只有浏览器确实无法预览的 Office 才用按钮。
+  const downloadLink = (label) => download
+    ? <a className="course-material__download" href={download} rel="noreferrer">{label}</a>
+    : null;
+  const downloadButton = (label) => download
+    ? <a className="outline-button" href={download} rel="noreferrer">{label}</a>
+    : null;
+
+  if (!source) return <article className="course-material course-material--locked">
+    <Lock size={18} weight="bold" />
+    {meta("加入课程后可在线预览")}
+  </article>;
+
+  if (resource.resourceType === "video") return <article className="course-material course-material--video">
+    <video controls preload="metadata" src={source} aria-label={resource.title} />
+    <div>
+      {meta("仅提供在线播放；加入课程后即可观看")}
+      {resource.transcriptText && <details><summary>查看文字稿</summary><p>{resource.transcriptText}</p></details>}
+    </div>
+  </article>;
+
+  if (resource.resourceType === "image") return <article className="course-material course-material--image">
+    <a href={source} target="_blank" rel="noreferrer"><img loading="lazy" src={source} alt={resource.title} /></a>
+    {meta("点击图片可查看原图。")}
+    {downloadLink("下载原图")}
+  </article>;
+
+  // 单文件网页课件只在页内预览：能完整看到效果，就不再分发原件。
+  if (resource.mimeType === "text/html") return <article className="course-material course-material--document">
+    <header>
+      {meta("仅提供在线预览；如需在本机运行，请找课程老师获取源文件。")}
+      <span className="course-material__actions">
+        <a className="outline-button" href={source} target="_blank" rel="noreferrer">新窗口打开</a>
+      </span>
+    </header>
+    <iframe src={source} title={resource.title} loading="lazy" referrerPolicy="no-referrer" />
+  </article>;
+
+  // PDF 浏览器能直接渲染，页内阅读为主，下载只作为备选方案。
+  if (resource.resourceType === "pdf") return <article className="course-material course-material--document">
+    <header>
+      {meta("页内可直接阅读；需要离线使用时再下载原件。")}
+      <span className="course-material__actions">
+        <a className="outline-button" href={source} target="_blank" rel="noreferrer">新窗口打开</a>
+        {downloadLink("下载 PDF")}
+      </span>
+    </header>
+    <iframe src={`${source}#view=FitH`} title={resource.title} loading="lazy" referrerPolicy="no-referrer" />
+  </article>;
+
+  // 前端源码课件（.css / .js）：页内查看源码为主，下载只作为备选。
+  if (!OFFICE_TYPES.includes(resource.resourceType)) return <article className="course-material course-material--source">
+    <Code size={18} weight="bold" />
+    {meta("源码可在页内查看；需要引用到本机项目时再下载原件。")}
+    <SourcePreview url={source} title={resource.title} />
+    {downloadLink("下载源文件")}
+  </article>;
+
+  // Office 原件浏览器无法渲染，下载后本地打开是唯一可行方式。
+  return <article className="course-material">
+    <Icon size={18} weight="bold" />
+    {meta("浏览器不能内嵌渲染 Office 原件：下载后用本机 PowerPoint / WPS 打开。")}
+    {downloadButton("下载课件")}
+  </article>;
+}
+
+/** 文本类课件（.css / .js）在页内查看源码，避免为了看一眼就去下载。 */
+function SourcePreview({ url, title }) {
+  const [state, setState] = useState({ loading: false, text: "", error: "" });
+  const load = async () => {
+    setState((current) => ({ ...current, loading: true }));
+    try {
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("源码读取失败，请稍后重试");
+      setState({ loading: false, text: (await response.text()).slice(0, 20000), error: "" });
+    } catch (error) {
+      setState({ loading: false, text: "", error: error.message ?? "源码读取失败" });
+    }
+  };
+  return <details className="course-material__code" onToggle={(event) => { if (event.currentTarget.open && !state.text && !state.loading) void load(); }}>
+    <summary>查看{title ? `「${title}」` : ""}源码</summary>
+    {state.loading && <p>正在读取源码…</p>}
+    {state.error && <p>{state.error}</p>}
+    {state.text && <pre>{state.text}</pre>}
+  </details>;
 }

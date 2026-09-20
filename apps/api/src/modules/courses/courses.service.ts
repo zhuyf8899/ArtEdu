@@ -8,6 +8,7 @@ import { ADMIN_MANAGEMENT_ROLES, COURSE_REVIEW_ROLES } from "../../common/consta
 import { AuthService, type Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import { getEnvironment } from "../../common/environment";
+import { courseUploadPolicy } from "../../common/upload-policy";
 import { storePrivateUpload } from "../studio/private-upload";
 import { RagService } from "../rag/rag.service";
 import type {
@@ -87,6 +88,16 @@ const courseResourceMimeTypes = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "video/mp4",
   "video/webm",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+  "image/avif",
+  "image/bmp",
+  "text/html",
+  "text/css",
+  "text/javascript",
 ] as const;
 
 @Injectable()
@@ -154,6 +165,9 @@ export class CoursesService {
     `, [actor.id, courseId]);
     const course = courseResult.rows[0];
     if (!course) throw new NotFoundException("课程不存在或尚未发布");
+    // 课件预览面向课程创建教师/管理员与已选课学生。
+    const isManager = actor.roles.includes("admin") || (actor.roles.includes("teacher") && course.created_by === actor.id);
+    const canViewMaterials = isManager || Boolean(course.enrollment_status);
 
     const [lessons, resources] = await Promise.all([
       this.database.query<LessonRow>(`
@@ -198,9 +212,13 @@ export class CoursesService {
         mimeType: resource.mime_type,
         transcriptText: resource.transcript_text,
         sortOrder: resource.sort_order,
-        // 课件原件不向学生端暴露。视频仅在用户已选课后通过受控 API 播放；
-        // 教师/管理员的资料管理入口不依赖这个学生端字段。
-        downloadUrl: resource.storage_key && resource.resource_type === "video" && course.enrollment_status
+        // 课件原件不直接暴露存储路径：预览与下载统一走受控 API，已选课即可使用。
+        // 网页课件与视频只提供在线预览，学生端不给下载地址；Office 原件浏览器无法内嵌渲染，
+        // 因此保留下载入口（下载后用本机 PowerPoint / WPS 打开）。课程管理者不受这条限制。
+        previewUrl: resource.storage_key && canViewMaterials
+          ? `/api/courses/${courseId}/resources/${resource.id}/preview`
+          : null,
+        downloadUrl: resource.storage_key && canViewMaterials && (isManager || studentMayDownload(resource.resource_type, resource.mime_type))
           ? `/api/courses/${courseId}/resources/${resource.id}/download`
           : null,
       })),
@@ -299,9 +317,11 @@ export class CoursesService {
     if (!getEnvironment().fileUploadsEnabled) throw new ForbiddenException("文件上传未启用");
     const course = await this.getOwnedCourse(actor, courseId);
     if (!["draft", "rejected"].includes(course.status)) throw new ConflictException("只有草稿或已驳回课程可以上传资料");
-    const part = await request.file();
-    if (!part) throw new BadRequestException("请选择 PDF、DOCX、PPTX 或 MP4/WebM 视频文件");
-    const upload = await storePrivateUpload(part, getEnvironment().uploadRoot, courseResourceMimeTypes, `admin/courses/${courseId}`);
+    const policy = courseUploadPolicy();
+    // 全局 multipart 上限是 10 MiB，这里按课件策略放宽（视频 100 MiB，其他仍 10 MiB）。
+    const part = await request.file({ limits: { fileSize: policy.videoBytes } });
+    if (!part) throw new BadRequestException("请选择课件文件：PDF、Word、PPT、视频、图片，或 HTML/CSS/JS 前端界面");
+    const upload = await storePrivateUpload(part, getEnvironment().uploadRoot, courseResourceMimeTypes, `admin/courses/${courseId}`, policy.videoBytes);
     try {
       const resource = await this.database.transaction(async (client) => {
         const locked = await client.query<{ status: string; created_by: string | null }>("SELECT status,created_by FROM courses WHERE id=$1 FOR UPDATE", [courseId]);
@@ -329,7 +349,7 @@ export class CoursesService {
     }
   }
 
-  async openResource(actor: Actor, courseId: string, resourceId: string) {
+  async openResource(actor: Actor, courseId: string, resourceId: string, mode: "preview" | "download" = "download") {
     const result = await this.database.query<CourseResourceRow>(`
       SELECT r.id,r.course_id,r.title,r.resource_type,r.storage_key,r.file_name,r.mime_type,r.file_size,r.status,
         c.status AS course_status,c.created_by,
@@ -341,11 +361,13 @@ export class CoursesService {
     const resource = result.rows[0];
     if (!resource || resource.status !== "published" || resource.course_status !== "published") throw new NotFoundException("课程资料不存在或尚未发布");
     const manager = actor.roles.includes("admin") || (actor.roles.includes("teacher") && resource.created_by === actor.id);
-    if (resource.resource_type !== "video" && !manager) {
-      throw new ForbiddenException("教学文档仅用于课程 AI 检索，暂不提供学生端原件下载");
-    }
-    if (resource.resource_type === "video" && !manager && !resource.enrolled) {
-      throw new ForbiddenException("请先加入课程后再播放教学视频");
+    // 加入课程后即可预览课件。课件内容的合规责任由上传的课程创建教师承担，
+    // 平台记录每次预览、播放与下载。
+    if (!manager && !resource.enrolled) throw new ForbiddenException("请先加入课程后再查看或下载课程资料");
+    // 网页课件与视频只开放预览：学生端即使拿到下载地址也会被拒绝，
+    // 课程创建教师和管理员仍可取回自己的原件。
+    if (mode === "download" && !manager && !studentMayDownload(resource.resource_type, resource.mime_type)) {
+      throw new ForbiddenException("该课件只提供在线预览，不提供原件下载");
     }
     const storageKey = resource.storage_key;
     const expectedPrefix = `admin/courses/${courseId}/`;
@@ -357,7 +379,7 @@ export class CoursesService {
     if (!file?.isFile()) throw new NotFoundException("课程资料文件不存在");
     await this.database.query(
       "INSERT INTO course_resource_access_events (id,resource_id,user_id,access_kind) VALUES ($1,$2,$3,$4)",
-      [`course-resource-access-${randomUUID()}`, resource.id, actor.id, resource.resource_type === "video" ? "stream" : "download"],
+      [`course-resource-access-${randomUUID()}`, resource.id, actor.id, mode === "download" ? "download" : (resource.resource_type === "video" ? "stream" : "preview")],
     );
     return {
       fileName: resource.file_name ?? resource.title,
@@ -562,6 +584,20 @@ export class CoursesService {
 function resourceTypeForMime(mimeType: typeof courseResourceMimeTypes[number]) {
   if (mimeType === "application/pdf") return "pdf";
   if (mimeType.includes("wordprocessingml")) return "word";
+  if (mimeType.includes("presentationml")) return "ppt";
   if (mimeType.startsWith("video/")) return "video";
-  return "ppt";
+  if (mimeType.startsWith("image/")) return "image";
+  // 其余允许的类型都是网页课件源码（HTML/CSS/JS）。
+  return "web";
+}
+
+/**
+ * 学生端可以下载原件的课件类型。
+ * 网页课件（HTML）与视频只提供在线预览：预览已经能完整呈现内容，再分发原件没有必要。
+ * CSS/JS 源码无法在页面上单独渲染，属于"预览困难"的一类，保留下载。
+ */
+function studentMayDownload(resourceType: string, mimeType: string | null) {
+  if (resourceType === "video") return false;
+  if (resourceType === "web") return mimeType !== "text/html";
+  return true;
 }

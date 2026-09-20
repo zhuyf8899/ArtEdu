@@ -67,7 +67,19 @@
 | GET | `/api/me/learning-progress` | 查询当前用户已加入的课程 |
 | POST | `/api/courses/:courseId/rag/search` | 课程知识库检索契约；当前明确返回等待校内 embedding Provider，不伪造答案 |
 
-课程资料为 PDF 时，上传响应会附带 `rag` 状态。PDF 会写入索引队列；DOCX、PPTX、视频不进入第一版 RAG。`allowWebFallback` 仅表示用户允许本地证据不足时联网搜索其问题，课程正文不会发送到联网搜索链路。学生端只可通过受控 API 播放自己已选课程的视频；PDF、Word、PPT 原件仅允许课程创建教师或管理员下载。
+课程资料为 PDF 时，上传响应会附带 `rag` 状态。PDF 会写入索引队列；DOCX、PPTX、视频不进入第一版 RAG。`allowWebFallback` 仅表示用户允许本地证据不足时联网搜索其问题，课程正文不会发送到联网搜索链路。
+
+课件支持 PDF、Word、PPT、视频（MP4/WebM）、图片（JPEG/PNG/WebP/GIF/SVG/AVIF/BMP）与前端界面（HTML/CSS/JS）。上传按类型限额：视频可到 `COURSE_VIDEO_MAX_MIB`（默认 100 MiB），其余 10 MiB，每门课程最多 30 个文件。
+
+课程详情中的每个课件会返回 `previewUrl`（页内呈现）；`downloadUrl` 只在允许下载时返回。已加入课程的学生与课程管理者都可以预览，
+但**视频与单文件网页课件对学生只开放预览，不返回下载地址**（PDF、图片、Office 原件与 CSS/JS 源码可以下载）：
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| GET | `/api/courses/:courseId/resources/:resourceId/preview` | 已选课学生及课程管理者预览课件；视频支持 Range，PDF/图片/HTML 内联，Office 原件按附件下发 |
+| GET | `/api/courses/:courseId/resources/:resourceId/download` | 下载原件（附件形式，保留原始文件名）；学生端仅对 PDF、图片、Office 原件与 CSS/JS 开放 |
+
+网页与 SVG 课件按不可信内容处理：响应带沙箱 CSP（与 Agent 工作区预览同一策略），页面拿不到本站登录态，也不能联网、提交表单或跳转顶层窗口。每次预览与下载都会写入 `course_resource_access_events`（`stream`、`preview`、`download`）。
 
 ## 我的学习空间
 

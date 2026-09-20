@@ -228,6 +228,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         {portalLoading && <HomeDataState loading />}
         {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
         {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从教学资源库选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}
+        {!portalLoading && !portalError && <CourseDiscovery courses={data.courses} onSearch={navigateSearch} onBrowse={() => navigateSection("courses")} onCoach={() => setCoachOpen(true)} />}
         <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => navigateSection("studio")} />
         <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课程与工作流生成下一步学习建议。" onClick={() => setCoachOpen(true)} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
         <SectionHeading eyebrow="// FEATURED WORKFLOWS" title="精选工作流" />
@@ -291,6 +292,17 @@ function SectionHeading({ eyebrow, title, action, onAction }) {
 
 function QuickAction({ icon: Icon, title, text, accent, onClick }) {
   return <button className={`quick-action ${accent ? "quick-action--accent" : ""}`} onClick={onClick}><Icon size={28} weight="thin" /><strong>{title}</strong><span>{text}</span><i><ArrowRight size={17} weight="bold" /></i></button>;
+}
+
+function CourseDiscovery({ courses, onSearch, onBrowse, onCoach }) {
+  const topics = [...new Set(courses.flatMap((course) => [course.title, course.category].filter(Boolean)))].slice(0, 6);
+  return <section className="course-discovery" aria-labelledby="course-discovery-title">
+    <div><p>// COURSE STARTER</p><h2 id="course-discovery-title">不知道从哪里开始？</h2><span>从课程名称进入，或用快速入门梳理你的学习目标。</span></div>
+    <div className="course-discovery__actions"><button className="primary-button" onClick={onCoach}><Lightbulb size={17} weight="fill" /> 快速入门</button><button className="outline-button" onClick={onBrowse}>浏览全部课程</button></div>
+    <div className="course-discovery__topics" aria-label="热门课程名称">
+      <small>课程热搜</small>{topics.length ? topics.map((topic) => <button key={topic} onClick={() => onSearch(topic)}>{topic} <ArrowRight size={13} weight="bold" /></button>) : <span>课程发布后将在这里显示常用入口。</span>}
+    </div>
+  </section>;
 }
 
 function StudioCard({ icon: Icon, label, title, text, action, accent, onClick }) {

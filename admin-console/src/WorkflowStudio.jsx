@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, Path, Play, Plus, SpinnerGap } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, LinkSimple, Path, Play, Plus, SpinnerGap, Wrench } from "@phosphor-icons/react";
 import "@xyflow/react/dist/style.css";
 import { getWorkflow, getWorkflows, startWorkflowRun, updateWorkflowRun } from "./services/adminApi.js";
 
@@ -18,6 +18,18 @@ function GraphNode({ data }) {
 }
 
 const nodeTypes = { input: GraphNode, prompt: GraphNode, skill: GraphNode, model: GraphNode, preview: GraphNode, note: GraphNode };
+
+const TOOL_DIRECTORY = [
+  { group: "通用设计工具", items: [
+    { name: "Figma", detail: "协作界面与原型设计", href: "https://www.figma.com/" },
+    { name: "Canva", detail: "版式、海报与演示设计", href: "https://www.canva.com/" },
+    { name: "Photopea", detail: "浏览器内图片编辑", href: "https://www.photopea.com/" },
+  ] },
+  { group: "平台与自有工具", items: [
+    { name: "AI 创作助手", detail: "生成图像、网页或文档草稿", href: "/create", internal: true },
+    { name: "案例社区", detail: "查看优秀案例与复用方法", href: "/community", internal: true },
+  ] },
+];
 
 export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false }) {
   const [workflows, setWorkflows] = useState([]);
@@ -59,7 +71,11 @@ export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false
       <WorkflowAdmin showToast={onNotice} canPublish={canPublish} />
     </Suspense>
   </div>;
-  return <section className="workflow-catalog"><header className="workflow-catalog__toolbar"><div><p>// CREATE AND LEARN</p><h2>创建或使用节点工作流</h2><span>登录用户都可以搭建自己的节点图，保存为个人草稿版本。</span></div><button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button></header>{workflows.map((workflow, index) => <article key={workflow.id}><div className={`workflow-catalog__cover workflow-catalog__cover--${index % 3}`}><FlowArrow size={36} weight="thin" /><span>{workflow.stepCount ?? "—"} NODES</span></div><div><small>{workflow.category}</small><h3>{workflow.name}</h3><p>{workflow.description}</p><button disabled={loading} onClick={() => open(workflow)}>打开节点画布 <ArrowRight size={16} weight="bold" /></button></div></article>)}{!workflows.length && <div className="empty-state"><Path size={32} /><strong>暂时没有已发布的工作流</strong><span>可以先创建自己的节点工作流，保存为草稿版本。</span></div>}</section>;
+  return <section className="workflow-catalog"><header className="workflow-catalog__toolbar"><div><p>// CREATE AND LEARN</p><h2>创建或使用节点工作流</h2><span>登录用户都可以搭建自己的节点图，保存为个人草稿版本。</span></div><button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button></header><ToolDirectory />{workflows.map((workflow, index) => <article key={workflow.id}><div className={`workflow-catalog__cover workflow-catalog__cover--${index % 3}`}><FlowArrow size={36} weight="thin" /><span>{workflow.stepCount ?? "—"} NODES</span></div><div><small>{workflow.category}</small><h3>{workflow.name}</h3><p>{workflow.description}</p><button disabled={loading} onClick={() => open(workflow)}>打开节点画布 <ArrowRight size={16} weight="bold" /></button></div></article>)}{!workflows.length && <div className="empty-state"><Path size={32} /><strong>暂时没有已发布的工作流</strong><span>可以先创建自己的节点工作流，保存为草稿版本。</span></div>}</section>;
+}
+
+function ToolDirectory() {
+  return <section className="tool-directory" aria-labelledby="tool-directory-title"><header><div><p>// DESIGN TOOLBOX</p><h3 id="tool-directory-title"><Wrench size={18} weight="bold" /> 设计工具入口</h3><span>工具在新窗口打开；平台功能保留在当前站内继续使用。</span></div></header><div className="tool-directory__groups">{TOOL_DIRECTORY.map(({ group, items }) => <div key={group}><strong>{group}</strong>{items.map((tool) => <a key={tool.name} href={tool.href} target={tool.internal ? undefined : "_blank"} rel={tool.internal ? undefined : "noreferrer"}><span><b>{tool.name}</b><small>{tool.detail}</small></span><LinkSimple size={17} weight="bold" /></a>)}</div>)}</div></section>;
 }
 
 function WorkflowRunner({ selected, run, loading, onBack, onStart, onComplete }) {

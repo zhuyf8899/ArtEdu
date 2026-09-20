@@ -112,6 +112,38 @@ test("上传文件按真实魔数识别，并拒绝伪装内容", () => {
   assert.equal(detectUploadMimeType(Buffer.from("RIFF0000WAVE", "ascii")), undefined);
 });
 
+test("课件新增类型：图片按魔数识别，HTML/SVG/CSS 需内容形态匹配", async () => {
+  assert.equal(detectUploadMimeType(Buffer.from("GIF89a....", "ascii")), "image/gif");
+  assert.equal(detectUploadMimeType(Buffer.from([0x42, 0x4d, 0x00, 0x00])), "image/bmp");
+  // AVIF 与 MP4 共用 ftyp 容器：必须按 brand 区分，否则图片会被当成视频。
+  assert.equal(detectUploadMimeType(Buffer.from("....ftypavif", "ascii")), "image/avif");
+  assert.equal(detectUploadMimeType(Buffer.from("....ftypisom", "ascii")), "video/mp4");
+
+  const root = await mkdtemp(path.join(os.tmpdir(), "artedu-courseware-"));
+  const part = (body: string | Buffer, filename: string, mimetype: string) => ({
+    fieldname: "file", filename, mimetype, file: Readable.from([Buffer.isBuffer(body) ? body : Buffer.from(body, "utf8")]),
+  }) as any;
+  try {
+    const html = await storePrivateUpload(part("<!doctype html><div>课件</div>", "lesson.html", "text/html"), root, ["text/html"]);
+    assert.equal(html.mimeType, "text/html");
+    assert.equal(html.assetType, "web");
+    assert.match(html.fileName, /\.html$/);
+
+    const svg = await storePrivateUpload(part('<svg xmlns="http://www.w3.org/2000/svg"></svg>', "icon.svg", "image/svg+xml"), root, ["image/svg+xml"]);
+    assert.equal(svg.assetType, "image");
+
+    const css = await storePrivateUpload(part("body { color: #111; }", "theme.css", "text/css"), root, ["text/css"]);
+    assert.match(css.fileName, /\.css$/);
+
+    // 内容与声明不符时一律拒绝：普通文本不能改名成 HTML 或 SVG 当页面托管。
+    await assert.rejects(storePrivateUpload(part("just words", "lesson.html", "text/html"), root, ["text/html"]), /不一致/);
+    await assert.rejects(storePrivateUpload(part("<!doctype html><div>x</div>", "icon.svg", "image/svg+xml"), root, ["image/svg+xml"]), /不一致/);
+    await assert.rejects(storePrivateUpload(part("no braces here", "theme.css", "text/css"), root, ["text/css"]), /不一致/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("课程资料上传接受安全识别的 PDF、DOCX，并在拒绝时清理临时文件", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "artedu-upload-test-"));
   try {

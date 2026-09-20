@@ -12,6 +12,10 @@ const allowedTypes = {
   "image/jpeg": "image",
   "image/png": "image",
   "image/webp": "image",
+  "image/gif": "image",
+  "image/svg+xml": "image",
+  "image/avif": "image",
+  "image/bmp": "image",
   "video/mp4": "video",
   "video/webm": "video",
   "application/pdf": "document",
@@ -20,15 +24,38 @@ const allowedTypes = {
   "text/plain": "document",
   "text/markdown": "document",
   "text/csv": "document",
+  // 前端界面类课件：HTML 在沙箱 iframe 中渲染，CSS/JS 作为源码查看与引用。
+  "text/html": "web",
+  "text/css": "web",
+  "text/javascript": "web",
 } as const;
 
 export type PrivateUploadMimeType = keyof typeof allowedTypes;
+
+/**
+ * 案例作品素材允许的类型。
+ * 课件新增的图片格式与 HTML/CSS/JS 只对教学课件开放：work_assets.asset_type
+ * 目前只接受 image/video/document/other，放开会让案例上传写入非法值。
+ */
+export const workAssetMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/markdown",
+  "text/csv",
+] as const satisfies readonly PrivateUploadMimeType[];
 
 export interface StoredUpload {
   storageKey: string;
   fileName: string;
   mimeType: PrivateUploadMimeType;
-  assetType: "image" | "video" | "document";
+  assetType: "image" | "video" | "document" | "web";
   sizeBytes: number;
   sha256: string;
 }
@@ -105,8 +132,14 @@ export function detectUploadMimeType(header: Buffer): PrivateUploadMimeType | un
   if (header.length >= 3 && header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) return "image/jpeg";
   if (header.length >= 8 && header.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
   if (header.length >= 12 && header.subarray(0, 4).toString("ascii") === "RIFF" && header.subarray(8, 12).toString("ascii") === "WEBP") return "image/webp";
+  if (header.length >= 6 && ["GIF87a", "GIF89a"].includes(header.subarray(0, 6).toString("ascii"))) return "image/gif";
+  if (header.length >= 2 && header[0] === 0x42 && header[1] === 0x4d) return "image/bmp";
   if (header.length >= 5 && header.subarray(0, 5).toString("ascii") === "%PDF-") return "application/pdf";
-  if (header.length >= 8 && header.subarray(4, 8).toString("ascii") === "ftyp") return "video/mp4";
+  if (header.length >= 12 && header.subarray(4, 8).toString("ascii") === "ftyp") {
+    // AVIF 与 MP4 共用 ftyp 容器，必须看 brand：否则 AVIF 图片会被当成视频。
+    const brand = header.subarray(8, 12).toString("ascii");
+    return ["avif", "avis"].includes(brand) ? "image/avif" : "video/mp4";
+  }
   if (header.length >= 4 && header.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]))) return "video/webm";
   return undefined;
 }
@@ -121,15 +154,20 @@ function detectOfficeMimeType(file: Buffer): PrivateUploadMimeType | undefined {
 }
 
 function detectTextMimeType(declaredMimeType: string, file: Buffer): PrivateUploadMimeType | undefined {
-  if (!["text/plain", "text/markdown", "text/csv"].includes(declaredMimeType)) return undefined;
+  if (!["text/plain", "text/markdown", "text/csv", "text/html", "text/css", "text/javascript", "image/svg+xml"].includes(declaredMimeType)) return undefined;
   // 拒绝 NUL 字节，避免把二进制伪装成文本；再通过 UTF-8 round-trip 验证。
   if (file.includes(0)) return undefined;
   const text = file.toString("utf8");
-  return Buffer.from(text, "utf8").equals(file) ? declaredMimeType as PrivateUploadMimeType : undefined;
+  if (!Buffer.from(text, "utf8").equals(file)) return undefined;
+  // 文本类课件再确认内容形态，避免把任意文本改名成 HTML/SVG 后当作可渲染页面托管。
+  if (declaredMimeType === "text/html" && !/<\s*(!doctype|html|head|body|div|section|main|p|h[1-6]|a|img|table|style|script|canvas|svg|template)\b/i.test(text)) return undefined;
+  if (declaredMimeType === "image/svg+xml" && !/<\s*svg[\s>]/i.test(text)) return undefined;
+  if (declaredMimeType === "text/css" && !/[{}]/.test(text)) return undefined;
+  return declaredMimeType as PrivateUploadMimeType;
 }
 
 function safeFileName(value: string | undefined, mimeType: StoredUpload["mimeType"]) {
-  const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4", "video/webm": ".webm", "application/pdf": ".pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx", "text/plain": ".txt", "text/markdown": ".md", "text/csv": ".csv" } as const)[mimeType];
+  const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "image/svg+xml": ".svg", "image/avif": ".avif", "image/bmp": ".bmp", "video/mp4": ".mp4", "video/webm": ".webm", "application/pdf": ".pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx", "text/plain": ".txt", "text/markdown": ".md", "text/csv": ".csv", "text/html": ".html", "text/css": ".css", "text/javascript": ".js" } as const)[mimeType];
   const base = path.basename(value ?? "upload").replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 120) || "upload";
   return base.toLowerCase().endsWith(extension) ? base : `${base}${extension}`;
 }

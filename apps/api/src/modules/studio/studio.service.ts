@@ -8,7 +8,7 @@ import type { Actor } from "../auth/auth.service";
 import { AuthService } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import { getEnvironment } from "../../common/environment";
-import { storePrivateUpload } from "./private-upload";
+import { storePrivateUpload, workAssetMimeTypes } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { caseUploadPolicy } from "../../common/upload-policy";
 import { assertCasePublication, caseStorySchema, type CaseStory } from "./case-story";
@@ -345,7 +345,7 @@ export class StudioService {
     const policy = caseUploadPolicy();
     const part = await request.file({ limits: { fileSize: policy.videoBytes } });
     if (!part) throw new BadRequestException("请选择一个文件");
-    const upload = await storePrivateUpload(part, environment.uploadRoot, undefined, `users/${actor.id}/works/${workId}`, policy.videoBytes);
+    const upload = await storePrivateUpload(part, environment.uploadRoot, workAssetMimeTypes, `users/${actor.id}/works/${workId}`, policy.videoBytes);
     let committed = false;
     try {
       const asset = await this.database.transaction(async (client) => {

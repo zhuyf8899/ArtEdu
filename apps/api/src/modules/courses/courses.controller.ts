@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
+import { workspacePreviewCsp } from "../agent/workspace-preview-csp";
 import {
   courseReviewDecisionSchema,
   createCourseSchema,
@@ -57,18 +58,46 @@ export class CoursesController {
 
   @Get("courses/:courseId/resources/:resourceId/download")
   async downloadResource(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("courseId") courseId: string, @Param("resourceId") resourceId: string) {
-    const resource = await this.courses.openResource(await this.auth.getActor(request), courseId, resourceId);
+    const resource = await this.courses.openResource(await this.auth.getActor(request), courseId, resourceId, "download");
+    return this.sendResource(request, reply, resource, true);
+  }
+
+  /**
+   * 课件预览：已加入课程的学生即可查看。
+   * PDF/图片/网页/视频在浏览器内呈现，Office 原件（PPT/Word）浏览器无法内嵌渲染，
+   * 因此按附件下发，由学生本地打开——这条链路同样计入访问审计。
+   */
+  @Get("courses/:courseId/resources/:resourceId/preview")
+  async previewResource(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("courseId") courseId: string, @Param("resourceId") resourceId: string) {
+    const resource = await this.courses.openResource(await this.auth.getActor(request), courseId, resourceId, "preview");
+    const officeOriginal = ["ppt", "word"].includes(resource.resourceType);
+    return this.sendResource(request, reply, resource, officeOriginal);
+  }
+
+  private sendResource(request: FastifyRequest, reply: FastifyReply, resource: Awaited<ReturnType<CoursesService["openResource"]>>, asAttachment: boolean) {
+    const mimeType = resource.mimeType ?? "application/octet-stream";
     const encodedName = encodeURIComponent(resource.fileName).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
-    reply.header("Content-Type", resource.mimeType);
+    reply.header("Content-Type", mimeType);
     reply.header("Cache-Control", "private, no-store");
     reply.header("X-Content-Type-Options", "nosniff");
-    if (resource.resourceType !== "video") {
+    if (asAttachment) {
       reply.header("Content-Disposition", `attachment; filename*=UTF-8''${encodedName}`);
       reply.header("Content-Length", String(resource.sizeBytes));
       return createReadStream(resource.filePath);
     }
 
     reply.header("Content-Disposition", `inline; filename*=UTF-8''${encodedName}`);
+    // 课件要能嵌在课程页的预览框里：必须显式声明 frame-ancestors，浏览器才会忽略
+    // 全局钩子补的 X-Frame-Options: DENY（CSP 的 frame-ancestors 优先级更高）。
+    // 网页与 SVG 课件是不可信内容，改用与 Agent 预览相同的沙箱策略：
+    // 拿不到本站登录态，也不能联网、提交表单或跳转顶层窗口。
+    reply.header("Content-Security-Policy", ["text/html", "image/svg+xml"].includes(mimeType)
+      ? workspacePreviewCsp(request.headers["x-forwarded-host"] ?? request.headers.host)
+      : "frame-ancestors 'self'");
+    if (resource.resourceType !== "video") {
+      reply.header("Content-Length", String(resource.sizeBytes));
+      return createReadStream(resource.filePath);
+    }
     reply.header("Accept-Ranges", "bytes");
     const range = request.headers.range;
     if (!range) {
