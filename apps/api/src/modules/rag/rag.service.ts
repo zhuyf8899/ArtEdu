@@ -1,8 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { getEnvironment } from "../../common/environment";
 import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import type { RagQueryInput } from "./rag.contracts";
+import { createEmbeddings, vectorLiteral } from "./rag.embedding";
 
 interface LocalEvidenceRow {
   id: string;
@@ -12,8 +14,11 @@ interface LocalEvidenceRow {
   match_position: number;
 }
 
+interface VectorEvidenceRow { resource_id: string; title: string; resource_type: string; content: string; page_number: number; similarity: number; }
+
 @Injectable()
 export class RagService {
+  private readonly logger = new Logger(RagService.name);
   constructor(private readonly database: DatabaseService) {}
 
   /** PDF 上传后的索引任务；Worker 与 embedding 适配器在后续校内环境接入。 */
@@ -56,6 +61,25 @@ export class RagService {
    */
   async query(actor: Actor, courseId: string, input: RagQueryInput) {
     await this.assertReadable(actor, courseId);
+    try {
+      const [queryVector] = await createEmbeddings([input.query]);
+      const vectorResult = await this.database.query<VectorEvidenceRow>(`SELECT chunk.resource_id,resource.title,resource.resource_type,chunk.content,chunk.page_number,
+        1 - (chunk.embedding <=> $2::vector) AS similarity
+        FROM rag_chunks chunk JOIN course_resources resource ON resource.id=chunk.resource_id
+        JOIN rag_documents document ON document.id=chunk.document_id
+        WHERE chunk.course_id=$1 AND resource.status='published' AND document.status='indexed'
+          AND 1 - (chunk.embedding <=> $2::vector) >= $3
+        ORDER BY chunk.embedding <=> $2::vector LIMIT 5`, [courseId, vectorLiteral(queryVector), getEnvironment().ragMinSimilarity]);
+      if (vectorResult.rows.length) return {
+        query: input.query, scope: input.scope,
+        localEvidence: vectorResult.rows.map((row) => ({ resourceId: row.resource_id, resourceTitle: row.title, resourceType: row.resource_type, excerpt: row.content, pageNumber: row.page_number, similarity: Number(row.similarity.toFixed(3)) })),
+        webEvidence: [], webFallbackEligible: input.allowWebFallback, retrievalState: "vector_evidence",
+        message: "已从本课程已索引的 PDF 中找到语义相关证据。",
+      };
+    } catch (error) {
+      // 向量服务短暂不可用时继续走已有的精确文本证据，不把系统错误伪装成答案。
+      if (getEnvironment().ragEnabled) this.logger.warn(error instanceof Error ? error.message : "向量检索失败");
+    }
     const result = await this.database.query<LocalEvidenceRow>(`
       SELECT id,title,resource_type,transcript_text,
         GREATEST(strpos(lower(transcript_text), lower($2)), 1) AS match_position
