@@ -14,8 +14,17 @@ test('部署和备份脚本 Bash 语法检查', () => {
 });
 test('部署健康检查失败必须退出；备份位于迁移之前', async () => {
   const code = await readFile('deploy/deploy-staging.sh','utf8');
-  assert.ok(code.indexOf('bash deploy/backup-staging.sh') < code.indexOf('$COMPOSE run --rm api npm run db:migrate'));
+  assert.ok(code.indexOf('bash deploy/backup-staging.sh') < code.indexOf('"${COMPOSE[@]}" run --rm api npm run db:migrate'));
   assert.match(code,/健康检查未通过[^]*?exit 1[^]*?DEPLOY_DONE/);
+  assert.match(code,/\/proc\/sys\/vm\/swappiness/);
+  assert.match(code,/MemAvailable/);
+  assert.match(code,/stop embedding rag-worker/);
+  assert.match(code,/start embedding rag-worker/);
+  const lowmem = await readFile('deploy/deploy-lowmem.sh','utf8');
+  assert.match(lowmem,/ALLOW_LOW_MEMORY/);
+  assert.match(lowmem,/if \[ "\$\{ALLOW_LOW_MEMORY:-0\}" = 1 \]; then[^]*?ARTEDU_ALLOW_LOW_MEMORY=1 bash deploy\/deploy-staging\.sh/);
+  assert.match(lowmem,/else\n  unset ARTEDU_ALLOW_LOW_MEMORY/);
+  assert.match(lowmem,/deploy\/last-deploy\.log/);
   const start = await readFile('scripts/start-local.ps1','utf8');
   assert.match(start,/if \(\$SeedDemo\)/);
   const nginx = await readFile('deploy/nginx.conf','utf8');

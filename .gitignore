@@ -217,6 +217,8 @@ apps/api/data/
 # 本地 embedding 模型权重：由 deploy/fetch-embedding-model.sh 下载，不进版本库
 models/
 backups/
+deploy/*.bak-*
+deploy/last-deploy.log
 
 # Ruff stuff:
 .ruff_cache/
