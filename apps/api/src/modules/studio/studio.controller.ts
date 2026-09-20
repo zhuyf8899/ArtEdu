@@ -9,13 +9,14 @@ import {
   workflowInputSchema,
   workflowRunInputSchema,
   workflowRunProgressSchema,
+  workflowRunExecuteSchema,
   workflowUpdateSchema,
   workflowVersionInputSchema,
   workInputSchema,
 } from "./studio.contracts";
 import type {
   CatalogQuery, WorkflowInput, WorkflowRunInput, WorkflowRunProgressInput,
-  WorkflowVersionInput, WorkInput, ReportInput,
+  WorkflowVersionInput, WorkInput, ReportInput, WorkflowRunExecuteInput,
 } from "./studio.contracts";
 import { StudioService } from "./studio.service";
 import { caseUploadPolicy } from "../../common/upload-policy";
@@ -75,6 +76,11 @@ export class StudioController {
   @Patch("workflow-runs/:runId/progress")
   async updateRun(@Req() request: FastifyRequest, @Param("runId") runId: string, @Body() body: unknown) {
     return this.studio.updateRun(await this.auth.getActor(request), runId, parseInput(workflowRunProgressSchema, body) as WorkflowRunProgressInput);
+  }
+
+  @Post("workflow-runs/:runId/execute")
+  async executeRun(@Req() request: FastifyRequest, @Param("runId") runId: string, @Body() body: unknown) {
+    return this.studio.executeRun(await this.auth.getActor(request), runId, parseInput(workflowRunExecuteSchema, body) as WorkflowRunExecuteInput);
   }
 
   @Get("works")

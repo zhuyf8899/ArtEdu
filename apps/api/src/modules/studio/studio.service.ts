@@ -8,6 +8,7 @@ import type { Actor } from "../auth/auth.service";
 import { AuthService } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import { getEnvironment } from "../../common/environment";
+import { GenerationService } from "../generation/generation.service";
 import { storePrivateUpload, workAssetMimeTypes } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { caseUploadPolicy } from "../../common/upload-policy";
@@ -18,6 +19,7 @@ import type {
   WorkflowInput,
   WorkflowRunInput,
   WorkflowRunProgressInput,
+  WorkflowRunExecuteInput,
   WorkflowVersionInput,
   WorkInput, ReportInput,
 } from "./studio.contracts";
@@ -44,7 +46,11 @@ const WORKFLOW_PUBLISH_ROLES = ["admin", "teacher", "operator"];
 
 @Injectable()
 export class StudioService {
-  constructor(private readonly database: DatabaseService, private readonly auth: AuthService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly auth: AuthService,
+    private readonly generation?: GenerationService,
+  ) {}
 
   async listWorkflows(query: CatalogQuery) {
     const values: unknown[] = [];
@@ -234,6 +240,32 @@ export class StudioService {
           completed_at=CASE WHEN $3='completed' THEN CURRENT_TIMESTAMP ELSE NULL END,updated_at=CURRENT_TIMESTAMP
         WHERE id=$1 AND user_id=$4
       `, [runId, nextStep, completed ? "completed" : "in_progress", actor.id]);
+    });
+    return this.getRun(actor, runId);
+  }
+
+  /** 执行当前拓扑节点；只有 KSampler 会消耗模型额度并调用统一图片 API。 */
+  async executeRun(actor: Actor, runId: string, input: WorkflowRunExecuteInput) {
+    const current = await this.getRun(actor, runId) as Record<string, any>;
+    if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");
+    const step = current.steps[current.currentStep];
+    const node = current.nodes.find((item: Record<string, any>) => item.id === step?.id);
+    if (!node) throw new ConflictException("当前节点不存在，无法执行");
+    const context = this.workflowContext(current.context);
+    if (input.prompt) context.prompt = input.prompt;
+    const output = await this.executeNode(actor, node, context);
+    context.nodeResults[node.id] = output;
+    const nextStep = Math.min(current.currentStep + 1, current.totalSteps);
+    const completed = nextStep >= current.totalSteps;
+    await this.database.transaction(async (client) => {
+      await client.query(
+        "INSERT INTO workflow_run_events (id,run_id,step_index,event_type,note) VALUES ($1,$2,$3,'execute',$4)",
+        [`workflow-event-${randomUUID()}`, runId, current.currentStep, this.executionNote(node, output)],
+      );
+      await client.query(`UPDATE workflow_runs SET context_json=$2::jsonb,current_step=$3,status=$4,
+        completed_at=CASE WHEN $4='completed' THEN CURRENT_TIMESTAMP ELSE NULL END,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND user_id=$5`,
+        [runId, JSON.stringify(context), nextStep, completed ? "completed" : "in_progress", actor.id],
+      );
     });
     return this.getRun(actor, runId);
   }
@@ -606,6 +638,89 @@ export class StudioService {
   private mapRun(row: Record<string, any>) {
     const definition = this.normalizeWorkflowDefinition(row.definition_json);
     return { id: row.id, workflowId: row.workflow_id, workflowName: row.workflow_name, category: row.category, status: row.status, currentStep: Number(row.current_step), totalSteps: Number(row.total_steps), context: row.context_json ?? {}, definition, nodes: definition.nodes, edges: definition.edges, steps: this.definitionToSteps(definition), startedAt: row.started_at, completedAt: row.completed_at, updatedAt: row.updated_at };
+  }
+
+  private workflowContext(value: Record<string, any> | null | undefined) {
+    const context = value && typeof value === "object" ? structuredClone(value) : {} as Record<string, any>;
+    context.nodeResults ??= {};
+    context.adapters ??= [];
+    context.size ??= "1024x1024";
+    return context as {
+      prompt?: string; size: string; modelConfigId?: string;
+      adapters: Array<{ type: string; value: string }>;
+      artifact?: { downloadUrl?: string; fileName?: string; mimeType?: string; fileSize?: number };
+      nodeResults: Record<string, unknown>;
+    };
+  }
+
+  private async executeNode(actor: Actor, node: Record<string, any>, context: ReturnType<StudioService["workflowContext"]>) {
+    const value = String(node.data?.value ?? "").trim();
+    const label = String(node.data?.label ?? node.type);
+    const appendPrompt = (piece: string) => { context.prompt = [context.prompt, piece].filter(Boolean).join("\n").trim(); };
+    switch (node.type) {
+      case "input":
+        context.prompt ??= value;
+        if (!context.prompt) throw new BadRequestException("输入节点需要在开始运行时填写需求，或设置默认值");
+        return { kind: "input", prompt: context.prompt };
+      case "load_image":
+        if (!value) throw new BadRequestException("加载图片节点需要填写已授权的图片 URL 或素材标识");
+        return { kind: "reference", source: value };
+      case "prompt": case "text_encode":
+        if (!value) throw new BadRequestException(`${label} 需要填写提示词`);
+        appendPrompt(value);
+        return { kind: "prompt", prompt: context.prompt };
+      case "skill":
+        if (!value) throw new BadRequestException("Skill 节点需要填写可执行的创作约束");
+        appendPrompt(value);
+        return { kind: "skill", applied: value };
+      case "model":
+        // 留空表示使用服务端为 image 能力配置的内部默认模型，避免把供应商选择暴露给学生。
+        if (!value) return { kind: "model", modelConfigId: "internal-default" };
+        context.modelConfigId = value;
+        return { kind: "model", modelConfigId: value };
+      case "load_checkpoint":
+        if (!value) throw new BadRequestException(`${label} 需要填写服务端模型配置 ID`);
+        context.modelConfigId = value;
+        return { kind: "model", modelConfigId: value };
+      case "lora": case "controlnet":
+        if (!value) throw new BadRequestException(`${label} 需要填写配置`);
+        context.adapters.push({ type: node.type, value });
+        return { kind: "adapter", type: node.type, value };
+      case "empty_latent": {
+        context.size = /^\d{3,4}x\d{3,4}$/.test(value) ? value : context.size;
+        return { kind: "latent", size: context.size };
+      }
+      case "ksampler": {
+        if (!context.prompt) throw new BadRequestException("KSampler 前必须连接输入或提示词节点");
+        if (!this.generation) throw new ConflictException("生成服务尚未装配");
+        const generated = await this.generation.runJob(actor, {
+          jobType: "image", prompt: context.prompt, context: [], modelConfigId: context.modelConfigId,
+          parameters: { size: context.size, source: "workflow-canvas", workflowNodeId: node.id, adapters: context.adapters },
+        });
+        if (!generated.artifact) throw new ConflictException("图片服务未返回可保存产物");
+        context.artifact = generated.artifact;
+        return { kind: "generation", jobId: generated.job.id, artifact: generated.artifact };
+      }
+      case "vae_decode":
+        if (!context.artifact) throw new BadRequestException("VAE 解码前必须先完成 KSampler 生成");
+        return { kind: "decoded_image", artifact: context.artifact };
+      case "upscale":
+        if (!context.artifact) throw new BadRequestException("放大节点前必须先完成图片生成");
+        return { kind: "upscale_request", artifact: context.artifact, target: value || "2x", pendingProviderCapability: "upscale" };
+      case "preview":
+        return { kind: "preview", artifact: context.artifact ?? null, text: context.prompt ?? "" };
+      case "save_image":
+        if (!context.artifact) throw new BadRequestException("保存图片前必须先完成图片生成");
+        return { kind: "saved_asset", artifact: context.artifact };
+      case "note":
+        return { kind: "note", text: value || node.data?.description || "" };
+      default:
+        throw new BadRequestException(`暂不支持执行节点类型 ${node.type}`);
+    }
+  }
+
+  private executionNote(node: Record<string, any>, output: Record<string, any>) {
+    return `${node.data?.label ?? node.type}：${output.kind === "generation" ? `生成任务 ${output.jobId}` : output.kind}`.slice(0, 2000);
   }
 
   private mapWork(row: WorkRow) {

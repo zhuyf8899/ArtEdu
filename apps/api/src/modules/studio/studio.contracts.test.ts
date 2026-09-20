@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { workflowInputSchema, workflowVersionInputSchema, workInputSchema } from "./studio.contracts";
+import { workflowInputSchema, workflowRunExecuteSchema, workflowVersionInputSchema, workInputSchema } from "./studio.contracts";
 import { assertCasePublication, caseStorySchema } from "./case-story";
 
 test("收集案例可存草稿，缺少原作者或授权不能提交审核", () => {
@@ -63,4 +63,11 @@ test("工作流版本支持内置 Skill，且拒绝循环图", () => {
   };
   assert.equal(workflowVersionInputSchema.safeParse({ definition: base }).success, true);
   assert.equal(workflowVersionInputSchema.safeParse({ definition: { ...base, edges: [...base.edges, { id: "cycle", source: "output", target: "input" }] } }).success, false);
+});
+
+test("节点执行接口仅允许可选的本次输入，不接受浏览器提交任意节点图", () => {
+  assert.equal(workflowRunExecuteSchema.safeParse({ prompt: "生成青绿色连续纹样" }).success, true);
+  assert.equal(workflowRunExecuteSchema.safeParse({ prompt: "" }).success, false);
+  assert.equal(workflowRunExecuteSchema.safeParse({ definition: { nodes: [] } }).success, true);
+  assert.deepEqual(workflowRunExecuteSchema.parse({ definition: { nodes: [] } }), {});
 });

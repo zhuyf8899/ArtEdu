@@ -7,8 +7,8 @@ import { shortId } from "./randomId.js";
 
 const blankWorkflow = { name: "", description: "", category: "视觉创作", entryType: "workbench" };
 const palette = {
-  input: { title: "创作输入", hint: "接收文字、图片或参数", color: "#4b87ff", group: "输入与素材" },
-  load_image: { title: "加载图片", hint: "把本地或课程图片带入画布", color: "#4b87ff", group: "输入与素材" },
+  input: { title: "创作输入", hint: "接收本次的文字需求", color: "#4b87ff", group: "输入与素材" },
+  load_image: { title: "参考素材", hint: "记录已授权素材标识或参考说明", color: "#4b87ff", group: "输入与素材" },
   prompt: { title: "提示词", hint: "整理创作指令", color: "#b268ff", group: "提示与教学" },
   text_encode: { title: "文本编码", hint: "将正负提示词编码为条件", color: "#b268ff", group: "提示与教学" },
   skill: { title: "内置 Skill", hint: "封装专业方法与参数预设", color: "#d6b335", group: "提示与教学" },
@@ -19,7 +19,7 @@ const palette = {
   empty_latent: { title: "空 Latent", hint: "设定分辨率与批次数", color: "#d6b335", group: "采样与处理" },
   ksampler: { title: "KSampler", hint: "配置采样器、步数、CFG 与 Seed", color: "#d6b335", group: "采样与处理" },
   vae_decode: { title: "VAE 解码", hint: "将 Latent 转为图片", color: "#d6b335", group: "采样与处理" },
-  upscale: { title: "放大修复", hint: "将结果放大并细化", color: "#d6b335", group: "采样与处理" },
+  upscale: { title: "超分规格", hint: "记录后续超分服务的目标规格", color: "#d6b335", group: "采样与处理" },
   preview: { title: "预览输出", hint: "展示中间或最终结果", color: "#42b883", group: "输出与说明" },
   save_image: { title: "保存图片", hint: "归档可下载的最终产物", color: "#42b883", group: "输出与说明" },
   note: { title: "说明", hint: "补充教学或操作说明", color: "#78859b", group: "输出与说明" },
@@ -37,14 +37,20 @@ function emptyDefinition() {
       { id: "input-1", type: "input", position: { x: 70, y: 160 }, data: { label: "创作需求", description: "输入主题、受众或参考素材", value: "" } },
       { id: "prompt-1", type: "prompt", position: { x: 350, y: 160 }, data: { label: "提示词构建", description: "将需求整理为可执行提示词", value: "" } },
       { id: "skill-1", type: "skill", position: { x: 640, y: 160 }, data: { label: "传统纹样 Skill", description: "将专业处理方法封装为可复用节点", value: "提取纹样骨架，保持对称、留白与色彩层级。" } },
-      { id: "model-1", type: "model", position: { x: 930, y: 160 }, data: { label: "图像生成模型", description: "选择后续接入的模型与参数", value: "" } },
-      { id: "preview-1", type: "preview", position: { x: 1220, y: 160 }, data: { label: "成果预览", description: "查看并导出生成结果", value: "" } },
+      { id: "model-1", type: "model", position: { x: 930, y: 160 }, data: { label: "图像生成模型", description: "填写服务端已配置的模型 ID；留空则使用内部图片通道", value: "" } },
+      { id: "ksampler-1", type: "ksampler", position: { x: 1210, y: 160 }, data: { label: "生成图片", description: "通过平台统一图片 API 创建真实生成任务", value: "" } },
+      { id: "vae-1", type: "vae_decode", position: { x: 1490, y: 160 }, data: { label: "读取生成结果", description: "读取 KSampler 已保存的图片产物", value: "" } },
+      { id: "preview-1", type: "preview", position: { x: 1770, y: 160 }, data: { label: "成果预览", description: "展示当前图片或文本结果", value: "" } },
+      { id: "save-1", type: "save_image", position: { x: 2050, y: 160 }, data: { label: "保存成果", description: "确认平台已归档的可下载图片", value: "" } },
     ],
     edges: [
       { id: "edge-input-prompt", source: "input-1", target: "prompt-1" },
       { id: "edge-prompt-skill", source: "prompt-1", target: "skill-1" },
       { id: "edge-skill-model", source: "skill-1", target: "model-1" },
-      { id: "edge-model-preview", source: "model-1", target: "preview-1" },
+      { id: "edge-model-sampler", source: "model-1", target: "ksampler-1" },
+      { id: "edge-sampler-vae", source: "ksampler-1", target: "vae-1" },
+      { id: "edge-vae-preview", source: "vae-1", target: "preview-1" },
+      { id: "edge-preview-save", source: "preview-1", target: "save-1" },
     ],
   };
 }

@@ -626,6 +626,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .workflow-run-node small { min-height: 28px; padding: 0 9px 8px; display: block; color: #b7c0cd; font-size: 7px; line-height: 1.4; }
 .workflow-start--graph { min-height: 230px; border-top: 0; }
 .workflow-step--node { border-top: 0; }
+.workflow-run-prompt { display: grid; gap: 6px; margin-top: 16px; font-size: 10px; font-weight: 700; }
+.workflow-run-prompt textarea { min-height: 88px; resize: vertical; }
+.workflow-node-output { max-height: 180px; overflow: auto; margin: 14px 0 0; padding: 12px; border-radius: 7px; background: #101827; color: #c7f9e5; font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
 .workflow-outline { margin-top: 16px; display: grid; gap: 6px; }
 .workflow-outline > div { min-height: 45px; padding: 0 13px; display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px; background: #eee8df; border: 1px solid #cfc6ba; color: #827b72; }
 .workflow-outline > div > span { font-size: 8px; font-weight: 700; }

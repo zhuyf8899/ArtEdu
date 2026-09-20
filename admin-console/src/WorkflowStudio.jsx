@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, LinkSimple, Path, Play, Plus, SpinnerGap, Wrench } from "@phosphor-icons/react";
 import "@xyflow/react/dist/style.css";
-import { getWorkflow, getWorkflows, startWorkflowRun, updateWorkflowRun } from "./services/adminApi.js";
+import { executeWorkflowRun, getWorkflow, getWorkflows, startWorkflowRun } from "./services/adminApi.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
 const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", text_encode: "#b268ff", skill: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b" };
@@ -57,14 +57,14 @@ export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
-  const completeNode = async () => {
+  const executeNode = async (prompt) => {
     setLoading(true);
-    try { const next = await updateWorkflowRun(run.id, { stepIndex: run.currentStep, action: "complete" }); setRun(next); onNotice(next.status === "completed" ? "节点工作流已完成" : "当前节点已完成，正在进入下一节点"); }
+    try { const next = await executeWorkflowRun(run.id, prompt ? { prompt } : {}); setRun(next); onNotice(next.status === "completed" ? "节点工作流已完成" : "节点已执行，正在进入下一节点"); }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
 
-  if (selected) return <WorkflowRunner selected={selected} run={run} loading={loading} onBack={() => { setSelected(null); setRun(null); }} onStart={start} onComplete={completeNode} />;
+  if (selected) return <WorkflowRunner selected={selected} run={run} loading={loading} onBack={() => { setSelected(null); setRun(null); }} onStart={start} onExecute={executeNode} />;
   if (builderOpen) return <div className="workflow-builder-entry">
     <button className="learning-back" onClick={() => setBuilderOpen(false)}><ArrowLeft size={16} weight="bold" /> 返回设计工作台</button>
     <Suspense fallback={<section className="portal-empty"><p>正在加载工作流创建器…</p></section>}>
@@ -78,7 +78,7 @@ function ToolDirectory() {
   return <section className="tool-directory" aria-labelledby="tool-directory-title"><header><div><p>// DESIGN TOOLBOX</p><h3 id="tool-directory-title"><Wrench size={18} weight="bold" /> 设计工具入口</h3><span>工具在新窗口打开；平台功能保留在当前站内继续使用。</span></div></header><div className="tool-directory__groups">{TOOL_DIRECTORY.map(({ group, items }) => <div key={group}><strong>{group}</strong>{items.map((tool) => <a key={tool.name} href={tool.href} target={tool.internal ? undefined : "_blank"} rel={tool.internal ? undefined : "noreferrer"}><span><b>{tool.name}</b><small>{tool.detail}</small></span><LinkSimple size={17} weight="bold" /></a>)}</div>)}</div></section>;
 }
 
-function WorkflowRunner({ selected, run, loading, onBack, onStart, onComplete }) {
+function WorkflowRunner({ selected, run, loading, onBack, onStart, onExecute }) {
   const steps = run?.steps ?? selected.steps ?? [];
   const activeStep = run?.status === "in_progress" ? steps[run.currentStep] : null;
   const activeId = activeStep?.id;
@@ -106,8 +106,14 @@ function WorkflowRunner({ selected, run, loading, onBack, onStart, onComplete })
     <header><div><span>{selected.category} · V{selected.versionNumber ?? 1} · 节点画布</span><h2>{selected.name}</h2><p>{selected.description}</p><small className="workflow-canvas-hint">可直接拖动节点调整本次查看的画布布局。</small></div><aside><strong>{selected.nodes?.length ?? selected.stepCount ?? 0}</strong><span>个节点</span></aside></header>
     <div className="workflow-player__progress"><i><b style={{ width: `${run?.status === "completed" ? 100 : progress}%` }} /></i><span>{run?.status === "completed" ? "全部完成" : `${progress}%`}</span></div>
     <div className="workflow-run-canvas"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView nodesDraggable nodesConnectable={false} elementsSelectable zoomOnDoubleClick={false} onNodesChange={onNodesChange}><Background color="#384250" gap={18} size={1} /><Controls showInteractive={false} /></ReactFlow></div>
-    {!run && <div className="workflow-start workflow-start--graph"><FlowArrow size={45} weight="thin" /><strong>准备运行节点工作流</strong><p>画布展示已发布的连接关系；开始后按教学节点记录进度。模型节点当前只做本地结构演示，不调用外部算力。</p><button disabled={loading || !selected.versionId} onClick={onStart}><Play size={18} weight="fill" /> 开始工作流</button>{!selected.versionId && <small>该工作流还没有发布版本</small>}</div>}
-    {run?.status === "in_progress" && activeStep && <article className="workflow-step workflow-step--node"><span>NODE {String(run.currentStep + 1).padStart(2, "0")} / {run.totalSteps}</span><h3>{activeStep.title}</h3><p>{activeStep.description}</p>{activeStep.instruction && <div><small>// 操作说明</small>{activeStep.instruction}</div>}<footer><em><Clock size={16} /> 约 {activeStep.estimatedMinutes ?? 10} 分钟</em><button disabled={loading} onClick={onComplete}>{loading ? <SpinnerGap className="spin" /> : <CheckCircle size={18} weight="fill" />} 完成当前节点</button></footer></article>}
+    {!run && <div className="workflow-start workflow-start--graph"><FlowArrow size={45} weight="thin" /><strong>准备运行节点工作流</strong><p>开始后每个节点会写入运行上下文；KSampler 通过平台统一图片 API 发起真实生成。</p><button disabled={loading || !selected.versionId} onClick={onStart}><Play size={18} weight="fill" /> 开始工作流</button>{!selected.versionId && <small>该工作流还没有发布版本</small>}</div>}
+    {run?.status === "in_progress" && activeStep && <NodeExecutionPanel step={activeStep} node={selected.nodes?.find((item) => item.id === activeStep.id)} output={run.context?.nodeResults?.[activeStep.id]} loading={loading} onExecute={onExecute} />}
     {run?.status === "completed" && <div className="workflow-complete"><CheckCircle size={54} weight="fill" /><strong>节点工作流已完成</strong><p>本次节点进度已经保存；可把成果整理后发布到案例社区。</p></div>}
   </section>;
+}
+
+function NodeExecutionPanel({ step, node, output, loading, onExecute }) {
+  const [prompt, setPrompt] = useState("");
+  const needsPrompt = node?.type === "input";
+  return <article className="workflow-step workflow-step--node"><span>NODE · {node?.type || "note"} · {step.title}</span><h3>{step.title}</h3><p>{step.description}</p>{step.instruction && <div><small>// 节点参数</small>{step.instruction}</div>}{needsPrompt && <label className="workflow-run-prompt">本次需求<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="输入本次要生成或处理的内容" /></label>}{output && <pre className="workflow-node-output">{JSON.stringify(output, null, 2)}</pre>}<footer><em><Clock size={16} /> 约 {step.estimatedMinutes ?? 10} 分钟</em><button disabled={loading || (needsPrompt && !prompt.trim())} onClick={() => onExecute(prompt.trim())}>{loading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} 执行当前节点</button></footer></article>;
 }

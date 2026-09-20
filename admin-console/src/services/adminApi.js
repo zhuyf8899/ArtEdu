@@ -192,6 +192,10 @@ export const updateWorkflowRun = (runId, input) => request(`/workflow-runs/${run
   method: "PATCH",
   body: JSON.stringify(input),
 });
+export const executeWorkflowRun = (runId, input = {}) => request(`/workflow-runs/${runId}/execute`, {
+  method: "POST",
+  body: JSON.stringify(input),
+});
 
 export const getWorks = (query = "") => request(`/works${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getMyWorks = () => request("/me/works");
