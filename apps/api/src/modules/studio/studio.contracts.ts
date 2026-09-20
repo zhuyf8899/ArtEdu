@@ -126,6 +126,18 @@ export const commentInputSchema = z.object({
   content: z.string().trim().min(1).max(2000),
 });
 
+export const toolDirectoryLinkSchema = z.object({
+  category: z.string().trim().min(2).max(60),
+  name: z.string().trim().min(2).max(80),
+  detail: z.string().trim().min(2).max(240),
+  href: z.string().trim().max(1000).refine((value) => {
+    try {
+      const url = new URL(value);
+      return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
+    } catch { return false; }
+  }, "链接必须是无凭据的 HTTP(S) 地址"),
+});
+
 /** 执行器只接受平台保存的节点图；浏览器不能传任意供应商参数或工作流 JSON。 */
 export const workflowRunExecuteSchema = z.object({
   prompt: z.string().trim().min(1).max(10000).optional(),
@@ -137,6 +149,7 @@ export const reportInputSchema = z.object({
 });
 
 export type CatalogQuery = z.infer<typeof catalogQuerySchema>;
+export type ToolDirectoryLinkInput = z.infer<typeof toolDirectoryLinkSchema>;
 export type WorkflowInput = z.infer<typeof workflowInputSchema>;
 export type WorkflowVersionInput = z.infer<typeof workflowVersionInputSchema>;
 export type WorkflowRunInput = z.infer<typeof workflowRunInputSchema>;

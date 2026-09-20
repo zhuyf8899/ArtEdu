@@ -238,7 +238,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
         {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary onNotice={showToast} /></>}
 
-        {section === "studio" && <><SectionHeading eyebrow="// GUIDED CREATION" title="工作流学习与创作" /><WorkflowStudio initialWorkflowId={studioWorkflowId} onNotice={showToast} /></>}
+        {section === "studio" && <><SectionHeading eyebrow="// GUIDED CREATION" title="工作流学习与创作" /><WorkflowStudio initialWorkflowId={studioWorkflowId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} /></>}
 
         {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} /></>}
 

@@ -61,6 +61,7 @@ export class RagService {
    */
   async query(actor: Actor, courseId: string, input: RagQueryInput) {
     await this.assertReadable(actor, courseId);
+    const environment = getEnvironment();
     try {
       const [queryVector] = await createEmbeddings([input.query]);
       const vectorResult = await this.database.query<VectorEvidenceRow>(`SELECT chunk.resource_id,resource.title,resource.resource_type,chunk.content,chunk.page_number,
@@ -69,7 +70,7 @@ export class RagService {
         JOIN rag_documents document ON document.id=chunk.document_id
         WHERE chunk.course_id=$1 AND resource.status='published' AND document.status='indexed'
           AND 1 - (chunk.embedding <=> $2::vector) >= $3
-        ORDER BY chunk.embedding <=> $2::vector LIMIT 5`, [courseId, vectorLiteral(queryVector), getEnvironment().ragMinSimilarity]);
+        ORDER BY chunk.embedding <=> $2::vector LIMIT 5`, [courseId, vectorLiteral(queryVector), environment.ragMinSimilarity]);
       if (vectorResult.rows.length) return {
         query: input.query, scope: input.scope,
         localEvidence: vectorResult.rows.map((row) => ({ resourceId: row.resource_id, resourceTitle: row.title, resourceType: row.resource_type, excerpt: row.content, pageNumber: row.page_number, similarity: Number(row.similarity.toFixed(3)) })),
@@ -78,7 +79,7 @@ export class RagService {
       };
     } catch (error) {
       // 向量服务短暂不可用时继续走已有的精确文本证据，不把系统错误伪装成答案。
-      if (getEnvironment().ragEnabled) this.logger.warn(error instanceof Error ? error.message : "向量检索失败");
+      if (environment.ragEnabled) this.logger.warn(error instanceof Error ? error.message : "向量检索失败");
     }
     const result = await this.database.query<LocalEvidenceRow>(`
       SELECT id,title,resource_type,transcript_text,
@@ -106,6 +107,17 @@ export class RagService {
         webFallbackEligible: input.allowWebFallback,
         retrievalState: "local_text_evidence",
         message: "已从本课程已授权的转写文本中找到相关证据；向量检索接入后可提供更宽泛的语义匹配。",
+      };
+    }
+    if (environment.ragEnabled) {
+      return {
+        query: input.query,
+        scope: input.scope,
+        localEvidence: [],
+        webEvidence: [],
+        webFallbackEligible: input.allowWebFallback,
+        retrievalState: "indexed_no_match",
+        message: "已检索本课程已索引的课件，但没有找到达到置信阈值的证据。",
       };
     }
     return {

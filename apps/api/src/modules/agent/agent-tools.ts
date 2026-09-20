@@ -8,6 +8,7 @@ import { AgentService } from "./agent.service";
 import { CreationStorageService } from "../creation-storage/creation-storage.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
 import { GenerationService } from "../generation/generation.service";
+import { RagService } from "../rag/rag.service";
 import { extractPageReferences, normalizeRelative, summarizePageCheck, type AssetState } from "./agent-page-check";
 
 export const platformToolDefinitions: readonly ModelToolDefinition[] = [
@@ -15,6 +16,7 @@ export const platformToolDefinitions: readonly ModelToolDefinition[] = [
   { type: "function", function: { name: "list_published_content", description: "列出当前用户可见的已发布课程、工作流或案例；用户未提供 ID、要求随便打开一个内容时使用。返回站内相对路径，不会打开外部浏览器。", parameters: { type: "object", properties: { type: { type: "string", enum: ["all", "course", "workflow", "work"] }, limit: { type: "integer", minimum: 1, maximum: 10 } } } } },
   { type: "function", function: { name: "search_web", description: "联网检索公开互联网，返回可引用的来源列表与检索摘要。仅在用户开启智能搜索时可用；必须基于返回的来源回答并在结尾给出真实链接，不得把未检索到的内容说成搜索结果。", parameters: { type: "object", properties: { query: { type: "string", minLength: 1, maxLength: 300 } }, required: ["query"] } } },
   { type: "function", function: { name: "get_course_lesson", description: "读取已发布课程和课时、资料摘要及学习进度。", parameters: { type: "object", properties: { courseId: { type: "string" }, lessonId: { type: "string" } }, required: ["courseId"] } } },
+  { type: "function", function: { name: "search_course_knowledge", description: "检索一门课程已授权且已索引的 PDF 课件。仅在回答课件内容时使用；返回可核验的资料名、页码和摘录，必须据此作答，不能把未命中的内容编造成课件结论。", parameters: { type: "object", properties: { courseId: { type: "string" }, query: { type: "string", minLength: 2, maxLength: 500 } }, required: ["courseId", "query"] } } },
   { type: "function", function: { name: "get_workflow_detail", description: "读取已发布工作流的步骤、节点、提示模板和入口信息。", parameters: { type: "object", properties: { workflowId: { type: "string" } }, required: ["workflowId"] } } },
   { type: "function", function: { name: "get_case_detail", description: "读取已发布案例的作品信息、作者、资源和关联工作流。", parameters: { type: "object", properties: { workId: { type: "string" } }, required: ["workId"] } } },
   { type: "function", function: { name: "search_cases", description: "按关键词、标签、专业方向或作者检索已发布社区案例。", parameters: { type: "object", properties: { keyword: { type: "string" }, tag: { type: "string" }, medium: { type: "string" }, author: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 20 } } } } },
@@ -38,6 +40,7 @@ export const platformToolDefinitions: readonly ModelToolDefinition[] = [
 ];
 
 const getCourseLessonSchema = z.object({ courseId: z.string().trim().min(1).max(160), lessonId: z.string().trim().min(1).max(160).optional() });
+const courseKnowledgeSchema = z.object({ courseId: z.string().trim().min(1).max(160), query: z.string().trim().min(2).max(500) });
 const getWorkflowDetailSchema = z.object({ workflowId: z.string().trim().min(1).max(160) });
 const getCaseDetailSchema = z.object({ workId: z.string().trim().min(1).max(160) });
 const readUploadedFileSchema = z.object({ uploadId: z.string().trim().min(1).max(160) });
@@ -68,6 +71,7 @@ export interface PlatformToolDependencies {
   creationStorage?: CreationStorageService;
   workspace?: AgentWorkspaceService;
   generation?: GenerationService;
+  rag?: RagService;
 }
 
 function parseArguments(call: ModelToolCall): unknown {
@@ -169,6 +173,12 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
     }
     case "get_course_lesson":
       return getCourseLesson(getCourseLessonSchema.parse(raw), dependencies);
+    case "search_course_knowledge": {
+      if (!dependencies.rag) throw new Error("课程知识库服务不可用");
+      const input = courseKnowledgeSchema.parse(raw);
+      const evidence = await dependencies.rag.query(dependencies.actor, input.courseId, { query: input.query, scope: "course", allowWebFallback: false });
+      return { status: "succeeded", ...evidence, instruction: "仅能根据 localEvidence 中的资料名、页码与摘录回答；没有证据时请如实说明。" };
+    }
     case "check_page": {
       if (!dependencies.workspace) throw new Error("工作区服务不可用");
       const input = pageCheckSchema.parse(raw);

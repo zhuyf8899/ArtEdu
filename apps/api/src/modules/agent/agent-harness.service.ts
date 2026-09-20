@@ -14,6 +14,7 @@ import { StudioService } from "../studio/studio.service";
 import { CreationStorageService } from "../creation-storage/creation-storage.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
 import { GenerationService } from "../generation/generation.service";
+import { RagService } from "../rag/rag.service";
 
 const scenarioInstruction = {
   chat: "回答用户的问题并给出清晰、可靠的学习或创作建议。除非用户明确切换到图像、图案、文档或网页创作能力，否则不要声称已生成图片、文件或其他产物。",
@@ -46,6 +47,7 @@ const toolUsePolicy = [
   "你是 ArtEdu 平台的 AI 设计助教。",
   "先根据用户输入和当前对话独立完成你能完成的分析、写作与设计建议；不要为了显得主动而搜索。",
   "只有用户明确询问平台课程、课时、案例、工作流、学习进度或某个具体平台内容时，才调用对应工具获取事实。",
+  "用户询问某门课程课件中的概念、定义、步骤或练习时，先用 list_courses 或 search_platform 确认课程 ID，再调用 search_course_knowledge。只能依据该工具返回的资料名、页码和摘录作答；没有证据时明确说明，不得补写课件内容。",
   "不得凭记忆编造课程、案例、作者、工作流、链接或执行结果。",
   "需求不明确时先提出最少必要的澄清问题或基于明确假设作答；不要把搜索当作默认动作。",
   "成果草稿可以直接保存；启动工作流仍必须先取得用户明确确认。",
@@ -122,6 +124,7 @@ export class AgentHarnessService {
     private readonly creationStorage: CreationStorageService,
     private readonly workspace: AgentWorkspaceService,
     private readonly generation: GenerationService,
+    private readonly rag: RagService,
   ) {}
 
   async execute(actor: Actor, runId: string, input: ExecuteAgentRunInput, hooks: AgentHarnessHooks = {}) {
@@ -231,7 +234,7 @@ export class AgentHarnessService {
                     });
                     return { ...searchResult, externalContentNotice: externalWebContentNotice };
                   }
-                  const output = await executePlatformTool(call, context, { actor, runId, agents: this.agents, database: this.database, studio: this.studio, creationStorage: this.creationStorage, workspace: this.workspace, generation: this.generation });
+                  const output = await executePlatformTool(call, context, { actor, runId, agents: this.agents, database: this.database, studio: this.studio, creationStorage: this.creationStorage, workspace: this.workspace, generation: this.generation, rag: this.rag });
                   await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: call.function.arguments }, output as Record<string, unknown>);
                   return output;
                 }

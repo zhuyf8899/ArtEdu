@@ -13,10 +13,11 @@ import {
   workflowUpdateSchema,
   workflowVersionInputSchema,
   workInputSchema,
+  toolDirectoryLinkSchema,
 } from "./studio.contracts";
 import type {
   CatalogQuery, WorkflowInput, WorkflowRunInput, WorkflowRunProgressInput,
-  WorkflowVersionInput, WorkInput, ReportInput, WorkflowRunExecuteInput,
+  WorkflowVersionInput, WorkInput, ReportInput, WorkflowRunExecuteInput, ToolDirectoryLinkInput,
 } from "./studio.contracts";
 import { StudioService } from "./studio.service";
 import { caseUploadPolicy } from "../../common/upload-policy";
@@ -27,6 +28,14 @@ export class StudioController {
 
   @Get("work-upload-policy")
   getUploadPolicy() { return caseUploadPolicy(); }
+
+  @Get("tool-directory-links")
+  listToolDirectoryLinks() { return this.studio.listToolDirectoryLinks(); }
+
+  @Post("admin/tool-directory-links")
+  async createToolDirectoryLink(@Req() request: FastifyRequest, @Body() body: unknown) {
+    return this.studio.createToolDirectoryLink(await this.auth.getActor(request), parseInput(toolDirectoryLinkSchema, body) as ToolDirectoryLinkInput);
+  }
 
   @Get("workflows")
   listWorkflows(@Query() query: unknown) {

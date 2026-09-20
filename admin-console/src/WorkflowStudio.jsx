@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, LinkSimple, Path, Play, Plus, SpinnerGap, Wrench } from "@phosphor-icons/react";
 import "@xyflow/react/dist/style.css";
-import { executeWorkflowRun, getWorkflow, getWorkflows, startWorkflowRun } from "./services/adminApi.js";
+import { createToolDirectoryLink, executeWorkflowRun, getToolDirectoryLinks, getWorkflow, getWorkflows, startWorkflowRun } from "./services/adminApi.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
 const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", text_encode: "#b268ff", skill: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b" };
@@ -20,18 +20,23 @@ function GraphNode({ data }) {
 const nodeTypes = Object.fromEntries(Object.keys(nodeStyle).map((type) => [type, GraphNode]));
 
 const TOOL_DIRECTORY = [
-  { group: "通用设计工具", items: [
+  { group: "界面与版式", items: [
     { name: "Figma", detail: "协作界面与原型设计", href: "https://www.figma.com/" },
     { name: "Canva", detail: "版式、海报与演示设计", href: "https://www.canva.com/" },
     { name: "Photopea", detail: "浏览器内图片编辑", href: "https://www.photopea.com/" },
   ] },
-  { group: "平台与自有工具", items: [
+  { group: "灵感与素材", items: [
+    { name: "Behance", detail: "查看设计作品与案例", href: "https://www.behance.net/" },
+    { name: "Unsplash", detail: "寻找可用视觉素材", href: "https://unsplash.com/" },
+  ] },
+  { group: "平台工具", items: [
     { name: "AI 创作助手", detail: "生成图像、网页或文档草稿", href: "/create", internal: true },
     { name: "案例社区", detail: "查看优秀案例与复用方法", href: "/community", internal: true },
+    { name: "课程中心", detail: "学习课程与阅读课件", href: "/learning", internal: true },
   ] },
 ];
 
-export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false }) {
+export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false, canManageToolDirectory = false }) {
   const [workflows, setWorkflows] = useState([]);
   const [selected, setSelected] = useState(null);
   const [run, setRun] = useState(null);
@@ -71,11 +76,27 @@ export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false
       <WorkflowAdmin showToast={onNotice} canPublish={canPublish} />
     </Suspense>
   </div>;
-  return <section className="workflow-catalog"><header className="workflow-catalog__toolbar"><div><p>// CREATE AND LEARN</p><h2>创建或使用节点工作流</h2><span>登录用户都可以搭建自己的节点图，保存为个人草稿版本。</span></div><button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button></header><ToolDirectory />{workflows.map((workflow, index) => <article key={workflow.id}><div className={`workflow-catalog__cover workflow-catalog__cover--${index % 3}`}><FlowArrow size={36} weight="thin" /><span>{workflow.stepCount ?? "—"} NODES</span></div><div><small>{workflow.category}</small><h3>{workflow.name}</h3><p>{workflow.description}</p><button disabled={loading} onClick={() => open(workflow)}>打开节点画布 <ArrowRight size={16} weight="bold" /></button></div></article>)}{!workflows.length && <div className="empty-state"><Path size={32} /><strong>暂时没有已发布的工作流</strong><span>可以先创建自己的节点工作流，保存为草稿版本。</span></div>}</section>;
+  return <section className="workflow-catalog"><header className="workflow-catalog__toolbar"><div><p>// CREATE AND LEARN</p><h2>创建或使用节点工作流</h2><span>登录用户都可以搭建自己的节点图，保存为个人草稿版本。</span></div><button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button></header><ToolDirectory canManage={canManageToolDirectory} onNotice={onNotice} />{workflows.map((workflow, index) => <article key={workflow.id}><div className={`workflow-catalog__cover workflow-catalog__cover--${index % 3}`}><FlowArrow size={36} weight="thin" /><span>{workflow.stepCount ?? "—"} NODES</span></div><div><small>{workflow.category}</small><h3>{workflow.name}</h3><p>{workflow.description}</p><button disabled={loading} onClick={() => open(workflow)}>打开节点画布 <ArrowRight size={16} weight="bold" /></button></div></article>)}{!workflows.length && <div className="empty-state"><Path size={32} /><strong>暂时没有已发布的工作流</strong><span>可以先创建自己的节点工作流，保存为草稿版本。</span></div>}</section>;
 }
 
-function ToolDirectory() {
-  return <section className="tool-directory" aria-labelledby="tool-directory-title"><header><div><p>// DESIGN TOOLBOX</p><h3 id="tool-directory-title"><Wrench size={18} weight="bold" /> 设计工具入口</h3><span>工具在新窗口打开；平台功能保留在当前站内继续使用。</span></div></header><div className="tool-directory__groups">{TOOL_DIRECTORY.map(({ group, items }) => <div key={group}><strong>{group}</strong>{items.map((tool) => <a key={tool.name} href={tool.href} target={tool.internal ? undefined : "_blank"} rel={tool.internal ? undefined : "noreferrer"}><span><b>{tool.name}</b><small>{tool.detail}</small></span><LinkSimple size={17} weight="bold" /></a>)}</div>)}</div></section>;
+function ToolDirectory({ canManage, onNotice }) {
+  const [customLinks, setCustomLinks] = useState([]);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ category: "", name: "", detail: "", href: "https://" });
+
+  useEffect(() => { getToolDirectoryLinks().then((payload) => setCustomLinks(payload.items ?? [])).catch((error) => onNotice(error.message)); }, [onNotice]);
+  const groups = useMemo(() => {
+    const merged = new Map(TOOL_DIRECTORY.map(({ group, items }) => [group, [...items]]));
+    customLinks.forEach((item) => merged.set(item.category, [...(merged.get(item.category) ?? []), item]));
+    return [...merged.entries()].map(([group, items]) => ({ group, items }));
+  }, [customLinks]);
+  const submit = async (event) => {
+    event.preventDefault(); setSaving(true);
+    try { const item = await createToolDirectoryLink(form); setCustomLinks((current) => [...current, item]); setEditorOpen(false); setForm({ category: "", name: "", detail: "", href: "https://" }); onNotice("工具栏目已添加，所有登录用户现在都能看到。"); }
+    catch (error) { onNotice(error.message); } finally { setSaving(false); }
+  };
+  return <section className="tool-directory" aria-labelledby="tool-directory-title"><header><div><p>// DESIGN TOOLBOX</p><h3 id="tool-directory-title"><Wrench size={18} weight="bold" /> 设计工具入口</h3><span>按栏目浏览工具；外部网站在新窗口打开，平台功能留在当前站内。</span></div>{canManage && <button className="outline-button tool-directory__manage" onClick={() => setEditorOpen((open) => !open)}><Plus size={16} weight="bold" /> 添加栏目链接</button>}</header>{editorOpen && <form className="tool-directory__editor" onSubmit={submit}><label>栏目名称<input required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="例如：三维与动效" /></label><label>工具名称<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="例如：Blender" /></label><label>用途说明<input required value={form.detail} onChange={(event) => setForm({ ...form, detail: event.target.value })} placeholder="一句话说明使用场景" /></label><label>网址<input required type="url" value={form.href} onChange={(event) => setForm({ ...form, href: event.target.value })} /></label><button className="primary-button" disabled={saving}>{saving ? "正在保存…" : "保存并发布入口"}</button></form>}<div className="tool-directory__groups">{groups.map(({ group, items }) => <div key={group}><strong>{group}</strong>{items.map((tool) => <a key={tool.id ?? tool.name} href={tool.href} target={tool.internal ? undefined : "_blank"} rel={tool.internal ? undefined : "noopener noreferrer"}><span><b>{tool.name}</b><small>{tool.detail}</small></span><LinkSimple size={17} weight="bold" /></a>)}</div>)}</div></section>;
 }
 
 function WorkflowRunner({ selected, run, loading, onBack, onStart, onExecute }) {

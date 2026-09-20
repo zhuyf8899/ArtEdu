@@ -21,7 +21,7 @@ import type {
   WorkflowRunProgressInput,
   WorkflowRunExecuteInput,
   WorkflowVersionInput,
-  WorkInput, ReportInput,
+  WorkInput, ReportInput, ToolDirectoryLinkInput,
 } from "./studio.contracts";
 
 interface WorkRow {
@@ -51,6 +51,24 @@ export class StudioService {
     private readonly auth: AuthService,
     private readonly generation?: GenerationService,
   ) {}
+
+  async listToolDirectoryLinks() {
+    const result = await this.database.query<{ id: string; category: string; name: string; detail: string; href: string; sort_order: number }>(
+      "SELECT id,category,name,detail,href,sort_order FROM tool_directory_links WHERE status='active' ORDER BY category,sort_order,created_at",
+    );
+    return { items: result.rows.map((row) => ({ id: row.id, category: row.category, name: row.name, detail: row.detail, href: row.href, sortOrder: row.sort_order })) };
+  }
+
+  async createToolDirectoryLink(actor: Actor, input: ToolDirectoryLinkInput) {
+    if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可以添加设计工具栏目");
+    const id = `tool-link-${randomUUID()}`;
+    const order = await this.database.query<{ next_order: number }>("SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM tool_directory_links WHERE category=$1", [input.category]);
+    await this.database.query(
+      "INSERT INTO tool_directory_links (id,category,name,detail,href,sort_order,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+      [id, input.category, input.name, input.detail, input.href, order.rows[0]?.next_order ?? 1, actor.id],
+    );
+    return { id, ...input, sortOrder: order.rows[0]?.next_order ?? 1 };
+  }
 
   async listWorkflows(query: CatalogQuery) {
     const values: unknown[] = [];
