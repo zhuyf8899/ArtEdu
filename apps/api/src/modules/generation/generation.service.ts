@@ -10,6 +10,7 @@ import type { ModelMessage, ModelResult } from "./model-adapter";
 import { ModelRegistry } from "./model-registry";
 import { OfficeExportService, type OfficeFormat } from "./office-export.service";
 import { DocumentContentError, documentMarkdown, documentPrompt, officeFormatSchema, parseDocumentContent, type DocumentContent } from "./document-content";
+import { imageGenerationParametersSchema } from "./generation.contracts";
 import { assertPdfAvailable, PdfExportError } from "./pdf-export";
 
 interface QuotaRow {
@@ -105,6 +106,9 @@ export class GenerationService {
         ...(input.context ?? []),
         { role: "user", content: input.prompt },
       ];
+      const imageOptions = ["image", "pattern"].includes(input.jobType)
+        ? imageGenerationParametersSchema.parse(input.parameters)
+        : undefined;
       const invokeModel = (nextMessages: ModelMessage[]) => adapter.execute({
         jobType: input.jobType,
         modelConfigId: input.modelConfigId,
@@ -116,7 +120,8 @@ export class GenerationService {
           // 文档要写满整篇；问答比普通创作需要更多余地，否则长答案会被截断。
           maxTokens: input.jobType === "document" ? 6500 : input.jobType === "chat" ? 2200 : 1200,
           ...(input.jobType === "document" ? { responseFormat: "json_object" as const } : {}),
-          providerOptions: { thinking: { type: "disabled" } },
+          // 所有图片 API 统一接收标准字段；文本模型仍保留其关闭 thinking 的参数。
+          providerOptions: imageOptions ?? { thinking: { type: "disabled" } },
         },
       });
       let output = await invokeModel(messages);

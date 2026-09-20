@@ -1,19 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, Handle, MarkerType, MiniMap, Position, ReactFlow } from "@xyflow/react";
-import { ArrowLeft, ArrowRight, DownloadSimple, FloppyDisk, FlowArrow, Plus, UploadSimple, X } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, DownloadSimple, FloppyDisk, FlowArrow, MagnifyingGlass, Plus, UploadSimple, X } from "@phosphor-icons/react";
 import "@xyflow/react/dist/style.css";
 import { createWorkflow, createWorkflowVersion, getAdminWorkflow, getAdminWorkflows, updateWorkflow } from "./services/adminApi.js";
 import { shortId } from "./randomId.js";
 
 const blankWorkflow = { name: "", description: "", category: "视觉创作", entryType: "workbench" };
 const palette = {
-  input: { title: "输入", hint: "接收文字、图片或参数", color: "#4b87ff" },
-  prompt: { title: "提示词", hint: "整理创作指令", color: "#b268ff" },
-  skill: { title: "内置 Skill", hint: "封装专业方法与参数预设", color: "#d6b335" },
-  model: { title: "模型", hint: "调用图像/文本能力", color: "#ff8b4b" },
-  preview: { title: "预览输出", hint: "展示并保存结果", color: "#42b883" },
-  note: { title: "说明", hint: "补充教学或操作说明", color: "#78859b" },
+  input: { title: "创作输入", hint: "接收文字、图片或参数", color: "#4b87ff", group: "输入与素材" },
+  load_image: { title: "加载图片", hint: "把本地或课程图片带入画布", color: "#4b87ff", group: "输入与素材" },
+  prompt: { title: "提示词", hint: "整理创作指令", color: "#b268ff", group: "提示与教学" },
+  text_encode: { title: "文本编码", hint: "将正负提示词编码为条件", color: "#b268ff", group: "提示与教学" },
+  skill: { title: "内置 Skill", hint: "封装专业方法与参数预设", color: "#d6b335", group: "提示与教学" },
+  load_checkpoint: { title: "加载模型", hint: "选择审核过的基础模型", color: "#ff8b4b", group: "模型与控制" },
+  lora: { title: "加载 LoRA", hint: "叠加受控风格或能力", color: "#ff8b4b", group: "模型与控制" },
+  controlnet: { title: "ControlNet", hint: "以线稿、姿态或深度控制生成", color: "#ff8b4b", group: "模型与控制" },
+  model: { title: "模型调用", hint: "调用图像或文本能力", color: "#ff8b4b", group: "模型与控制" },
+  empty_latent: { title: "空 Latent", hint: "设定分辨率与批次数", color: "#d6b335", group: "采样与处理" },
+  ksampler: { title: "KSampler", hint: "配置采样器、步数、CFG 与 Seed", color: "#d6b335", group: "采样与处理" },
+  vae_decode: { title: "VAE 解码", hint: "将 Latent 转为图片", color: "#d6b335", group: "采样与处理" },
+  upscale: { title: "放大修复", hint: "将结果放大并细化", color: "#d6b335", group: "采样与处理" },
+  preview: { title: "预览输出", hint: "展示中间或最终结果", color: "#42b883", group: "输出与说明" },
+  save_image: { title: "保存图片", hint: "归档可下载的最终产物", color: "#42b883", group: "输出与说明" },
+  note: { title: "说明", hint: "补充教学或操作说明", color: "#78859b", group: "输出与说明" },
 };
+const paletteGroups = [...new Set(Object.values(palette).map((item) => item.group))];
 const draftKey = (id) => `artedu.workflow.graph-draft.${id}`;
 // crypto.randomUUID 在明文 HTTP 的不安全上下文里不存在，统一走 randomId。
 const newId = shortId;
@@ -103,9 +114,9 @@ function workflowWarnings(definition) {
   const outgoing = new Set(definition.edges.map((edge) => edge.source));
   const warnings = [];
   if (!definition.nodes.some((node) => node.type === "input")) warnings.push("建议添加输入节点，明确用户从哪里开始");
-  if (!definition.nodes.some((node) => node.type === "preview")) warnings.push("建议添加预览输出节点，明确成果如何结束");
+  if (!definition.nodes.some((node) => node.type === "preview" || node.type === "save_image")) warnings.push("建议添加预览或保存图片节点，明确成果如何结束");
   if (definition.nodes.some((node) => !incoming.has(node.id) && node.type !== "input")) warnings.push("存在未接入的节点，请确认它是独立说明还是遗漏了连线");
-  if (definition.nodes.some((node) => !outgoing.has(node.id) && node.type !== "preview" && node.type !== "note")) warnings.push("存在没有输出连线的处理节点");
+  if (definition.nodes.some((node) => !outgoing.has(node.id) && node.type !== "preview" && node.type !== "save_image" && node.type !== "note")) warnings.push("存在没有输出连线的处理节点");
   return [...new Set(warnings)];
 }
 
@@ -123,7 +134,7 @@ function FlowNode({ data }) {
   </div>;
 }
 
-const nodeTypes = { input: FlowNode, prompt: FlowNode, skill: FlowNode, model: FlowNode, preview: FlowNode, note: FlowNode };
+const nodeTypes = Object.fromEntries(Object.keys(palette).map((type) => [type, FlowNode]));
 
 export function WorkflowAdmin({ showToast, canPublish = true }) {
   const [items, setItems] = useState([]);
@@ -218,12 +229,15 @@ function WorkflowCanvas({ editor, selected, loading, canPublish, onBack, onChang
   const [selectedId, setSelectedId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [preview, setPreview] = useState("");
+  const [nodeQuery, setNodeQuery] = useState("");
+  const [nodeGroup, setNodeGroup] = useState("全部");
   const nodes = useMemo(() => editor.definition.nodes.map((node) => ({ ...node, data: { ...node.data, nodeType: node.type } })), [editor.definition.nodes]);
   const edges = useMemo(() => editor.definition.edges.map((edge) => ({ ...edge, markerEnd: { type: MarkerType.ArrowClosed } })), [editor.definition.edges]);
   const selectedNode = editor.definition.nodes.find((node) => node.id === selectedId);
   const selectedEdge = editor.definition.edges.find((edge) => edge.id === selectedEdgeId);
   const issues = workflowIssues(editor.definition);
   const warnings = workflowWarnings(editor.definition);
+  const visiblePalette = Object.entries(palette).filter(([type, meta]) => (nodeGroup === "全部" || meta.group === nodeGroup) && `${type} ${meta.title} ${meta.hint}`.toLowerCase().includes(nodeQuery.trim().toLowerCase()));
 
   const commit = (next) => onDefinition({ ...editor.definition, ...next });
   const addNode = (type) => {
@@ -252,7 +266,7 @@ function WorkflowCanvas({ editor, selected, loading, canPublish, onBack, onChang
     <button className="learning-back" onClick={onBack}><ArrowLeft size={16} weight="bold" /> 返回工作流列表</button>
     <section className="workflow-canvas-topbar"><div><p>// COMFY-STYLE WORKFLOW BUILDER · {selected.status === "published" ? "NEW VERSION" : "DRAFT"}</p><h1>{editor.name || "未命名节点工作流"}</h1><span>拖动画布、连线编排；编辑状态仅保存在本机浏览器，保存后才写入数据库。</span></div><div className="workflow-editor-actions"><label className="outline-button"><UploadSimple size={16} /> 导入 JSON<input hidden type="file" accept="application/json,.json" onChange={onImport} /></label><button className="outline-button" onClick={onExport}><DownloadSimple size={16} /> 导出 JSON</button></div></section>
     <section className="workflow-canvas-shell">
-      <aside className="workflow-node-palette"><p>// NODE LIBRARY</p><h2>节点库</h2><span>点击添加到画布</span>{Object.entries(palette).map(([type, meta]) => <button key={type} onClick={() => addNode(type)} style={{ "--node-color": meta.color }}><i><FlowArrow size={16} /></i><strong>{meta.title}</strong><small>{meta.hint}</small><Plus size={15} /></button>)}<div className="workflow-canvas-tip"><strong>连接规则</strong><span>从右侧输出点拖至下一节点左侧输入点，可形成分支与汇合。</span></div></aside>
+      <aside className="workflow-node-palette"><p>// NODE LIBRARY</p><h2>节点库</h2><span>按类型搜索，点击添加到画布</span><label className="workflow-node-search"><MagnifyingGlass size={15} /><input value={nodeQuery} onChange={(event) => setNodeQuery(event.target.value)} placeholder="搜索节点，例如 KSampler" /></label><div className="workflow-node-groups"><button className={nodeGroup === "全部" ? "is-active" : ""} onClick={() => setNodeGroup("全部")}>全部</button>{paletteGroups.map((group) => <button key={group} className={nodeGroup === group ? "is-active" : ""} onClick={() => setNodeGroup(group)}>{group}</button>)}</div><div className="workflow-node-list">{visiblePalette.map(([type, meta]) => <button key={type} onClick={() => addNode(type)} style={{ "--node-color": meta.color }}><i><FlowArrow size={16} /></i><span><em>{meta.group}</em><strong>{meta.title}</strong><small>{meta.hint}</small></span><Plus size={15} /></button>)}{!visiblePalette.length && <div className="workflow-node-empty">没有匹配的节点</div>}</div><div className="workflow-canvas-tip"><strong>连接规则</strong><span>当前画布会校验 DAG 结构；端口类型与实际 GPU 执行会随 Worker 协议接入。</span></div></aside>
       <div className="workflow-flow-wrap"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} defaultViewport={editor.definition.viewport} fitView nodesDraggable nodesConnectable elementsSelectable panOnDrag isValidConnection={isValidConnection} onNodesChange={(changes) => commit({ nodes: applyNodeChanges(changes, editor.definition.nodes) })} onEdgesChange={(changes) => commit({ edges: applyEdgeChanges(changes, editor.definition.edges) })} onConnect={connect} onNodeClick={(_, node) => { setSelectedId(node.id); setSelectedEdgeId(null); }} onEdgeClick={(_, edge) => { setSelectedEdgeId(edge.id); setSelectedId(null); }} onPaneClick={() => { setSelectedId(null); setSelectedEdgeId(null); }} onMoveEnd={(_, viewport) => commit({ viewport })}><Background color="#374151" gap={18} size={1} /><MiniMap pannable zoomable nodeColor={(node) => palette[node.type]?.color || "#78859b"} /><Controls /></ReactFlow>{preview && <div className="workflow-preview-toast"><strong>本地结构预览</strong><span>{preview}</span><button onClick={() => setPreview("")}><X size={15} /></button></div>}</div>
       <aside className="workflow-inspector"><p>// INSPECTOR</p><h2>{selectedNode ? "节点配置" : selectedEdge ? "连线配置" : "工作流配置"}</h2>{selectedNode ? <div className="workflow-form"><div className="node-type-badge" style={{ "--node-color": palette[selectedNode.type]?.color }}>{palette[selectedNode.type]?.title}</div><label>节点名称<input value={selectedNode.data.label || ""} onChange={(event) => updateNode("label", event.target.value)} /></label><label>节点说明<textarea value={selectedNode.data.description || ""} onChange={(event) => updateNode("description", event.target.value)} /></label><label>默认值 / 参数<textarea value={selectedNode.data.value || ""} onChange={(event) => updateNode("value", event.target.value)} placeholder={selectedNode.type === "skill" ? "例如：提取纹样骨架；保持四方连续；应用低饱和配色" : "例如：1024×1024、写实摄影、低饱和"} /></label><label>预计用时<input type="number" min="0" max="1440" value={selectedNode.data.estimatedMinutes ?? 10} onChange={(event) => updateNode("estimatedMinutes", Number(event.target.value))} /><small>用于学生端步骤提示，不影响图结构。</small></label><button className="outline-button" onClick={duplicateNode}><Plus size={15} /> 复制节点</button><button className="danger-text-button" onClick={deleteNode}><X size={15} /> 删除节点</button></div> : selectedEdge ? <div className="workflow-edge-inspector"><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.source)?.data?.label || selectedEdge.source}</strong><FlowArrow size={18} weight="bold" /><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.target)?.data?.label || selectedEdge.target}</strong><span>这条连线代表数据从上游节点传递到下游节点。</span><button className="danger-text-button" onClick={deleteEdge}><X size={15} /> 删除连线</button></div> : <div className="workflow-form"><label>工作流名称<input value={editor.name} onChange={(event) => onChange("name", event.target.value)} /></label><label>工作流描述<textarea value={editor.description} onChange={(event) => onChange("description", event.target.value)} /></label><label>分类<input value={editor.category} onChange={(event) => onChange("category", event.target.value)} /></label><label>入口<select value={editor.entryType} onChange={(event) => onChange("entryType", event.target.value)}><option value="chat">教学对话</option><option value="workbench">设计工作台</option><option value="external_tool">外部工具</option></select></label><label>提示模板（可选）<textarea value={editor.promptTemplate} onChange={(event) => onChange("promptTemplate", event.target.value)} placeholder="供未来模型节点调用的全局提示词" /></label></div>}<div className={`workflow-graph-check ${issues.length ? "is-error" : ""}`}><strong>{issues.length ? "图结构待修复" : "图结构有效"}</strong><span>{issues[0] || `${editor.definition.nodes.length} 个节点 · ${editor.definition.edges.length} 条连接`}</span>{!issues.length && warnings[0] && <em>{warnings[0]}</em>}</div></aside>
     </section>

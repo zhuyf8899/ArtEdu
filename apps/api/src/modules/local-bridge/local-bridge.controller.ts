@@ -9,7 +9,7 @@ import { LocalBridgeService } from "./local-bridge.service";
 @Controller("local-bridge")
 export class LocalBridgeController {
   constructor(private readonly service: LocalBridgeService, private readonly auth: AuthService) {}
-  @Post("pair") async pair(@Req() request: FastifyRequest, @Body() body: unknown) { const input = parseInput(pairBridgeSchema, body) as { displayName: string }; return this.service.pair(await this.auth.getActor(request), input.displayName); }
+  @Post("pair") async pair(@Req() request: FastifyRequest, @Body() body: unknown) { const input = parseInput(pairBridgeSchema, body) as { displayName: string; tokenDays: number }; return this.service.pair(await this.auth.getActor(request), input.displayName, input.tokenDays); }
   @Get("status") async status(@Req() request: FastifyRequest) { return this.service.status(await this.auth.getActor(request)); }
   @Delete(":deviceId") async revoke(@Req() request: FastifyRequest, @Param("deviceId") deviceId: string) { return this.service.revoke(await this.auth.getActor(request), deviceId); }
   @Public() @Post("heartbeat") async heartbeat(@Req() request: FastifyRequest) { return this.service.heartbeat(request.headers.authorization); }

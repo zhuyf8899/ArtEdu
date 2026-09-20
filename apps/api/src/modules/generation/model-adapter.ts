@@ -96,7 +96,7 @@ export interface ModelStreamDelta {
  * 供应商协议。默认 openai-chat（chat/completions）；
  * 图像/视频等不兼容 OpenAI 文本协议的供应商使用各自的专用适配器。
  */
-export type ModelProtocol = "openai-chat" | "modelscope-image";
+export type ModelProtocol = "openai-chat" | "openai-image" | "modelscope-image";
 
 export interface ModelProviderConfig {
   id: string;

@@ -10,12 +10,14 @@ interface DeviceRow { id: string; user_id: string; status: "active" | "revoked";
 @Injectable()
 export class LocalBridgeService {
   constructor(private readonly database: DatabaseService, private readonly agents: AgentService) {}
-  async pair(actor: Actor, displayName: string) {
+  async pair(actor: Actor, displayName: string, requestedTokenDays: number) {
     const token = randomBytes(32).toString("base64url");
     const deviceId = `bridge-${randomUUID()}`;
-    const expiresAt = new Date(Date.now() + getEnvironment().localBridgeTokenDays * 24 * 60 * 60 * 1000);
+    // 用户能缩短自己的令牌，但不能用前端参数绕过部署方设置的最长有效期。
+    const tokenDays = Math.min(requestedTokenDays, getEnvironment().localBridgeTokenDays);
+    const expiresAt = new Date(Date.now() + tokenDays * 24 * 60 * 60 * 1000);
     await this.database.query(`INSERT INTO local_bridge_devices (id,user_id,display_name,token_hash,expires_at) VALUES ($1,$2,$3,$4,$5)`, [deviceId, actor.id, displayName, this.hash(token), expiresAt]);
-    return { deviceId, token, warning: "配对令牌仅本次返回；请立即交给本地 Bridge，勿保存到云端或截图分享。" };
+    return { deviceId, token, tokenDays, expiresAt: expiresAt.toISOString(), warning: "配对令牌仅本次返回；请立即交给本地 Bridge，勿保存到云端或截图分享。" };
   }
   async claim(authorization?: string) {
     const device = await this.authenticate(authorization);

@@ -40,6 +40,7 @@ export const getAdminReviews = () => request("/admin/reviews");
 export const getAdminDashboard = () => request("/admin/dashboard");
 export const getApiHealth = () => request("/health");
 export const getCurrentUser = () => request("/auth/me");
+export const pairBridgeDevice = (displayName, tokenDays) => request("/local-bridge/pair", { method: "POST", body: JSON.stringify({ displayName, tokenDays }) });
 export const getBridgeDevices = () => request("/local-bridge/status");
 export const revokeBridgeDevice = (deviceId) => request(`/local-bridge/${encodeURIComponent(deviceId)}`, { method: "DELETE" });
 export const loginLocal = (username, password) => request("/auth/login", {

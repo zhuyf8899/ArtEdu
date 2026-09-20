@@ -9,7 +9,7 @@
 | portal | `/portal` | 首页聚合、全局搜索 | 推荐排序、搜索分析 |
 | courses | `/courses`、`/me/learning-progress` | 已实现第一阶段 | 资源上传、成果绑定查询 |
 | learning | `/me/learning-space` | 已实现 | 学习首页聚合、任务与笔记管理 |
-| workflows | `/workflows`、`/workflow-runs` | 已实现第一阶段 | 模型步骤执行、成果自动采集 |
+| workflows | `/workflows`、`/workflow-runs` | 已实现教学画布与人工进度 | GPU Worker 节点执行、成果自动采集；执行层通过可替换 Adapter 接入 |
 | works | `/works`、`/me/works` | 已实现第一阶段 | 对象存储直传、媒体转码 |
 | admin | `/admin` | 用户、额度、作品审核、课程 CMS 与发布审核 | 资源上传、模型配置管理 |
 | generation-jobs | `/generation-jobs` | 排队和查询 | 模型执行、输出文件、取消与重试 |
@@ -27,6 +27,8 @@
 | GET | `/api/admin/agent-alerts` | 管理员读取未处理的关键词安全告警。 |
 
 ## Local Model Bridge
+
+Local Bridge 是本机 GPU Worker 的安全基础：Worker 主动领取任务，门户服务器不反向连接电脑，也不保存模型密钥。当前任务领取仅覆盖 Agent；GPU 工作流任务协议见 [GPU Worker 接入文档](gpu-worker-integration.md)。
 
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |

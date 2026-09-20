@@ -1,6 +1,19 @@
 import { z } from "zod";
 import { officeFormatSchema } from "./document-content";
 
+/**
+ * 图片能力的公共输入。网页、工作流节点和任意供应商适配器都只认识这套字段；
+ * 供应商不支持的字段由适配器明确忽略，而不是把私有 API 参数暴露给浏览器。
+ */
+export const imageGenerationParametersSchema = z.object({
+  size: z.string().regex(/^\d{3,4}x\d{3,4}$/).optional(),
+  aspectRatio: z.enum(["1:1", "4:3", "3:4", "16:9", "9:16"]).optional(),
+  imageCount: z.coerce.number().int().min(1).max(4).optional(),
+  seed: z.coerce.number().int().min(0).max(4_294_967_295).optional(),
+  negativePrompt: z.string().trim().max(1500).optional(),
+  style: z.string().trim().max(120).optional(),
+});
+
 export const createGenerationJobSchema = z.object({
   // chat 是纯文本问答（默认能力），其余为产物类创作。
   jobType: z.enum(["chat", "image", "video", "webpage", "pattern", "document", "knowledge_graph"]),

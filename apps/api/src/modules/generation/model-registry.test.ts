@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { rm } from "node:fs/promises";
+import path from "node:path";
 import test from "node:test";
+import { getEnvironment } from "../../common/environment";
 import { ModelRegistry, readModelProviderConfigs } from "./model-registry";
 
 const providers = JSON.stringify([{ id: "school", baseUrl: "https://model.example.edu/v1", model: "chat-v1", capabilities: ["chat"], apiKeyEnv: "SCHOOL_KEY" }]);
@@ -55,6 +58,39 @@ test("问答路由到文本模型，图像/图案路由到内置图像通道", (
   } finally {
     if (originalProviders === undefined) delete process.env.MODEL_PROVIDERS_JSON;
     else process.env.MODEL_PROVIDERS_JSON = originalProviders;
+  }
+});
+
+test("OpenAI Images 兼容服务复用统一图片参数并将 base64 产物交给平台存储", async () => {
+  const saved = { providers: process.env.MODEL_PROVIDERS_JSON, key: process.env.IMAGE_KEY, fetch: globalThis.fetch };
+  let storageKey: string | undefined;
+  try {
+    process.env.MODEL_PROVIDERS_JSON = JSON.stringify([{
+      id: "image-api", baseUrl: "https://image.example.edu/v1", model: "image-v1", capabilities: ["image"],
+      apiKeyEnv: "IMAGE_KEY", timeoutMs: 5000, protocol: "openai-image",
+    }]);
+    process.env.IMAGE_KEY = "test-image-key";
+    let requestBody: Record<string, unknown> | undefined;
+    globalThis.fetch = (async (_input: unknown, init?: { body?: string }) => {
+      requestBody = JSON.parse(init?.body ?? "{}") as Record<string, unknown>;
+      return jsonResponse({ data: [{ b64_json: Buffer.from("test-image").toString("base64") }] });
+    }) as typeof fetch;
+    const result = await new ModelRegistry().getForJob({ jobType: "image" }).execute({
+      jobType: "image", prompt: "一朵花", jobId: "registry-image-test",
+      parameters: { providerOptions: { aspectRatio: "16:9", imageCount: 2, seed: 7 } },
+    });
+    storageKey = result.content;
+    assert.equal(result.kind, "asset");
+    assert.equal(requestBody?.size, "1536x864");
+    assert.equal(requestBody?.n, 2);
+    assert.equal(requestBody?.seed, 7);
+  } finally {
+    if (storageKey) await rm(path.resolve(getEnvironment().uploadRoot, storageKey), { force: true });
+    globalThis.fetch = saved.fetch;
+    if (saved.providers === undefined) delete process.env.MODEL_PROVIDERS_JSON;
+    else process.env.MODEL_PROVIDERS_JSON = saved.providers;
+    if (saved.key === undefined) delete process.env.IMAGE_KEY;
+    else process.env.IMAGE_KEY = saved.key;
   }
 });
 

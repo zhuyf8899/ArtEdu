@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import { ModelScopeImageAdapter } from "./modelscope-image.adapter";
+import { OpenAIImageAdapter } from "./openai-image.adapter";
 import { ModelHttpError, UNUSABLE_KEY_HTTP_STATUSES, describeProviderApiKeyEnvs, providerApiKeyEnvNames, resolveProviderApiKeys } from "./provider-api-keys";
 import type { ModelAdapter, ModelCapability, ModelInvocationOptions, ModelMessage, ModelProviderConfig, ModelRequest, ModelResult, ModelStreamDelta } from "./model-adapter";
 
@@ -16,7 +17,7 @@ const providerSchema = z.object({
   // Agent 可经历工具调用和视觉理解；三分钟是单次上游模型调用的硬上限。
   timeoutMs: z.coerce.number().int().min(1000).max(180000).default(30000),
   // 默认沿用 OpenAI 兼容的 chat/completions；图像等专用协议在此显式声明。
-  protocol: z.enum(["openai-chat", "modelscope-image"]).default("openai-chat"),
+  protocol: z.enum(["openai-chat", "openai-image", "modelscope-image"]).default("openai-chat"),
   // 内部通道（如平台内置图像生成）：只用于后端路由，不出现在前台模型列表。
   internal: z.boolean().default(false),
 });
@@ -319,9 +320,11 @@ export class ModelRegistry {
   constructor() {
     const configs = readModelProviderConfigs();
     this.configsById = new Map(configs.map((config) => [config.id, config]));
-    this.adapters = configs.map((config) => config.protocol === "modelscope-image"
-      ? new ModelScopeImageAdapter(config)
-      : new OpenAICompatibleAdapter(config));
+    this.adapters = configs.map((config) => {
+      if (config.protocol === "modelscope-image") return new ModelScopeImageAdapter(config);
+      if (config.protocol === "openai-image") return new OpenAIImageAdapter(config);
+      return new OpenAICompatibleAdapter(config);
+    });
   }
 
   list() {

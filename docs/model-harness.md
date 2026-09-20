@@ -35,6 +35,36 @@ MODEL_PROVIDERS_JSON=[{"id":"model-deepseek-v4-pro","baseUrl":"https://api.deeps
 MODELSCOPE_API=由部署环境的密钥管理服务注入
 ```
 
+### 统一图片 API 入口
+
+前端、工作流和 Agent **一律**调用平台的 `POST /api/generation-jobs/run`，不直接访问任何图片供应商，也不接触 API Key。图片请求共用 `jobType: "image" | "pattern"` 与以下标准 `parameters`：
+
+| 字段 | 含义 | 范围 |
+| --- | --- | --- |
+| `size` | 优先使用的像素尺寸 | `1024x1024` 形式 |
+| `aspectRatio` | 未指定 size 时的画幅 | `1:1`、`4:3`、`3:4`、`16:9`、`9:16` |
+| `imageCount` | 希望返回的数量 | 1–4（当前平台先归档首张） |
+| `seed` | 可复现种子 | 无符号 32 位整数 |
+| `negativePrompt` / `style` | 负面约束、风格 | 供应商支持时使用 |
+
+目前已有两种后端适配器：
+
+1. `modelscope-image`：魔搭异步任务 API，提交后轮询任务状态并下载图片。
+2. `openai-image`：调用 `{baseUrl}/images/generations`，兼容 `data[].url` 或 `data[].b64_json` 返回；适用于校内网关或采用该协议的云服务。
+
+新增供应商只需要增加一个服务端适配器；不要修改网页调用路径、工作流保存格式或把供应商私有字段透传到浏览器。示例：
+
+```env
+MODEL_PROVIDERS_JSON=[
+  {"id":"school-image-api","baseUrl":"https://image.example.edu/v1","model":"image-v1","capabilities":["image","pattern"],"apiKeyEnv":"IMAGE_API_KEY","timeoutMs":120000,"protocol":"openai-image","internal":true}
+]
+IMAGE_API_KEY=仅部署环境注入
+```
+
+### 与 ComfyUI 工作流的边界
+
+ComfyUI 的惯用调用链是提交完整工作流、获得任务 ID、通过 WebSocket 或轮询观察进度、最后从历史记录读取产物。ArtEdu 应保持相同的任务语义，但不把浏览器暴露给 ComfyUI：画布节点先被编译为平台的标准图片请求或受控的工作流模板，再由适配器提交给目标 API。这样 API 模式不需要下载模型；日后部署自托管 ComfyUI 时，只新增 `comfyui` 适配器并在服务端处理 `/prompt`、`/ws`、`/history/{id}`，用户界面和调用入口不变。
+
 调用链：`POST /v1/images/generations`（带 `X-ModelScope-Async-Mode: true`）拿 `task_id` → 轮询 `GET /v1/tasks/{task_id}`（带 `X-ModelScope-Task-Type: image_generation`）→ 下载 `output_images[0]` 写入 `UPLOAD_ROOT/generated/<jobId>/`。适配器返回 `kind: "asset"`，服务层登记 `generation_outputs`，前端通过 `/api/generation-jobs/:jobId/download` 内联展示（该响应为 `Content-Disposition: inline`，文档仍为 `attachment`）。
 
 两个必须同时满足的条件，缺一个首页就没有可用模型：

@@ -41,7 +41,8 @@ const graphPointSchema = z.object({
 
 const workflowNodeSchema = z.object({
   id: z.string().trim().min(1).max(80),
-  type: z.enum(["input", "prompt", "skill", "model", "preview", "note"]),
+  // 节点名是平台稳定的执行契约；执行器可按能力忽略未支持节点，但不得把未知节点当作模型调用。
+  type: z.enum(["input", "prompt", "skill", "model", "preview", "note", "load_checkpoint", "text_encode", "empty_latent", "ksampler", "vae_decode", "load_image", "save_image", "lora", "controlnet", "upscale"]),
   position: graphPointSchema,
   data: z.object({
     label: z.string().trim().min(1).max(160),

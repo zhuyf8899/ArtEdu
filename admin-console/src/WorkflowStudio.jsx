@@ -5,7 +5,7 @@ import "@xyflow/react/dist/style.css";
 import { getWorkflow, getWorkflows, startWorkflowRun, updateWorkflowRun } from "./services/adminApi.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
-const nodeStyle = { input: "#4b87ff", prompt: "#b268ff", skill: "#d6b335", model: "#ff8b4b", preview: "#42b883", note: "#78859b" };
+const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", text_encode: "#b268ff", skill: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b" };
 
 function GraphNode({ data }) {
   const color = nodeStyle[data.nodeType] || nodeStyle.note;
@@ -17,7 +17,7 @@ function GraphNode({ data }) {
   </div>;
 }
 
-const nodeTypes = { input: GraphNode, prompt: GraphNode, skill: GraphNode, model: GraphNode, preview: GraphNode, note: GraphNode };
+const nodeTypes = Object.fromEntries(Object.keys(nodeStyle).map((type) => [type, GraphNode]));
 
 const TOOL_DIRECTORY = [
   { group: "通用设计工具", items: [
