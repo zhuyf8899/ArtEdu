@@ -14,6 +14,32 @@ services:
       timeout: 5s
       retries: 12
 
+  # 自托管 embedding Provider：只供课程 RAG 调用；模型文件由部署脚本下载并校验。
+  embedding:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.embedding
+    image: artedu-embedding:latest
+    restart: unless-stopped
+    environment:
+      MODEL_DIR: /model
+      MODEL_NAME: ${RAG_EMBEDDING_MODEL:-bge-base-zh-v1.5}
+      MODEL_FILE: ${RAG_EMBEDDING_MODEL_FILE:-model_quantized.onnx}
+      TOKENIZER_FILE: tokenizer.json
+      POOLING: cls
+      MAX_TOKENS: ${RAG_EMBEDDING_MAX_TOKENS:-512}
+      MAX_BATCH: ${RAG_EMBEDDING_MAX_BATCH:-16}
+      ORT_THREADS: ${RAG_EMBEDDING_THREADS:-2}
+      EMBEDDING_API_KEY: ${RAG_EMBEDDING_API_KEY:?Set RAG_EMBEDDING_API_KEY in .env}
+    volumes:
+      - ${ARTEDU_MODEL_DIR:-./models}:/model:ro
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5).status==200 else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
   api:
     build:
       context: .
