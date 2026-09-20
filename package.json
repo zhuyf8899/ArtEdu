@@ -14,7 +14,7 @@
     "db:migrate": "cd apps/api && npm run db:migrate",
     "db:seed": "cd apps/api && npm run db:seed",
     "db:prepare": "npm run db:up && npm run db:migrate && npm run db:seed",
-    "check": "npm run check:api && npm run check:api:test && npm run check:web && npm run test:case-import && node --test scripts/reliability.test.mjs",
+    "check": "npm run check:api && npm run check:api:test && npm run check:web && npm run test:case-import && node --test scripts/reliability.test.mjs scripts/start-case-local.test.mjs",
     "test:case-import": "node --test scripts/import-community-cases.test.mjs",
     "check:runtime": "node scripts/check-runtime.mjs",
     "test:chat:live": "node scripts/verify-demo-chat.mjs",
