@@ -6,7 +6,7 @@ import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify
 import multipart from "@fastify/multipart";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
-import { caseUploadPolicy } from "./common/upload-policy";
+import { caseUploadPolicy, courseUploadPolicy } from "./common/upload-policy";
 import { AppModule } from "./app.module";
 import { getEnvironment } from "./common/environment";
 import { ApiExceptionFilter } from "./common/api-exception.filter";
@@ -14,7 +14,10 @@ import { apiRateLimitHook } from "./common/rate-limit";
 
 async function bootstrap() {
   const environment = getEnvironment();
-  caseUploadPolicy(); // Fail fast on invalid configured video limits.
+  // multipart 的全局上限必须覆盖所有允许的视频上传路由；具体路由仍以
+  // request.file({ limits }) + storePrivateUpload 的类型策略约束非视频为 10 MiB。
+  // 否则 Fastify 会在课程路由来得及按视频放宽前先返回 413。
+  const maxUploadBytes = Math.max(caseUploadPolicy().videoBytes, courseUploadPolicy().videoBytes);
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: environment.nodeEnv !== "test", bodyLimit: 1_048_576, genReqId: () => randomUUID() }),
@@ -31,7 +34,7 @@ async function bootstrap() {
   if (environment.fileUploadsEnabled) {
     await mkdir(environment.uploadRoot, { recursive: true, mode: 0o700 });
     await app.register(multipart, {
-      limits: { files: 1, fields: 0, parts: 1, fileSize: 10 * 1024 * 1024 },
+      limits: { files: 1, fields: 0, parts: 1, fileSize: maxUploadBytes },
       throwFileSizeLimit: true,
     });
   }
