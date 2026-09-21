@@ -294,6 +294,21 @@ export class CoursesService {
     return { items: result.rows.map((row) => this.mapCourse(row)) };
   }
 
+  /** “我的资源”只返回当前用户实际打开过的已发布课件，访问日志同时成为继续学习入口。 */
+  async getRecentResources(actor: Actor) {
+    const result = await this.database.query(`
+      SELECT DISTINCT ON (event.resource_id) event.resource_id AS "resourceId",resource.course_id AS "courseId",
+        resource.title,resource.resource_type AS "resourceType",course.title AS "courseTitle",
+        event.access_kind AS "accessKind",event.created_at AS "lastAccessedAt"
+      FROM course_resource_access_events event
+      JOIN course_resources resource ON resource.id=event.resource_id
+      JOIN courses course ON course.id=resource.course_id
+      WHERE event.user_id=$1 AND resource.status='published' AND course.status='published'
+      ORDER BY event.resource_id,event.created_at DESC
+    `, [actor.id]);
+    return { items: result.rows.sort((left: any, right: any) => new Date(right.lastAccessedAt).getTime() - new Date(left.lastAccessedAt).getTime()).slice(0, 12) };
+  }
+
   async listManaged(actor: Actor) {
     this.authService.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
     const admin = actor.roles.includes("admin");

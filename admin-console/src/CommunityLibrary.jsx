@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, Flag, Heart, ImageSquare, PaperPlaneTilt, Plus, SpinnerGap } from "@phosphor-icons/react";
 import { addWorkComment, getMyWorks, getWork, getWorkflows, getWorks, reportComment, reportWork, submitWork, toggleWorkReaction } from "./services/adminApi.js";
 import { CaseStoryEditor } from "./CaseStoryEditor.jsx";
@@ -17,6 +17,9 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   const [loading, setLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
+  // 轻量、可解释的本地排序：优先复用用户已点赞/收藏作品的学科、工具与方法，
+  // 新用户则退化为社区互动与发布时间，不需要画像上传或外部追踪。
+  const recommendations = useMemo(() => recommendWorks(works), [works]);
   const refresh = async (showLoading = false) => {
     if (showLoading) setCatalogLoading(true);
     setCatalogError("");
@@ -80,6 +83,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   return <>
     <div className="community-actions"><div><strong>分享创作，也分享过程</strong><span>一项目一案例 · 保存草稿 → 预览 → 提交审核</span></div><button onClick={() => setEditing(null)}><Plus size={18} /> 新建案例草稿</button></div>
     {!!myWorks.length && <section className="my-submissions"><span>我的案例与草稿</span>{myWorks.map(work => <button disabled={loading} key={work.id} onClick={() => openWork(work)}><strong>{work.title}</strong><em className={`status-${work.status}`}>{statusName(work.status)}</em></button>)}</section>}
+    {!!recommendations.length && <section className="community-recommendations"><header><div><small>// FOR YOU</small><h3>为你推荐</h3><p>{recommendations.personalized ? "根据你已点赞或收藏案例的方向排序" : "先从社区互动较高、较新的案例开始探索"}</p></div></header><div>{recommendations.items.map(work => <button key={work.id} disabled={loading} onClick={() => openWork(work)}>{work.previewUrl ? <img src={work.previewUrl} alt="" /> : <ImageSquare size={23} />}<span><strong>{work.title}</strong><small>{work.discipline} · {work.reason}</small></span><ArrowRight size={16} /></button>)}</div></section>}
     <section className="work-grid">{works.map((work,index) => <article className="work-card" key={work.id}><div className={`work-preview work-preview--${index % 3}`}>{work.previewUrl ? <img src={work.previewUrl} alt={work.title} loading="lazy" /> : <WorkVisualFallback work={work} compact />}</div><div><small>{work.creators?.join("、") || work.author}</small><h3>{work.title}</h3><p>{work.summary}</p><div className="case-labels">{[...(work.methods ?? []),...(work.tools ?? [])].slice(0,4).map((label,i) => <span key={`${label}-${i}`}>{label}</span>)}</div><div className="work-card__stats"><span><Heart /> {work.likeCount ?? 0}</span><span><BookmarkSimple /> {work.favoriteCount ?? 0}</span></div><button disabled={loading} onClick={() => openWork(work)}>查看案例 <ArrowRight size={16} /></button></div></article>)}</section>
     {!works.length && <p>暂无已发布案例。可先创建草稿，补充成果与创作过程。</p>}
     {editor}
@@ -88,6 +92,19 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
 function statusName(status) { return { draft: "草稿", pending: "审核中", approved: "已发布", rejected: "已驳回", archived: "已归档" }[status] ?? status; }
 function WorkVisualFallback({ work, compact = false }) {
   return <div className={`work-visual-fallback ${compact ? "work-visual-fallback--compact" : ""}`}><ImageSquare size={compact ? 36 : 58} /><span>{work.discipline || "艺术创作"}</span><strong>{work.title}</strong><small>作品封面待补充</small></div>;
+}
+function recommendWorks(works) {
+  const signals = works.filter((work) => work.liked || work.favorited);
+  const disciplines = new Set(signals.map((work) => work.discipline));
+  const terms = new Set(signals.flatMap((work) => [...(work.methods ?? []), ...(work.tools ?? [])]).map((item) => item.toLowerCase()));
+  const personalized = signals.length > 0;
+  const items = works.filter((work) => !work.favorited).map((work) => {
+    const matches = [...(work.methods ?? []), ...(work.tools ?? [])].filter((item) => terms.has(item.toLowerCase())).length;
+    const disciplineMatch = disciplines.has(work.discipline);
+    const popularity = Math.min(12, Number(work.likeCount ?? 0) + Number(work.favoriteCount ?? 0) * 2);
+    return { ...work, score: (disciplineMatch ? 18 : 0) + matches * 7 + popularity, reason: disciplineMatch ? "同类创作方向" : matches ? "与你常看的工具相近" : "社区热门案例" };
+  }).sort((left, right) => right.score - left.score || String(right.publishedAt).localeCompare(String(left.publishedAt))).slice(0, 3);
+  return { items, personalized };
 }
 function ImageViewer({ image, onClose }) {
   return <div className="case-image-viewer" role="dialog" aria-modal="true" aria-label="图片预览">

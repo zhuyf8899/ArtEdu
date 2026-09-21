@@ -63,6 +63,7 @@ export const updateLessonProgress = (courseId, lessonId, progressPercent) => req
 });
 export const getMyLearning = () => request("/me/learning-progress");
 export const getLearningSpace = () => request("/me/learning-space");
+export const getRecentCourseResources = () => request("/me/recent-resources");
 export const createLearningTask = (input) => request("/me/learning-space/tasks", {
   method: "POST",
   body: JSON.stringify(input),

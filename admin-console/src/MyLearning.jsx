@@ -10,6 +10,7 @@ import {
   deleteLearningNote,
   deleteLearningTask,
   getLearningSpace,
+  getRecentCourseResources,
   updateLearningTask,
 } from "./services/adminApi.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
@@ -45,12 +46,13 @@ export function MyLearning({ account, onNavigate, onNotice }) {
   const [noteForm, setNoteForm] = useState({ title: "", content: "", courseId: "" });
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [recentResources, setRecentResources] = useState([]);
   const { confirmAction } = useFeedback();
 
   const load = async () => {
     setLoading(true);
     setLoadError("");
-    try { setData(await getLearningSpace()); }
+    try { const [learning, recent] = await Promise.all([getLearningSpace(), getRecentCourseResources()]); setData(learning); setRecentResources(recent.items ?? []); }
     catch (error) { setLoadError(error.message); onNotice(error.message); }
     finally { setLoading(false); }
   };
@@ -135,7 +137,7 @@ export function MyLearning({ account, onNavigate, onNotice }) {
 
       <div className="learning-content" aria-busy={loading}>
         {loading ? <LearningLoading /> : loadError ? <LearningLoadError message={loadError} onRetry={load} /> : <>
-          {view === "overview" && <Overview data={data} displayName={displayName} onView={setView} onToggleTask={toggleTask} onNavigate={onNavigate} />}
+          {view === "overview" && <Overview data={data} recentResources={recentResources} displayName={displayName} onView={setView} onToggleTask={toggleTask} onNavigate={onNavigate} />}
           {view === "courses" && <CoursesView courses={data.courses} onNavigate={onNavigate} />}
           {view === "plan" && <PlanView tasks={data.tasks} form={taskForm} setForm={setTaskForm} saving={saving} onSubmit={addTask} onToggle={toggleTask} onDelete={removeTask} />}
           {view === "notes" && <NotesView notes={data.notes} courses={data.courses} form={noteForm} setForm={setNoteForm} saving={saving} onSubmit={addNote} onDelete={removeNote} />}
@@ -147,7 +149,7 @@ export function MyLearning({ account, onNavigate, onNotice }) {
   </section>;
 }
 
-function Overview({ data, displayName, onView, onToggleTask, onNavigate }) {
+function Overview({ data, recentResources, displayName, onView, onToggleTask, onNavigate }) {
   const courses = data.courses.slice(0, 3);
   const tasks = data.tasks.slice(0, 4);
   return <>
@@ -164,6 +166,8 @@ function Overview({ data, displayName, onView, onToggleTask, onNavigate }) {
         </article>
         <SectionHeader eyebrow="// CONTINUE LEARNING" title="继续学习" action="查看全部课程" onAction={() => onView("courses")} />
         {courses.length ? <div className="continue-learning-list">{courses.map((course, index) => <CourseRow key={course.id} course={course} index={index} onNavigate={onNavigate} />)}</div> : <EmptyBlock icon={BookOpenText} title="还没有加入课程" text="从教学资源库选择一门课程，开始建立你的学习路径。" action="浏览课程" onAction={() => onNavigate("/learning")} />}
+        <SectionHeader eyebrow="// RECENT RESOURCES" title="最近打开的课件" />
+        {recentResources.length ? <div className="recent-resource-list">{recentResources.slice(0, 4).map((resource) => <button key={resource.resourceId} onClick={() => onNavigate(`/learning?course=${encodeURIComponent(resource.courseId)}`)}><FileText size={18} /><span><strong>{resource.title}</strong><small>{resource.courseTitle} · 上次{resource.accessKind === "download" ? "下载" : resource.accessKind === "stream" ? "播放" : "预览"}</small></span><ArrowRight size={16} /></button>)}</div> : <EmptyInline text="打开课件后，最近访问记录会显示在这里，方便继续学习。" />}
         <SectionHeader eyebrow="// SAVED CASES" title="我的收藏" action="查看全部" onAction={() => onView("favorites")} />
         {data.favorites.length ? <div className="learning-mini-grid">{data.favorites.slice(0, 3).map((work, index) => <WorkMiniCard key={work.id} work={work} index={index} onClick={() => onNavigate("/community")} />)}</div> : <EmptyInline text="收藏优秀案例后，会显示在这里。" />}
       </div>
