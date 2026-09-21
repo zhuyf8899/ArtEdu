@@ -54,7 +54,7 @@ export class StudioService {
 
   async listToolDirectoryLinks() {
     const result = await this.database.query(
-      "SELECT id,category,name,detail,href,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links WHERE status='active' ORDER BY category,sort_order,created_at",
+      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links WHERE status='active' ORDER BY category,sort_order,created_at",
     );
     return { items: result.rows.map((row) => this.mapToolDirectoryLink(row)) };
   }
@@ -62,7 +62,7 @@ export class StudioService {
   async listManagedToolDirectoryLinks(actor: Actor) {
     if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可以管理设计工具目录");
     const result = await this.database.query(
-      "SELECT id,category,name,detail,href,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links ORDER BY category,sort_order,created_at",
+      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links ORDER BY category,sort_order,created_at",
     );
     return { items: result.rows.map((row) => this.mapToolDirectoryLink(row)) };
   }
@@ -72,8 +72,8 @@ export class StudioService {
     const id = `tool-link-${randomUUID()}`;
     const order = await this.database.query<{ next_order: number }>("SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM tool_directory_links WHERE category=$1", [input.category]);
     await this.database.query(
-      "INSERT INTO tool_directory_links (id,category,name,detail,href,icon_key,launch_mode,is_featured,sort_order,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-      [id, input.category, input.name, input.detail, input.href, input.iconKey, input.launchMode, input.featured, order.rows[0]?.next_order ?? 1, actor.id],
+      "INSERT INTO tool_directory_links (id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+      [id, input.category, input.name, input.detail, input.href, input.coverImageUrl || null, input.iconKey, input.launchMode, input.featured, order.rows[0]?.next_order ?? 1, actor.id],
     );
     return { id, ...input, status: "active", sortOrder: order.rows[0]?.next_order ?? 1 };
   }
@@ -81,8 +81,8 @@ export class StudioService {
   async updateToolDirectoryLink(actor: Actor, toolLinkId: string, input: ToolDirectoryLinkUpdateInput) {
     if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可以管理设计工具目录");
     const result = await this.database.query(
-      "UPDATE tool_directory_links SET category=$2,name=$3,detail=$4,href=$5,icon_key=$6,launch_mode=$7,is_featured=$8,status=$9,updated_by=$10,updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING id,category,name,detail,href,icon_key,launch_mode,is_featured,sort_order,status",
-      [toolLinkId, input.category, input.name, input.detail, input.href, input.iconKey, input.launchMode, input.featured, input.status, actor.id],
+      "UPDATE tool_directory_links SET category=$2,name=$3,detail=$4,href=$5,cover_image_url=$6,icon_key=$7,launch_mode=$8,is_featured=$9,status=$10,updated_by=$11,updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status",
+      [toolLinkId, input.category, input.name, input.detail, input.href, input.coverImageUrl || null, input.iconKey, input.launchMode, input.featured, input.status, actor.id],
     );
     if (!result.rowCount) throw new NotFoundException("设计工具条目不存在");
     return this.mapToolDirectoryLink(result.rows[0]);
@@ -771,6 +771,7 @@ export class StudioService {
       name: row.name,
       detail: row.detail,
       href: row.href,
+      coverImageUrl: row.cover_image_url ?? "",
       iconKey: row.icon_key ?? "link",
       launchMode: row.launch_mode ?? "new_tab",
       featured: Boolean(row.is_featured),

@@ -56,6 +56,11 @@ export class CoursesController {
     return this.courses.getMyLearning(await this.auth.getActor(request));
   }
 
+  @Get("me/recent-resources")
+  async recentResources(@Req() request: FastifyRequest) {
+    return this.courses.getRecentResources(await this.auth.getActor(request));
+  }
+
   @Get("courses/:courseId/resources/:resourceId/download")
   async downloadResource(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("courseId") courseId: string, @Param("resourceId") resourceId: string) {
     const resource = await this.courses.openResource(await this.auth.getActor(request), courseId, resourceId, "download");

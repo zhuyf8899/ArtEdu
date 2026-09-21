@@ -34,7 +34,7 @@ function decorateCourse(course) {
   };
 }
 
-export function LearningLibrary({ onNotice }) {
+export function LearningLibrary({ onNotice, initialCourseId = "" }) {
   const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -248,6 +248,10 @@ function SourcePreview({ url, title }) {
       setState({ loading: false, text: "", error: error.message ?? "源码读取失败" });
     }
   };
+
+  useEffect(() => {
+    if (initialCourseId && !selected && !loading) void openCourse(initialCourseId);
+  }, [initialCourseId]);
   return <details className="course-material__code" onToggle={(event) => { if (event.currentTarget.open && !state.text && !state.loading) void load(); }}>
     <summary>查看{title ? `「${title}」` : ""}源码</summary>
     {state.loading && <p>正在读取源码…</p>}

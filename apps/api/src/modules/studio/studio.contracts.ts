@@ -136,11 +136,20 @@ const toolDirectoryHrefSchema = z.string().trim().max(1000).refine((value) => {
   } catch { return false; }
 }, "链接必须是站内路径或无凭据的 HTTP(S) 地址");
 
+const toolDirectoryCoverSchema = z.string().trim().max(1000).refine((value) => {
+  if (/^\/(?!\/)/.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
+  } catch { return false; }
+}, "背景图必须是站内路径或无凭据的 HTTP(S) 地址");
+
 export const toolDirectoryLinkSchema = z.object({
   category: z.string().trim().min(2).max(60),
   name: z.string().trim().min(2).max(80),
   detail: z.string().trim().min(2).max(240),
   href: toolDirectoryHrefSchema,
+  coverImageUrl: toolDirectoryCoverSchema.optional().or(z.literal("")),
   iconKey: z.enum(["design", "image", "idea", "learning", "ai", "code", "link"]).default("link"),
   launchMode: z.enum(["new_tab", "same_tab"]).default("new_tab"),
   featured: z.boolean().default(false),
