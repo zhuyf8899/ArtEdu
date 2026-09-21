@@ -179,7 +179,9 @@ export const uploadTemporaryCreationFile = (file, conversationLocalId) => {
 export const getWorkflows = (query = "") => request(`/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getWorkflow = (workflowId) => request(`/workflows/${workflowId}`);
 export const getToolDirectoryLinks = () => request("/tool-directory-links");
+export const getManagedToolDirectoryLinks = () => request("/admin/tool-directory-links");
 export const createToolDirectoryLink = (input) => request("/admin/tool-directory-links", { method: "POST", body: JSON.stringify(input) });
+export const updateToolDirectoryLink = (toolLinkId, input) => request(`/admin/tool-directory-links/${encodeURIComponent(toolLinkId)}`, { method: "PATCH", body: JSON.stringify(input) });
 export const getAdminWorkflows = (query = "") => request(`/admin/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getAdminWorkflow = (workflowId) => request(`/admin/workflows/${workflowId}`);
 export const createWorkflow = (input) => request("/workflows", { method: "POST", body: JSON.stringify(input) });

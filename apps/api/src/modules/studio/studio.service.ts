@@ -21,7 +21,7 @@ import type {
   WorkflowRunProgressInput,
   WorkflowRunExecuteInput,
   WorkflowVersionInput,
-  WorkInput, ReportInput, ToolDirectoryLinkInput,
+  WorkInput, ReportInput, ToolDirectoryLinkInput, ToolDirectoryLinkUpdateInput,
 } from "./studio.contracts";
 
 interface WorkRow {
@@ -53,10 +53,18 @@ export class StudioService {
   ) {}
 
   async listToolDirectoryLinks() {
-    const result = await this.database.query<{ id: string; category: string; name: string; detail: string; href: string; sort_order: number }>(
-      "SELECT id,category,name,detail,href,sort_order FROM tool_directory_links WHERE status='active' ORDER BY category,sort_order,created_at",
+    const result = await this.database.query(
+      "SELECT id,category,name,detail,href,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links WHERE status='active' ORDER BY category,sort_order,created_at",
     );
-    return { items: result.rows.map((row) => ({ id: row.id, category: row.category, name: row.name, detail: row.detail, href: row.href, sortOrder: row.sort_order })) };
+    return { items: result.rows.map((row) => this.mapToolDirectoryLink(row)) };
+  }
+
+  async listManagedToolDirectoryLinks(actor: Actor) {
+    if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可以管理设计工具目录");
+    const result = await this.database.query(
+      "SELECT id,category,name,detail,href,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links ORDER BY category,sort_order,created_at",
+    );
+    return { items: result.rows.map((row) => this.mapToolDirectoryLink(row)) };
   }
 
   async createToolDirectoryLink(actor: Actor, input: ToolDirectoryLinkInput) {
@@ -64,10 +72,20 @@ export class StudioService {
     const id = `tool-link-${randomUUID()}`;
     const order = await this.database.query<{ next_order: number }>("SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM tool_directory_links WHERE category=$1", [input.category]);
     await this.database.query(
-      "INSERT INTO tool_directory_links (id,category,name,detail,href,sort_order,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7)",
-      [id, input.category, input.name, input.detail, input.href, order.rows[0]?.next_order ?? 1, actor.id],
+      "INSERT INTO tool_directory_links (id,category,name,detail,href,icon_key,launch_mode,is_featured,sort_order,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+      [id, input.category, input.name, input.detail, input.href, input.iconKey, input.launchMode, input.featured, order.rows[0]?.next_order ?? 1, actor.id],
     );
-    return { id, ...input, sortOrder: order.rows[0]?.next_order ?? 1 };
+    return { id, ...input, status: "active", sortOrder: order.rows[0]?.next_order ?? 1 };
+  }
+
+  async updateToolDirectoryLink(actor: Actor, toolLinkId: string, input: ToolDirectoryLinkUpdateInput) {
+    if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可以管理设计工具目录");
+    const result = await this.database.query(
+      "UPDATE tool_directory_links SET category=$2,name=$3,detail=$4,href=$5,icon_key=$6,launch_mode=$7,is_featured=$8,status=$9,updated_by=$10,updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING id,category,name,detail,href,icon_key,launch_mode,is_featured,sort_order,status",
+      [toolLinkId, input.category, input.name, input.detail, input.href, input.iconKey, input.launchMode, input.featured, input.status, actor.id],
+    );
+    if (!result.rowCount) throw new NotFoundException("设计工具条目不存在");
+    return this.mapToolDirectoryLink(result.rows[0]);
   }
 
   async listWorkflows(query: CatalogQuery) {
@@ -743,6 +761,22 @@ export class StudioService {
 
   private mapWork(row: WorkRow) {
     return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
+  }
+
+  // 对外只暴露目录展示所需字段；不返回维护者身份，避免把后台账号信息带到学生端。
+  private mapToolDirectoryLink(row: Record<string, any>) {
+    return {
+      id: row.id,
+      category: row.category,
+      name: row.name,
+      detail: row.detail,
+      href: row.href,
+      iconKey: row.icon_key ?? "link",
+      launchMode: row.launch_mode ?? "new_tab",
+      featured: Boolean(row.is_featured),
+      status: row.status,
+      sortOrder: Number(row.sort_order),
+    };
   }
 
   private canReview(actor: Actor) { return actor.roles.some((role) => ["admin", "operator", "teacher"].includes(role)); }

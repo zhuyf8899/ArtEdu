@@ -126,16 +126,28 @@ export const commentInputSchema = z.object({
   content: z.string().trim().min(1).max(2000),
 });
 
+const toolDirectoryHrefSchema = z.string().trim().max(1000).refine((value) => {
+  // 平台内入口只允许根路径相对地址；外部入口必须是无凭据 HTTP(S) 地址。
+  // 这样管理员可把课程、案例等站内功能放入同一目录，同时不开放 javascript: 等协议。
+  if (/^\/(?!\/)/.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
+  } catch { return false; }
+}, "链接必须是站内路径或无凭据的 HTTP(S) 地址");
+
 export const toolDirectoryLinkSchema = z.object({
   category: z.string().trim().min(2).max(60),
   name: z.string().trim().min(2).max(80),
   detail: z.string().trim().min(2).max(240),
-  href: z.string().trim().max(1000).refine((value) => {
-    try {
-      const url = new URL(value);
-      return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
-    } catch { return false; }
-  }, "链接必须是无凭据的 HTTP(S) 地址"),
+  href: toolDirectoryHrefSchema,
+  iconKey: z.enum(["design", "image", "idea", "learning", "ai", "code", "link"]).default("link"),
+  launchMode: z.enum(["new_tab", "same_tab"]).default("new_tab"),
+  featured: z.boolean().default(false),
+});
+
+export const toolDirectoryLinkUpdateSchema = toolDirectoryLinkSchema.extend({
+  status: z.enum(["active", "archived"]).default("active"),
 });
 
 /** 执行器只接受平台保存的节点图；浏览器不能传任意供应商参数或工作流 JSON。 */
@@ -150,6 +162,7 @@ export const reportInputSchema = z.object({
 
 export type CatalogQuery = z.infer<typeof catalogQuerySchema>;
 export type ToolDirectoryLinkInput = z.infer<typeof toolDirectoryLinkSchema>;
+export type ToolDirectoryLinkUpdateInput = z.infer<typeof toolDirectoryLinkUpdateSchema>;
 export type WorkflowInput = z.infer<typeof workflowInputSchema>;
 export type WorkflowVersionInput = z.infer<typeof workflowVersionInputSchema>;
 export type WorkflowRunInput = z.infer<typeof workflowRunInputSchema>;

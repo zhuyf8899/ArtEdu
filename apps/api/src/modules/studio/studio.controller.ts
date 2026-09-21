@@ -14,10 +14,11 @@ import {
   workflowVersionInputSchema,
   workInputSchema,
   toolDirectoryLinkSchema,
+  toolDirectoryLinkUpdateSchema,
 } from "./studio.contracts";
 import type {
   CatalogQuery, WorkflowInput, WorkflowRunInput, WorkflowRunProgressInput,
-  WorkflowVersionInput, WorkInput, ReportInput, WorkflowRunExecuteInput, ToolDirectoryLinkInput,
+  WorkflowVersionInput, WorkInput, ReportInput, WorkflowRunExecuteInput, ToolDirectoryLinkInput, ToolDirectoryLinkUpdateInput,
 } from "./studio.contracts";
 import { StudioService } from "./studio.service";
 import { caseUploadPolicy } from "../../common/upload-policy";
@@ -35,6 +36,16 @@ export class StudioController {
   @Post("admin/tool-directory-links")
   async createToolDirectoryLink(@Req() request: FastifyRequest, @Body() body: unknown) {
     return this.studio.createToolDirectoryLink(await this.auth.getActor(request), parseInput(toolDirectoryLinkSchema, body) as ToolDirectoryLinkInput);
+  }
+
+  @Get("admin/tool-directory-links")
+  async listManagedToolDirectoryLinks(@Req() request: FastifyRequest) {
+    return this.studio.listManagedToolDirectoryLinks(await this.auth.getActor(request));
+  }
+
+  @Patch("admin/tool-directory-links/:toolLinkId")
+  async updateToolDirectoryLink(@Req() request: FastifyRequest, @Param("toolLinkId") toolLinkId: string, @Body() body: unknown) {
+    return this.studio.updateToolDirectoryLink(await this.auth.getActor(request), toolLinkId, parseInput(toolDirectoryLinkUpdateSchema, body) as ToolDirectoryLinkUpdateInput);
   }
 
   @Get("workflows")

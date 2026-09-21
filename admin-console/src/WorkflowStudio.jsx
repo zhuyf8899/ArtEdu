@@ -1,8 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, LinkSimple, Path, Play, Plus, SpinnerGap, Wrench } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Code, FlowArrow, ImageSquare, Lightbulb, LinkSimple, Palette, Path, PencilSimple, Play, Plus, Robot, SpinnerGap, Wrench } from "@phosphor-icons/react";
 import "@xyflow/react/dist/style.css";
-import { createToolDirectoryLink, executeWorkflowRun, getToolDirectoryLinks, getWorkflow, getWorkflows, startWorkflowRun } from "./services/adminApi.js";
+import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
 const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", text_encode: "#b268ff", skill: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b" };
@@ -19,22 +19,8 @@ function GraphNode({ data }) {
 
 const nodeTypes = Object.fromEntries(Object.keys(nodeStyle).map((type) => [type, GraphNode]));
 
-const TOOL_DIRECTORY = [
-  { group: "界面与版式", items: [
-    { name: "Figma", detail: "协作界面与原型设计", href: "https://www.figma.com/" },
-    { name: "Canva", detail: "版式、海报与演示设计", href: "https://www.canva.com/" },
-    { name: "Photopea", detail: "浏览器内图片编辑", href: "https://www.photopea.com/" },
-  ] },
-  { group: "灵感与素材", items: [
-    { name: "Behance", detail: "查看设计作品与案例", href: "https://www.behance.net/" },
-    { name: "Unsplash", detail: "寻找可用视觉素材", href: "https://unsplash.com/" },
-  ] },
-  { group: "平台工具", items: [
-    { name: "AI 创作助手", detail: "生成图像、网页或文档草稿", href: "/create", internal: true },
-    { name: "案例社区", detail: "查看优秀案例与复用方法", href: "/community", internal: true },
-    { name: "课程中心", detail: "学习课程与阅读课件", href: "/learning", internal: true },
-  ] },
-];
+const TOOL_ICONS = { design: Palette, image: ImageSquare, idea: Lightbulb, learning: Path, ai: Robot, code: Code, link: LinkSimple };
+const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https://", iconKey: "link", launchMode: "new_tab", featured: false, status: "active" });
 
 export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false, canManageToolDirectory = false }) {
   const [workflows, setWorkflows] = useState([]);
@@ -80,23 +66,36 @@ export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false
 }
 
 function ToolDirectory({ canManage, onNotice }) {
-  const [customLinks, setCustomLinks] = useState([]);
+  const [links, setLinks] = useState([]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ category: "", name: "", detail: "", href: "https://" });
+  const [form, setForm] = useState(emptyToolForm);
+  const [editingId, setEditingId] = useState(null);
 
-  useEffect(() => { getToolDirectoryLinks().then((payload) => setCustomLinks(payload.items ?? [])).catch((error) => onNotice(error.message)); }, [onNotice]);
+  const load = useCallback(() => {
+    const request = canManage ? getManagedToolDirectoryLinks : getToolDirectoryLinks;
+    request().then((payload) => setLinks(payload.items ?? [])).catch((error) => onNotice(error.message));
+  }, [canManage, onNotice]);
+  useEffect(() => { load(); }, [load]);
   const groups = useMemo(() => {
-    const merged = new Map(TOOL_DIRECTORY.map(({ group, items }) => [group, [...items]]));
-    customLinks.forEach((item) => merged.set(item.category, [...(merged.get(item.category) ?? []), item]));
+    const merged = new Map();
+    links.filter((item) => item.status === "active").forEach((item) => merged.set(item.category, [...(merged.get(item.category) ?? []), item]));
     return [...merged.entries()].map(([group, items]) => ({ group, items }));
-  }, [customLinks]);
+  }, [links]);
+  const openNew = () => { setEditingId(null); setForm(emptyToolForm()); setEditorOpen(true); };
+  const edit = (item) => { setEditingId(item.id); setForm({ category: item.category, name: item.name, detail: item.detail, href: item.href, iconKey: item.iconKey, launchMode: item.launchMode, featured: item.featured, status: item.status }); setEditorOpen(true); };
   const submit = async (event) => {
     event.preventDefault(); setSaving(true);
-    try { const item = await createToolDirectoryLink(form); setCustomLinks((current) => [...current, item]); setEditorOpen(false); setForm({ category: "", name: "", detail: "", href: "https://" }); onNotice("工具栏目已添加，所有登录用户现在都能看到。"); }
+    try { const item = editingId ? await updateToolDirectoryLink(editingId, form) : await createToolDirectoryLink(form); setLinks((current) => editingId ? current.map((entry) => entry.id === item.id ? item : entry) : [...current, item]); setEditorOpen(false); setEditingId(null); setForm(emptyToolForm()); onNotice(editingId ? "工具条目已更新。" : "工具栏目已添加，所有登录用户现在都能看到。"); }
     catch (error) { onNotice(error.message); } finally { setSaving(false); }
   };
-  return <section className="tool-directory" aria-labelledby="tool-directory-title"><header><div><p>// DESIGN TOOLBOX</p><h3 id="tool-directory-title"><Wrench size={18} weight="bold" /> 设计工具入口</h3><span>按栏目浏览工具；外部网站在新窗口打开，平台功能留在当前站内。</span></div>{canManage && <button className="outline-button tool-directory__manage" onClick={() => setEditorOpen((open) => !open)}><Plus size={16} weight="bold" /> 添加栏目链接</button>}</header>{editorOpen && <form className="tool-directory__editor" onSubmit={submit}><label>栏目名称<input required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="例如：三维与动效" /></label><label>工具名称<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="例如：Blender" /></label><label>用途说明<input required value={form.detail} onChange={(event) => setForm({ ...form, detail: event.target.value })} placeholder="一句话说明使用场景" /></label><label>网址<input required type="url" value={form.href} onChange={(event) => setForm({ ...form, href: event.target.value })} /></label><button className="primary-button" disabled={saving}>{saving ? "正在保存…" : "保存并发布入口"}</button></form>}<div className="tool-directory__groups">{groups.map(({ group, items }) => <div key={group}><strong>{group}</strong>{items.map((tool) => <a key={tool.id ?? tool.name} href={tool.href} target={tool.internal ? undefined : "_blank"} rel={tool.internal ? undefined : "noopener noreferrer"}><span><b>{tool.name}</b><small>{tool.detail}</small></span><LinkSimple size={17} weight="bold" /></a>)}</div>)}</div></section>;
+  return <section className="tool-directory" aria-labelledby="tool-directory-title"><header><div><p>// DESIGN TOOLBOX</p><h3 id="tool-directory-title"><Wrench size={18} weight="bold" /> 设计工具入口</h3><span>统一展示平台与外部工具；外部网站将在新窗口打开。</span></div>{canManage && <button className="outline-button tool-directory__manage" onClick={openNew}><Plus size={16} weight="bold" /> 添加工具</button>}</header>{editorOpen && <form className="tool-directory__editor" onSubmit={submit}><label>栏目名称<input required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="例如：三维与动效" /></label><label>工具名称<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="例如：Blender" /></label><label>用途说明<input required value={form.detail} onChange={(event) => setForm({ ...form, detail: event.target.value })} placeholder="一句话说明使用场景" /></label><label>链接或站内路径<input required value={form.href} onChange={(event) => setForm({ ...form, href: event.target.value })} placeholder="https://… 或 /learning" /></label><label>图标<select value={form.iconKey} onChange={(event) => setForm({ ...form, iconKey: event.target.value })}>{Object.entries({ design: "设计", image: "图片", idea: "灵感", learning: "学习", ai: "AI", code: "开发", link: "通用" }).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>打开方式<select value={form.launchMode} onChange={(event) => setForm({ ...form, launchMode: event.target.value })}><option value="new_tab">新标签页</option><option value="same_tab">当前页</option></select></label><label className="tool-directory__check"><input type="checkbox" checked={form.featured} onChange={(event) => setForm({ ...form, featured: event.target.checked })} /> 首页推荐</label>{editingId && <label>状态<select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="active">展示</option><option value="archived">下架（保留记录）</option></select></label>}<button className="primary-button" disabled={saving}>{saving ? "正在保存…" : editingId ? "保存修改" : "保存并发布入口"}</button></form>}<div className="tool-directory__groups">{groups.map(({ group, items }) => <section key={group} className="tool-directory__group"><strong>{group}</strong><div>{items.map((tool) => <ToolDirectoryCard key={tool.id} tool={tool} canManage={canManage} onEdit={edit} />)}</div></section>)}</div></section>;
+}
+
+function ToolDirectoryCard({ tool, canManage, onEdit }) {
+  const Icon = TOOL_ICONS[tool.iconKey] ?? LinkSimple;
+  const external = tool.launchMode !== "same_tab";
+  return <article className="tool-directory__card"><a href={tool.href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}><span className="tool-directory__icon"><Icon size={21} weight="duotone" /></span><span><small>{tool.featured ? "推荐工具" : external ? "外部工具" : "平台功能"}</small><b>{tool.name}</b><em>{tool.detail}</em></span><LinkSimple size={17} weight="bold" /></a>{canManage && <button className="tool-directory__edit" onClick={() => onEdit(tool)} aria-label={`编辑 ${tool.name}`}><PencilSimple size={15} weight="bold" /></button>}</article>;
 }
 
 function WorkflowRunner({ selected, run, loading, onBack, onStart, onExecute }) {
