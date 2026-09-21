@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Code, ImageSquare, Lightbulb, LinkSimple, Palette, PencilSimple, Plus, Robot, Wrench } from "@phosphor-icons/react";
+import { ArrowLeft, Code, ImageSquare, Lightbulb, LinkSimple, Palette, Path, PencilSimple, Plus, Robot, Wrench } from "@phosphor-icons/react";
 import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
