@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Code, FlowArrow, ImageSquare, Lightbulb, LinkSimple, Palette, Path, PencilSimple, Plus, Robot, Wrench } from "@phosphor-icons/react";
+import { ArrowLeft, Code, ImageSquare, Lightbulb, LinkSimple, Palette, PencilSimple, Plus, Robot, Wrench } from "@phosphor-icons/react";
 import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
@@ -48,7 +48,7 @@ export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false
       <WorkflowAdmin showToast={onNotice} canPublish={canPublish} />
     </Suspense>
   </div>;
-  return <section className="workflow-catalog" id="workflow-catalog"><header className="workflow-catalog__toolbar"><div><p>// CREATE AND LEARN</p><h2>通用工作流</h2><span>选择案例分析或图片生成等子流程；登录用户也可以新建自己的节点图。</span></div><button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button></header><ToolDirectory canManage={canManageToolDirectory} onNotice={onNotice} />{workflows.map((workflow, index) => <article key={workflow.id}><div className={`workflow-catalog__cover workflow-catalog__cover--${index % 3}`}><FlowArrow size={36} weight="thin" /><span>{workflow.stepCount ?? "—"} NODES</span></div><div><small>{workflow.category}</small><h3>{workflow.name}</h3><p>{workflow.description}</p><button disabled={loading} onClick={() => open(workflow)}>进入子流程 <ArrowRight size={16} weight="bold" /></button></div></article>)}{!workflows.length && <div className="empty-state"><Path size={32} /><strong>暂时没有已发布的工作流</strong><span>可以先创建自己的节点工作流，保存为草稿版本。</span></div>}</section>;
+  return <section className="workflow-catalog" id="workflow-catalog"><header className="workflow-catalog__toolbar"><div><p>// CREATE AND LEARN</p><h2>节点工作流</h2><span>从零开始搭建自己的节点图，并保存为个人草稿版本。</span></div><button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button></header><ToolDirectory canManage={canManageToolDirectory} onNotice={onNotice} /></section>;
 }
 function ToolDirectory({ canManage, onNotice }) {
   const [links, setLinks] = useState([]);
