@@ -9,6 +9,8 @@ import { createEmbeddings, vectorLiteral } from "./rag.embedding";
 
 const execFileAsync = promisify(execFile);
 const EMBEDDING_BATCH_SIZE = 16;
+const MAX_ATTEMPTS = 3;
+const PROCESSING_LEASE_MINUTES = 15;
 
 interface IngestionJob {
   id: string;
@@ -40,9 +42,13 @@ export class RagWorkerService {
 
   private async claimJob(): Promise<IngestionJob | null> {
     return this.database.transaction(async (client) => {
+      // Worker 被 OOM/重启时，processing 任务不能永久堵塞队列；回收过期租约后再领取。
+      await client.query(`UPDATE rag_ingestion_jobs
+        SET status='queued', started_at=NULL, error_message='索引 Worker 任务租约已过期'
+        WHERE status='processing' AND started_at < CURRENT_TIMESTAMP - make_interval(mins => $1)`, [PROCESSING_LEASE_MINUTES]);
       const result = await client.query<IngestionJob>(`SELECT job.id,job.document_id,document.course_id,document.resource_id,document.storage_key
         FROM rag_ingestion_jobs job JOIN rag_documents document ON document.id=job.document_id
-        WHERE job.status='queued' ORDER BY job.created_at LIMIT 1 FOR UPDATE SKIP LOCKED`);
+        WHERE job.status='queued' AND job.attempts < $1 ORDER BY job.created_at LIMIT 1 FOR UPDATE SKIP LOCKED`, [MAX_ATTEMPTS]);
       const job = result.rows[0];
       if (!job) return null;
       await client.query("UPDATE rag_ingestion_jobs SET status='processing',attempts=attempts+1,started_at=CURRENT_TIMESTAMP,error_message=NULL WHERE id=$1", [job.id]);
@@ -74,8 +80,13 @@ export class RagWorkerService {
     const reason = (error instanceof Error ? error.message : "未知索引错误").slice(0, 1000);
     this.logger.error(`RAG 索引失败 ${job.document_id}: ${reason}`);
     await this.database.transaction(async (client) => {
-      await client.query("UPDATE rag_ingestion_jobs SET status='failed',completed_at=CURRENT_TIMESTAMP,error_message=$2 WHERE id=$1", [job.id, reason]);
-      await client.query("UPDATE rag_documents SET status='failed',failure_reason=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1", [job.document_id, reason]);
+      const result = await client.query<{ attempts: number }>("SELECT attempts FROM rag_ingestion_jobs WHERE id=$1 FOR UPDATE", [job.id]);
+      const attempts = Number(result.rows[0]?.attempts ?? MAX_ATTEMPTS);
+      const terminal = attempts >= MAX_ATTEMPTS;
+      await client.query(terminal
+        ? "UPDATE rag_ingestion_jobs SET status='failed',completed_at=CURRENT_TIMESTAMP,error_message=$2 WHERE id=$1"
+        : "UPDATE rag_ingestion_jobs SET status='queued',started_at=NULL,error_message=$2 WHERE id=$1", [job.id, reason]);
+      await client.query("UPDATE rag_documents SET status=$2,failure_reason=$3,updated_at=CURRENT_TIMESTAMP WHERE id=$1", [job.document_id, terminal ? "failed" : "queued", reason]);
     });
   }
 }

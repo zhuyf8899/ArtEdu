@@ -21,7 +21,7 @@ export class RagService {
   private readonly logger = new Logger(RagService.name);
   constructor(private readonly database: DatabaseService) {}
 
-  /** PDF 上传后的索引任务；Worker 与 embedding 适配器在后续校内环境接入。 */
+  /** PDF 上传后的索引任务；队列由独立 RAG Worker 消费。 */
   async enqueueResource(courseId: string, resourceId: string) {
     const result = await this.database.query<{ storage_key: string; mime_type: string }>(
       "SELECT storage_key,mime_type FROM course_resources WHERE id=$1 AND course_id=$2",
@@ -56,8 +56,8 @@ export class RagService {
   }
 
   /**
-   * 在校内 embedding Provider 接入前，优先使用教师已经录入的课程转写文本做本地证据检索。
-   * 这不是向量检索：没有文本命中时会如实返回等待 embedding Provider，而不会编造答案。
+   * 优先使用已索引 PDF 的向量证据；向量服务暂时不可用时回退到教师录入的转写文本。
+   * 两条链路都只返回可追溯证据，不在服务端伪造答案。
    */
   async query(actor: Actor, courseId: string, input: RagQueryInput) {
     await this.assertReadable(actor, courseId);
@@ -127,7 +127,7 @@ export class RagService {
       webEvidence: [],
       webFallbackEligible: input.allowWebFallback,
       retrievalState: "awaiting_embedding_provider",
-      message: "课程知识库接口已建立，等待接入校内 embedding 服务后开始索引与检索。",
+      message: "课程知识库尚未完成向量索引；请稍后重试或联系课程教师。",
     };
   }
 
