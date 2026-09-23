@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, Flag, Heart, ImageSquare, PaperPlaneTilt, Plus, SpinnerGap } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, Flag, Heart, ImageSquare, MagnifyingGlass, PaperPlaneTilt, Plus, SpinnerGap, X } from "@phosphor-icons/react";
 import { addWorkComment, getMyWorks, getWork, getWorkflows, getWorks, reportComment, reportWork, submitWork, toggleWorkReaction } from "./services/adminApi.js";
 import { CaseStoryEditor } from "./CaseStoryEditor.jsx";
 import { CaseStoryView } from "./CaseStoryView.jsx";
@@ -17,6 +17,8 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   const [loading, setLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
+  const [search, setSearch] = useState("");
+  const [activeTag, setActiveTag] = useState("");
   const refresh = async (showLoading = false) => {
     if (showLoading) setCatalogLoading(true);
     setCatalogError("");
@@ -57,6 +59,13 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
     finally { setLoading(false); }
   };
   const editable = selected && myWorks.some(work => work.id === selected.id) && ["draft", "rejected"].includes(selected.status);
+  const availableTags = [...new Set(works.flatMap(work => workLabels(work)))].sort((left, right) => left.localeCompare(right, "zh-CN"));
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const visibleWorks = works.filter(work => {
+    const labels = workLabels(work);
+    const text = [work.title, work.summary, work.author, ...(work.creators ?? []), ...labels].filter(Boolean).join(" ").toLocaleLowerCase();
+    return (!normalizedSearch || text.includes(normalizedSearch)) && (!activeTag || labels.includes(activeTag));
+  });
   const editor = editing !== undefined && <CaseStoryEditor key={editing?.id ?? "new"} initial={editing} workflows={workflows} onNotice={onNotice} onClose={() => { setEditing(undefined); refresh().catch(error => onNotice(error.message)); }} onSaved={saved => { setEditing(undefined); setSelected(saved); refresh().catch(error => onNotice(error.message)); onNotice("草稿已保存，尚未提交审核或发布"); }} />;
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载案例社区</strong></section>;
   if (catalogError && !works.length && !myWorks.length) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} /><strong>案例社区暂时无法加载</strong><p>{catalogError}</p><button onClick={() => refresh(true).catch(error => onNotice(error.message))}>重新加载</button></section>;
@@ -80,12 +89,26 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   return <>
     <div className="community-actions"><div><strong>分享创作，也分享过程</strong><span>一项目一案例 · 保存草稿 → 预览 → 提交审核</span></div><button onClick={() => setEditing(null)}><Plus size={18} /> 新建案例草稿</button></div>
     {!!myWorks.length && <section className="my-submissions"><span>我的案例与草稿</span>{myWorks.map(work => <button disabled={loading} key={work.id} onClick={() => openWork(work)}><strong>{work.title}</strong><em className={`status-${work.status}`}>{statusName(work.status)}</em></button>)}</section>}
-    <section className="work-grid">{works.map((work,index) => <article className="work-card" key={work.id}><div className={`work-preview work-preview--${index % 3}`}>{work.previewUrl ? <img src={work.previewUrl} alt={work.title} loading="lazy" /> : <WorkVisualFallback work={work} compact />}</div><div><small>{work.creators?.join("、") || work.author}</small><h3>{work.title}</h3><p>{work.summary}</p><div className="case-labels">{[...(work.methods ?? []),...(work.tools ?? [])].slice(0,4).map((label,i) => <span key={`${label}-${i}`}>{label}</span>)}</div><div className="work-card__stats"><span><Heart /> {work.likeCount ?? 0}</span><span><BookmarkSimple /> {work.favoriteCount ?? 0}</span></div><button disabled={loading} onClick={() => openWork(work)}>查看案例 <ArrowRight size={16} /></button></div></article>)}</section>
-    {!works.length && <p>暂无已发布案例。可先创建草稿，补充成果与创作过程。</p>}
+    <section className="community-discovery" aria-label="搜索和筛选案例">
+      <label className="community-search"><MagnifyingGlass size={19} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索案例名称、创作者、方法或工具" aria-label="搜索案例" />{search && <button onClick={() => setSearch("")} aria-label="清除搜索"><X size={17} /></button>}</label>
+      <div className="community-filter-row"><span>快速筛选</span><div className="community-filter-chips" aria-label="案例分类标签">
+        <button className={!activeTag ? "is-active" : ""} aria-pressed={!activeTag} onClick={() => setActiveTag("")}>全部案例 <em>{works.length}</em></button>
+        {availableTags.map(tag => <button key={tag} className={activeTag === tag ? "is-active" : ""} aria-pressed={activeTag === tag} onClick={() => setActiveTag(activeTag === tag ? "" : tag)}>{tag}</button>)}
+      </div></div>
+      <div className="community-results" aria-live="polite">{search || activeTag ? `找到 ${visibleWorks.length} 个案例` : `共 ${works.length} 个案例`}<span> · 封面、创作者与分类标签一目了然</span></div>
+    </section>
+    {visibleWorks.length ? <section className="work-grid">{visibleWorks.map(work => <article className="work-card" key={work.id}>
+      <div className="work-preview">{work.previewUrl ? <img src={work.previewUrl} alt={`${work.title}封面`} loading="lazy" /> : <WorkVisualFallback work={work} compact />}</div>
+      <div className="work-card__body"><small>{work.creators?.join("、") || work.author || "匿名创作者"}</small><h3>{work.title}</h3>
+        <div className="case-labels">{workLabels(work).slice(0, 4).map(label => <span key={label}>{label}</span>)}</div>
+        <div className="work-card__footer"><div className="work-card__stats"><span><Heart /> {work.likeCount ?? 0}</span><span><BookmarkSimple /> {work.favoriteCount ?? 0}</span></div><button disabled={loading} onClick={() => openWork(work)}>查看案例 <ArrowRight size={16} /></button></div>
+      </div>
+    </article>)}</section> : <section className="community-empty"><MagnifyingGlass size={26} /><strong>{works.length ? "没有找到匹配的案例" : "暂时还没有已发布案例"}</strong><p>{works.length ? "试试其他关键词或分类标签。" : "可先创建草稿，补充成果与创作过程。"}</p>{(search || activeTag) && <button onClick={() => { setSearch(""); setActiveTag(""); }}>清除筛选条件</button>}</section>}
     {editor}
   </>;
 }
 function statusName(status) { return { draft: "草稿", pending: "审核中", approved: "已发布", rejected: "已驳回", archived: "已归档" }[status] ?? status; }
+function workLabels(work) { return [...new Set([work.discipline, ...(work.methods ?? []), ...(work.tools ?? []), ...(work.tags ?? []).map(tag => typeof tag === "string" ? tag : tag.name)].filter(Boolean))]; }
 function WorkVisualFallback({ work, compact = false }) {
   return <div className={`work-visual-fallback ${compact ? "work-visual-fallback--compact" : ""}`}><ImageSquare size={compact ? 36 : 58} /><span>{work.discipline || "艺术创作"}</span><strong>{work.title}</strong><small>作品封面待补充</small></div>;
 }
