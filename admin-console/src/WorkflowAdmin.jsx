@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, Handle, MarkerType, MiniMap, Position, ReactFlow } from "@xyflow/react";
-import { ArrowLeft, ArrowRight, DownloadSimple, FloppyDisk, FlowArrow, MagnifyingGlass, Plus, UploadSimple, X } from "@phosphor-icons/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { addEdge, applyEdgeChanges, applyNodeChanges, Background, ConnectionLineType, Controls, Handle, MarkerType, MiniMap, Position, ReactFlow } from "@xyflow/react";
+import { ArrowLeft, ArrowRight, ArrowsOut, CheckCircle, DownloadSimple, FloppyDisk, FlowArrow, Keyboard, MagnifyingGlass, MagicWand, Play, Plus, SpinnerGap, UploadSimple, X } from "@phosphor-icons/react";
 import "@xyflow/react/dist/style.css";
-import { createWorkflow, createWorkflowVersion, getAdminWorkflow, getAdminWorkflows, updateWorkflow } from "./services/adminApi.js";
+import { createWorkflow, createWorkflowVersion, executeWorkflowRun, getAdminWorkflow, getAdminWorkflows, startWorkflowRun, updateWorkflow, uploadTemporaryCreationFile } from "./services/adminApi.js";
 import { shortId } from "./randomId.js";
 
 const blankWorkflow = { name: "", description: "", category: "视觉创作", entryType: "workbench" };
@@ -126,14 +126,38 @@ function workflowWarnings(definition) {
   return [...new Set(warnings)];
 }
 
-function FlowNode({ data }) {
+function publishIssues(definition) {
+  // 线性教学工作流会以 note 节点兼容历史版本；只对可执行节点图强制输入输出闭环。
+  if (!definition.nodes.some((node) => node.type !== "note")) return [];
+  const incoming = new Map(definition.nodes.map((node) => [node.id, 0]));
+  const outgoing = new Map(definition.nodes.map((node) => [node.id, []]));
+  definition.edges.forEach((edge) => {
+    incoming.set(edge.target, (incoming.get(edge.target) ?? 0) + 1);
+    outgoing.get(edge.source)?.push(edge.target);
+  });
+  const inputs = definition.nodes.filter((node) => node.type === "input");
+  const outputs = definition.nodes.filter((node) => node.type === "preview" || node.type === "save_image");
+  if (!inputs.length) return ["发布前需要至少一个创作输入节点"];
+  if (!outputs.length) return ["发布前需要至少一个预览或保存图片节点"];
+  const reachable = new Set(inputs.map((node) => node.id));
+  const queue = [...reachable];
+  while (queue.length) for (const target of outgoing.get(queue.shift()) ?? []) if (!reachable.has(target)) { reachable.add(target); queue.push(target); }
+  const detached = definition.nodes.find((node) => !reachable.has(node.id) && node.type !== "note");
+  if (detached) return [`发布前请连接孤立节点“${detached.data.label || detached.id}”`];
+  const unreachableOutput = outputs.find((node) => !reachable.has(node.id));
+  if (unreachableOutput) return [`发布前请将输出节点“${unreachableOutput.data.label || unreachableOutput.id}”连接到输入链路`];
+  if (definition.nodes.some((node) => node.type !== "note" && !(incoming.get(node.id) || outgoing.get(node.id)?.length))) return ["发布前请移除或连接孤立节点"];
+  return [];
+}
+
+function FlowNode({ data, selected }) {
   const meta = palette[data.nodeType] || palette.note;
   const canReceive = data.nodeType !== "input";
   const canSend = data.nodeType !== "preview";
-  return <div className="workflow-flow-node" style={{ "--node-color": meta.color }}>
+  return <div className={`workflow-flow-node ${selected ? "is-selected" : ""} ${data.isActive ? "is-running" : ""} ${data.isComplete ? "is-complete" : ""}`} style={{ "--node-color": meta.color }}>
     {canReceive && <Handle id="input" type="target" position={Position.Left} className="workflow-flow-handle" />}
     <div className="workflow-flow-node__bar drag-handle"><FlowArrow size={15} weight="bold" /> {meta.title}</div>
-    <strong className="nodrag">{data.label || meta.title}</strong>
+    <strong className="nodrag">{data.label || meta.title}{data.isComplete && <CheckCircle size={14} weight="fill" aria-label="已执行" />}{data.isActive && <SpinnerGap size={14} className="spin" aria-label="正在执行" />}</strong>
     <span className="nodrag">{data.description || meta.hint}</span>
     {data.value && <small className="nodrag">{data.value}</small>}
     {canSend && <Handle id="output" type="source" position={Position.Right} className="workflow-flow-handle" />}
@@ -148,6 +172,10 @@ export function WorkflowAdmin({ showToast, canPublish = true }) {
   const [editor, setEditor] = useState(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const draftTimer = useRef(null);
+
+  useEffect(() => () => { if (draftTimer.current) window.clearTimeout(draftTimer.current); }, []);
 
   const load = async () => {
     try { setItems((await getAdminWorkflows(search)).items ?? []); }
@@ -162,6 +190,7 @@ export function WorkflowAdmin({ showToast, canPublish = true }) {
       const latest = detail.versions?.[0];
       const local = readDraft(workflow.id);
       setSelected(detail);
+      setDirty(Boolean(local));
       setEditor({
         name: detail.name ?? "", description: detail.description ?? "", category: detail.category ?? "视觉创作", entryType: detail.entryType ?? "workbench", entryUrl: detail.entryUrl ?? "",
         promptTemplate: local?.promptTemplate ?? latest?.promptTemplate ?? "",
@@ -180,25 +209,36 @@ export function WorkflowAdmin({ showToast, canPublish = true }) {
     finally { setLoading(false); }
   };
 
-  const change = (key, value) => setEditor((current) => {
+  const queueDraft = (id, value) => {
+    if (draftTimer.current) window.clearTimeout(draftTimer.current);
+    draftTimer.current = window.setTimeout(() => writeDraft(id, value), 180);
+  };
+  const change = (key, value) => { setDirty(true); setEditor((current) => {
     const next = { ...current, [key]: value };
-    writeDraft(selected?.id, { definition: next.definition, promptTemplate: next.promptTemplate });
+    // 拖动节点会连续产生几十个 position 事件，延迟写草稿避免同步 localStorage 阻塞指针移动。
+    queueDraft(selected?.id, { definition: next.definition, promptTemplate: next.promptTemplate });
     return next;
-  });
+  }); };
 
   const changeDefinition = (definition) => change("definition", definition);
 
   const save = async (publish) => {
     const issues = workflowIssues(editor.definition);
-    if (!editor.name.trim() || issues.length) { showToast(!editor.name.trim() ? "请填写工作流名称" : issues[0]); return; }
+    const releaseIssues = publish ? publishIssues(editor.definition) : [];
+    if (!editor.name.trim() || issues.length || releaseIssues.length) { showToast(!editor.name.trim() ? "请填写工作流名称" : issues[0] || releaseIssues[0]); return; }
     setLoading(true);
     try {
-      await updateWorkflow(selected.id, { name: editor.name, description: editor.description, category: editor.category, entryType: editor.entryType, entryUrl: editor.entryUrl || undefined });
+      // 历史数据可能把站内路由（例如 /studio）存进入口地址；服务端仅接受无凭据 HTTP(S) 外链。
+      const entryUrl = /^https?:\/\//i.test(editor.entryUrl || "") ? editor.entryUrl : undefined;
+      await updateWorkflow(selected.id, { name: editor.name, description: editor.description, category: editor.category, entryType: editor.entryType, entryUrl });
       await createWorkflowVersion(selected.id, { definition: editor.definition, promptTemplate: editor.promptTemplate, publish });
+      if (draftTimer.current) window.clearTimeout(draftTimer.current);
       window.localStorage.removeItem(draftKey(selected.id));
+      setDirty(false);
       await load(); await open({ id: selected.id });
       showToast(publish ? "节点工作流新版本已发布" : "节点工作流版本已保存");
-    } catch (error) { showToast(error.message); }
+      return true;
+    } catch (error) { showToast(error.message); return false; }
     finally { setLoading(false); }
   };
 
@@ -219,11 +259,12 @@ export function WorkflowAdmin({ showToast, canPublish = true }) {
         const next = { ...current, ...(data.workflow ?? {}), definition, promptTemplate: data.promptTemplate ?? current.promptTemplate };
         writeDraft(selected?.id, { definition: next.definition, promptTemplate: next.promptTemplate }); return next;
       });
+      setDirty(true);
       showToast("节点图已导入本地草稿");
     } catch (error) { showToast(`导入失败：${error.message}`); }
   };
 
-  if (editor && selected) return <WorkflowCanvas editor={editor} selected={selected} loading={loading} canPublish={canPublish} onBack={() => { setEditor(null); setSelected(null); }} onChange={change} onDefinition={changeDefinition} onSave={save} onExport={exportJson} onImport={importJson} />;
+  if (editor && selected) return <WorkflowCanvas editor={editor} selected={selected} loading={loading} dirty={dirty} canPublish={canPublish} onNotice={showToast} onBack={() => { setEditor(null); setSelected(null); }} onChange={change} onDefinition={changeDefinition} onSave={save} onExport={exportJson} onImport={importJson} />;
 
   return <div className="page-content">
     <section className="page-intro"><div><p>// COMFY-STYLE WORKFLOW OPERATIONS</p><h1>节点工作流</h1><span>用画布连接输入、提示词、模型与输出节点；保存后生成不可变版本。</span></div><button className="primary-button" disabled={loading} onClick={create}><Plus size={18} weight="bold" /> 新建节点工作流</button></section>
@@ -231,13 +272,22 @@ export function WorkflowAdmin({ showToast, canPublish = true }) {
   </div>;
 }
 
-function WorkflowCanvas({ editor, selected, loading, canPublish, onBack, onChange, onDefinition, onSave, onExport, onImport }) {
+function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice, onBack, onChange, onDefinition, onSave, onExport, onImport }) {
   const [selectedId, setSelectedId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [preview, setPreview] = useState("");
   const [nodeQuery, setNodeQuery] = useState("");
   const [nodeGroup, setNodeGroup] = useState("全部");
-  const nodes = useMemo(() => editor.definition.nodes.map((node) => ({ ...node, data: { ...node.data, nodeType: node.type } })), [editor.definition.nodes]);
+  const [flow, setFlow] = useState(null);
+  const [run, setRun] = useState(null);
+  const [runPrompt, setRunPrompt] = useState("");
+  const [referenceFile, setReferenceFile] = useState(null);
+  const [runBusy, setRunBusy] = useState(false);
+  const runSteps = run?.steps ?? [];
+  const activeStep = run?.status === "in_progress" ? runSteps[run.currentStep] : null;
+  const activeNode = activeStep ? editor.definition.nodes.find((node) => node.id === activeStep.id) : null;
+  const completedNodeIds = useMemo(() => new Set(run ? runSteps.slice(0, run.currentStep).map((step) => step.id) : []), [run, runSteps]);
+  const nodes = useMemo(() => editor.definition.nodes.map((node) => ({ ...node, data: { ...node.data, nodeType: node.type, isActive: node.id === activeStep?.id, isComplete: completedNodeIds.has(node.id) } })), [editor.definition.nodes, activeStep?.id, completedNodeIds]);
   const edges = useMemo(() => editor.definition.edges.map((edge) => ({ ...edge, markerEnd: { type: MarkerType.ArrowClosed } })), [editor.definition.edges]);
   const selectedNode = editor.definition.nodes.find((node) => node.id === selectedId);
   const selectedEdge = editor.definition.edges.find((edge) => edge.id === selectedEdgeId);
@@ -268,15 +318,99 @@ function WorkflowCanvas({ editor, selected, loading, canPublish, onBack, onChang
     commit({ edges: addEdge({ ...connection, id: newId("edge") }, editor.definition.edges) }); setSelectedEdgeId(null);
   };
 
+  const autoLayout = () => {
+    const incoming = new Map(editor.definition.nodes.map((node) => [node.id, []]));
+    editor.definition.edges.forEach((edge) => incoming.get(edge.target)?.push(edge.source));
+    const ranks = new Map();
+    const rankOf = (id, visiting = new Set()) => {
+      if (ranks.has(id)) return ranks.get(id);
+      if (visiting.has(id)) return 0;
+      visiting.add(id);
+      const rank = Math.max(0, ...(incoming.get(id) || []).map((source) => rankOf(source, visiting) + 1));
+      visiting.delete(id); ranks.set(id, rank); return rank;
+    };
+    editor.definition.nodes.forEach((node) => rankOf(node.id));
+    const columns = new Map();
+    editor.definition.nodes.forEach((node) => { const rank = ranks.get(node.id) ?? 0; if (!columns.has(rank)) columns.set(rank, []); columns.get(rank).push(node); });
+    const nodes = editor.definition.nodes.map((node) => {
+      const rank = ranks.get(node.id) ?? 0;
+      const column = columns.get(rank) || [];
+      return { ...node, position: { x: 70 + rank * 285, y: 70 + column.findIndex((item) => item.id === node.id) * 175 } };
+    });
+    commit({ nodes });
+    window.setTimeout(() => flow?.fitView({ padding: 0.2, duration: 280 }), 0);
+  };
+  const fitCanvas = () => flow?.fitView({ padding: 0.2, duration: 280 });
+  const runWorkflow = async () => {
+    if (issues.length) { onNotice(issues[0]); return; }
+    if (publishIssues(editor.definition).length) { onNotice(publishIssues(editor.definition)[0]); return; }
+    setRunBusy(true);
+    try {
+      if (dirty || selected.status !== "published") {
+        const saved = await onSave(true);
+        if (!saved) return;
+      }
+      const next = await startWorkflowRun(selected.id, {});
+      setRun(next); setRunPrompt(""); onNotice("运行已启动：请按画布连接顺序执行节点。");
+    } catch (error) { onNotice(error.message); }
+    finally { setRunBusy(false); }
+  };
+  const executeCurrentNode = async () => {
+    if (!run || !activeNode) return;
+    if (activeNode.type === "input" && !runPrompt.trim() && !String(activeNode.data.value || "").trim()) { onNotice("请填写创作需求，或在输入节点配置默认值。"); return; }
+    setRunBusy(true);
+    try {
+      let referenceFileId;
+      if (activeNode.type === "load_image") {
+        if (!referenceFile) { onNotice("请先选择一张已获授权的参考图片。"); return; }
+        const uploaded = await uploadTemporaryCreationFile(referenceFile);
+        referenceFileId = uploaded.id;
+      }
+      const next = await executeWorkflowRun(run.id, { ...(runPrompt.trim() ? { prompt: runPrompt.trim() } : {}), ...(referenceFileId ? { referenceFileId } : {}) });
+      setRun(next);
+      if (referenceFileId) setReferenceFile(null);
+      if (next.status === "completed") onNotice("工作流已执行完成，结果已写入本次运行记录。");
+    } catch (error) { onNotice(error.message); }
+    finally { setRunBusy(false); }
+  };
+
+  useEffect(() => {
+    if (!flow || !editor.definition.nodes.length) return;
+    const frame = window.requestAnimationFrame(() => flow.fitView({ padding: 0.2, duration: 0 }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [flow, selected.id]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const target = event.target;
+      const editing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") { event.preventDefault(); if (!editing && !loading) onSave(false); return; }
+      if (editing) return;
+      if (event.key === "Escape") { setSelectedId(null); setSelectedEdgeId(null); }
+      if (event.key === "Delete" || event.key === "Backspace") {
+        if (selectedId) deleteNode(); else if (selectedEdgeId) deleteEdge();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedId, selectedEdgeId, loading, onSave]);
+
   return <div className="page-content workflow-canvas-page">
     <button className="learning-back" onClick={onBack}><ArrowLeft size={16} weight="bold" /> 返回工作流列表</button>
-    <section className="workflow-canvas-topbar"><div><p>// COMFY-STYLE WORKFLOW BUILDER · {selected.status === "published" ? "NEW VERSION" : "DRAFT"}</p><h1>{editor.name || "未命名节点工作流"}</h1><span>拖动画布、连线编排；编辑状态仅保存在本机浏览器，保存后才写入数据库。</span></div><div className="workflow-editor-actions"><label className="outline-button"><UploadSimple size={16} /> 导入 JSON<input hidden type="file" accept="application/json,.json" onChange={onImport} /></label><button className="outline-button" onClick={onExport}><DownloadSimple size={16} /> 导出 JSON</button></div></section>
+    <section className="workflow-canvas-topbar"><div><p>// COMFY-STYLE WORKFLOW BUILDER · {selected.status === "published" ? "NEW VERSION" : "DRAFT"}</p><h1>{editor.name || "未命名节点工作流"}</h1><span>拖动节点顶部调整位置；拖动画布空白处平移，滚轮缩放。{dirty ? "本机草稿尚未保存为版本。" : "当前版本已保存。"}</span></div><div className="workflow-editor-actions"><label className="outline-button"><UploadSimple size={16} /> 导入 JSON<input hidden type="file" accept="application/json,.json" onChange={onImport} /></label><button className="outline-button" onClick={onExport}><DownloadSimple size={16} /> 导出 JSON</button></div></section>
     <section className="workflow-canvas-shell">
       <aside className="workflow-node-palette"><p>// NODE LIBRARY</p><h2>节点库</h2><span>按类型搜索，点击添加到画布</span><label className="workflow-node-search"><MagnifyingGlass size={15} /><input value={nodeQuery} onChange={(event) => setNodeQuery(event.target.value)} placeholder="搜索节点，例如 KSampler" /></label><div className="workflow-node-groups"><button className={nodeGroup === "全部" ? "is-active" : ""} onClick={() => setNodeGroup("全部")}>全部</button>{paletteGroups.map((group) => <button key={group} className={nodeGroup === group ? "is-active" : ""} onClick={() => setNodeGroup(group)}>{group}</button>)}</div><div className="workflow-node-list">{visiblePalette.map(([type, meta]) => <button key={type} onClick={() => addNode(type)} style={{ "--node-color": meta.color }}><i><FlowArrow size={16} /></i><span><em>{meta.group}</em><strong>{meta.title}</strong><small>{meta.hint}</small></span><Plus size={15} /></button>)}{!visiblePalette.length && <div className="workflow-node-empty">没有匹配的节点</div>}</div><div className="workflow-canvas-tip"><strong>连接规则</strong><span>当前画布会校验 DAG 结构；端口类型与实际 GPU 执行会随 Worker 协议接入。</span></div></aside>
-      <div className="workflow-flow-wrap"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} defaultViewport={editor.definition.viewport} fitView nodesDraggable nodesConnectable elementsSelectable panOnDrag isValidConnection={isValidConnection} onNodesChange={(changes) => commit({ nodes: applyNodeChanges(changes, editor.definition.nodes) })} onEdgesChange={(changes) => commit({ edges: applyEdgeChanges(changes, editor.definition.edges) })} onConnect={connect} onNodeClick={(_, node) => { setSelectedId(node.id); setSelectedEdgeId(null); }} onEdgeClick={(_, edge) => { setSelectedEdgeId(edge.id); setSelectedId(null); }} onPaneClick={() => { setSelectedId(null); setSelectedEdgeId(null); }} onMoveEnd={(_, viewport) => commit({ viewport })}><Background color="#374151" gap={18} size={1} /><MiniMap pannable zoomable nodeColor={(node) => palette[node.type]?.color || "#78859b"} /><Controls /></ReactFlow>{preview && <div className="workflow-preview-toast"><strong>本地结构预览</strong><span>{preview}</span><button onClick={() => setPreview("")}><X size={15} /></button></div>}</div>
+      <div className="workflow-flow-wrap"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} defaultViewport={editor.definition.viewport} onInit={setFlow} nodesDraggable nodesConnectable elementsSelectable dragHandle=".drag-handle" panOnDrag zoomOnScroll snapToGrid snapGrid={[20, 20]} onlyRenderVisibleElements connectionLineType={ConnectionLineType.SmoothStep} isValidConnection={isValidConnection} onNodesChange={(changes) => commit({ nodes: applyNodeChanges(changes, editor.definition.nodes) })} onEdgesChange={(changes) => commit({ edges: applyEdgeChanges(changes, editor.definition.edges) })} onConnect={connect} onNodeClick={(_, node) => { setSelectedId(node.id); setSelectedEdgeId(null); }} onEdgeClick={(_, edge) => { setSelectedEdgeId(edge.id); setSelectedId(null); }} onSelectionChange={({ nodes: nextNodes, edges: nextEdges }) => { setSelectedId(nextNodes[0]?.id ?? null); setSelectedEdgeId(nextEdges[0]?.id ?? null); }} onPaneClick={() => { setSelectedId(null); setSelectedEdgeId(null); }} onMoveEnd={(_, viewport) => commit({ viewport })}><Background color="#374151" gap={20} size={1} /><MiniMap pannable zoomable nodeColor={(node) => palette[node.type]?.color || "#78859b"} /><Controls showInteractive={false} /><div className="workflow-flow-tools"><button type="button" onClick={autoLayout} title="按连接关系自动整理节点"><MagicWand size={15} /> 自动整理</button><button type="button" onClick={fitCanvas} title="让全部节点适配画布"><ArrowsOut size={15} /> 适配画布</button></div></ReactFlow>{preview && <div className="workflow-preview-toast"><strong>本地结构预览</strong><span>{preview}</span><button onClick={() => setPreview("")}><X size={15} /></button></div>}</div>
       <aside className="workflow-inspector"><p>// INSPECTOR</p><h2>{selectedNode ? "节点配置" : selectedEdge ? "连线配置" : "工作流配置"}</h2>{selectedNode ? <div className="workflow-form"><div className="node-type-badge" style={{ "--node-color": palette[selectedNode.type]?.color }}>{palette[selectedNode.type]?.title}</div><label>节点名称<input value={selectedNode.data.label || ""} onChange={(event) => updateNode("label", event.target.value)} /></label><label>节点说明<textarea value={selectedNode.data.description || ""} onChange={(event) => updateNode("description", event.target.value)} /></label><label>默认值 / 参数<textarea value={selectedNode.data.value || ""} onChange={(event) => updateNode("value", event.target.value)} placeholder={selectedNode.type === "skill" ? "例如：提取纹样骨架；保持四方连续；应用低饱和配色" : "例如：1024×1024、写实摄影、低饱和"} /></label><label>预计用时<input type="number" min="0" max="1440" value={selectedNode.data.estimatedMinutes ?? 10} onChange={(event) => updateNode("estimatedMinutes", Number(event.target.value))} /><small>用于学生端步骤提示，不影响图结构。</small></label><button className="outline-button" onClick={duplicateNode}><Plus size={15} /> 复制节点</button><button className="danger-text-button" onClick={deleteNode}><X size={15} /> 删除节点</button></div> : selectedEdge ? <div className="workflow-edge-inspector"><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.source)?.data?.label || selectedEdge.source}</strong><FlowArrow size={18} weight="bold" /><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.target)?.data?.label || selectedEdge.target}</strong><span>这条连线代表数据从上游节点传递到下游节点。</span><button className="danger-text-button" onClick={deleteEdge}><X size={15} /> 删除连线</button></div> : <div className="workflow-form"><label>工作流名称<input value={editor.name} onChange={(event) => onChange("name", event.target.value)} /></label><label>工作流描述<textarea value={editor.description} onChange={(event) => onChange("description", event.target.value)} /></label><label>分类<input value={editor.category} onChange={(event) => onChange("category", event.target.value)} /></label><label>入口<select value={editor.entryType} onChange={(event) => onChange("entryType", event.target.value)}><option value="chat">教学对话</option><option value="workbench">设计工作台</option><option value="external_tool">外部工具</option></select></label><label>提示模板（可选）<textarea value={editor.promptTemplate} onChange={(event) => onChange("promptTemplate", event.target.value)} placeholder="供未来模型节点调用的全局提示词" /></label></div>}<div className={`workflow-graph-check ${issues.length ? "is-error" : ""}`}><strong>{issues.length ? "图结构待修复" : "图结构有效"}</strong><span>{issues[0] || `${editor.definition.nodes.length} 个节点 · ${editor.definition.edges.length} 条连接`}</span>{!issues.length && warnings[0] && <em>{warnings[0]}</em>}</div></aside>
     </section>
-    <section className="workflow-runbar"><div><FlowArrow size={19} weight="bold" /><span>当前仅校验图结构；模型执行、队列和运行日志将在后续接入实际算力后启用。</span></div><div><button className="outline-button" onClick={() => setPreview(issues.length ? issues[0] : `连接关系有效：${editor.definition.nodes.length} 个节点将按画布关系传递数据。`)}>本地预览</button><button className="outline-button" disabled={loading} onClick={() => onSave(false)}><FloppyDisk size={16} /> 保存版本</button>{canPublish ? <button className="primary-button" disabled={loading} onClick={() => onSave(true)}>保存并发布 <ArrowRight size={16} /></button> : <span className="workflow-publish-hint">保存后由教师、运营或管理员发布。</span>}</div></section>
+    <section className="workflow-canvas-runner" aria-live="polite">
+      <div><p>// RUN ON CANVAS</p><h2>{run?.status === "completed" ? "本次运行已完成" : activeNode ? `正在执行：${activeNode.data.label || activeNode.type}` : "从画布直接运行"}</h2><span>{run ? `${Math.round((run.currentStep / Math.max(run.totalSteps, 1)) * 100)}% · ${run.currentStep}/${run.totalSteps} 个节点已完成` : "先校验并发布当前节点图，再按连接关系逐节点执行。"}</span></div>
+      {!run && <button className="primary-button" disabled={loading || runBusy || !canPublish} onClick={runWorkflow}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}{dirty || selected.status !== "published" ? "发布并运行" : "运行工作流"}</button>}
+      {run?.status === "in_progress" && activeNode && <div className="workflow-canvas-runner__step"><div><strong>{activeNode.data.label || activeNode.type}</strong><small>{activeNode.data.description || palette[activeNode.type]?.hint}</small></div>{activeNode.type === "input" && <label>创作需求<textarea value={runPrompt} onChange={(event) => setRunPrompt(event.target.value)} placeholder="例如：为新生设计一张青绿色的传统纹样海报" /></label>}{activeNode.type === "load_image" && <label className="workflow-reference-upload">参考图片<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small></label>}<button className="primary-button" disabled={runBusy} onClick={executeCurrentNode}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}执行当前节点</button></div>}
+      {run?.status === "completed" && <div className="workflow-canvas-runner__done"><CheckCircle size={20} weight="fill" /> 所有节点均已执行。请在节点结果中查看生成产物或运行记录。</div>}
+      {!canPublish && <small>需要教师、运营或管理员身份才能发布并运行。</small>}
+    </section>
+    <section className="workflow-runbar"><div><FlowArrow size={19} weight="bold" /><span>拖动节点：顶部栏；平移画布：空白处；缩放：滚轮。Delete 删除选中节点或连线，Ctrl/⌘+S 保存。</span></div><div><span className="workflow-canvas-selection-hint"><Keyboard size={14} /> {selectedNode ? `已选节点：${selectedNode.data.label || "未命名"}` : selectedEdge ? "已选连线" : "未选择对象"}</span><button className="outline-button" onClick={() => setPreview(issues.length ? issues[0] : `连接关系有效：${editor.definition.nodes.length} 个节点将按画布关系传递数据。`)}>本地预览</button><button className="outline-button" disabled={loading || runBusy} onClick={() => onSave(false)}><FloppyDisk size={16} /> 保存版本</button>{canPublish ? <button className="outline-button" disabled={loading || runBusy} onClick={() => onSave(true)}>保存并发布 <ArrowRight size={16} /></button> : <span className="workflow-publish-hint">保存后由教师、运营或管理员发布。</span>}</div></section>
     {selected.versions?.length > 0 && <section className="table-panel workflow-versions"><div className="panel__heading"><div><p>// VERSION HISTORY</p><h2>版本记录</h2></div><span>{selected.versions.length} 个版本</span></div>{selected.versions.map((version) => <div key={version.id}><strong>V{version.versionNumber}</strong><span>{version.nodes?.length ?? version.steps?.length ?? 0} 个节点 · {version.edges?.length ?? 0} 条连接 · {version.published ? "已发布" : "草稿"}</span><small>{version.createdAt ? new Date(version.createdAt).toLocaleString("zh-CN") : ""}</small></div>)}</section>}
   </div>;
 }

@@ -25,7 +25,8 @@ const environmentSchema = z.object({
   RAG_EMBEDDING_BASE_URL: optionalUrl,
   RAG_EMBEDDING_MODEL: z.string().trim().max(200).optional(),
   RAG_EMBEDDING_API_KEY: z.string().trim().max(2000).optional(),
-  RAG_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(64).max(4096).default(1024),
+  // 当前 staging embedding 模型 BAAI/bge-base-zh-v1.5 输出 768 维。
+  RAG_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(64).max(4096).default(768),
   RAG_MIN_SIMILARITY: z.coerce.number().min(0).max(1).default(0.62),
   RAG_WEB_FALLBACK_ENABLED: z.enum(["true", "false"]).default("true"),
   AGENT_ALERT_KEYWORDS: z.string().optional(),

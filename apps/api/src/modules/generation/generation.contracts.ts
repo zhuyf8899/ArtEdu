@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { officeFormatSchema } from "./document-content";
+import type { ModelMessage } from "./model-adapter";
 
 /**
  * 图片能力的公共输入。网页、工作流节点和任意供应商适配器都只认识这套字段；
@@ -42,5 +43,5 @@ export const runGenerationJobSchema = createGenerationJobSchema.extend({
 type ParsedGenerationJobInput = z.infer<typeof createGenerationJobSchema>;
 type ParsedRunGenerationJobInput = z.infer<typeof runGenerationJobSchema>;
 // 服务层兼容既有调用方；HTTP 校验后仍会把缺失值归一化为 []。
-export type CreateGenerationJobInput = Omit<ParsedGenerationJobInput, "context"> & { context?: ParsedGenerationJobInput["context"] };
-export type RunGenerationJobInput = Omit<ParsedRunGenerationJobInput, "context"> & { context?: ParsedRunGenerationJobInput["context"] };
+export type CreateGenerationJobInput = Omit<ParsedGenerationJobInput, "context"> & { context?: ModelMessage[] };
+export type RunGenerationJobInput = Omit<ParsedRunGenerationJobInput, "context"> & { context?: ModelMessage[] };

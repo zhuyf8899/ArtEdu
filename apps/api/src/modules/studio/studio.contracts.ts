@@ -162,6 +162,8 @@ export const toolDirectoryLinkUpdateSchema = toolDirectoryLinkSchema.extend({
 /** 执行器只接受平台保存的节点图；浏览器不能传任意供应商参数或工作流 JSON。 */
 export const workflowRunExecuteSchema = z.object({
   prompt: z.string().trim().min(1).max(10000).optional(),
+  // 仅接收临时素材服务签发的 ID；实际文件归属、类型和过期时间由服务端再次校验。
+  referenceFileId: z.string().trim().min(1).max(160).optional(),
 });
 
 export const reportInputSchema = z.object({

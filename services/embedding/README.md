@@ -46,8 +46,8 @@ docker compose -f docker-compose.staging.yml ps embedding
 
 ## 与 RAG 代码的接线
 
-`api` 与 `rag-worker` 通过 `RAG_EMBEDDING_BASE_URL` 等四个变量访问本服务（见 `deploy/staging.env.example`）。**当前 RAG 摄取与向量检索代码尚未实现**：`apps/api/src/modules/rag/rag.worker.ts` 是占位实现，`rag.service.ts` 只做 `transcript_text` 精确匹配，所以 `RAG_ENABLED` 保持 `false`，打开它也不会产生索引。
+`api` 与 `rag-worker` 通过 `RAG_EMBEDDING_BASE_URL` 等四个变量访问本服务（见 `deploy/staging.env.example`）。RAG Worker 会使用 `pdftotext` 提取 PDF、按页切片、批量调用本服务并写入 pgvector；查询按余弦相似度召回分块，服务异常时回退到 `transcript_text` 精确匹配。任务最多重试 3 次，崩溃 Worker 遗留的 processing 任务会在 15 分钟后自动回收。生产环境仍应在完成数据验证后再把 `RAG_ENABLED` 设为 `true`。
 
 ## 维度对齐
 
-`migrations/0016_rag_pgvector_foundation.sql` 最初把 `rag_chunks.embedding` 定为 `vector(1024)`；`migrations/0024_rag_embedding_dimensions.sql` 已把它对齐到本模型的 768 维并重建 HNSW 索引（该表迁移前为空）。摄取代码落地时，模型输出、`RAG_EMBEDDING_DIMENSIONS` 与列类型三者必须一致。
+`migrations/0016_rag_pgvector_foundation.sql` 最初把 `rag_chunks.embedding` 定为 `vector(1024)`；`migrations/0024_rag_embedding_dimensions.sql` 已把它对齐到本模型的 768 维并重建 HNSW 索引（该表迁移前为空）。部署时模型输出、`RAG_EMBEDDING_DIMENSIONS` 与列类型三者必须一致。

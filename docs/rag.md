@@ -5,9 +5,9 @@
 当前（2026-09-18）的状态分两层：
 
 - **Provider 已就绪**：`docker-compose.staging.yml` 的 `embedding` 服务已在 staging 上运行，提供 OpenAI 兼容的 `/v1/embeddings`（见下文）。
-- **摄取与向量检索代码尚未落地**：`rag.worker.ts` 仍是占位实现（只打印日志、不领取任务），`rag.service.ts` 的查询仍是对教师录入的 `transcript_text` 做精确文本匹配。因此现阶段不会索引 PDF，也不会做向量召回，接口如实返回 `awaiting_embedding_provider`，不编造结果。
+- **摄取与向量检索已落地**：`rag.worker.ts` 会领取 PDF 索引任务、调用本地 embedding 服务并写入 pgvector；`rag.service.ts` 按余弦相似度召回证据，服务暂时不可用时回退到教师录入的 `transcript_text` 精确匹配。Worker 对失败任务最多重试 3 次，并会回收崩溃 Worker 遗留的过期 processing 任务。
 
-- `POST /api/courses/:courseId/rag/search`：课程提问接口；命中已授权的转写文本时返回 `local_text_evidence`，否则返回 `awaiting_embedding_provider`。
+- `POST /api/courses/:courseId/rag/search`：课程提问接口；命中 PDF 向量分块时返回 `vector_evidence`，命中转写文本时返回 `local_text_evidence`，均无命中时返回 `indexed_no_match` 或 `awaiting_embedding_provider`。
 - `POST /api/admin/courses/:courseId/resources/:resourceId/rag/reindex`：教师或管理员把 PDF 放入索引队列。
 - `GET /api/admin/courses/:courseId/resources/:resourceId/rag/status`：读取索引队列和资料状态。
 
@@ -42,7 +42,7 @@ RAG_EMBEDDING_DIMENSIONS=768
 
 ### 维度对齐
 
-`migrations/0024_rag_embedding_dimensions.sql` 把 `rag_chunks.embedding` 从占位用的 `vector(1024)` 调整为 `vector(768)` 并重建 HNSW 索引（该表迁移前为空）。摄取代码落地时，`RAG_EMBEDDING_DIMENSIONS`、列类型和模型输出三者必须保持一致。
+`migrations/0024_rag_embedding_dimensions.sql` 把 `rag_chunks.embedding` 从占位用的 `vector(1024)` 调整为 `vector(768)` 并重建 HNSW 索引（该表迁移前为空）。部署时 `RAG_EMBEDDING_DIMENSIONS`、列类型和模型输出三者必须保持一致。
 
 ### 验证方式
 
