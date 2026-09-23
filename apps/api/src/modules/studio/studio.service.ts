@@ -224,6 +224,7 @@ export class StudioService {
     if (!actor.roles.includes("admin") && workflow.rows[0].created_by !== actor.id) throw new ForbiddenException("只能编辑自己创建的工作流");
     if (input.publish) this.auth.requireAnyRole(actor, WORKFLOW_PUBLISH_ROLES);
     const definition = input.definition ?? this.legacyStepsToDefinition(input.steps ?? []);
+    if (input.publish) this.assertExecutableDefinition(definition);
     const version = await this.database.transaction(async (client) => {
       const next = await client.query<{ number: number }>("SELECT COALESCE(MAX(version_number), 0)::int + 1 AS number FROM workflow_versions WHERE workflow_id = $1", [workflowId]);
       const id = `workflow-version-${randomUUID()}`;
@@ -238,14 +239,31 @@ export class StudioService {
   }
 
   async startWorkflow(actor: Actor, workflowId: string, input: WorkflowRunInput) {
-    const workflow = await this.getWorkflow(workflowId) as Record<string, any>;
-    if (!workflow.versionId) throw new ConflictException("工作流还没有已发布版本");
+    const result = await this.database.query(`
+      SELECT w.id,w.name,w.description,w.category,w.entry_type,w.entry_url,w.status,w.created_by,
+        latest.id AS version_id,latest.version_number,latest.definition_json,latest.prompt_template,
+        COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
+      FROM workflows w
+      LEFT JOIN LATERAL (
+        SELECT * FROM workflow_versions
+        WHERE workflow_id=w.id AND (published_at IS NOT NULL OR w.created_by=$2)
+        ORDER BY version_number DESC LIMIT 1
+      ) latest ON TRUE
+      WHERE w.id=$1 AND (w.status='published' OR w.created_by=$2) AND w.status<>'archived'
+    `, [workflowId, actor.id]);
+    if (!result.rows[0]) throw new NotFoundException("工作流不存在或尚未发布");
+    const workflow = this.mapWorkflow(result.rows[0]);
+    if (!workflow.versionId) throw new ConflictException("工作流还没有可运行版本");
+    this.assertExecutableDefinition(workflow.definition);
+    const initialPrompt = typeof input.context.prompt === "string" ? input.context.prompt.trim().slice(0, 10000) : "";
+    const initialSize = typeof input.context.size === "string" && /^\d{3,4}x\d{3,4}$/.test(input.context.size) ? input.context.size : "1024x1024";
+    const runContext = { initialPrompt, initialSize, size: initialSize, nodeResults: {}, nodeStates: {} };
     const id = `workflow-run-${randomUUID()}`;
     await this.database.transaction(async (client) => {
       await client.query(`
         INSERT INTO workflow_runs (id,user_id,workflow_id,workflow_version_id,total_steps,context_json)
         VALUES ($1,$2,$3,$4,$5,$6::jsonb)
-      `, [id, actor.id, workflowId, workflow.versionId, workflow.stepCount, JSON.stringify(input.context)]);
+      `, [id, actor.id, workflowId, workflow.versionId, workflow.stepCount, JSON.stringify(runContext)]);
       await client.query("INSERT INTO workflow_run_events (id,run_id,step_index,event_type) VALUES ($1,$2,0,'start')", [`workflow-event-${randomUUID()}`, id]);
     });
     return this.getRun(actor, id);
@@ -268,6 +286,8 @@ export class StudioService {
     const current = await this.getRun(actor, runId) as Record<string, any>;
     if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");
     if (input.stepIndex !== current.currentStep) throw new ConflictException("只能处理当前步骤");
+    const currentNode = current.nodes.find((node: Record<string, any>) => node.id === current.steps[current.currentStep]?.id);
+    if (input.action !== "note" && currentNode?.type !== "note") throw new ConflictException("可执行节点必须由服务端实际执行，不能手动跳过");
     const advances = input.action === "complete" || input.action === "skip";
     const nextStep = advances ? Math.min(current.currentStep + 1, current.totalSteps) : current.currentStep;
     const completed = nextStep >= current.totalSteps && advances;
@@ -284,18 +304,33 @@ export class StudioService {
     return this.getRun(actor, runId);
   }
 
-  /** 执行当前拓扑节点；只有 KSampler 会消耗模型额度并调用统一图片 API。 */
+  /** 按连接关系传递上游状态；生成节点通过平台统一模型服务计费和归档。 */
   async executeRun(actor: Actor, runId: string, input: WorkflowRunExecuteInput) {
     const current = await this.getRun(actor, runId) as Record<string, any>;
     if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");
     const step = current.steps[current.currentStep];
     const node = current.nodes.find((item: Record<string, any>) => item.id === step?.id);
     if (!node) throw new ConflictException("当前节点不存在，无法执行");
-    const context = this.workflowContext(current.context);
+    const claimed = await this.database.query(`UPDATE workflow_runs
+      SET context_json=jsonb_set(context_json, '{executing}', jsonb_build_object('step', current_step, 'at', CURRENT_TIMESTAMP), true)
+      WHERE id=$1 AND user_id=$2 AND status='in_progress' AND current_step=$3
+        AND (context_json->'executing' IS NULL OR (context_json->'executing'->>'at')::timestamptz < CURRENT_TIMESTAMP - INTERVAL '10 minutes')
+      RETURNING id`, [runId, actor.id, current.currentStep]);
+    if (!claimed.rowCount) throw new ConflictException("该节点正在执行，或执行进度已更新");
+    try {
+    const saved = this.workflowContext(current.context);
+    const parents = current.edges.filter((edge: Record<string, any>) => edge.target === node.id).map((edge: Record<string, any>) => edge.source);
+    const context = parents.length
+      ? this.mergeNodeStates(saved, parents)
+      : this.workflowContext({ prompt: saved.initialPrompt, size: saved.initialSize });
+    if (input.prompt && node.type !== "input") throw new BadRequestException("只可在输入节点填写创作需求");
+    if (input.referenceFileId && node.type !== "load_image") throw new BadRequestException("只可在参考素材节点上传图片");
     if (input.prompt) context.prompt = input.prompt;
     if (input.referenceFileId) context.referenceFileId = input.referenceFileId;
     const output = await this.executeNode(actor, node, context);
-    context.nodeResults[node.id] = output;
+    saved.nodeResults[node.id] = output;
+    saved.nodeStates[node.id] = this.snapshotNodeState(context);
+    Object.assign(saved, this.snapshotNodeState(context));
     const nextStep = Math.min(current.currentStep + 1, current.totalSteps);
     const completed = nextStep >= current.totalSteps;
     await this.database.transaction(async (client) => {
@@ -305,10 +340,32 @@ export class StudioService {
       );
       await client.query(`UPDATE workflow_runs SET context_json=$2::jsonb,current_step=$3,status=$4,
         completed_at=CASE WHEN $4='completed' THEN CURRENT_TIMESTAMP ELSE NULL END,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND user_id=$5`,
-        [runId, JSON.stringify(context), nextStep, completed ? "completed" : "in_progress", actor.id],
+        [runId, JSON.stringify(saved), nextStep, completed ? "completed" : "in_progress", actor.id],
       );
     });
     return this.getRun(actor, runId);
+    } catch (error) {
+      await this.database.query("UPDATE workflow_runs SET context_json=context_json-'executing' WHERE id=$1 AND user_id=$2 AND current_step=$3", [runId, actor.id, current.currentStep]);
+      throw error;
+    }
+  }
+
+  private assertExecutableDefinition(definition: { nodes: Array<Record<string, any>>; edges: Array<Record<string, any>> }) {
+    if (!definition.nodes.length) throw new BadRequestException("工作流至少需要一个节点");
+    const unsupported = definition.nodes.find((node) => ["lora", "controlnet", "upscale", "text_encode", "load_checkpoint", "vae_decode"].includes(node.type));
+    if (unsupported) throw new BadRequestException(`“${unsupported.data?.label ?? unsupported.type}”尚无真实执行服务，不能发布`);
+    if (definition.nodes.every((node) => node.type === "note")) return;
+    const inputIds = definition.nodes.filter((node) => node.type === "input").map((node) => node.id);
+    if (!inputIds.length) throw new BadRequestException("可执行工作流需要创作输入节点");
+    if (!definition.nodes.some((node) => node.type === "preview" || node.type === "save_image")) throw new BadRequestException("可执行工作流需要成果预览或保存节点");
+    const reached = new Set(inputIds);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const edge of definition.edges) if (reached.has(edge.source) && !reached.has(edge.target)) { reached.add(edge.target); changed = true; }
+    }
+    const detached = definition.nodes.find((node) => node.type !== "note" && !reached.has(node.id));
+    if (detached) throw new BadRequestException(`节点“${detached.data?.label ?? detached.id}”没有连接到输入`);
   }
 
   async listWorks(actor: Actor, query: CatalogQuery) {
@@ -684,15 +741,40 @@ export class StudioService {
   private workflowContext(value: Record<string, any> | null | undefined) {
     const context = value && typeof value === "object" ? structuredClone(value) : {} as Record<string, any>;
     context.nodeResults ??= {};
+    context.nodeStates ??= {};
     context.adapters ??= [];
     context.size ??= "1024x1024";
     return context as {
-      prompt?: string; size: string; modelConfigId?: string;
+      prompt?: string; initialPrompt?: string; initialSize?: string; text?: string; size: string; modelConfigId?: string;
       adapters: Array<{ type: string; value: string }>;
       referenceFileId?: string;
       artifact?: { downloadUrl?: string; fileName?: string; mimeType?: string; fileSize?: number };
       nodeResults: Record<string, unknown>;
+      nodeStates: Record<string, Record<string, any>>;
     };
+  }
+
+  private snapshotNodeState(context: ReturnType<StudioService["workflowContext"]>) {
+    return {
+      prompt: context.prompt, text: context.text, size: context.size,
+      modelConfigId: context.modelConfigId, referenceFileId: context.referenceFileId,
+      artifact: context.artifact, adapters: context.adapters,
+    };
+  }
+
+  private mergeNodeStates(saved: ReturnType<StudioService["workflowContext"]>, parents: string[]) {
+    const states = parents.map((id) => saved.nodeStates[id]).filter(Boolean);
+    if (states.length !== parents.length) throw new ConflictException("上游节点尚未全部执行");
+    const merged = this.workflowContext({});
+    merged.nodeResults = saved.nodeResults;
+    merged.nodeStates = saved.nodeStates;
+    for (const state of states) {
+      for (const key of ["prompt", "text", "size", "modelConfigId", "referenceFileId", "artifact"] as const) {
+        if (state[key] !== undefined) (merged as any)[key] = state[key];
+      }
+      merged.adapters.push(...(state.adapters ?? []));
+    }
+    return merged;
   }
 
   private async executeNode(actor: Actor, node: Record<string, any>, context: ReturnType<StudioService["workflowContext"]>) {
@@ -705,8 +787,8 @@ export class StudioService {
         if (!context.prompt) throw new BadRequestException("输入节点需要在开始运行时填写需求，或设置默认值");
         return { kind: "input", prompt: context.prompt };
       case "load_image":
-        if (!context.referenceFileId && !value) throw new BadRequestException("请上传一张已获授权的参考图片");
-        return { kind: "reference", source: context.referenceFileId ?? value };
+        if (!context.referenceFileId) throw new BadRequestException("请上传一张已获授权的参考图片");
+        return { kind: "reference", source: context.referenceFileId };
       case "prompt": case "text_encode":
         if (!value) throw new BadRequestException(`${label} 需要填写提示词`);
         appendPrompt(value);
@@ -720,14 +802,23 @@ export class StudioService {
         if (!value) return { kind: "model", modelConfigId: "internal-default" };
         context.modelConfigId = value;
         return { kind: "model", modelConfigId: value };
+      case "text_generate": {
+        if (!context.prompt) throw new BadRequestException("文本生成节点需要连接创作输入");
+        if (!this.generation || !this.models) throw new ConflictException("文本生成服务尚未装配");
+        const modelConfigId = this.models.getForJob({ jobType: "chat" }).id;
+        const generated = await this.generation.runJob(actor, {
+          jobType: "chat", prompt: value ? `${value}\n\n用户需求：${context.prompt}` : context.prompt,
+          modelConfigId, parameters: { source: "workflow-canvas", workflowNodeId: node.id },
+        });
+        context.text = generated.output.content;
+        return { kind: "generated_text", jobId: generated.job.id, text: context.text };
+      }
       case "load_checkpoint":
         if (!value) throw new BadRequestException(`${label} 需要填写服务端模型配置 ID`);
         context.modelConfigId = value;
         return { kind: "model", modelConfigId: value };
       case "lora": case "controlnet":
-        if (!value) throw new BadRequestException(`${label} 需要填写配置`);
-        context.adapters.push({ type: node.type, value });
-        return { kind: "adapter", type: node.type, value };
+        throw new BadRequestException(`${label} 尚无可用的 GPU 执行服务，请移除该节点后运行`);
       case "empty_latent": {
         context.size = /^\d{3,4}x\d{3,4}$/.test(value) ? value : context.size;
         return { kind: "latent", size: context.size };
@@ -756,10 +847,9 @@ export class StudioService {
         if (!context.artifact) throw new BadRequestException("VAE 解码前必须先完成 KSampler 生成");
         return { kind: "decoded_image", artifact: context.artifact };
       case "upscale":
-        if (!context.artifact) throw new BadRequestException("放大节点前必须先完成图片生成");
-        return { kind: "upscale_request", artifact: context.artifact, target: value || "2x", pendingProviderCapability: "upscale" };
+        throw new BadRequestException("超分节点尚无可用执行服务，请移除该节点后运行");
       case "preview":
-        return { kind: "preview", artifact: context.artifact ?? null, text: context.prompt ?? "" };
+        return { kind: "preview", artifact: context.artifact ?? null, text: context.text ?? context.prompt ?? "" };
       case "save_image":
         if (!context.artifact) throw new BadRequestException("保存图片前必须先完成图片生成");
         return { kind: "saved_asset", artifact: context.artifact };

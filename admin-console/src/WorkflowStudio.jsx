@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
-import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
+import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflowRun, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
 const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ WorkflowRunner: component }) => ({ default: component })));
@@ -8,7 +8,7 @@ const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ Workflo
 const TOOL_ICONS = { design: Palette, image: ImageSquare, idea: Lightbulb, learning: Path, ai: Robot, code: Code, link: LinkSimple };
 const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https://", coverImageUrl: "", iconKey: "link", launchMode: "new_tab", featured: false, status: "active" });
 
-export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false, canManageToolDirectory = false }) {
+export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice, canPublish = false, canManageToolDirectory = false }) {
   const [workflows, setWorkflows] = useState([]);
   const [selected, setSelected] = useState(null);
   const [run, setRun] = useState(null);
@@ -19,7 +19,12 @@ export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false
 
   const open = async (workflow) => {
     setLoading(true);
-    try { setSelected(await getWorkflow(workflow.id)); setRun(null); }
+    try {
+      const detail = await getWorkflow(workflow.id);
+      const previous = initialRunId ? await getWorkflowRun(initialRunId) : null;
+      if (previous && previous.workflowId !== detail.id) throw new Error("执行记录与工作流不匹配");
+      setSelected(detail); setRun(previous);
+    }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
@@ -40,8 +45,23 @@ export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
+  const executeRemaining = async () => {
+    setLoading(true);
+    try {
+      let current = run;
+      while (current?.status === "in_progress") {
+        const step = current.steps[current.currentStep];
+        const node = current.nodes.find((item) => item.id === step?.id);
+        if (node?.type === "input" || node?.type === "load_image") break;
+        current = await executeWorkflowRun(current.id);
+        setRun(current);
+      }
+      onNotice(current?.status === "completed" ? "工作流已完成，成果已保存" : "需要填写下一节点的输入");
+    } catch (error) { onNotice(error.message); }
+    finally { setLoading(false); }
+  };
 
-  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} onBack={() => { setSelected(null); setRun(null); }} onStart={start} onExecute={executeNode} /></Suspense>;
+  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} onBack={() => { setSelected(null); setRun(null); }} onStart={start} onExecute={executeNode} onExecuteRemaining={executeRemaining} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
     <button className="learning-back" onClick={() => setBuilderOpen(false)}><ArrowLeft size={16} weight="bold" /> 返回设计工作台</button>
     <Suspense fallback={<section className="portal-empty"><p>正在加载工作流创建器…</p></section>}>
@@ -82,6 +102,6 @@ function ToolDirectoryCard({ tool, canManage, onEdit, onOpenWorkflowBuilder }) {
   const cover = tool.coverImageUrl || ({ design: "/assets/learning/ai-design-foundations.jpg", image: "/assets/learning/traditional-patterns.jpg", idea: "/assets/learning/vibe-coding.jpg", learning: "/assets/learning/traditional-patterns.jpg", ai: "/assets/learning/ai-design-foundations.jpg", code: "/assets/learning/vibe-coding.jpg", link: "/assets/learning/ai-design-foundations.jpg" }[tool.iconKey] ?? "/assets/learning/ai-design-foundations.jpg");
   const content = <><span className="tool-directory__cover" style={{ backgroundImage: `url(${cover})` }} aria-hidden="true" /><span className="tool-directory__veil"><span className="tool-directory__icon"><Icon size={20} weight="duotone" /></span><span className="tool-directory__copy"><small>{tool.category} · {tool.featured ? "推荐工具" : external ? "外部工具" : "平台功能"}</small><b>{tool.name}</b><em>{tool.detail}</em></span><span className="tool-directory__play"><span /></span></span></>;
   const isWorkflowBuilder = tool.id === "tool-directory-workflow";
-  return <article className="tool-directory__card">{isWorkflowBuilder ? <button type="button" className="tool-directory__launch" onClick={onOpenWorkflowBuilder} aria-label="打开节点工作流创建器">{content}</button> : <a href={tool.href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>{content}</a>}{canManage && <button className="tool-directory__edit" onClick={() => onEdit(tool)} aria-label={`编辑 ${tool.name}`}><PencilSimple size={15} weight="bold" /></button>}</article>;
+  return <article className="tool-directory__card">{isWorkflowBuilder ? <button type="button" className="tool-directory__launch" onClick={onOpenWorkflowBuilder} aria-label="打开节点工作流创建器">{content}</button> : <a href={tool.href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>{content}</a>}{canManage && <button className="tool-directory__edit" onClick={() => onEdit(tool)} aria-label={`编辑 ${tool.name}`}><PencilSimple size={14} weight="bold" /><span>编辑</span></button>}</article>;
 }
 
