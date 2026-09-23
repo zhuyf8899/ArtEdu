@@ -32,6 +32,7 @@ interface WorkRow {
   title: string;
   summary: string | null;
   discipline: string | null;
+  tags: string[] | null;
   status: string;
   author_id: string;
   author: string;
@@ -620,6 +621,7 @@ export class StudioService {
     return `SELECT w.id,w.title,w.summary,w.discipline,w.status,w.author_id,w.story_json,author.display_name AS author,w.published_at,w.created_at,
       COUNT(DISTINCT likes.user_id)::int AS like_count,COUNT(DISTINCT favorites.user_id)::int AS favorite_count,
       BOOL_OR(likes.user_id=${actorParameter}) AS liked,BOOL_OR(favorites.user_id=${actorParameter}) AS favorited,
+      ARRAY_REMOVE(ARRAY_AGG(DISTINCT case_tags.name), NULL) AS tags,
       COALESCE((SELECT '/api/works/' || w.id || '/assets/' || cover.id || '/download' FROM work_assets cover
         WHERE cover.work_id=w.id AND cover.asset_type='image' AND cover.storage_key IS NOT NULL
         AND (w.status<>'approved' OR cover.moderation_status='approved')
@@ -627,6 +629,7 @@ export class StudioService {
         MIN(assets.external_url) FILTER (WHERE assets.asset_type='image')) AS preview_url
       FROM works w JOIN users author ON author.id=w.author_id
       LEFT JOIN work_likes likes ON likes.work_id=w.id LEFT JOIN work_favorites favorites ON favorites.work_id=w.id
+      LEFT JOIN work_tags case_relation ON case_relation.work_id=w.id LEFT JOIN tags case_tags ON case_tags.id=case_relation.tag_id
       LEFT JOIN work_assets assets ON assets.work_id=w.id`;
   }
 
@@ -865,7 +868,7 @@ export class StudioService {
   }
 
   private mapWork(row: WorkRow) {
-    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
+    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], tags: row.tags ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
   }
 
   // 对外只暴露目录展示所需字段；不返回维护者身份，避免把后台账号信息带到学生端。
