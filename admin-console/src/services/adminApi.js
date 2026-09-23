@@ -193,6 +193,7 @@ export const startWorkflowRun = (workflowId, context = {}) => request(`/workflow
   body: JSON.stringify({ context }),
 });
 export const getMyWorkflowRuns = () => request("/me/workflow-runs");
+export const getWorkflowRun = (runId) => request(`/workflow-runs/${encodeURIComponent(runId)}`);
 export const updateWorkflowRun = (runId, input) => request(`/workflow-runs/${runId}/progress`, {
   method: "PATCH",
   body: JSON.stringify(input),

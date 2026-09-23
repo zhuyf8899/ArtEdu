@@ -1770,6 +1770,36 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .tool-directory__veil { width: auto; min-height: 0; position: relative; left: auto; bottom: auto; padding: 14px; display: grid; grid-template-columns: 32px minmax(0,1fr) 30px; align-items: center; gap: 10px; background: #fff; border-top: 1px solid #eee; backdrop-filter: none; }
 .tool-directory__icon { width: 32px; height: 32px; color: #22252a; background: var(--lime); border-color: #22252a; border-radius: 9px; }
 .tool-directory__copy small { color: #87888d; font-size: 9px; }
+/* 学习首页把课程行动放在首屏，其余信息按需进入对应栏目。 */
+.my-learning-heading { min-height: 90px; }
+.my-learning-heading h1 { font-size: clamp(30px, 4vw, 48px); }
+.learning-space { min-height: 500px; }
+.learning-next-step { margin: 16px 0 22px; padding: clamp(20px, 3vw, 32px); display: flex; align-items: center; justify-content: space-between; gap: 20px; color: #fff; background: #202126; border-radius: 16px; }
+.learning-next-step small { color: #d8ff4d; font-size: 10px; font-weight: 750; }
+.learning-next-step h3 { margin: 8px 0; font-size: clamp(22px, 3vw, 30px); line-height: 1.25; }
+.learning-next-step p { margin: 0 0 10px; color: #c6c7ca; font-size: 12px; }
+.learning-next-step span { color: #d8ff4d; font-size: 11px; }
+.learning-next-step button { min-height: 42px; padding: 0 16px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; color: #202126; background: #d8ff4d; border: 0; border-radius: 9px; font-weight: 750; }
+.learning-focus-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.learning-focus-panel { min-width: 0; padding: 16px; border: 1px solid #e5e5e5; border-radius: 13px; }
+.learning-focus-panel .learning-section-header { margin: 0 0 12px; }
+.learning-suggestion { width: 100%; min-height: 54px; padding: 10px; display: flex; align-items: center; gap: 9px; color: #24252a; background: #f7f7f4; border: 0; border-radius: 8px; text-align: left; font-size: 11px; }
+.learning-suggestion strong, .learning-suggestion span { min-width: 0; display: block; }
+.learning-suggestion span { color: #6d6e72; }
+.learning-suggestion svg:last-child { margin-left: auto; flex: 0 0 auto; }
+.learning-recent-compact { margin-top: 24px; }
+.learning-recent-compact > button { width: 100%; min-height: 46px; padding: 0 8px; display: flex; align-items: center; gap: 10px; color: #24252a; background: transparent; border: 0; border-bottom: 1px solid #e9e9e5; text-align: left; }
+.learning-recent-compact > button span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.learning-run-result { display: flex; align-items: center; border-bottom: 1px solid #e9e9e5; }
+.learning-run-result > button { min-width: 0; min-height: 46px; padding: 0 8px; flex: 1; display: flex; align-items: center; gap: 10px; color: #24252a; background: transparent; border: 0; text-align: left; }
+.learning-run-result > button span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.learning-run-result > a { margin-left: 8px; color: #24252a; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.workflow-run-all { min-height: 38px; margin: 12px 0; padding: 0 15px; display: inline-flex; align-items: center; gap: 8px; color: #202126; background: var(--lime); border: 1px solid #202126; border-radius: 8px; font-weight: 750; }
+.workflow-run-all:disabled { opacity: .6; cursor: wait; }
+.workflow-result-link { min-height: 43px; margin-top: 16px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; color: #202126; background: var(--lime); border: 1px solid #202126; border-radius: 8px; text-decoration: none; font-weight: 750; }
+.workflow-result-text { margin-top: 16px; padding: 18px; background: #f7f7f4; border: 1px solid #deded8; border-radius: 10px; }
+.workflow-result-text p { margin: 10px 0 0; white-space: pre-wrap; line-height: 1.7; }
+@media (max-width: 720px) { .learning-next-step { align-items: stretch; flex-direction: column; }.learning-next-step button { justify-content: center; }.learning-focus-grid { grid-template-columns: 1fr; } }
 .tool-directory__copy b { color: #202126; font-size: 14px; }
 .tool-directory__copy em { color: #77787e; font-size: 10px; white-space: normal; }
 .tool-directory__play { width: 29px; height: 29px; color: #202126; background: #eef0df; border: 1px solid #d6d9bd; box-shadow: none; }

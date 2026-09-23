@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
-import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
+import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflowRun, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
 const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ WorkflowRunner: component }) => ({ default: component })));
@@ -8,7 +8,7 @@ const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ Workflo
 const TOOL_ICONS = { design: Palette, image: ImageSquare, idea: Lightbulb, learning: Path, ai: Robot, code: Code, link: LinkSimple };
 const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https://", coverImageUrl: "", iconKey: "link", launchMode: "new_tab", featured: false, status: "active" });
 
-export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false, canManageToolDirectory = false }) {
+export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice, canPublish = false, canManageToolDirectory = false }) {
   const [workflows, setWorkflows] = useState([]);
   const [selected, setSelected] = useState(null);
   const [run, setRun] = useState(null);
@@ -19,7 +19,12 @@ export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false
 
   const open = async (workflow) => {
     setLoading(true);
-    try { setSelected(await getWorkflow(workflow.id)); setRun(null); }
+    try {
+      const detail = await getWorkflow(workflow.id);
+      const previous = initialRunId ? await getWorkflowRun(initialRunId) : null;
+      if (previous && previous.workflowId !== detail.id) throw new Error("执行记录与工作流不匹配");
+      setSelected(detail); setRun(previous);
+    }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
@@ -40,8 +45,23 @@ export function WorkflowStudio({ initialWorkflowId, onNotice, canPublish = false
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
+  const executeRemaining = async () => {
+    setLoading(true);
+    try {
+      let current = run;
+      while (current?.status === "in_progress") {
+        const step = current.steps[current.currentStep];
+        const node = current.nodes.find((item) => item.id === step?.id);
+        if (node?.type === "input" || node?.type === "load_image") break;
+        current = await executeWorkflowRun(current.id);
+        setRun(current);
+      }
+      onNotice(current?.status === "completed" ? "工作流已完成，成果已保存" : "需要填写下一节点的输入");
+    } catch (error) { onNotice(error.message); }
+    finally { setLoading(false); }
+  };
 
-  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} onBack={() => { setSelected(null); setRun(null); }} onStart={start} onExecute={executeNode} /></Suspense>;
+  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} onBack={() => { setSelected(null); setRun(null); }} onStart={start} onExecute={executeNode} onExecuteRemaining={executeRemaining} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
     <button className="learning-back" onClick={() => setBuilderOpen(false)}><ArrowLeft size={16} weight="bold" /> 返回设计工作台</button>
     <Suspense fallback={<section className="portal-empty"><p>正在加载工作流创建器…</p></section>}>

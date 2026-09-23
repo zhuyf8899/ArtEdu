@@ -75,8 +75,9 @@ export class LearningService {
       this.listFavorites(actor.id),
       this.listWorks(actor.id),
       this.database.query(`
-        SELECT r.id, r.status, r.current_step AS "currentStep", r.total_steps AS "totalSteps",
-          r.updated_at AS "updatedAt", w.name AS "workflowName", w.category
+        SELECT r.id, r.workflow_id AS "workflowId", r.status, r.current_step AS "currentStep", r.total_steps AS "totalSteps",
+          r.updated_at AS "updatedAt", w.name AS "workflowName", w.category,
+          r.context_json->'artifact' AS artifact
         FROM workflow_runs r
         JOIN workflows w ON w.id = r.workflow_id
         WHERE r.user_id = $1

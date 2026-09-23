@@ -8,20 +8,15 @@ import { shortId } from "./randomId.js";
 const blankWorkflow = { name: "", description: "", category: "视觉创作", entryType: "workbench" };
 const palette = {
   input: { title: "创作输入", hint: "接收本次的文字需求", color: "#4b87ff", group: "输入与素材" },
-  load_image: { title: "参考素材", hint: "记录已授权素材标识或参考说明", color: "#4b87ff", group: "输入与素材" },
+  load_image: { title: "参考素材", hint: "运行时上传已授权图片", color: "#4b87ff", group: "输入与素材" },
   prompt: { title: "提示词", hint: "整理创作指令", color: "#b268ff", group: "提示与教学" },
-  text_encode: { title: "文本编码", hint: "将正负提示词编码为条件", color: "#b268ff", group: "提示与教学" },
   skill: { title: "内置 Skill", hint: "封装专业方法与参数预设", color: "#d6b335", group: "提示与教学" },
-  load_checkpoint: { title: "加载模型", hint: "选择审核过的基础模型", color: "#ff8b4b", group: "模型与控制" },
-  lora: { title: "加载 LoRA", hint: "叠加受控风格或能力", color: "#ff8b4b", group: "模型与控制" },
-  controlnet: { title: "ControlNet", hint: "以线稿、姿态或深度控制生成", color: "#ff8b4b", group: "模型与控制" },
-  model: { title: "模型调用", hint: "调用图像或文本能力", color: "#ff8b4b", group: "模型与控制" },
-  empty_latent: { title: "空 Latent", hint: "设定分辨率与批次数", color: "#d6b335", group: "采样与处理" },
-  ksampler: { title: "KSampler", hint: "配置采样器、步数、CFG 与 Seed", color: "#d6b335", group: "采样与处理" },
-  vae_decode: { title: "VAE 解码", hint: "将 Latent 转为图片", color: "#d6b335", group: "采样与处理" },
-  upscale: { title: "超分规格", hint: "记录后续超分服务的目标规格", color: "#d6b335", group: "采样与处理" },
+  text_generate: { title: "生成文字", hint: "调用平台文本模型，保存回复", color: "#b268ff", group: "模型与控制" },
+  model: { title: "图片模型", hint: "选择已配置图片模型，留空使用默认模型", color: "#ff8b4b", group: "模型与控制" },
+  empty_latent: { title: "图片尺寸", hint: "填写如 1024x1024 的输出尺寸", color: "#d6b335", group: "采样与处理" },
+  ksampler: { title: "生成图片", hint: "调用平台图片模型并保存产物", color: "#d6b335", group: "采样与处理" },
   preview: { title: "预览输出", hint: "展示中间或最终结果", color: "#42b883", group: "输出与说明" },
-  save_image: { title: "保存图片", hint: "归档可下载的最终产物", color: "#42b883", group: "输出与说明" },
+  save_image: { title: "保存图片", hint: "展示已归档的可下载产物", color: "#42b883", group: "输出与说明" },
   note: { title: "说明", hint: "补充教学或操作说明", color: "#78859b", group: "输出与说明" },
 };
 const paletteGroups = [...new Set(Object.values(palette).map((item) => item.group))];
@@ -35,21 +30,19 @@ function emptyDefinition() {
     viewport: { x: 0, y: 0, zoom: 0.85 },
     nodes: [
       { id: "input-1", type: "input", position: { x: 70, y: 160 }, data: { label: "创作需求", description: "输入主题、受众或参考素材", value: "" } },
-      { id: "prompt-1", type: "prompt", position: { x: 350, y: 160 }, data: { label: "提示词构建", description: "将需求整理为可执行提示词", value: "" } },
+      { id: "prompt-1", type: "prompt", position: { x: 350, y: 160 }, data: { label: "创作方向", description: "在用户需求上补充设计约束", value: "请结合用户的主题、受众和用途，保持画面结构清晰。" } },
       { id: "skill-1", type: "skill", position: { x: 640, y: 160 }, data: { label: "传统纹样 Skill", description: "将专业处理方法封装为可复用节点", value: "提取纹样骨架，保持对称、留白与色彩层级。" } },
       { id: "model-1", type: "model", position: { x: 930, y: 160 }, data: { label: "图像生成模型", description: "填写服务端已配置的模型 ID；留空则使用内部图片通道", value: "" } },
       { id: "ksampler-1", type: "ksampler", position: { x: 1210, y: 160 }, data: { label: "生成图片", description: "通过平台统一图片 API 创建真实生成任务", value: "" } },
-      { id: "vae-1", type: "vae_decode", position: { x: 1490, y: 160 }, data: { label: "读取生成结果", description: "读取 KSampler 已保存的图片产物", value: "" } },
-      { id: "preview-1", type: "preview", position: { x: 1770, y: 160 }, data: { label: "成果预览", description: "展示当前图片或文本结果", value: "" } },
-      { id: "save-1", type: "save_image", position: { x: 2050, y: 160 }, data: { label: "保存成果", description: "确认平台已归档的可下载图片", value: "" } },
+      { id: "preview-1", type: "preview", position: { x: 1490, y: 160 }, data: { label: "成果预览", description: "展示已经生成的图片", value: "" } },
+      { id: "save-1", type: "save_image", position: { x: 1770, y: 160 }, data: { label: "保存成果", description: "打开平台已归档的图片", value: "" } },
     ],
     edges: [
       { id: "edge-input-prompt", source: "input-1", target: "prompt-1" },
       { id: "edge-prompt-skill", source: "prompt-1", target: "skill-1" },
       { id: "edge-skill-model", source: "skill-1", target: "model-1" },
       { id: "edge-model-sampler", source: "model-1", target: "ksampler-1" },
-      { id: "edge-sampler-vae", source: "ksampler-1", target: "vae-1" },
-      { id: "edge-vae-preview", source: "vae-1", target: "preview-1" },
+      { id: "edge-sampler-preview", source: "ksampler-1", target: "preview-1" },
       { id: "edge-preview-save", source: "preview-1", target: "save-1" },
     ],
   };
@@ -127,6 +120,9 @@ function workflowWarnings(definition) {
 }
 
 function publishIssues(definition) {
+  if (!definition.nodes.length) return ["工作流至少需要一个节点"];
+  const unsupported = definition.nodes.find((node) => ["lora", "controlnet", "upscale", "text_encode", "load_checkpoint", "vae_decode"].includes(node.type));
+  if (unsupported) return [`“${unsupported.data?.label || unsupported.type}”尚无真实执行服务，请移除后发布`];
   // 线性教学工作流会以 note 节点兼容历史版本；只对可执行节点图强制输入输出闭环。
   if (!definition.nodes.some((node) => node.type !== "note")) return [];
   const incoming = new Map(definition.nodes.map((node) => [node.id, 0]));
@@ -346,12 +342,12 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
     if (publishIssues(editor.definition).length) { onNotice(publishIssues(editor.definition)[0]); return; }
     setRunBusy(true);
     try {
-      if (dirty || selected.status !== "published") {
-        const saved = await onSave(true);
+      if (dirty || !selected.versions?.length || (canPublish && selected.status !== "published")) {
+        const saved = await onSave(canPublish);
         if (!saved) return;
       }
       const next = await startWorkflowRun(selected.id, {});
-      setRun(next); setRunPrompt(""); onNotice("运行已启动：请按画布连接顺序执行节点。");
+      setRun(next); setRunPrompt(""); onNotice("运行已启动：节点将按连接顺序执行。");
     } catch (error) { onNotice(error.message); }
     finally { setRunBusy(false); }
   };
@@ -397,18 +393,18 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
 
   return <div className="page-content workflow-canvas-page">
     <button className="learning-back" onClick={onBack}><ArrowLeft size={16} weight="bold" /> 返回工作流列表</button>
-    <section className="workflow-canvas-topbar"><div><p>// COMFY-STYLE WORKFLOW BUILDER · {selected.status === "published" ? "NEW VERSION" : "DRAFT"}</p><h1>{editor.name || "未命名节点工作流"}</h1><span>拖动节点顶部调整位置；拖动画布空白处平移，滚轮缩放。{dirty ? "本机草稿尚未保存为版本。" : "当前版本已保存。"}</span></div><div className="workflow-editor-actions"><label className="outline-button"><UploadSimple size={16} /> 导入 JSON<input hidden type="file" accept="application/json,.json" onChange={onImport} /></label><button className="outline-button" onClick={onExport}><DownloadSimple size={16} /> 导出 JSON</button></div></section>
+    <section className="workflow-canvas-topbar"><div><p>// EXECUTABLE WORKFLOW BUILDER · {selected.status === "published" ? "NEW VERSION" : "DRAFT"}</p><h1>{editor.name || "未命名节点工作流"}</h1><span>拖动节点顶部调整位置；拖动画布空白处平移，滚轮缩放。{dirty ? "本机草稿尚未保存为版本。" : "当前版本已保存。"}</span></div><div className="workflow-editor-actions"><label className="outline-button"><UploadSimple size={16} /> 导入 JSON<input hidden type="file" accept="application/json,.json" onChange={onImport} /></label><button className="outline-button" onClick={onExport}><DownloadSimple size={16} /> 导出 JSON</button></div></section>
     <section className="workflow-canvas-shell">
-      <aside className="workflow-node-palette"><p>// NODE LIBRARY</p><h2>节点库</h2><span>按类型搜索，点击添加到画布</span><label className="workflow-node-search"><MagnifyingGlass size={15} /><input value={nodeQuery} onChange={(event) => setNodeQuery(event.target.value)} placeholder="搜索节点，例如 KSampler" /></label><div className="workflow-node-groups"><button className={nodeGroup === "全部" ? "is-active" : ""} onClick={() => setNodeGroup("全部")}>全部</button>{paletteGroups.map((group) => <button key={group} className={nodeGroup === group ? "is-active" : ""} onClick={() => setNodeGroup(group)}>{group}</button>)}</div><div className="workflow-node-list">{visiblePalette.map(([type, meta]) => <button key={type} onClick={() => addNode(type)} style={{ "--node-color": meta.color }}><i><FlowArrow size={16} /></i><span><em>{meta.group}</em><strong>{meta.title}</strong><small>{meta.hint}</small></span><Plus size={15} /></button>)}{!visiblePalette.length && <div className="workflow-node-empty">没有匹配的节点</div>}</div><div className="workflow-canvas-tip"><strong>连接规则</strong><span>当前画布会校验 DAG 结构；端口类型与实际 GPU 执行会随 Worker 协议接入。</span></div></aside>
+      <aside className="workflow-node-palette"><p>// NODE LIBRARY</p><h2>节点库</h2><span>按类型搜索，点击添加到画布</span><label className="workflow-node-search"><MagnifyingGlass size={15} /><input value={nodeQuery} onChange={(event) => setNodeQuery(event.target.value)} placeholder="搜索节点，例如 KSampler" /></label><div className="workflow-node-groups"><button className={nodeGroup === "全部" ? "is-active" : ""} onClick={() => setNodeGroup("全部")}>全部</button>{paletteGroups.map((group) => <button key={group} className={nodeGroup === group ? "is-active" : ""} onClick={() => setNodeGroup(group)}>{group}</button>)}</div><div className="workflow-node-list">{visiblePalette.map(([type, meta]) => <button key={type} onClick={() => addNode(type)} style={{ "--node-color": meta.color }}><i><FlowArrow size={16} /></i><span><em>{meta.group}</em><strong>{meta.title}</strong><small>{meta.hint}</small></span><Plus size={15} /></button>)}{!visiblePalette.length && <div className="workflow-node-empty">没有匹配的节点</div>}</div><div className="workflow-canvas-tip"><strong>执行说明</strong><span>按连线顺序传递输入；文本和图片生成调用平台已配置的模型服务。未接入的 GPU 节点不可发布。</span></div></aside>
       <div className="workflow-flow-wrap"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} defaultViewport={editor.definition.viewport} onInit={setFlow} nodesDraggable nodesConnectable elementsSelectable dragHandle=".drag-handle" panOnDrag zoomOnScroll snapToGrid snapGrid={[20, 20]} onlyRenderVisibleElements connectionLineType={ConnectionLineType.SmoothStep} isValidConnection={isValidConnection} onNodesChange={(changes) => commit({ nodes: applyNodeChanges(changes, editor.definition.nodes) })} onEdgesChange={(changes) => commit({ edges: applyEdgeChanges(changes, editor.definition.edges) })} onConnect={connect} onNodeClick={(_, node) => { setSelectedId(node.id); setSelectedEdgeId(null); }} onEdgeClick={(_, edge) => { setSelectedEdgeId(edge.id); setSelectedId(null); }} onSelectionChange={({ nodes: nextNodes, edges: nextEdges }) => { setSelectedId(nextNodes[0]?.id ?? null); setSelectedEdgeId(nextEdges[0]?.id ?? null); }} onPaneClick={() => { setSelectedId(null); setSelectedEdgeId(null); }} onMoveEnd={(_, viewport) => commit({ viewport })}><Background color="#374151" gap={20} size={1} /><MiniMap pannable zoomable nodeColor={(node) => palette[node.type]?.color || "#78859b"} /><Controls showInteractive={false} /><div className="workflow-flow-tools"><button type="button" onClick={autoLayout} title="按连接关系自动整理节点"><MagicWand size={15} /> 自动整理</button><button type="button" onClick={fitCanvas} title="让全部节点适配画布"><ArrowsOut size={15} /> 适配画布</button></div></ReactFlow>{preview && <div className="workflow-preview-toast"><strong>本地结构预览</strong><span>{preview}</span><button onClick={() => setPreview("")}><X size={15} /></button></div>}</div>
       <aside className="workflow-inspector"><p>// INSPECTOR</p><h2>{selectedNode ? "节点配置" : selectedEdge ? "连线配置" : "工作流配置"}</h2>{selectedNode ? <div className="workflow-form"><div className="node-type-badge" style={{ "--node-color": palette[selectedNode.type]?.color }}>{palette[selectedNode.type]?.title}</div><label>节点名称<input value={selectedNode.data.label || ""} onChange={(event) => updateNode("label", event.target.value)} /></label><label>节点说明<textarea value={selectedNode.data.description || ""} onChange={(event) => updateNode("description", event.target.value)} /></label><label>默认值 / 参数<textarea value={selectedNode.data.value || ""} onChange={(event) => updateNode("value", event.target.value)} placeholder={selectedNode.type === "skill" ? "例如：提取纹样骨架；保持四方连续；应用低饱和配色" : "例如：1024×1024、写实摄影、低饱和"} /></label><label>预计用时<input type="number" min="0" max="1440" value={selectedNode.data.estimatedMinutes ?? 10} onChange={(event) => updateNode("estimatedMinutes", Number(event.target.value))} /><small>用于学生端步骤提示，不影响图结构。</small></label><button className="outline-button" onClick={duplicateNode}><Plus size={15} /> 复制节点</button><button className="danger-text-button" onClick={deleteNode}><X size={15} /> 删除节点</button></div> : selectedEdge ? <div className="workflow-edge-inspector"><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.source)?.data?.label || selectedEdge.source}</strong><FlowArrow size={18} weight="bold" /><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.target)?.data?.label || selectedEdge.target}</strong><span>这条连线代表数据从上游节点传递到下游节点。</span><button className="danger-text-button" onClick={deleteEdge}><X size={15} /> 删除连线</button></div> : <div className="workflow-form"><label>工作流名称<input value={editor.name} onChange={(event) => onChange("name", event.target.value)} /></label><label>工作流描述<textarea value={editor.description} onChange={(event) => onChange("description", event.target.value)} /></label><label>分类<input value={editor.category} onChange={(event) => onChange("category", event.target.value)} /></label><label>入口<select value={editor.entryType} onChange={(event) => onChange("entryType", event.target.value)}><option value="chat">教学对话</option><option value="workbench">设计工作台</option><option value="external_tool">外部工具</option></select></label><label>提示模板（可选）<textarea value={editor.promptTemplate} onChange={(event) => onChange("promptTemplate", event.target.value)} placeholder="供未来模型节点调用的全局提示词" /></label></div>}<div className={`workflow-graph-check ${issues.length ? "is-error" : ""}`}><strong>{issues.length ? "图结构待修复" : "图结构有效"}</strong><span>{issues[0] || `${editor.definition.nodes.length} 个节点 · ${editor.definition.edges.length} 条连接`}</span>{!issues.length && warnings[0] && <em>{warnings[0]}</em>}</div></aside>
     </section>
     <section className="workflow-canvas-runner" aria-live="polite">
       <div><p>// RUN ON CANVAS</p><h2>{run?.status === "completed" ? "本次运行已完成" : activeNode ? `正在执行：${activeNode.data.label || activeNode.type}` : "从画布直接运行"}</h2><span>{run ? `${Math.round((run.currentStep / Math.max(run.totalSteps, 1)) * 100)}% · ${run.currentStep}/${run.totalSteps} 个节点已完成` : "先校验并发布当前节点图，再按连接关系逐节点执行。"}</span></div>
-      {!run && <button className="primary-button" disabled={loading || runBusy || !canPublish} onClick={runWorkflow}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}{dirty || selected.status !== "published" ? "发布并运行" : "运行工作流"}</button>}
+      {!run && <button className="primary-button" disabled={loading || runBusy} onClick={runWorkflow}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}{canPublish ? (dirty || selected.status !== "published" ? "发布并运行" : "运行工作流") : "保存并试运行"}</button>}
       {run?.status === "in_progress" && activeNode && <div className="workflow-canvas-runner__step"><div><strong>{activeNode.data.label || activeNode.type}</strong><small>{activeNode.data.description || palette[activeNode.type]?.hint}</small></div>{activeNode.type === "input" && <label>创作需求<textarea value={runPrompt} onChange={(event) => setRunPrompt(event.target.value)} placeholder="例如：为新生设计一张青绿色的传统纹样海报" /></label>}{activeNode.type === "load_image" && <label className="workflow-reference-upload">参考图片<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small></label>}<button className="primary-button" disabled={runBusy} onClick={executeCurrentNode}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}执行当前节点</button></div>}
-      {run?.status === "completed" && <div className="workflow-canvas-runner__done"><CheckCircle size={20} weight="fill" /> 所有节点均已执行。请在节点结果中查看生成产物或运行记录。</div>}
-      {!canPublish && <small>需要教师、运营或管理员身份才能发布并运行。</small>}
+      {run?.status === "completed" && <div className="workflow-canvas-runner__done"><CheckCircle size={20} weight="fill" /> 已完成。{run.context?.artifact?.downloadUrl && <a href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看生成作品</a>}{run.context?.text && <span>{run.context.text}</span>}</div>}
+      {!canPublish && <small>草稿可自行试运行；发布给其他人使用需要教师、运营或管理员身份。</small>}
     </section>
     <section className="workflow-runbar"><div><FlowArrow size={19} weight="bold" /><span>拖动节点：顶部栏；平移画布：空白处；缩放：滚轮。Delete 删除选中节点或连线，Ctrl/⌘+S 保存。</span></div><div><span className="workflow-canvas-selection-hint"><Keyboard size={14} /> {selectedNode ? `已选节点：${selectedNode.data.label || "未命名"}` : selectedEdge ? "已选连线" : "未选择对象"}</span><button className="outline-button" onClick={() => setPreview(issues.length ? issues[0] : `连接关系有效：${editor.definition.nodes.length} 个节点将按画布关系传递数据。`)}>本地预览</button><button className="outline-button" disabled={loading || runBusy} onClick={() => onSave(false)}><FloppyDisk size={16} /> 保存版本</button>{canPublish ? <button className="outline-button" disabled={loading || runBusy} onClick={() => onSave(true)}>保存并发布 <ArrowRight size={16} /></button> : <span className="workflow-publish-hint">保存后由教师、运营或管理员发布。</span>}</div></section>
     {selected.versions?.length > 0 && <section className="table-panel workflow-versions"><div className="panel__heading"><div><p>// VERSION HISTORY</p><h2>版本记录</h2></div><span>{selected.versions.length} 个版本</span></div>{selected.versions.map((version) => <div key={version.id}><strong>V{version.versionNumber}</strong><span>{version.nodes?.length ?? version.steps?.length ?? 0} 个节点 · {version.edges?.length ?? 0} 条连接 · {version.published ? "已发布" : "草稿"}</span><small>{version.createdAt ? new Date(version.createdAt).toLocaleString("zh-CN") : ""}</small></div>)}</section>}

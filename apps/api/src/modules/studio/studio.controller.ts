@@ -93,6 +93,11 @@ export class StudioController {
     return this.studio.listMyRuns(await this.auth.getActor(request));
   }
 
+  @Get("workflow-runs/:runId")
+  async getRun(@Req() request: FastifyRequest, @Param("runId") runId: string) {
+    return this.studio.getWorkflowRun(await this.auth.getActor(request), runId);
+  }
+
   @Patch("workflow-runs/:runId/progress")
   async updateRun(@Req() request: FastifyRequest, @Param("runId") runId: string, @Body() body: unknown) {
     return this.studio.updateRun(await this.auth.getActor(request), runId, parseInput(workflowRunProgressSchema, body) as WorkflowRunProgressInput);

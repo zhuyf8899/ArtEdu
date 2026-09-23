@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowClockwise, ArrowRight, BookOpenText, BookmarkSimple, CalendarCheck, Check,
-  Clock, FileText, Heart, House, ImageSquare, NotePencil, Plus, Sparkle,
-  Student, Target, Trash, TrendUp,
+  Clock, FileText, Heart, House, ImageSquare, NotePencil, Plus,
+  Student, Trash,
 } from "@phosphor-icons/react";
 import {
   createLearningNote,
@@ -124,8 +124,8 @@ export function MyLearning({ account, onNavigate, onNotice }) {
 
   return <section className="my-learning-page">
     <header className="my-learning-heading">
-      <div><p className="eyebrow">// PERSONAL LEARNING SPACE</p><h1>我的学习</h1><p>继续课程、安排计划，并沉淀每一次创作与反思。</p></div>
-      <div className="my-learning-heading__status"><span>本周学习</span><strong>{data.summary.weeklyMinutes}</strong><em>分钟</em></div>
+      <div><p className="eyebrow">// PERSONAL LEARNING SPACE</p><h1>我的学习</h1><p>从下一步开始，课程、练习和作品都在这里。</p></div>
+      <div className="my-learning-heading__status"><span>已完成课时</span><strong>{data.summary.completedLessons}</strong><em>/ {data.summary.totalLessons} 节</em></div>
     </header>
 
     <div className="learning-space">
@@ -150,37 +150,33 @@ export function MyLearning({ account, onNavigate, onNotice }) {
 }
 
 function Overview({ data, recentResources, displayName, onView, onToggleTask, onNavigate }) {
-  const courses = data.courses.slice(0, 3);
-  const tasks = data.tasks.slice(0, 4);
+  const nextTask = data.tasks.find((task) => task.status === "pending");
+  const nextCourse = data.courses.find((course) => course.completedLessons < course.lessonCount);
+  const nextRun = data.workflowRuns.find((run) => run.status === "in_progress");
+  const remainingLessons = nextCourse ? Math.max(0, nextCourse.lessonCount - nextCourse.completedLessons) : 0;
   return <>
-    <div className="learning-welcome"><div><span>// KEEP CREATING</span><h2>欢迎回来，{displayName}</h2><p>把今天的小进展，积累成可以复用的创作方法。</p></div><Sparkle size={34} weight="duotone" /></div>
-
-    {data.summary.enrolledCourses === 0 && <section className="learning-onboarding"><div><span>01</span><strong>挑选一门课程</strong><p>从资源库选择 UI 创作、图案生成或 Vibe Coding 课程。</p></div><div><span>02</span><strong>跟随工作流练习</strong><p>按步骤完成提示词、参数和创作产物。</p></div><div><span>03</span><strong>发布并沉淀案例</strong><p>把作品提交到案例社区，形成个人学习档案。</p></div><button onClick={() => onNavigate("/learning")}>开始学习 <ArrowRight size={15} /></button></section>}
-
-    <section className="learning-dashboard-grid">
-      <div className="learning-dashboard-main">
-        <article className="learning-goal-card">
-        <div className="learning-goal-card__icon"><Target size={36} weight="duotone" /></div>
-        <div><span>本周学习目标</span><strong>{data.summary.completedLessons} / {data.summary.totalLessons || 0} <small>节课时</small></strong><i><b style={{ width: `${data.summary.completionPercent}%` }} /></i></div>
-        <dl><div><dt>已加入</dt><dd>{data.summary.enrolledCourses} 门课程</dd></div><div><dt>本周已学</dt><dd>{data.summary.weeklyMinutes} 分钟</dd></div></dl>
-        </article>
-        <SectionHeader eyebrow="// CONTINUE LEARNING" title="继续学习" action="查看全部课程" onAction={() => onView("courses")} />
-        {courses.length ? <div className="continue-learning-list">{courses.map((course, index) => <CourseRow key={course.id} course={course} index={index} onNavigate={onNavigate} />)}</div> : <EmptyBlock icon={BookOpenText} title="还没有加入课程" text="从教学资源库选择一门课程，开始建立你的学习路径。" action="浏览课程" onAction={() => onNavigate("/learning")} />}
-        <SectionHeader eyebrow="// RECENT RESOURCES" title="最近打开的课件" />
-        {recentResources.length ? <div className="recent-resource-list">{recentResources.slice(0, 4).map((resource) => <button key={resource.resourceId} onClick={() => onNavigate(`/learning?course=${encodeURIComponent(resource.courseId)}`)}><FileText size={18} /><span><strong>{resource.title}</strong><small>{resource.courseTitle} · 上次{resource.accessKind === "download" ? "下载" : resource.accessKind === "stream" ? "播放" : "预览"}</small></span><ArrowRight size={16} /></button>)}</div> : <EmptyInline text="打开课件后，最近访问记录会显示在这里，方便继续学习。" />}
-        <SectionHeader eyebrow="// SAVED CASES" title="我的收藏" action="查看全部" onAction={() => onView("favorites")} />
-        {data.favorites.length ? <div className="learning-mini-grid">{data.favorites.slice(0, 3).map((work, index) => <WorkMiniCard key={work.id} work={work} index={index} onClick={() => onNavigate("/community")} />)}</div> : <EmptyInline text="收藏优秀案例后，会显示在这里。" />}
-      </div>
-      <aside className="learning-dashboard-side">
-        <article className="today-tasks"><header><div><span>// TODAY</span><h3>今日任务</h3></div><button onClick={() => onView("plan")}>全部任务 <ArrowRight size={14} /></button></header>{tasks.length ? <div>{tasks.map((task) => <TaskRow compact key={task.id} task={task} onToggle={onToggleTask} />)}</div> : <EmptyInline text="今天还没有学习任务" />}</article>
-        <article className="recent-learning"><header><TrendUp size={19} weight="bold" /><div><span>// RECENT</span><h3>最近学习</h3></div></header>{courses.map((course) => <button key={course.id} onClick={() => onNavigate("/learning")}><span>{course.title}</span><strong>{course.progressPercent}%</strong></button>)}{!courses.length && <EmptyInline text="暂无学习记录" />}</article>
-      </aside>
+    <div className="learning-welcome"><div><span>// YOUR NEXT STEP</span><h2>{displayName}，接下来做什么？</h2><p>先完成一件事，再继续探索。</p></div></div>
+    <section className="learning-next-step">
+      <div><small>{nextCourse ? "继续课程" : "开始学习"}</small><h3>{nextCourse?.title ?? "选择第一门课程"}</h3><p>{nextCourse ? `还剩 ${remainingLessons} 节课时 · 整门课程预计 ${nextCourse.estimatedMinutes} 分钟` : "从教学资源库选择感兴趣的课程。"}</p>
+        {nextCourse && <span>已完成 {nextCourse.completedLessons} / {nextCourse.lessonCount} 节课时</span>}</div>
+      <button onClick={() => onNavigate(nextCourse ? `/learning?course=${encodeURIComponent(nextCourse.id)}` : "/learning")}>{nextCourse ? "继续学习" : "浏览课程"} <ArrowRight size={17} weight="bold" /></button>
     </section>
+    <div className="learning-focus-grid">
+      <section className="learning-focus-panel"><SectionHeader eyebrow="// TO DO" title="待完成" action="全部计划" onAction={() => onView("plan")} />
+        {nextTask ? <TaskRow task={nextTask} onToggle={onToggleTask} /> : <button className="learning-suggestion" onClick={() => onView("plan")}>还没有待办。添加一项今天要完成的练习 <ArrowRight size={15} /></button>}</section>
+      <section className="learning-focus-panel"><SectionHeader eyebrow="// CREATE" title="创作进度" action="工作台" onAction={() => onNavigate("/studio")} />
+        {nextRun ? <button className="learning-suggestion" onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(nextRun.workflowId)}&run=${encodeURIComponent(nextRun.id)}`)}><strong>{nextRun.workflowName}</strong><span>已执行 {nextRun.currentStep} / {nextRun.totalSteps} 个节点 · 继续运行</span><ArrowRight size={15} /></button> : <button className="learning-suggestion" onClick={() => onNavigate("/studio")}>从设计工作台开始一次创作 <ArrowRight size={15} /></button>}</section>
+    </div>
+    {(recentResources.length > 0 || data.favorites.length > 0 || data.workflowRuns.some((run) => run.status === "completed")) && <section className="learning-recent-compact"><SectionHeader eyebrow="// RECENT" title="最近资源与成果" />
+      {recentResources.slice(0, 2).map((resource) => <button key={resource.resourceId} onClick={() => onNavigate(`/learning?course=${encodeURIComponent(resource.courseId)}`)}><FileText size={16} /><span>{resource.title}</span><ArrowRight size={15} /></button>)}
+      {data.favorites.slice(0, 1).map((work) => <button key={work.id} onClick={() => onNavigate("/community")}><BookmarkSimple size={16} /><span>{work.title}</span><ArrowRight size={15} /></button>)}
+      {data.workflowRuns.filter((run) => run.status === "completed").slice(0, 2).map((run) => <div className="learning-run-result" key={run.id}><button onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(run.workflowId)}&run=${encodeURIComponent(run.id)}`)}><ImageSquare size={16} /><span>{run.workflowName} · 已完成</span><ArrowRight size={15} /></button>{run.artifact?.downloadUrl && <a href={run.artifact.downloadUrl} target="_blank" rel="noreferrer">查看产物</a>}</div>)}
+    </section>}
   </>;
 }
 
 function CoursesView({ courses, onNavigate }) {
-  return <><SectionHeader eyebrow="// MY COURSES" title="我的课程" action="发现更多课程" onAction={() => onNavigate("/learning")} />{courses.length ? <div className="my-course-grid">{courses.map((course, index) => <article key={course.id} className="my-course-card"><img src={courseImage(course, index)} alt={`${course.title}课程缩略图`} /><div><span>{course.category} · {course.creatorName}</span><h3>{course.title}</h3><p>{course.summary}</p><div className="course-progress"><i><b style={{ width: `${course.progressPercent}%` }} /></i><strong>{course.progressPercent}%</strong></div><footer><small>{course.completedLessons}/{course.lessonCount} 节课时</small><button onClick={() => onNavigate("/learning")}>继续学习 <ArrowRight size={15} /></button></footer></div></article>)}</div> : <EmptyBlock icon={BookOpenText} title="还没有加入课程" text="从资源库选择课程后，你的学习进度会显示在这里。" action="浏览课程" onAction={() => onNavigate("/learning")} />}</>;
+  return <><SectionHeader eyebrow="// MY COURSES" title="我的课程" action="发现更多课程" onAction={() => onNavigate("/learning")} />{courses.length ? <div className="my-course-grid">{courses.map((course, index) => <article key={course.id} className="my-course-card"><img src={courseImage(course, index)} alt={`${course.title}课程缩略图`} /><div><span>{course.category} · {course.creatorName}</span><h3>{course.title}</h3><p>{course.summary}</p><div className="course-progress"><i><b style={{ width: `${course.progressPercent}%` }} /></i><strong>{course.progressPercent}%</strong></div><footer><small>{course.completedLessons}/{course.lessonCount} 节课时</small><button onClick={() => onNavigate(`/learning?course=${encodeURIComponent(course.id)}`)}>继续学习 <ArrowRight size={15} /></button></footer></div></article>)}</div> : <EmptyBlock icon={BookOpenText} title="还没有加入课程" text="从资源库选择课程后，你的学习进度会显示在这里。" action="浏览课程" onAction={() => onNavigate("/learning")} />}</>;
 }
 
 function PlanView({ tasks, form, setForm, saving, onSubmit, onToggle, onDelete }) {
@@ -202,7 +198,7 @@ function WorksView({ title, eyebrow, items, empty, onNavigate }) {
 }
 
 function CourseRow({ course, index, onNavigate }) {
-  return <article className="continue-course"><img src={courseImage(course, index)} alt={`${course.title}课程缩略图`} /><div><span>{course.category} · {course.creatorName}</span><h3>{course.title}</h3><div className="course-progress"><i><b style={{ width: `${course.progressPercent}%` }} /></i><strong>{course.progressPercent}%</strong></div><small>当前课时完成度 {course.progressPercent}% · 已完成 {course.completedLessons}/{course.lessonCount} 节 · 共 {course.estimatedMinutes} 分钟</small></div><button onClick={() => onNavigate("/learning")}>继续课程 <ArrowRight size={15} weight="bold" /></button></article>;
+  return <article className="continue-course"><img src={courseImage(course, index)} alt={`${course.title}课程缩略图`} /><div><span>{course.category} · {course.creatorName}</span><h3>{course.title}</h3><div className="course-progress"><i><b style={{ width: `${course.progressPercent}%` }} /></i><strong>{course.progressPercent}%</strong></div><small>已完成 {course.completedLessons}/{course.lessonCount} 节课时 · 整门课程预计 {course.estimatedMinutes} 分钟</small></div><button onClick={() => onNavigate(`/learning?course=${encodeURIComponent(course.id)}`)}>继续课程 <ArrowRight size={15} weight="bold" /></button></article>;
 }
 
 function TaskRow({ task, compact, onToggle, onDelete }) {
