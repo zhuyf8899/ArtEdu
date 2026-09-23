@@ -2,7 +2,6 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
-    mem_limit: 320m
     environment:
       POSTGRES_DB: artedu
       POSTGRES_USER: artedu
@@ -22,7 +21,6 @@ services:
       dockerfile: deploy/Dockerfile.embedding
     image: artedu-embedding:latest
     restart: unless-stopped
-    mem_limit: 400m
     environment:
       MODEL_DIR: /model
       MODEL_NAME: ${RAG_EMBEDDING_MODEL:-bge-base-zh-v1.5}
@@ -47,7 +45,6 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.api
     restart: unless-stopped
-    mem_limit: 192m
     environment:
       NODE_ENV: development
       ARTEDU_ENV_LABEL: ${ARTEDU_ENV_LABEL:-staging}
@@ -106,7 +103,6 @@ services:
       dockerfile: deploy/Dockerfile.api
     restart: unless-stopped
     command: ["node", "dist/rag.worker.js"]
-    mem_limit: 160m
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://artedu:${ARTEDU_POSTGRES_PASSWORD}@postgres:5432/artedu
@@ -130,7 +126,6 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.web
     restart: unless-stopped
-    mem_limit: 64m
     ports:
       - "${ARTEDU_BIND_IP:-127.0.0.1}:${ARTEDU_HTTP_PORT:-8080}:80"
     depends_on:

@@ -8,9 +8,9 @@ import { createAgentRun, executeAgentRun, executeAgentRunStream, getApiHealth, g
 import { AiCreationLauncher } from "./AiCreationConsole.jsx";
 import { AiCreationWorkspace } from "./CreationWorkspace.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
-import { canEnterAdmin } from "./testAccounts.js";
 import { PiyingToolCard } from "./PiyingToolCard.js";
 import "./piying-tool.css";
+import { canEnterAdmin } from "./testAccounts.js";
 
 const LearningLibrary = lazy(() => import("./LearningLibrary.jsx").then(({ LearningLibrary: component }) => ({ default: component })));
 const WorkflowStudio = lazy(() => import("./WorkflowStudio.jsx").then(({ WorkflowStudio: component }) => ({ default: component })));
@@ -240,7 +240,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
         {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary initialCourseId={learningCourseId} onNotice={showToast} /></>}
 
-        {section === "studio" && <><PiyingToolCard /><WorkflowStudio initialWorkflowId={studioWorkflowId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} /></>}
+        {section === "studio" && <><PiyingToolCard /><WorkflowStudio initialWorkflowId={studioWorkflowId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} /></>}
 
         {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} /></>}
 
@@ -257,17 +257,26 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 }
 
 function TeachingCoach({ courses, workflows, onClose, onNavigate }) {
-  const [question, setQuestion] = useState("");
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState({ goal: "", level: "", output: "" });
   const [answer, setAnswer] = useState(null);
-  const createAdvice = (event) => {
-    event.preventDefault();
-    const keyword = question.trim().toLowerCase();
-    const course = courses.find((item) => `${item.title}${item.summary}${item.category}`.toLowerCase().includes(keyword)) ?? courses[0];
-    const workflow = workflows.find((item) => `${item.name}${item.description}${item.category}`.toLowerCase().includes(keyword)) ?? workflows[0];
-    const focus = /图案|纹样|pattern/.test(keyword) ? "先收集 3 个纹样参考，提炼重复单元、主色和留白规则。" : /ui|网页|界面|web/.test(keyword) ? "先写清页面目标、核心用户操作和信息层级，再进入视觉细化。" : "先把创作目标拆成“主题、素材、方法、输出”四项，再逐项验证。";
-    setAnswer({ focus, course, workflow });
+  const questions = [
+    { key: "goal", title: "你现在最想做什么？", options: [["learn", "系统学习", "从课程和基础概念开始"], ["create", "完成一个作品", "直接进入案例和工作流"], ["explore", "探索灵感", "先看优秀案例和工具"]] },
+    { key: "level", title: "你对设计工具熟悉吗？", options: [["beginner", "零基础", "希望每一步都有明确提示"], ["familiar", "用过一些", "可以边看边尝试"], ["advanced", "比较熟悉", "希望快速进入创作"]] },
+    { key: "output", title: "你希望先得到什么？", options: [["course", "课程路径", "按课时稳步学习"], ["workflow", "工作流方案", "照着节点步骤完成"], ["case", "案例参考", "先看结果和创作方法"]] }],
+    current = questions[step];
+  const choose = (value) => {
+    const next = { ...answers, [current.key]: value };
+    setAnswers(next);
+    if (step < questions.length - 1) setStep(step + 1);
+    else {
+      const course = next.output === "course" ? courses[0] : courses.find((item) => next.goal === "create" ? /创作|设计|图案|视觉/.test(`${item.title}${item.summary}${item.category}`) : true) ?? courses[0];
+      const workflow = next.output === "workflow" ? workflows[0] : workflows.find((item) => next.goal === "create" ? /工作流|设计|图像/.test(`${item.name}${item.description}${item.category}`) : true) ?? workflows[0];
+      const focus = next.goal === "learn" ? "先从一门入门课程开始，完成一个小练习，再进入工作流实践。" : next.goal === "explore" ? "先浏览优秀案例和工具入口，收藏一个最想复刻的方向，再进入课程或工作流。" : "先确定作品主题、素材和输出形式，再用工作流把创意拆成可执行步骤。";
+      setAnswer({ focus, course, workflow });
+    }
   };
-  return <div className="coach-layer" role="presentation"><button className="coach-scrim" aria-label="关闭教学教练" onClick={onClose} /><section className="coach-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-title"><header><div><p>// LEARNING COACH</p><h2 id="coach-title">教学教练</h2></div><button onClick={onClose} aria-label="关闭教学教练"><X size={20} weight="bold" /></button></header><p className="coach-intro">基于当前已发布课程与工作流，为你整理可执行的下一步。它不调用外部模型，也不会编造课程内容。</p><form onSubmit={createAdvice}><label>你现在想解决什么？<textarea required maxLength="300" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="例如：我想用传统纹样做一个移动端首页，但不知道先做什么。" /></label><button>生成学习建议 <ArrowRight size={16} weight="bold" /></button></form>{answer && <section className="coach-answer"><span><Lightbulb size={18} weight="fill" /> 建议的起点</span><p>{answer.focus}</p>{answer.course && <button onClick={() => onNavigate("/learning")}><small>推荐课程</small><strong>{answer.course.title}</strong><ArrowRight size={16} weight="bold" /></button>}{answer.workflow && <button onClick={() => onNavigate("/studio")}><small>推荐工作流</small><strong>{answer.workflow.name}</strong><ArrowRight size={16} weight="bold" /></button>}{!answer.course && !answer.workflow && <em>当前尚无可推荐内容；请先由教师发布课程或工作流。</em>}</section>}</section></div>;
+  return <div className="coach-layer" role="presentation"><button className="coach-scrim" aria-label="关闭教学教练" onClick={onClose} /><section className="coach-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-title"><header><div><p>// LEARNING COACH · {answer ? "完成" : `问题 ${step + 1} / ${questions.length}`}</p><h2 id="coach-title">快速入门</h2></div><button onClick={onClose} aria-label="关闭教学教练"><X size={20} weight="bold" /></button></header><p className="coach-intro">回答三个小问题，获得适合你的课程、案例或工作流入口。推荐只基于平台已发布内容。</p>{!answer && <div className="coach-question"><strong>{current.title}</strong><div className="coach-options">{current.options.map(([value, label, hint]) => <button key={value} type="button" onClick={() => choose(value)}><b>{label}</b><span>{hint}</span><ArrowRight size={15} weight="bold" /></button>)}</div></div>}{answer && <section className="coach-answer"><span><Lightbulb size={18} weight="fill" /> 你的入门建议</span><p>{answer.focus}</p>{answer.course && <button onClick={() => onNavigate("/learning")}><small>推荐课程</small><strong>{answer.course.title}</strong><ArrowRight size={16} weight="bold" /></button>}{answer.workflow && <button onClick={() => onNavigate("/studio")}><small>推荐工作流</small><strong>{answer.workflow.name}</strong><ArrowRight size={16} weight="bold" /></button>}{!answer.course && !answer.workflow && <em>当前尚无可推荐内容；请先由教师发布课程或工作流。</em>}<button className="coach-restart" onClick={() => { setStep(0); setAnswers({ goal: "", level: "", output: "" }); setAnswer(null); }}>重新回答</button></section>}</section></div>;
 }
 
 function HomeDataState({ loading = false, error = "", title, text, action, onRetry }) {
@@ -298,11 +307,11 @@ function QuickAction({ icon: Icon, title, text, accent, onClick }) {
 
 function CourseDiscovery({ courses, onSearch, onBrowse, onCoach }) {
   const topics = [...new Set(courses.flatMap((course) => [course.title, course.category].filter(Boolean)))].slice(0, 6);
-  return <section className="course-discovery" aria-labelledby="course-discovery-title">
-    <div><p>// COURSE STARTER</p><h2 id="course-discovery-title">不知道从哪里开始？</h2><span>从课程名称进入，或用快速入门梳理你的学习目标。</span></div>
-    <div className="course-discovery__actions"><button className="primary-button" onClick={onCoach}><Lightbulb size={17} weight="fill" /> 快速入门</button><button className="outline-button" onClick={onBrowse}>浏览全部课程</button></div>
-    <div className="course-discovery__topics" aria-label="热门课程名称">
-      <small>课程热搜</small>{topics.length ? topics.map((topic) => <button key={topic} onClick={() => onSearch(topic)}>{topic} <ArrowRight size={13} weight="bold" /></button>) : <span>课程发布后将在这里显示常用入口。</span>}
+  return <section className="course-discovery course-discovery--questionnaire" aria-labelledby="course-discovery-title">
+    <div><p>// QUICK START QUESTIONNAIRE</p><h2 id="course-discovery-title">先回答三个问题，再开始创作</h2><span>像 Blockbench 的 Quick Start 一样，先选目标和方向，再进入合适的课程、案例或工作流。</span></div>
+    <div className="course-discovery__actions"><button className="primary-button" onClick={onCoach}><Lightbulb size={17} weight="fill" /> 开始问卷</button><button className="outline-button" onClick={onBrowse}>浏览全部课程</button></div>
+    <div className="course-discovery__topics" aria-label="课程快捷入口">
+      <small>课程快捷入口</small>{topics.length ? topics.map((topic) => <button key={topic} onClick={() => onSearch(topic)}>{topic} <ArrowRight size={13} weight="bold" /></button>) : <span>课程发布后将在这里显示快捷入口。</span>}
     </div>
   </section>;
 }

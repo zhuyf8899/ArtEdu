@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
 import { ArrowLeft, CheckCircle, Clock, FlowArrow, Play, SpinnerGap } from "@phosphor-icons/react";
+import { uploadTemporaryCreationFile } from "./services/adminApi.js";
 import "@xyflow/react/dist/style.css";
 
 const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", text_encode: "#b268ff", skill: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b" };
@@ -29,6 +30,20 @@ export function WorkflowRunner({ selected, run, loading, onBack, onStart, onExec
 
 function NodeExecutionPanel({ step, node, output, loading, onExecute }) {
   const [prompt, setPrompt] = useState("");
+  const [referenceFile, setReferenceFile] = useState(null);
+  const [uploadError, setUploadError] = useState("");
+  const [uploading, setUploading] = useState(false);
   const needsPrompt = node?.type === "input";
-  return <article className="workflow-step workflow-step--node"><span>NODE · {node?.type || "note"} · {step.title}</span><h3>{step.title}</h3><p>{step.description}</p>{step.instruction && <div><small>// 节点参数</small>{step.instruction}</div>}{needsPrompt && <label className="workflow-run-prompt">本次需求<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="输入本次要生成或处理的内容" /></label>}{output && <pre className="workflow-node-output">{JSON.stringify(output, null, 2)}</pre>}<footer><em><Clock size={16} /> 约 {step.estimatedMinutes ?? 10} 分钟</em><button disabled={loading || (needsPrompt && !prompt.trim())} onClick={() => onExecute(prompt.trim())}>{loading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} 执行当前节点</button></footer></article>;
+  const needsReference = node?.type === "load_image";
+  const execute = async () => {
+    if (needsReference && !referenceFile) return;
+    try {
+      setUploading(true);
+      const reference = needsReference ? await uploadTemporaryCreationFile(referenceFile) : null;
+      setUploadError("");
+      onExecute({ ...(prompt.trim() ? { prompt: prompt.trim() } : {}), ...(reference ? { referenceFileId: reference.id } : {}) });
+    } catch (error) { setUploadError(error instanceof Error ? error.message : "参考图片上传失败"); }
+    finally { setUploading(false); }
+  };
+  return <article className="workflow-step workflow-step--node"><span>NODE · {node?.type || "note"} · {step.title}</span><h3>{step.title}</h3><p>{step.description}</p>{step.instruction && <div><small>// 节点参数</small>{step.instruction}</div>}{needsPrompt && <label className="workflow-run-prompt">本次需求<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="输入本次要生成或处理的内容" /></label>}{needsReference && <label className="workflow-reference-upload">参考图片<input type="file" disabled={uploading} accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => { setReferenceFile(event.target.files?.[0] ?? null); setUploadError(""); }} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small>{uploadError && <em>{uploadError}</em>}</label>}{output && <pre className="workflow-node-output">{JSON.stringify(output, null, 2)}</pre>}<footer><em><Clock size={16} /> 约 {step.estimatedMinutes ?? 10} 分钟</em><button disabled={loading || uploading || (needsPrompt && !prompt.trim()) || (needsReference && !referenceFile)} onClick={execute}>{loading || uploading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} {uploading ? "上传参考图片…" : "执行当前节点"}</button></footer></article>;
 }

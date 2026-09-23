@@ -9,6 +9,8 @@ import { AuthService } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import { getEnvironment } from "../../common/environment";
 import { GenerationService } from "../generation/generation.service";
+import { ModelRegistry } from "../generation/model-registry";
+import { CreationStorageService } from "../creation-storage/creation-storage.service";
 import { storePrivateUpload, workAssetMimeTypes } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { caseUploadPolicy } from "../../common/upload-policy";
@@ -50,6 +52,8 @@ export class StudioService {
     private readonly database: DatabaseService,
     private readonly auth: AuthService,
     private readonly generation?: GenerationService,
+    private readonly models?: ModelRegistry,
+    private readonly creationStorage?: CreationStorageService,
   ) {}
 
   async listToolDirectoryLinks() {
@@ -289,6 +293,7 @@ export class StudioService {
     if (!node) throw new ConflictException("当前节点不存在，无法执行");
     const context = this.workflowContext(current.context);
     if (input.prompt) context.prompt = input.prompt;
+    if (input.referenceFileId) context.referenceFileId = input.referenceFileId;
     const output = await this.executeNode(actor, node, context);
     context.nodeResults[node.id] = output;
     const nextStep = Math.min(current.currentStep + 1, current.totalSteps);
@@ -684,6 +689,7 @@ export class StudioService {
     return context as {
       prompt?: string; size: string; modelConfigId?: string;
       adapters: Array<{ type: string; value: string }>;
+      referenceFileId?: string;
       artifact?: { downloadUrl?: string; fileName?: string; mimeType?: string; fileSize?: number };
       nodeResults: Record<string, unknown>;
     };
@@ -699,8 +705,8 @@ export class StudioService {
         if (!context.prompt) throw new BadRequestException("输入节点需要在开始运行时填写需求，或设置默认值");
         return { kind: "input", prompt: context.prompt };
       case "load_image":
-        if (!value) throw new BadRequestException("加载图片节点需要填写已授权的图片 URL 或素材标识");
-        return { kind: "reference", source: value };
+        if (!context.referenceFileId && !value) throw new BadRequestException("请上传一张已获授权的参考图片");
+        return { kind: "reference", source: context.referenceFileId ?? value };
       case "prompt": case "text_encode":
         if (!value) throw new BadRequestException(`${label} 需要填写提示词`);
         appendPrompt(value);
@@ -729,8 +735,17 @@ export class StudioService {
       case "ksampler": {
         if (!context.prompt) throw new BadRequestException("KSampler 前必须连接输入或提示词节点");
         if (!this.generation) throw new ConflictException("生成服务尚未装配");
+        const reference = context.referenceFileId
+          ? await this.creationStorage?.readImageForVision(actor, context.referenceFileId)
+          : undefined;
+        if (context.referenceFileId && !reference) throw new ConflictException("参考图片服务尚未装配");
+        if (reference && !this.models?.getForJob({ jobType: "image", modelConfigId: context.modelConfigId }).capabilities.includes("vision")) {
+          throw new BadRequestException("当前图片模型不支持参考图；请切换支持视觉输入的模型，或移除参考素材节点");
+        }
         const generated = await this.generation.runJob(actor, {
-          jobType: "image", prompt: context.prompt, context: [], modelConfigId: context.modelConfigId,
+          jobType: "image", prompt: context.prompt,
+          context: reference ? [{ role: "user", content: `这是用户已授权的参考图片“${reference.fileName}”。仅用于提取构图、色彩、材质或风格特征，不复制具体作品。`, images: [{ dataUrl: reference.dataUrl, detail: "high" }] }] : [],
+          modelConfigId: context.modelConfigId,
           parameters: { size: context.size, source: "workflow-canvas", workflowNodeId: node.id, adapters: context.adapters },
         });
         if (!generated.artifact) throw new ConflictException("图片服务未返回可保存产物");
