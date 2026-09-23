@@ -19,6 +19,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   const [catalogError, setCatalogError] = useState("");
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState("");
+  const [activeGroup, setActiveGroup] = useState("大类");
   const refresh = async (showLoading = false) => {
     if (showLoading) setCatalogLoading(true);
     setCatalogError("");
@@ -59,7 +60,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
     finally { setLoading(false); }
   };
   const editable = selected && myWorks.some(work => work.id === selected.id) && ["draft", "rejected"].includes(selected.status);
-  const availableTags = [...new Set(works.flatMap(work => workLabels(work)))].sort((left, right) => left.localeCompare(right, "zh-CN"));
+  const groupTags = [...new Set(works.flatMap(work => workLabelGroups(work)[activeGroup] ?? []))].sort((left, right) => left.localeCompare(right, "zh-CN"));
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const visibleWorks = works.filter(work => {
     const labels = workLabels(work);
@@ -91,9 +92,13 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
     {!!myWorks.length && <section className="my-submissions"><span>我的案例与草稿</span>{myWorks.map(work => <button disabled={loading} key={work.id} onClick={() => openWork(work)}><strong>{work.title}</strong><em className={`status-${work.status}`}>{statusName(work.status)}</em></button>)}</section>}
     <section className="community-discovery" aria-label="搜索和筛选案例">
       <label className="community-search"><MagnifyingGlass size={19} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索案例名称、创作者、方法或工具" aria-label="搜索案例" />{search && <button onClick={() => setSearch("")} aria-label="清除搜索"><X size={17} /></button>}</label>
-      <div className="community-filter-row"><span>快速筛选</span><div className="community-filter-chips" aria-label="案例分类标签">
-        <button className={!activeTag ? "is-active" : ""} aria-pressed={!activeTag} onClick={() => setActiveTag("")}>全部案例 <em>{works.length}</em></button>
-        {availableTags.map(tag => <button key={tag} className={activeTag === tag ? "is-active" : ""} aria-pressed={activeTag === tag} onClick={() => setActiveTag(activeTag === tag ? "" : tag)}>{tag}</button>)}
+      <div className="community-filter-row"><span>分类</span><div className="community-filter-tabs" role="tablist" aria-label="案例标签大类">
+        {Object.keys(EMPTY_LABEL_GROUPS).map(group => <button key={group} role="tab" aria-selected={activeGroup === group} className={activeGroup === group ? "is-active" : ""} onClick={() => { setActiveGroup(group); setActiveTag(""); }}>{group}</button>)}
+      </div></div>
+      <div className="community-filter-row community-filter-row--tags"><span>{activeGroup}标签</span><div className="community-filter-chips" aria-label={`${activeGroup}分类标签`}>
+        <button className={!activeTag ? "is-active" : ""} aria-pressed={!activeTag} onClick={() => setActiveTag("")}>全部</button>
+        {groupTags.map(tag => <button key={tag} className={activeTag === tag ? "is-active" : ""} aria-pressed={activeTag === tag} onClick={() => setActiveTag(activeTag === tag ? "" : tag)}>{tag}</button>)}
+        {!groupTags.length && <small className="community-no-tags">此类暂无标签</small>}
       </div></div>
       <div className="community-results" aria-live="polite">{search || activeTag ? `找到 ${visibleWorks.length} 个案例` : `共 ${works.length} 个案例`}<span> · 封面、创作者与分类标签一目了然</span></div>
     </section>
@@ -108,7 +113,9 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   </>;
 }
 function statusName(status) { return { draft: "草稿", pending: "审核中", approved: "已发布", rejected: "已驳回", archived: "已归档" }[status] ?? status; }
-function workLabels(work) { return [...new Set([work.discipline, ...(work.methods ?? []), ...(work.tools ?? []), ...(work.tags ?? []).map(tag => typeof tag === "string" ? tag : tag.name)].filter(Boolean))]; }
+const EMPTY_LABEL_GROUPS = { 大类: [], 设计类: [], 使用工具类: [], 艺术类: [] };
+function workLabelGroups(work) { return { 大类: [work.discipline].filter(Boolean), 设计类: work.methods ?? [], 使用工具类: work.tools ?? [], 艺术类: (work.tags ?? []).map(tag => typeof tag === "string" ? tag : tag.name).filter(Boolean) }; }
+function workLabels(work) { return [...new Set(Object.values(workLabelGroups(work)).flat())]; }
 function WorkVisualFallback({ work, compact = false }) {
   return <div className={`work-visual-fallback ${compact ? "work-visual-fallback--compact" : ""}`}><ImageSquare size={compact ? 36 : 58} /><span>{work.discipline || "艺术创作"}</span><strong>{work.title}</strong><small>作品封面待补充</small></div>;
 }
