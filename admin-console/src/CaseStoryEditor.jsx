@@ -90,7 +90,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
       <fieldset disabled={busy}>
         <label>案例名称<input required minLength={2} maxLength={160} value={form.title} onChange={e => change("title", e.target.value)} /></label>
         <label>项目简介<textarea required minLength={2} maxLength={3000} value={form.summary} onChange={e => change("summary", e.target.value)} /></label>
-        <div className="publish-form__row"><label>学科<input required maxLength={100} value={form.discipline} onChange={e => change("discipline", e.target.value)} /></label><label>来源<select value={form.story.origin} onChange={e => storyChange("origin", e.target.value)}><option value="unspecified">待补充</option><option value="collected">收集案例／外部创作</option><option value="platform">在 ArtEdu 创作</option></select></label></div>
+        <div className="publish-form__row"><label>学科<input required maxLength={100} value={form.discipline} onChange={e => change("discipline", e.target.value)} /></label><label>来源<select value={form.story.origin} onChange={e => storyChange("origin", e.target.value)}><option value="unspecified">请选择来源</option><option value="collected">收集案例／外部创作</option><option value="platform">在 ArtEdu 创作</option></select><small>提交审核前需明确来源；外部案例还需填写作者与授权说明。</small></label></div>
         <label>原作者／团队（多人用逗号分隔）<input maxLength={960} value={labelFields.creators} onChange={e => setLabelFields({...labelFields,creators:e.target.value})} placeholder="支持匿名作者；上传者不会替代原作者署名" /></label>
         <label>使用工具<input maxLength={960} value={labelFields.tools} onChange={e => setLabelFields({...labelFields,tools:e.target.value})} placeholder="按作者提供的信息填写，未提供则留空" /></label>
         <label>创作方式<input maxLength={720} value={labelFields.methods} onChange={e => setLabelFields({...labelFields,methods:e.target.value})} placeholder="概念探索，品牌设计，图像生成" /></label>
@@ -98,7 +98,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
         <label>关联教学工作流<select value={form.workflowId} onChange={e => change("workflowId", e.target.value)}><option value="">未关联／尚未整理</option>{workflows.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
         <label>添加成果与过程文件<input type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,application/pdf,.docx,.pptx" onChange={e => { setFiles([...e.target.files]); uploaded.current.clear(); }} /><small>{policy ? `视频最多 ${policy.videoBytes / 1024 / 1024} MiB，图片及文档最多 10 MiB，共最多 10 个` : '正在读取上传限制…'}；ZIP、MOV、webloc 请先处理。保存后可将图片关联到步骤。</small></label>
         {!!files.length && <p>待上传：{files.map(file => file.name).join("、")}</p>}
-        {!!assets.length && <><p>已上传 {assets.length} 个文件</p><label>封面<select value={form.story.coverAssetId} onChange={e => storyChange("coverAssetId", e.target.value)}><option value="">使用第一张图片</option>{assets.filter(a => a.asset_type === "image").map(a => <option key={a.id} value={a.id}>{a.file_name}</option>)}</select></label></>}
+        {!!assets.length && <><p>已上传 {assets.length} 个文件</p><label>封面<select value={form.story.coverAssetId} onChange={e => storyChange("coverAssetId", e.target.value)}><option value="">使用第一张图片</option>{assets.filter(a => a.asset_type === "image").map(a => <option key={a.id} value={a.id}>{a.file_name}</option>)}</select><small>提交审核至少需要一张图片；视频、PDF 和演示文稿可作为过程材料。</small></label></>}
         <h3>创作过程</h3>
         {form.story.steps.map((step, index) => <section className="case-editor-step" key={index}>
           <h4>步骤 {index + 1}</h4>

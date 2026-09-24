@@ -24,6 +24,10 @@ export const accountStatusSchema = z.object({
 export const reviewDecisionSchema = z.object({
   status: z.enum(["approved", "rejected"]),
   note: z.string().trim().max(1000).optional().default(""),
+}).superRefine((input, context) => {
+  if (input.status === "rejected" && !input.note) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["note"], message: "驳回作品必须填写修改原因" });
+  }
 });
 
 export const reportDecisionSchema = z.object({

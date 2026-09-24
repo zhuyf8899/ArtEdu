@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { workflowInputSchema, workflowVersionInputSchema, workInputSchema } from "./studio.contracts";
-import { assertCasePublication, caseStorySchema } from "./case-story";
+import { assertCaseCover, assertCasePublication, caseStorySchema } from "./case-story";
 
 test("收集案例可存草稿，缺少原作者或授权不能提交审核", () => {
   const draft = caseStorySchema.parse({ origin: "collected", creators: ["匿名作者"] });
@@ -9,9 +9,16 @@ test("收集案例可存草稿，缺少原作者或授权不能提交审核", ()
   assert.throws(() => assertCasePublication(draft), /授权/);
   assert.throws(() => assertCasePublication({ ...draft, authorization: "confirmed" }), /授权说明/);
   assert.doesNotThrow(() => assertCasePublication({ ...draft, authorization: "confirmed", authorizationNote: "已获校内展示授权" }));
-  assert.doesNotThrow(() => assertCasePublication(caseStorySchema.parse({})));
+  assert.throws(() => assertCasePublication(caseStorySchema.parse({})), /标明案例来源/);
+  assert.doesNotThrow(() => assertCasePublication(caseStorySchema.parse({ origin: "platform" })));
   assert.equal(caseStorySchema.safeParse({ steps: Array.from({length: 21}, () => ({title:"步骤"})) }).success, false);
   assert.equal(caseStorySchema.safeParse({ steps: [{ title: "步骤", execute: true }] }).success, false);
+});
+
+test("案例提交审核必须有图片封面，视频和文档只能作为补充材料", () => {
+  assert.throws(() => assertCaseCover(0), /至少上传一张图片/);
+  assert.doesNotThrow(() => assertCaseCover(1));
+  assert.doesNotThrow(() => assertCaseCover(3));
 });
 
 test("作品投稿不接受客户端提供的资源地址或资源元数据", () => {
