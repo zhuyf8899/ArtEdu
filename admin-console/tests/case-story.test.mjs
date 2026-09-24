@@ -35,3 +35,13 @@ test('视频附件的名称、预览和下载独立成行，保留下载权限',
   assert.match(css, /\.case-attachment__header strong \{[^}]*min-width: 0;[^}]*overflow-wrap: anywhere;/);
   assert.match(css, /\.case-attachment__video \{[^}]*max-width: 100%;/);
 });
+
+test('已驳回案例在作者详情展示整改意见和审核历史', async () => {
+  const library = await readFile(new URL('../src/CommunityLibrary.jsx',import.meta.url),'utf8');
+  const css = await readFile(new URL('../src/case-story.css',import.meta.url),'utf8');
+  assert.match(library, /selected\.latestRejection\?\.reason/);
+  assert.match(library, /查看审核历史/);
+  assert.match(library, /修改并保存后，可再次提交审核/);
+  assert.match(css, /\.case-review-feedback/);
+  assert.match(css, /\.case-review-history/);
+});

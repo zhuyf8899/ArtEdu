@@ -196,6 +196,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .queue-item__meta span { color: var(--muted); font-size: 8px; }
 .queue-item__meta em { padding: 4px 6px; color: #3c6500; background: #eaffc9; font-size: 7px; font-style: normal; }
 .queue-item__meta em.is-warning { color: #805400; background: #fff0bf; }
+.queue-item__meta em { white-space: nowrap; }
+.editorial-checklist { margin: 0 18px 16px; padding: 12px 14px; color: #603f00; background: #fff6dc; border: 1px solid #e7c36b; font-size: 10px; }
+.editorial-checklist strong { display: block; font-size: 11px; }
+.editorial-checklist ul { margin: 8px 0; padding-left: 18px; display: grid; gap: 4px; }
+.editorial-checklist small { color: #79643d; font-size: 8px; }
 .review-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9f988e; text-align: center; background: #f8f4ee; }
 .review-placeholder strong { margin-top: 11px; color: var(--ink); font-size: 13px; }
 .review-placeholder span { max-width: 240px; margin-top: 5px; font-size: 9px; }

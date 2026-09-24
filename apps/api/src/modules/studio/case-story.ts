@@ -26,7 +26,14 @@ export type CaseStory = z.infer<typeof caseStorySchema>;
 
 // No executable HTML or model calls: prompts are only educational text.
 export function assertCasePublication(story: CaseStory) {
+  if (story.origin === "unspecified") {
+    throw new Error("请先标明案例来源：ArtEdu 创作或外部收集案例");
+  }
   if (story.origin === "collected" && (!story.creators.length || story.authorization !== "confirmed" || !story.authorizationNote)) {
     throw new Error("收集案例需填写原作者并确认展示授权及授权说明后，才能提交审核");
   }
+}
+
+export function assertCaseCover(imageCount: number) {
+  if (imageCount < 1) throw new Error("提交审核前请至少上传一张图片作为案例封面；视频和文档可作为补充材料");
 }

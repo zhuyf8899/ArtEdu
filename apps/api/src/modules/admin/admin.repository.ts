@@ -34,7 +34,25 @@ export interface AdminReview {
   prompt: string;
   assets: number;
   assetLinks: Array<{ id: string; fileName: string; mimeType: string; url: string }>;
+  editorialIssues: string[];
   status: "pending" | "approved" | "rejected";
+}
+
+type ReviewStory = { origin?: unknown; creators?: unknown; authorization?: unknown; authorizationNote?: unknown } | null | undefined;
+
+export function getEditorialIssues(story: ReviewStory, tagCount: number, imageCount: number): string[] {
+  const issues: string[] = [];
+  if (!story || (story.origin !== "platform" && story.origin !== "collected")) issues.push("未标明案例来源");
+  if (story?.origin === "collected") {
+    const creators = Array.isArray(story.creators) ? story.creators.filter((name) => typeof name === "string" && name.trim()) : [];
+    if (!creators.length) issues.push("未填写原作者／团队");
+    if (story.authorization !== "confirmed" || typeof story.authorizationNote !== "string" || !story.authorizationNote.trim()) {
+      issues.push("缺少展示授权确认或授权说明");
+    }
+  }
+  if (tagCount < 1) issues.push("未添加检索标签");
+  if (imageCount < 1) issues.push("缺少图片封面");
+  return issues;
 }
 
 export interface AdminReport {
@@ -77,6 +95,9 @@ interface ReviewRow {
   machine_status: string | null;
   prompt: string | null;
   assets: number | null;
+  image_assets: number | null;
+  tags: number | null;
+  story_json: ReviewStory;
   asset_links: Array<{ id: string; fileName: string; mimeType: string; url: string }> | null;
   status: AdminReview["status"];
 }
@@ -227,6 +248,9 @@ export class AdminRepository {
         moderation.machine_status,
         job.prompt,
         asset_counts.assets,
+        image_counts.image_assets,
+        tag_counts.tags,
+        w.story_json,
         asset_links.asset_links,
         w.status
       FROM works w
@@ -244,6 +268,12 @@ export class AdminRepository {
       LEFT JOIN LATERAL (
         SELECT COUNT(*)::int AS assets FROM work_assets wa WHERE wa.work_id = w.id
       ) asset_counts ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS image_assets FROM work_assets wa WHERE wa.work_id = w.id AND wa.asset_type = 'image'
+      ) image_counts ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS tags FROM work_tags wt WHERE wt.work_id = w.id
+      ) tag_counts ON TRUE
       LEFT JOIN LATERAL (
         SELECT COALESCE(json_agg(json_build_object(
           'id', wa.id,
@@ -285,6 +315,7 @@ export class AdminRepository {
       prompt: row.prompt ?? "未记录生成提示词",
       assets: Number(row.assets ?? 0),
       assetLinks: row.asset_links ?? [],
+      editorialIssues: getEditorialIssues(row.story_json, Number(row.tags ?? 0), Number(row.image_assets ?? 0)),
       status: row.status,
     }));
   }

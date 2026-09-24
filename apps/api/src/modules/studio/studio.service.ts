@@ -11,7 +11,7 @@ import { getEnvironment } from "../../common/environment";
 import { storePrivateUpload } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { caseUploadPolicy } from "../../common/upload-policy";
-import { assertCasePublication, caseStorySchema, type CaseStory } from "./case-story";
+import { assertCaseCover, assertCasePublication, caseStorySchema, type CaseStory } from "./case-story";
 import { extractImageText, findOcrRiskKeywords } from "./content-moderation";
 import type {
   CatalogQuery,
@@ -273,19 +273,32 @@ export class StudioService {
       GROUP BY w.id, author.display_name
     `, [workId, actor.id, this.canReview(actor), actor.id]);
     if (!result.rows[0]) throw new NotFoundException("作品不存在");
-    const [assets, tags, workflows, comments] = await Promise.all([
+    const privileged = result.rows[0].author_id === actor.id || this.canReview(actor);
+    const [assets, tags, workflows, comments, reviewEvents] = await Promise.all([
       this.database.query("SELECT id,file_name,mime_type,asset_type,external_url,alt_text,sort_order FROM work_assets WHERE work_id=$1 ORDER BY sort_order,created_at", [workId]),
       this.database.query("SELECT t.name,t.slug FROM tags t JOIN work_tags wt ON wt.tag_id=t.id WHERE wt.work_id=$1 ORDER BY t.name", [workId]),
       this.database.query("SELECT wf.id,wf.name,wf.category FROM workflows wf JOIN work_workflows ww ON ww.workflow_id=wf.id WHERE ww.work_id=$1", [workId]),
       this.database.query("SELECT c.id,c.content,c.created_at,u.display_name AS author FROM comments c JOIN users u ON u.id=c.author_id WHERE c.work_id=$1 AND c.status='published' ORDER BY c.created_at", [workId]),
+      privileged
+        ? this.database.query<{ action: string; reason: string | null; created_at: Date; reviewer: string | null }>(`
+          SELECT ar.action, ar.reason, ar.created_at, reviewer.display_name AS reviewer
+          FROM audit_records ar
+          LEFT JOIN users reviewer ON reviewer.id = ar.reviewer_id
+          WHERE ar.target_type = 'work' AND ar.target_id = $1
+            AND ar.action IN ('submit', 'approve', 'reject')
+          ORDER BY ar.created_at DESC
+          LIMIT 30
+        `, [workId])
+        : Promise.resolve({ rows: [] }),
     ]);
-    const privileged = result.rows[0].author_id === actor.id || this.canReview(actor);
     const story = caseStorySchema.parse(result.rows[0].story_json ?? {});
     const visibleAssets = assets.rows.map(asset => ({ ...asset,
       url: `/api/works/${encodeURIComponent(workId)}/assets/${encodeURIComponent(asset.id)}/download`,
       canDownload: asset.asset_type !== "document" || privileged || story.allowDocumentDownload,
     }));
-    return { ...this.mapWork(result.rows[0]), story: privileged ? story : { ...story, authorizationNote: "" }, assets: visibleAssets, tags: tags.rows, workflows: workflows.rows, comments: comments.rows };
+    const reviewHistory = reviewEvents.rows.map(event => ({ action: event.action, reason: event.reason ?? "", createdAt: event.created_at, reviewer: event.reviewer ?? "审核人员" }));
+    const latestRejection = reviewHistory.find(event => event.action === "reject") ?? null;
+    return { ...this.mapWork(result.rows[0]), story: privileged ? story : { ...story, authorizationNote: "" }, assets: visibleAssets, tags: tags.rows, workflows: workflows.rows, comments: comments.rows, reviewHistory, latestRejection };
   }
 
   async createWork(actor: Actor, input: WorkInput) {
@@ -306,8 +319,9 @@ export class StudioService {
       if (!["draft", "rejected"].includes(work.rows[0].status)) throw new ConflictException("当前作品不能重复提交");
       try { assertCasePublication(caseStorySchema.parse(work.rows[0].story_json ?? {})); }
       catch (error) { throw new BadRequestException((error as Error).message); }
-      const assets = await client.query("SELECT 1 FROM work_assets WHERE work_id=$1 LIMIT 1", [workId]);
-      if (!assets.rowCount) throw new BadRequestException("至少添加一个作品资源后才能提交审核");
+      const assets = await client.query<{ image_count: number }>("SELECT COUNT(*)::int AS image_count FROM work_assets WHERE work_id=$1 AND asset_type='image'", [workId]);
+      try { assertCaseCover(Number(assets.rows[0]?.image_count ?? 0)); }
+      catch (error) { throw new BadRequestException((error as Error).message); }
       await client.query("UPDATE works SET status='pending',published_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId]);
       await client.query("INSERT INTO audit_records (id,target_type,target_id,reviewer_id,action,reason) VALUES ($1,'work',$2,$3,'submit',$4)", [`audit-${randomUUID()}`, workId, actor.id, "用户提交作品审核"]);
       return true;
