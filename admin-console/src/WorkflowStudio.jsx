@@ -21,18 +21,29 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
     setLoading(true);
     try {
       const detail = await getWorkflow(workflow.id);
-      const previous = initialRunId ? await getWorkflowRun(initialRunId) : null;
-      if (previous && previous.workflowId !== detail.id) throw new Error("执行记录与工作流不匹配");
-      setSelected(detail); setRun(previous);
+      setSelected(detail); setRun(null);
     }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
   useEffect(() => {
-    if (!initialWorkflowId || selected || loading || !workflows.length) return;
+    if (!initialRunId) return;
+    let active = true;
+    setLoading(true);
+    getWorkflowRun(initialRunId).then((previous) => {
+      if (initialWorkflowId && previous.workflowId !== initialWorkflowId) throw new Error("执行记录与工作流不匹配");
+      if (!active) return;
+      // 运行记录只允许本人读取，且自带不可变节点图；草稿未发布也可以安全恢复。
+      setSelected({ id: previous.workflowId, name: previous.workflowName, category: previous.category, description: "已保存的节点工作流", nodes: previous.nodes, edges: previous.edges, steps: previous.steps, definition: previous.definition });
+      setRun(previous);
+    }).catch((error) => { if (active) onNotice(error.message); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [initialRunId, initialWorkflowId]);
+  useEffect(() => {
+    if (initialRunId || !initialWorkflowId || selected || loading || !workflows.length) return;
     const workflow = workflows.find((item) => item.id === initialWorkflowId);
     if (workflow) void open(workflow);
-  }, [initialWorkflowId, loading, selected, workflows]);
+  }, [initialRunId, initialWorkflowId, loading, selected, workflows]);
   const start = async () => {
     setLoading(true);
     try { const next = await startWorkflowRun(selected.id, { source: "web-node-canvas" }); setRun(next); onNotice("工作流已开始，节点进度会保存到本地数据库"); }
