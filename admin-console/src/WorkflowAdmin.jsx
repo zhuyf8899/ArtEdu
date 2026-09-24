@@ -281,6 +281,7 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
   const [runNegativePrompt, setRunNegativePrompt] = useState("");
   const [referenceFile, setReferenceFile] = useState(null);
   const [runBusy, setRunBusy] = useState(false);
+  const [runError, setRunError] = useState("");
   const runSteps = run?.steps ?? [];
   const activeStep = run?.status === "in_progress" ? runSteps[run.currentStep] : null;
   const activeNode = activeStep ? editor.definition.nodes.find((node) => node.id === activeStep.id) : null;
@@ -343,6 +344,7 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
     if (issues.length) { onNotice(issues[0]); return; }
     if (publishIssues(editor.definition).length) { onNotice(publishIssues(editor.definition)[0]); return; }
     setRunBusy(true);
+    setRunError("");
     try {
       if (dirty || !selected.versions?.length || (canPublish && selected.status !== "published")) {
         const saved = await onSave(canPublish);
@@ -357,6 +359,7 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
     if (!run || !activeNode) return;
     if (activeNode.type === "input" && !runPrompt.trim() && !String(activeNode.data.value || "").trim()) { onNotice("请填写创作需求，或在输入节点配置默认值。"); return; }
     setRunBusy(true);
+    setRunError("");
     try {
       let referenceFileId;
       if (activeNode.type === "load_image") {
@@ -368,7 +371,7 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
       setRun(next);
       if (referenceFileId) setReferenceFile(null);
       if (next.status === "completed") onNotice("工作流已执行完成，结果已写入本次运行记录。");
-    } catch (error) { onNotice(error.message); }
+    } catch (error) { setRunError(error.message); onNotice(error.message); }
     finally { setRunBusy(false); }
   };
 
@@ -405,6 +408,8 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
       <div><p>// RUN ON CANVAS</p><h2>{run?.status === "completed" ? "本次运行已完成" : activeNode ? `正在执行：${activeNode.data.label || activeNode.type}` : "从画布直接运行"}</h2><span>{run ? `${Math.round((run.currentStep / Math.max(run.totalSteps, 1)) * 100)}% · ${run.currentStep}/${run.totalSteps} 个节点已完成` : "先校验并发布当前节点图，再按连接关系逐节点执行。"}</span></div>
       {!run && <button className="primary-button" disabled={loading || runBusy} onClick={runWorkflow}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}{canPublish ? (dirty || selected.status !== "published" ? "发布并运行" : "运行工作流") : "保存并试运行"}</button>}
       {run?.status === "in_progress" && activeNode && <div className="workflow-canvas-runner__step"><div><strong>{activeNode.data.label || activeNode.type}</strong><small>{activeNode.data.description || palette[activeNode.type]?.hint}</small></div>{activeNode.type === "input" && <label>创作需求<textarea value={runPrompt} onChange={(event) => setRunPrompt(event.target.value)} placeholder="例如：为新生设计一张青绿色的传统纹样海报" /></label>}{activeNode.type === "negative_prompt" && <label>本次负向提示词<textarea value={runNegativePrompt} onChange={(event) => setRunNegativePrompt(event.target.value)} placeholder={activeNode.data.value || "例如：文字、水印、模糊"} maxLength={1500} /><small>留空使用节点默认值</small></label>}{activeNode.type === "load_image" && <label className="workflow-reference-upload">参考图片<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small></label>}<button className="primary-button" disabled={runBusy} onClick={executeCurrentNode}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}执行当前节点</button></div>}
+      {runBusy && activeNode?.type === "ksampler" && <small className="workflow-canvas-runner__status">图片服务可能排队数分钟，请勿重复点击或关闭页面。</small>}
+      {runError && <p className="workflow-canvas-runner__error" role="alert">{runError}</p>}
       {run?.status === "completed" && <div className="workflow-canvas-runner__done"><CheckCircle size={20} weight="fill" /> 已完成。{run.context?.artifact?.downloadUrl && <a href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看生成作品</a>}{run.context?.text && <span>{run.context.text}</span>}</div>}
       {!canPublish && <small>草稿可自行试运行；发布给其他人使用需要教师、运营或管理员身份。</small>}
     </section>

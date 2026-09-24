@@ -295,6 +295,7 @@ function providerErrorCode(error: unknown) {
 
 function providerFailureMessage(error: unknown) {
   if (error instanceof DocumentContentError || error instanceof PdfExportError) return error.message;
+  if (error instanceof Error && error.message.startsWith("图像生成超时")) return "图片服务排队较久，本次等待超时；请稍后重试当前节点";
   if (error instanceof Error && error.name === "AbortError") return "模型响应超时，请稍后重试";
   const status = error instanceof Error ? error.message.match(/HTTP (\d{3})/)?.[1] : undefined;
   return ({

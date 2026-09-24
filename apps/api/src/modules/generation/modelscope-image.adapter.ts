@@ -11,6 +11,8 @@ import { describeProviderApiKeyEnvs, resolveProviderApiKeys } from "./provider-a
 //   3. 从 output_images[0] 下载图片，写入上传目录（与 Office 导出同一套存储约定）
 // 因此它单独实现 ModelAdapter，而不是复用 OpenAICompatibleAdapter。
 const POLL_INTERVAL_MS = 3000;
+// ModelScope 异步图片任务可能排队超过通用模型的 120 秒；低于 nginx 的 300 秒代理上限。
+const MIN_IMAGE_TIMEOUT_MS = 270000;
 const MAX_PROMPT_CHARS = 1500;
 // 默认方图：Qwen-Image 不加 size 时返回 760×1280 竖图，在对话面板里会被迫滚动；
 // 图标/纹样/UI 这类用途方图也更合适。可用 providerOptions.size 覆盖（如 "1328x1328"）。
@@ -33,7 +35,7 @@ export class ModelScopeImageAdapter implements ModelAdapter {
     const size = this.resolveSize(request);
     const negativePrompt = this.resolveNegativePrompt(request);
     const jobId = request.jobId ?? randomUUID();
-    const deadline = Date.now() + this.config.timeoutMs;
+    const deadline = Date.now() + Math.max(this.config.timeoutMs, MIN_IMAGE_TIMEOUT_MS);
 
     const taskId = await this.submit(apiKey, prompt, size, negativePrompt);
     const imageUrl = await this.waitForImage(apiKey, taskId, deadline);
