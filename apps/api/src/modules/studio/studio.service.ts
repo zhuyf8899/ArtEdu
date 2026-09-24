@@ -591,6 +591,9 @@ export class StudioService {
       title: node.data?.label ?? `节点 ${index + 1}`,
       description: node.data?.description ?? "",
       instruction: node.data?.value ?? "",
+      exampleInput: node.data?.exampleInput ?? "",
+      exampleOutput: node.data?.exampleOutput ?? "",
+      parameterDescription: node.data?.parameterDescription ?? "",
       estimatedMinutes: Number(node.data?.estimatedMinutes ?? 10),
       };
     });

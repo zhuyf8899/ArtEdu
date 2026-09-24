@@ -202,7 +202,8 @@ function CourseRow({ course, index, onNavigate }) {
 }
 
 function TaskRow({ task, compact, onToggle, onDelete }) {
-  return <article className={`learning-task-row ${task.status === "completed" ? "is-complete" : ""} ${compact ? "is-compact" : ""}`}><button className="task-check" onClick={() => onToggle(task)} aria-label={task.status === "completed" ? "标记为未完成" : "标记为已完成"}>{task.status === "completed" && <Check size={13} weight="bold" />}</button><div><strong>{task.title}</strong>{!compact && <span>{taskTypeName(task.taskType)} · {task.dueDate ? formatDate(task.dueDate) : "未设置日期"}</span>}</div>{!compact && <button className="task-delete" onClick={() => onDelete(task.id)} aria-label={`删除${task.title}`}><Trash size={16} /></button>}</article>;
+  const autoCompleted = task.taskType === "lesson";
+  return <article className={`learning-task-row ${task.status === "completed" ? "is-complete" : ""} ${compact ? "is-compact" : ""}`}><button className="task-check" disabled={autoCompleted} onClick={() => onToggle(task)} aria-label={autoCompleted ? "课时任务由课程进度自动维护" : task.status === "completed" ? "标记为未完成" : "标记为已完成"}>{task.status === "completed" && <Check size={13} weight="bold" />}</button><div><strong>{task.title}</strong>{!compact && <span>{taskTypeName(task.taskType)} · {task.dueDate ? formatDate(task.dueDate) : "未设置日期"}</span>}</div>{!compact && !autoCompleted && <button className="task-delete" onClick={() => onDelete(task.id)} aria-label={`删除${task.title}`}><Trash size={16} /></button>}</article>;
 }
 
 function WorkMiniCard({ work, index, onClick }) {
@@ -228,5 +229,5 @@ function LearningLoadError({ message, onRetry }) {
 }
 
 function courseImage(course, index) { return COURSE_IMAGES[course.id] || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]; }
-function taskTypeName(type) { return { course: "课程学习", workflow: "工作流", review: "复习", note: "学习笔记", custom: "自定义" }[type] || "学习任务"; }
+function taskTypeName(type) { return { course: "课程学习", lesson: "课时完成", workflow: "工作流", review: "复习", note: "学习笔记", custom: "自定义" }[type] || "学习任务"; }
 function formatDate(value) { return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(new Date(value)); }

@@ -21,6 +21,10 @@ const lessonSchema = z.object({
   estimatedMinutes: z.coerce.number().int().min(0).max(1440).default(0),
   workflowId: z.string().trim().min(1).max(100).nullable().optional(),
   modelConfigIds: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
+  learningSteps: z.array(z.string().trim().min(1).max(500)).max(20).default([]),
+  practiceTask: z.string().trim().max(2000).default(""),
+  completionCriteria: z.string().trim().max(1000).default(""),
+  requiresWorkSubmission: z.boolean().default(false),
 });
 
 export const createCourseSchema = z.object({
@@ -42,6 +46,12 @@ export const updateProgressSchema = z.object({
   progressPercent: z.coerce.number().int().min(0).max(100),
   watchedSeconds: z.coerce.number().int().min(0).max(86400).default(0),
   lastPositionSeconds: z.coerce.number().int().min(0).max(86400).default(0),
+  completionConfirmed: z.boolean().default(false),
+});
+
+export const lessonSubmissionSchema = z.object({
+  workId: z.string().trim().min(1).max(100),
+  note: z.string().trim().max(1000).default(""),
 });
 
 export const courseReviewDecisionSchema = z.object({
@@ -52,4 +62,5 @@ export const courseReviewDecisionSchema = z.object({
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
 export type UpdateCourseInput = z.infer<typeof updateCourseSchema>;
 export type ProgressInput = z.infer<typeof updateProgressSchema>;
+export type LessonSubmissionInput = z.infer<typeof lessonSubmissionSchema>;
 export type CourseReviewDecisionInput = z.infer<typeof courseReviewDecisionSchema>;

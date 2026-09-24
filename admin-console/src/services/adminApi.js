@@ -56,9 +56,13 @@ export const searchPortal = (query, type = "all", tag = "") => {
 export const getCourses = (query = "") => request(`/courses${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getCourse = (courseId) => request(`/courses/${courseId}`);
 export const enrollCourse = (courseId) => request(`/courses/${courseId}/enroll`, { method: "POST" });
-export const updateLessonProgress = (courseId, lessonId, progressPercent) => request(`/courses/${courseId}/lessons/${lessonId}/progress`, {
+export const updateLessonProgress = (courseId, lessonId, progressPercent, options = {}) => request(`/courses/${courseId}/lessons/${lessonId}/progress`, {
   method: "PUT",
-  body: JSON.stringify({ progressPercent }),
+  body: JSON.stringify({ progressPercent, ...options }),
+});
+export const submitLessonWork = (courseId, lessonId, input) => request(`/courses/${courseId}/lessons/${lessonId}/submissions`, {
+  method: "POST",
+  body: JSON.stringify(input),
 });
 export const getMyLearning = () => request("/me/learning-progress");
 export const getLearningSpace = () => request("/me/learning-space");

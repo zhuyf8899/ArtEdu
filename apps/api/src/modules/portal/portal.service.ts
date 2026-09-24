@@ -55,7 +55,10 @@ interface SearchRow {
   author: string | null;
   metadata: string | null;
   tags: string[] | null;
+  methods?: string[] | null;
+  tools?: string[] | null;
   updated_at: Date;
+  match_count: number;
 }
 
 @Injectable()
@@ -184,14 +187,19 @@ export class PortalService {
   async search(_actor: Actor, query: PortalSearchQuery) {
     const patterns = buildPortalSearchPatterns(query.query);
     const tag = query.tag ?? null;
-    const limit = 24;
+    const limit = 60;
     const include = (type: PortalSearchQuery["type"]) => query.type === "all" || query.type === type;
 
     const [courses, workflows, works] = await Promise.all([
       include("course") ? this.database.query<SearchRow>(`
         SELECT c.id, c.title, c.summary, c.category, creator.display_name AS author,
           c.difficulty AS metadata,
+          COUNT(*) OVER()::int AS match_count,
           ARRAY_REMOVE(ARRAY_AGG(DISTINCT tag.name), NULL) AS tags,
+          ARRAY_REMOVE(ARRAY(SELECT DISTINCT model.display_name FROM course_lessons lesson
+            CROSS JOIN LATERAL jsonb_array_elements_text(lesson.model_config_ids) model_id(value)
+            JOIN model_configs model ON model.id = model_id.value
+            WHERE lesson.course_id = c.id AND lesson.status = 'published'), NULL) AS tools,
           c.updated_at
         FROM courses c
         LEFT JOIN users creator ON creator.id = c.created_by
@@ -219,6 +227,7 @@ export class PortalService {
       include("workflow") ? this.database.query<SearchRow>(`
         SELECT workflow.id, workflow.name AS title, workflow.description AS summary,
           workflow.category, creator.display_name AS author, workflow.entry_type AS metadata,
+          COUNT(*) OVER()::int AS match_count,
           ARRAY_REMOVE(ARRAY_AGG(DISTINCT tag.name), NULL) AS tags,
           workflow.updated_at
         FROM workflows workflow
@@ -247,7 +256,10 @@ export class PortalService {
       include("work") ? this.database.query<SearchRow>(`
         SELECT work.id, work.title, work.summary, work.discipline AS category,
           author.display_name AS author, NULL::text AS metadata,
+          COUNT(*) OVER()::int AS match_count,
           ARRAY_REMOVE(ARRAY_AGG(DISTINCT tag.name), NULL) AS tags,
+          ARRAY(SELECT jsonb_array_elements_text(COALESCE(work.story_json->'methods', '[]'::jsonb))) AS methods,
+          ARRAY(SELECT jsonb_array_elements_text(COALESCE(work.story_json->'tools', '[]'::jsonb))) AS tools,
           work.updated_at
         FROM works work
         JOIN users author ON author.id = work.author_id
@@ -268,7 +280,7 @@ export class PortalService {
             JOIN tags filter_tag ON filter_tag.id = filter_relation.tag_id
             WHERE filter_relation.work_id = work.id AND filter_tag.name = $2
           ))
-        GROUP BY work.id, author.display_name
+        GROUP BY work.id, author.display_name, work.story_json
         ORDER BY work.is_featured DESC, work.featured_rank NULLS LAST, work.updated_at DESC
         LIMIT $3
       `, [patterns, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
@@ -281,13 +293,13 @@ export class PortalService {
     ].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     const counts = {
       all: items.length,
-      course: courses.rows.length,
-      workflow: workflows.rows.length,
-      work: works.rows.length,
+      course: Number(courses.rows[0]?.match_count ?? 0),
+      workflow: Number(workflows.rows[0]?.match_count ?? 0),
+      work: Number(works.rows[0]?.match_count ?? 0),
     };
     const availableTags = [...new Set(items.flatMap((item) => item.tags))].sort((left, right) => left.localeCompare(right, "zh-CN"));
 
-    return { query: query.query, type: query.type, tag, counts, availableTags, items };
+    return { query: query.query, type: query.type, tag, counts, matchCount: counts.all, availableTags, items };
   }
 
   private mapSearchResult(type: "course" | "workflow" | "work", row: SearchRow) {
@@ -306,6 +318,8 @@ export class PortalService {
       summary: row.summary ?? "",
       category: row.category ?? "未分类",
       author: row.author ?? "ArtEdu 教学团队",
+      methods: [...new Set([...(row.methods ?? []), ...(row.tags ?? []).filter((value) => ["UI 创作", "图案生成", "Vibe Coding", "UI设计", "图案设计"].includes(value)), ...(type === "course" && /coding|网页|代码/i.test(row.title) ? ["Vibe Coding"] : type === "course" && /纹样|图案/.test(row.title) ? ["图案生成"] : [])])],
+      tools: [...new Set([...(row.tools ?? []), ...(type === "workflow" ? row.tags ?? [] : [])])],
       tags: [...new Set(tags)],
       route: { course: "/learning", workflow: "/studio", work: "/community" }[type],
       updatedAt: row.updated_at.toISOString(),
