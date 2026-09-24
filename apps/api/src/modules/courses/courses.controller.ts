@@ -7,6 +7,7 @@ import {
   courseReviewDecisionSchema,
   createCourseSchema,
   listCoursesQuerySchema,
+  lessonSubmissionSchema,
   updateCourseSchema,
   updateProgressSchema,
 } from "./courses.contracts";
@@ -14,6 +15,7 @@ import type {
   CourseReviewDecisionInput,
   CreateCourseInput,
   ProgressInput,
+  LessonSubmissionInput,
   UpdateCourseInput,
 } from "./courses.contracts";
 import { CoursesService } from "./courses.service";
@@ -47,6 +49,19 @@ export class CoursesController {
     return this.courses.updateProgress(
       await this.auth.getActor(request), courseId, lessonId,
       parseInput(updateProgressSchema, body) as ProgressInput,
+    );
+  }
+
+  @Post("courses/:courseId/lessons/:lessonId/submissions")
+  async submitLessonWork(
+    @Req() request: FastifyRequest,
+    @Param("courseId") courseId: string,
+    @Param("lessonId") lessonId: string,
+    @Body() body: unknown,
+  ) {
+    return this.courses.submitLessonWork(
+      await this.auth.getActor(request), courseId, lessonId,
+      parseInput(lessonSubmissionSchema, body) as LessonSubmissionInput,
     );
   }
 

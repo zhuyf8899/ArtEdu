@@ -13,6 +13,7 @@ import { RagService } from "../rag/rag.service";
 import type {
   CourseReviewDecisionInput,
   CreateCourseInput,
+  LessonSubmissionInput,
   ProgressInput,
   UpdateCourseInput,
 } from "./courses.contracts";
@@ -50,6 +51,12 @@ interface LessonRow extends QueryResultRow {
   model_config_ids: string[];
   progress_percent: number;
   progress_status: string;
+  learning_steps: string[];
+  practice_task: string;
+  completion_criteria: string;
+  requires_work_submission: boolean;
+  submitted_work_id: string | null;
+  submission_note: string | null;
 }
 
 interface ReviewRow extends QueryResultRow {
@@ -158,11 +165,14 @@ export class CoursesService {
     const [lessons, resources] = await Promise.all([
       this.database.query<LessonRow>(`
         SELECT l.id, l.title, l.summary, l.lesson_type, l.sort_order, l.estimated_minutes,
-          l.workflow_id, l.model_config_ids,
+          l.workflow_id, l.model_config_ids, l.learning_steps, l.practice_task,
+          l.completion_criteria, l.requires_work_submission,
           COALESCE(p.progress_percent, 0)::int AS progress_percent,
-          COALESCE(p.status, 'not_started') AS progress_status
+          COALESCE(p.status, 'not_started') AS progress_status,
+          submission.work_id AS submitted_work_id, submission.note AS submission_note
         FROM course_lessons l
         LEFT JOIN learning_progress p ON p.lesson_id = l.id AND p.user_id = $1
+        LEFT JOIN course_lesson_submissions submission ON submission.lesson_id = l.id AND submission.user_id = $1
         WHERE l.course_id = $2 AND l.status = 'published'
         ORDER BY l.sort_order, l.created_at
       `, [actor.id, courseId]),
@@ -185,6 +195,11 @@ export class CoursesService {
         estimatedMinutes: lesson.estimated_minutes ?? 0,
         workflowId: lesson.workflow_id,
         modelConfigIds: lesson.model_config_ids ?? [],
+        learningSteps: lesson.learning_steps ?? [],
+        practiceTask: lesson.practice_task ?? "",
+        completionCriteria: lesson.completion_criteria ?? "",
+        requiresWorkSubmission: lesson.requires_work_submission,
+        submission: lesson.submitted_work_id ? { workId: lesson.submitted_work_id, note: lesson.submission_note ?? "" } : null,
         progressPercent: lesson.progress_percent,
         progressStatus: lesson.progress_status,
       })),
@@ -214,18 +229,26 @@ export class CoursesService {
       INSERT INTO course_enrollments (id, user_id, course_id)
       VALUES ($1, $2, $3)
       ON CONFLICT (user_id, course_id) DO UPDATE
-      SET status = 'in_progress', completed_at = NULL, updated_at = CURRENT_TIMESTAMP
+      SET status = CASE WHEN course_enrollments.status = 'completed' THEN 'completed' ELSE 'in_progress' END,
+        completed_at = CASE WHEN course_enrollments.status = 'completed' THEN course_enrollments.completed_at ELSE NULL END,
+        updated_at = CURRENT_TIMESTAMP
     `, [randomUUID(), actor.id, courseId]);
     return this.getPublished(actor, courseId);
   }
 
   async updateProgress(actor: Actor, courseId: string, lessonId: string, input: ProgressInput) {
     const lesson = await this.database.query(`
-      SELECT l.id FROM course_lessons l JOIN courses c ON c.id = l.course_id
+      SELECT l.id, l.title, l.estimated_minutes, l.requires_work_submission FROM course_lessons l JOIN courses c ON c.id = l.course_id
       WHERE l.id = $1 AND l.course_id = $2 AND l.status = 'published' AND c.status = 'published'
     `, [lessonId, courseId]);
     if (!lesson.rows[0]) throw new NotFoundException("课程课时不存在");
+    if (input.progressPercent >= 100 && !input.completionConfirmed) throw new BadRequestException("请先确认已达到本课时的完成标准");
+    if (input.progressPercent >= 100 && lesson.rows[0].requires_work_submission) {
+      const submission = await this.database.query("SELECT id FROM course_lesson_submissions WHERE user_id = $1 AND course_id = $2 AND lesson_id = $3", [actor.id, courseId, lessonId]);
+      if (!submission.rows[0]) throw new BadRequestException("请先关联一项自己的作品，再完成此课时");
+    }
     await this.enroll(actor, courseId);
+    const watchedSeconds = Math.max(input.watchedSeconds, input.progressPercent >= 100 ? Number(lesson.rows[0].estimated_minutes ?? 0) * 60 : 0);
     const status = input.progressPercent >= 100 ? "completed" : input.progressPercent > 0 ? "in_progress" : "not_started";
     await this.database.transaction(async (client) => {
       await client.query(`
@@ -234,13 +257,21 @@ export class CoursesService {
           last_position_seconds, completed_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $4 = 100 THEN CURRENT_TIMESTAMP END, CURRENT_TIMESTAMP)
         ON CONFLICT (user_id, lesson_id) DO UPDATE SET
-          status = EXCLUDED.status,
+          status = CASE WHEN GREATEST(learning_progress.progress_percent, EXCLUDED.progress_percent) = 100 THEN 'completed' ELSE EXCLUDED.status END,
           progress_percent = GREATEST(learning_progress.progress_percent, EXCLUDED.progress_percent),
           watched_seconds = GREATEST(learning_progress.watched_seconds, EXCLUDED.watched_seconds),
           last_position_seconds = EXCLUDED.last_position_seconds,
           completed_at = CASE WHEN EXCLUDED.progress_percent = 100 THEN COALESCE(learning_progress.completed_at, CURRENT_TIMESTAMP) ELSE learning_progress.completed_at END,
           updated_at = CURRENT_TIMESTAMP
-      `, [actor.id, lessonId, status, input.progressPercent, input.watchedSeconds, input.lastPositionSeconds]);
+      `, [actor.id, lessonId, status, input.progressPercent, watchedSeconds, input.lastPositionSeconds]);
+      if (input.progressPercent >= 100) {
+        await client.query(`
+          INSERT INTO learning_tasks (id, user_id, title, task_type, target_id, due_date, status, completed_at)
+          VALUES ($1, $2, $3, 'lesson', $4, CURRENT_DATE, 'completed', CURRENT_TIMESTAMP)
+          ON CONFLICT (user_id, target_id, due_date) WHERE task_type = 'lesson'
+          DO UPDATE SET status = 'completed', completed_at = COALESCE(learning_tasks.completed_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP
+        `, [`lesson-task-${randomUUID()}`, actor.id, `完成课时：${lesson.rows[0].title}`, lessonId]);
+      }
       const remaining = await client.query(`
         SELECT COUNT(*)::int AS remaining
         FROM course_lessons l
@@ -254,6 +285,26 @@ export class CoursesService {
         `, [actor.id, courseId]);
       }
     });
+    return this.getPublished(actor, courseId);
+  }
+
+  async submitLessonWork(actor: Actor, courseId: string, lessonId: string, input: LessonSubmissionInput) {
+    const eligible = await this.database.query(`
+      SELECT lesson.id FROM course_lessons lesson
+      JOIN courses course ON course.id = lesson.course_id
+      WHERE lesson.id = $1 AND lesson.course_id = $2 AND lesson.status = 'published' AND course.status = 'published'
+    `, [lessonId, courseId]);
+    if (!eligible.rows[0]) throw new NotFoundException("课程课时不存在或未发布");
+    const work = await this.database.query(`
+      SELECT id FROM works WHERE id = $1 AND author_id = $2 AND status IN ('draft', 'rejected', 'pending', 'approved')
+    `, [input.workId, actor.id]);
+    if (!work.rows[0]) throw new BadRequestException("只能提交自己创建的有效作品");
+    await this.enroll(actor, courseId);
+    await this.database.query(`
+      INSERT INTO course_lesson_submissions (id, user_id, course_id, lesson_id, work_id, note)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (user_id, lesson_id) DO UPDATE SET work_id = EXCLUDED.work_id, note = EXCLUDED.note, submitted_at = CURRENT_TIMESTAMP
+    `, [`lesson-submission-${randomUUID()}`, actor.id, courseId, lessonId, input.workId, input.note]);
     return this.getPublished(actor, courseId);
   }
 
@@ -517,12 +568,14 @@ export class CoursesService {
       await client.query(`
         INSERT INTO course_lessons (
           id, course_id, title, summary, lesson_type, sort_order, estimated_minutes,
-          workflow_id, model_config_ids, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, 'published')
+          workflow_id, model_config_ids, learning_steps, practice_task, completion_criteria,
+          requires_work_submission, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11, $12, $13, 'published')
       `, [
         lesson.id ?? `lesson-${randomUUID()}`, courseId, lesson.title, lesson.summary,
         lesson.lessonType, index, lesson.estimatedMinutes, lesson.workflowId ?? null,
-        JSON.stringify(lesson.modelConfigIds),
+        JSON.stringify(lesson.modelConfigIds), JSON.stringify(lesson.learningSteps), lesson.practiceTask,
+        lesson.completionCriteria, lesson.requiresWorkSubmission,
       ]);
     }
   }

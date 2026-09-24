@@ -70,11 +70,23 @@ function CreateCourseModal({ busy, onClose, onCreate }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("视觉传达");
   const [lessonTitle, setLessonTitle] = useState("");
-  return createPortal(<div className="course-modal-layer"><button className="drawer-scrim" aria-label="关闭" onClick={onClose} /><form className="course-modal" role="dialog" aria-modal="true" aria-labelledby="create-course-title" onSubmit={(event) => { event.preventDefault(); onCreate({ title, category, summary: "从课程资源管理端创建的课程。", difficulty: "beginner", lessons: [{ title: lessonTitle, summary: "课程第一课时", lessonType: "lesson", estimatedMinutes: 30, modelConfigIds: [] }] }); }}>
+  const [lessonSummary, setLessonSummary] = useState("");
+  const [learningSteps, setLearningSteps] = useState("理解主题与目标\n完成一次创作练习\n复盘并保存作品");
+  const [practiceTask, setPracticeTask] = useState("");
+  const [completionCriteria, setCompletionCriteria] = useState("");
+  const [requiresWorkSubmission, setRequiresWorkSubmission] = useState(false);
+  const [estimatedMinutes, setEstimatedMinutes] = useState(30);
+  return createPortal(<div className="course-modal-layer"><button className="drawer-scrim" aria-label="关闭" onClick={onClose} /><form className="course-modal" role="dialog" aria-modal="true" aria-labelledby="create-course-title" onSubmit={(event) => { event.preventDefault(); onCreate({ title, category, summary: "从课程资源管理端创建的课程。", difficulty: "beginner", lessons: [{ title: lessonTitle, summary: lessonSummary, lessonType: "lesson", estimatedMinutes, learningSteps: learningSteps.split("\n").map(value => value.trim()).filter(Boolean), practiceTask, completionCriteria, requiresWorkSubmission, modelConfigIds: [] }] }); }}>
     <header><div><p>// NEW COURSE</p><h2 id="create-course-title">新建课程草稿</h2></div><button type="button" aria-label="关闭新建课程窗口" onClick={onClose}><X size={20} /></button></header>
     <label>课程名称<input required minLength="2" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：AI 辅助视觉创作基础" /></label>
     <label>学科分类<input required value={category} onChange={(event) => setCategory(event.target.value)} /></label>
     <label>第一课时<input required value={lessonTitle} onChange={(event) => setLessonTitle(event.target.value)} placeholder="例如：认识生成式设计工作流" /></label>
+    <label>课时简介<textarea value={lessonSummary} onChange={(event) => setLessonSummary(event.target.value)} placeholder="这一课时将学习什么？" /></label>
+    <label>学习步骤（每行一步）<textarea required value={learningSteps} onChange={(event) => setLearningSteps(event.target.value)} /></label>
+    <label>练习任务<textarea value={practiceTask} onChange={(event) => setPracticeTask(event.target.value)} placeholder="例如：围绕一个传统纹样完成两种配色方案" /></label>
+    <label>完成标准<textarea value={completionCriteria} onChange={(event) => setCompletionCriteria(event.target.value)} placeholder="例如：提交两种方案，并说明选色依据" /></label>
+    <label>预计学习时长（分钟）<input required type="number" min="1" max="1440" value={estimatedMinutes} onChange={(event) => setEstimatedMinutes(Number(event.target.value))} /></label>
+    <label className="course-submission-toggle"><input type="checkbox" checked={requiresWorkSubmission} onChange={(event) => setRequiresWorkSubmission(event.target.checked)} /> 完成此课时前必须关联一项我的作品</label>
     <footer><button type="button" className="outline-button" onClick={onClose}>取消</button><button disabled={busy} className="primary-button" type="submit">保存课程草稿 <ArrowRight size={16} /></button></footer>
   </form></div>, document.body);
 }

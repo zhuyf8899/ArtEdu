@@ -31,6 +31,9 @@ const workflowStepSchema = z.object({
   title: z.string().trim().min(1).max(160),
   description: z.string().trim().max(1200).default(""),
   instruction: z.string().trim().max(4000).default(""),
+  exampleInput: z.string().trim().max(4000).default(""),
+  exampleOutput: z.string().trim().max(4000).default(""),
+  parameterDescription: z.string().trim().max(2000).default(""),
   estimatedMinutes: z.number().int().min(0).max(1440).default(10),
 });
 
@@ -47,6 +50,9 @@ const workflowNodeSchema = z.object({
     label: z.string().trim().min(1).max(160),
     description: z.string().trim().max(1200).default(""),
     value: z.string().trim().max(10000).optional(),
+    exampleInput: z.string().trim().max(4000).default(""),
+    exampleOutput: z.string().trim().max(4000).default(""),
+    parameterDescription: z.string().trim().max(2000).default(""),
   }).passthrough(),
 });
 

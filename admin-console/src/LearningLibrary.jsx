@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowRight, BookOpenText, CheckCircle, Clock, Funnel, PlayCircle, SpinnerGap, Wrench } from "@phosphor-icons/react";
-import { enrollCourse, getCourse, getCourses, updateLessonProgress } from "./services/adminApi.js";
+import { enrollCourse, getCourse, getCourses, getMyWorks, submitLessonWork, updateLessonProgress } from "./services/adminApi.js";
 
 const COURSE_PROFILES = {
   "course-ai-design-foundation": { method: "UI 创作", author: "周可老师", tools: ["GPT-4o", "Figma"] },
@@ -37,6 +37,8 @@ function decorateCourse(course) {
 export function LearningLibrary({ onNotice }) {
   const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [myWorks, setMyWorks] = useState([]);
+  const [completionChecks, setCompletionChecks] = useState({});
   const [loading, setLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
@@ -56,7 +58,10 @@ export function LearningLibrary({ onNotice }) {
 
   const openCourse = async (courseId) => {
     setLoading(true);
-    try { setSelected(decorateCourse(await getCourse(courseId))); }
+    try {
+      const [course, works] = await Promise.all([getCourse(courseId), getMyWorks()]);
+      setSelected(decorateCourse(course)); setMyWorks(works.items ?? []); setCompletionChecks({});
+    }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
@@ -70,8 +75,18 @@ export function LearningLibrary({ onNotice }) {
 
   const completeLesson = async (lessonId) => {
     setLoading(true);
-    try { setSelected(decorateCourse(await updateLessonProgress(selected.id, lessonId, 100))); onNotice("课时已完成，学习进度已保存"); }
+    try { setSelected(decorateCourse(await updateLessonProgress(selected.id, lessonId, 100, { completionConfirmed: true }))); onNotice("课时已完成，学习时长、课程进度与今日任务已同步"); }
     catch (error) { onNotice(error.message); }
+    finally { setLoading(false); }
+  };
+
+  const saveLessonWork = async (lessonId, workId) => {
+    if (!workId) return;
+    setLoading(true);
+    try {
+      setSelected(decorateCourse(await submitLessonWork(selected.id, lessonId, { workId })));
+      onNotice("作品已关联到课时，可以继续确认完成标准");
+    } catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
 
@@ -94,7 +109,14 @@ export function LearningLibrary({ onNotice }) {
   if (selected) return <section className="learning-detail">
     <button className="learning-back" onClick={() => setSelected(null)}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
     <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟 · {selected.lessonCount} 个课时 · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div><aside><strong>{selected.progressPercent}%</strong><span>学习进度</span><i><b style={{ width: `${selected.progressPercent}%` }} /></i>{selected.enrollmentStatus ? <em>已加入学习</em> : <button disabled={loading} onClick={enroll}><PlayCircle size={18} weight="fill" /> 加入课程</button>}</aside></div>
-    <div className="lesson-list">{selected.lessons.map((lesson, index) => <article key={lesson.id}><span>{String(index + 1).padStart(2, "0")}</span><div><small>{lesson.lessonType === "workflow" ? "AI 工作流实践" : "课程课时"}</small><strong>{lesson.title}</strong><p>{lesson.summary}</p></div><div><em>{lesson.estimatedMinutes} 分钟</em>{lesson.progressPercent >= 100 ? <b><CheckCircle size={17} weight="fill" /> 已完成</b> : <button disabled={loading} onClick={() => completeLesson(lesson.id)}>标记完成 <ArrowRight size={15} /></button>}</div></article>)}</div>
+    <div className="lesson-list">{selected.lessons.map((lesson, index) => <article className="lesson-card" key={lesson.id}>
+      <div className="lesson-card__heading"><span>{String(index + 1).padStart(2, "0")}</span><div><small>{lesson.lessonType === "workflow" ? "AI 工作流实践" : lesson.lessonType === "practice" ? "动手练习" : lesson.lessonType === "assignment" ? "课时作业" : "课程课时"} · {lesson.estimatedMinutes} 分钟</small><strong>{lesson.title}</strong><p>{lesson.summary}</p></div><em>{lesson.progressPercent >= 100 ? "已完成" : `${lesson.progressPercent ?? 0}%`}</em></div>
+      {!!lesson.learningSteps?.length && <section className="lesson-card__section"><strong>学习步骤</strong><ol>{lesson.learningSteps.map((step, stepIndex) => <li key={`${stepIndex}-${step}`}>{step}</li>)}</ol></section>}
+      {lesson.practiceTask && <section className="lesson-card__section"><strong>练习任务</strong><p>{lesson.practiceTask}</p></section>}
+      {lesson.completionCriteria && <section className="lesson-card__section"><strong>完成标准</strong><p>{lesson.completionCriteria}</p></section>}
+      {lesson.requiresWorkSubmission && <section className="lesson-card__submission"><strong>提交本课作品</strong>{lesson.submission ? <p>已关联作品：{myWorks.find(work => work.id === lesson.submission.workId)?.title ?? lesson.submission.workId}</p> : <><p>先在案例社区保存自己的作品草稿，再关联到本课时。</p><div><select aria-label={`选择${lesson.title}的提交作品`} value="" onChange={event => void saveLessonWork(lesson.id, event.target.value)} disabled={loading}><option value="">选择我的作品</option>{myWorks.filter(work => ["draft", "rejected", "pending", "approved"].includes(work.status)).map(work => <option key={work.id} value={work.id}>{work.title} · {work.status}</option>)}</select><small>还没有作品？先前往案例社区创建草稿，保存后返回本课时。</small></div></>}</section>}
+      <footer className="lesson-card__footer">{lesson.progressPercent >= 100 ? <b><CheckCircle size={17} weight="fill" /> 已完成 · 学习时长和今日任务已记录</b> : <><label><input type="checkbox" checked={Boolean(completionChecks[lesson.id])} onChange={event => setCompletionChecks(current => ({ ...current, [lesson.id]: event.target.checked }))} /> 我已完成本课时要求</label><button disabled={loading || !completionChecks[lesson.id] || (lesson.requiresWorkSubmission && !lesson.submission)} onClick={() => completeLesson(lesson.id)}>完成课时 <ArrowRight size={15} /></button></>}</footer>
+    </article>)}</div>
     {selected.resources?.length > 0 && <section className="course-materials"><p>// COURSE MATERIALS</p><h3>课程资料</h3>{selected.resources.map((resource) => resource.resourceType === "video" ? <article className="course-material course-material--video" key={resource.id}>{resource.downloadUrl || resource.externalUrl ? <video controls preload="metadata" src={resource.downloadUrl ?? resource.externalUrl} aria-label={resource.title} /> : <div className="course-video-locked"><BookOpenText size={20} weight="bold" /><span>加入课程后可播放</span></div>}<div><strong>{resource.title}</strong><small>视频课程 · 仅已加入课程的账号可播放</small>{resource.transcriptText && <details><summary>查看文字稿</summary><p>{resource.transcriptText}</p></details>}</div></article> : <article className="course-material" key={resource.id}><BookOpenText size={18} weight="bold" /><span><strong>{resource.title}</strong><small>{({ pdf: "PDF", word: "WORD", ppt: "PPT" }[resource.resourceType] ?? resource.resourceType?.toUpperCase() ?? "FILE")} · 已纳入 AI 教学检索，学生端不开放原文件</small></span></article>)}</section>}
   </section>;
 
