@@ -9,7 +9,8 @@ const blankWorkflow = { name: "", description: "", category: "视觉创作", ent
 const palette = {
   input: { title: "创作输入", hint: "接收本次的文字需求", color: "#4b87ff", group: "输入与素材" },
   load_image: { title: "参考素材", hint: "运行时上传已授权图片", color: "#4b87ff", group: "输入与素材" },
-  prompt: { title: "提示词", hint: "整理创作指令", color: "#b268ff", group: "提示与教学" },
+  prompt: { title: "正向提示词", hint: "描述希望画面出现的内容", color: "#b268ff", group: "提示与教学" },
+  negative_prompt: { title: "负向提示词", hint: "描述需要避开的内容", color: "#a15e8c", group: "提示与教学" },
   skill: { title: "内置 Skill", hint: "封装专业方法与参数预设", color: "#d6b335", group: "提示与教学" },
   text_generate: { title: "生成文字", hint: "调用平台文本模型，保存回复", color: "#b268ff", group: "模型与控制" },
   model: { title: "图片模型", hint: "选择已配置图片模型，留空使用默认模型", color: "#ff8b4b", group: "模型与控制" },
@@ -30,8 +31,8 @@ function emptyDefinition() {
     viewport: { x: 0, y: 0, zoom: 0.85 },
     nodes: [
       { id: "input-1", type: "input", position: { x: 70, y: 160 }, data: { label: "创作需求", description: "输入主题、受众或参考素材", value: "" } },
-      { id: "prompt-1", type: "prompt", position: { x: 350, y: 160 }, data: { label: "创作方向", description: "在用户需求上补充设计约束", value: "请结合用户的主题、受众和用途，保持画面结构清晰。" } },
-      { id: "skill-1", type: "skill", position: { x: 640, y: 160 }, data: { label: "传统纹样 Skill", description: "将专业处理方法封装为可复用节点", value: "提取纹样骨架，保持对称、留白与色彩层级。" } },
+      { id: "prompt-1", type: "prompt", position: { x: 350, y: 160 }, data: { label: "正向提示词", description: "希望生成的主体、构图与风格", value: "画面主体明确，构图清晰，色彩协调。" } },
+      { id: "negative-1", type: "negative_prompt", position: { x: 640, y: 160 }, data: { label: "负向提示词", description: "不希望出现的内容", value: "模糊、低清晰度、杂乱构图、文字、水印" } },
       { id: "model-1", type: "model", position: { x: 930, y: 160 }, data: { label: "图像生成模型", description: "填写服务端已配置的模型 ID；留空则使用内部图片通道", value: "" } },
       { id: "ksampler-1", type: "ksampler", position: { x: 1210, y: 160 }, data: { label: "生成图片", description: "通过平台统一图片 API 创建真实生成任务", value: "" } },
       { id: "preview-1", type: "preview", position: { x: 1490, y: 160 }, data: { label: "成果预览", description: "展示已经生成的图片", value: "" } },
@@ -39,8 +40,8 @@ function emptyDefinition() {
     ],
     edges: [
       { id: "edge-input-prompt", source: "input-1", target: "prompt-1" },
-      { id: "edge-prompt-skill", source: "prompt-1", target: "skill-1" },
-      { id: "edge-skill-model", source: "skill-1", target: "model-1" },
+      { id: "edge-prompt-negative", source: "prompt-1", target: "negative-1" },
+      { id: "edge-negative-model", source: "negative-1", target: "model-1" },
       { id: "edge-model-sampler", source: "model-1", target: "ksampler-1" },
       { id: "edge-sampler-preview", source: "ksampler-1", target: "preview-1" },
       { id: "edge-preview-save", source: "preview-1", target: "save-1" },
@@ -277,6 +278,7 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
   const [flow, setFlow] = useState(null);
   const [run, setRun] = useState(null);
   const [runPrompt, setRunPrompt] = useState("");
+  const [runNegativePrompt, setRunNegativePrompt] = useState("");
   const [referenceFile, setReferenceFile] = useState(null);
   const [runBusy, setRunBusy] = useState(false);
   const runSteps = run?.steps ?? [];
@@ -347,7 +349,7 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
         if (!saved) return;
       }
       const next = await startWorkflowRun(selected.id, {});
-      setRun(next); setRunPrompt(""); onNotice("运行已启动：节点将按连接顺序执行。");
+      setRun(next); setRunPrompt(""); setRunNegativePrompt(""); onNotice("运行已启动：节点将按连接顺序执行。");
     } catch (error) { onNotice(error.message); }
     finally { setRunBusy(false); }
   };
@@ -362,7 +364,7 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
         const uploaded = await uploadTemporaryCreationFile(referenceFile);
         referenceFileId = uploaded.id;
       }
-      const next = await executeWorkflowRun(run.id, { ...(runPrompt.trim() ? { prompt: runPrompt.trim() } : {}), ...(referenceFileId ? { referenceFileId } : {}) });
+      const next = await executeWorkflowRun(run.id, { ...(activeNode.type === "input" && runPrompt.trim() ? { prompt: runPrompt.trim() } : {}), ...(activeNode.type === "negative_prompt" && runNegativePrompt.trim() ? { negativePrompt: runNegativePrompt.trim() } : {}), ...(referenceFileId ? { referenceFileId } : {}) });
       setRun(next);
       if (referenceFileId) setReferenceFile(null);
       if (next.status === "completed") onNotice("工作流已执行完成，结果已写入本次运行记录。");
@@ -402,7 +404,7 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
     <section className="workflow-canvas-runner" aria-live="polite">
       <div><p>// RUN ON CANVAS</p><h2>{run?.status === "completed" ? "本次运行已完成" : activeNode ? `正在执行：${activeNode.data.label || activeNode.type}` : "从画布直接运行"}</h2><span>{run ? `${Math.round((run.currentStep / Math.max(run.totalSteps, 1)) * 100)}% · ${run.currentStep}/${run.totalSteps} 个节点已完成` : "先校验并发布当前节点图，再按连接关系逐节点执行。"}</span></div>
       {!run && <button className="primary-button" disabled={loading || runBusy} onClick={runWorkflow}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}{canPublish ? (dirty || selected.status !== "published" ? "发布并运行" : "运行工作流") : "保存并试运行"}</button>}
-      {run?.status === "in_progress" && activeNode && <div className="workflow-canvas-runner__step"><div><strong>{activeNode.data.label || activeNode.type}</strong><small>{activeNode.data.description || palette[activeNode.type]?.hint}</small></div>{activeNode.type === "input" && <label>创作需求<textarea value={runPrompt} onChange={(event) => setRunPrompt(event.target.value)} placeholder="例如：为新生设计一张青绿色的传统纹样海报" /></label>}{activeNode.type === "load_image" && <label className="workflow-reference-upload">参考图片<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small></label>}<button className="primary-button" disabled={runBusy} onClick={executeCurrentNode}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}执行当前节点</button></div>}
+      {run?.status === "in_progress" && activeNode && <div className="workflow-canvas-runner__step"><div><strong>{activeNode.data.label || activeNode.type}</strong><small>{activeNode.data.description || palette[activeNode.type]?.hint}</small></div>{activeNode.type === "input" && <label>创作需求<textarea value={runPrompt} onChange={(event) => setRunPrompt(event.target.value)} placeholder="例如：为新生设计一张青绿色的传统纹样海报" /></label>}{activeNode.type === "negative_prompt" && <label>本次负向提示词<textarea value={runNegativePrompt} onChange={(event) => setRunNegativePrompt(event.target.value)} placeholder={activeNode.data.value || "例如：文字、水印、模糊"} maxLength={1500} /><small>留空使用节点默认值</small></label>}{activeNode.type === "load_image" && <label className="workflow-reference-upload">参考图片<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small></label>}<button className="primary-button" disabled={runBusy} onClick={executeCurrentNode}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}执行当前节点</button></div>}
       {run?.status === "completed" && <div className="workflow-canvas-runner__done"><CheckCircle size={20} weight="fill" /> 已完成。{run.context?.artifact?.downloadUrl && <a href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看生成作品</a>}{run.context?.text && <span>{run.context.text}</span>}</div>}
       {!canPublish && <small>草稿可自行试运行；发布给其他人使用需要教师、运营或管理员身份。</small>}
     </section>

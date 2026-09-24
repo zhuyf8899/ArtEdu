@@ -31,10 +31,11 @@ export class ModelScopeImageAdapter implements ModelAdapter {
 
     const prompt = this.resolvePrompt(request);
     const size = this.resolveSize(request);
+    const negativePrompt = this.resolveNegativePrompt(request);
     const jobId = request.jobId ?? randomUUID();
     const deadline = Date.now() + this.config.timeoutMs;
 
-    const taskId = await this.submit(apiKey, prompt, size);
+    const taskId = await this.submit(apiKey, prompt, size, negativePrompt);
     const imageUrl = await this.waitForImage(apiKey, taskId, deadline);
 
     const response = await fetch(imageUrl, { signal: AbortSignal.timeout(Math.max(5000, deadline - Date.now())) });
@@ -80,7 +81,12 @@ export class ModelScopeImageAdapter implements ModelAdapter {
     return typeof raw === "string" && /^\d{3,4}x\d{3,4}$/.test(raw) ? raw : DEFAULT_IMAGE_SIZE;
   }
 
-  private async submit(apiKey: string, prompt: string, size: string) {
+  private resolveNegativePrompt(request: ModelRequest) {
+    const raw = (request.parameters?.providerOptions as Record<string, unknown> | undefined)?.negativePrompt;
+    return typeof raw === "string" ? raw.trim() : "";
+  }
+
+  private async submit(apiKey: string, prompt: string, size: string, negativePrompt: string) {
     const response = await fetch(new URL("v1/images/generations", this.baseUrl()), {
       method: "POST",
       headers: {
@@ -89,7 +95,7 @@ export class ModelScopeImageAdapter implements ModelAdapter {
         // 异步模式：立即返回 task_id，避免长连接被网关掐断。
         "X-ModelScope-Async-Mode": "true",
       },
-      body: JSON.stringify({ model: this.config.model, prompt, size }),
+      body: JSON.stringify({ model: this.config.model, prompt, size, ...(negativePrompt ? { negative_prompt: negativePrompt } : {}) }),
       signal: AbortSignal.timeout(this.config.timeoutMs),
     });
     if (!response.ok) throw new Error(`模型接口返回 HTTP ${response.status}`);

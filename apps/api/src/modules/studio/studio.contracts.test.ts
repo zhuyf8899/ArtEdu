@@ -41,13 +41,14 @@ test("工作流版本支持 ComfyUI 式节点和连线", () => {
       schemaVersion: 2,
       nodes: [
         { id: "input-1", type: "input", position: { x: 0, y: 0 }, data: { label: "需求" } },
+        { id: "negative-1", type: "negative_prompt", position: { x: 120, y: 0 }, data: { label: "负向提示词", value: "水印" } },
         { id: "model-1", type: "model", position: { x: 250, y: 0 }, data: { label: "模型" } },
       ],
-      edges: [{ id: "edge-1", source: "input-1", target: "model-1" }],
+      edges: [{ id: "edge-1", source: "input-1", target: "negative-1" }, { id: "edge-2", source: "negative-1", target: "model-1" }],
     },
   });
-  assert.equal(result.definition?.nodes.length, 2);
-  assert.equal(result.definition?.edges[0]?.target, "model-1");
+  assert.equal(result.definition?.nodes.length, 3);
+  assert.equal(result.definition?.edges[1]?.target, "model-1");
   assert.equal(workflowVersionInputSchema.safeParse({ definition: { schemaVersion: 2, nodes: [{ id: "same", type: "input", position: { x: 0, y: 0 }, data: {} }], edges: [{ id: "bad", source: "same", target: "same" }] } }).success, false);
 });
 
@@ -67,6 +68,8 @@ test("工作流版本支持内置 Skill，且拒绝循环图", () => {
 
 test("节点执行接口仅允许可选的本次输入，不接受浏览器提交任意节点图", () => {
   assert.equal(workflowRunExecuteSchema.safeParse({ prompt: "生成青绿色连续纹样" }).success, true);
+  assert.equal(workflowRunExecuteSchema.parse({ negativePrompt: "文字、水印" }).negativePrompt, "文字、水印");
+  assert.equal(workflowRunExecuteSchema.safeParse({ negativePrompt: "x".repeat(1501) }).success, false);
   assert.equal(workflowRunExecuteSchema.safeParse({ prompt: "" }).success, false);
   assert.equal(workflowRunExecuteSchema.safeParse({ definition: { nodes: [] } }).success, true);
   assert.deepEqual(workflowRunExecuteSchema.parse({ definition: { nodes: [] } }), {});
