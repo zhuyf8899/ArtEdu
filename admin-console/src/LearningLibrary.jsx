@@ -1,20 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowRight, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, Wrench } from "@phosphor-icons/react";
 import { enrollCourse, getCourse, getCourses, updateLessonProgress } from "./services/adminApi.js";
+import { coverImageFor } from "./coverImages.js";
 
 const COURSE_PROFILES = {
   "course-ai-design-foundation": { method: "UI 创作", author: "周可老师", tools: ["GPT-4o", "Figma"] },
   "course-traditional-pattern": { method: "图案生成", author: "林知夏老师", tools: ["FLUX.1", "Midjourney"] },
   "course-vibe-gallery": { method: "Vibe Coding", author: "陈明远老师", tools: ["Claude 4", "VS Code"] },
 };
-
-const COURSE_IMAGES = {
-  "course-ai-design-foundation": "/assets/learning/ai-design-foundations.jpg",
-  "course-traditional-pattern": "/assets/learning/traditional-patterns.jpg",
-  "course-vibe-gallery": "/assets/learning/vibe-coding.jpg",
-};
-
-const FALLBACK_IMAGES = Object.values(COURSE_IMAGES);
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
 
@@ -108,8 +101,8 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
       <FilterRow label="作者" items={["全部作者", ...authors]} value={authorFilter} onChange={setAuthorFilter} />
       <FilterRow label="使用工具" items={["全部工具", ...tools]} value={toolFilter} onChange={setToolFilter} />
     </section>
-    {filteredCourses.length ? <section className="course-grid">{filteredCourses.map((course, index) => <article className="course-card" key={course.id}>
-      <div className={`course-cover course-cover--${index % 3}`}><img src={COURSE_IMAGES[course.id] ?? FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]} alt="" /><span>{course.method}</span></div>
+    {filteredCourses.length ? <section className="course-grid">{filteredCourses.map((course) => <article className="course-card" key={course.id}>
+      <div className="course-cover"><img src={coverImageFor(course)} alt="" /><span>{course.method}</span></div>
       <div className="course-card__content">
         <div className="course-card__tags"><b>{course.method}</b><span>{course.category}</span></div>
         <small>{course.lessonCount ?? 0} 个课时 · {difficultyName(course.difficulty)}</small>

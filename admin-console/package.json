@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test:sites": "node --test tests/sites-worker.test.mjs",
     "test:chat": "node --test tests/ai-markdown.test.mjs tests/creation-capabilities.test.mjs tests/conversation-context.test.mjs",
-    "test:platform": "node --test tests/platform-runtime.test.mjs tests/case-story.test.mjs tests/upload-file.test.mjs tests/piying-tool.test.mjs"
+    "test:platform": "node --test tests/platform-runtime.test.mjs tests/case-story.test.mjs tests/upload-file.test.mjs tests/piying-tool.test.mjs tests/cover-images.test.mjs"
   },
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.3.0",

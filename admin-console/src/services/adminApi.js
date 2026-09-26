@@ -84,8 +84,13 @@ export const updateLearningNote = (noteId, input) => request(`/me/learning-space
 export const deleteLearningNote = (noteId) => request(`/me/learning-space/notes/${noteId}`, { method: "DELETE" });
 
 export const getAdminCourses = () => request("/admin/courses");
+export const getAdminCourse = (courseId) => request(`/admin/courses/${encodeURIComponent(courseId)}`);
 export const createAdminCourse = (input) => request("/admin/courses", {
   method: "POST",
+  body: JSON.stringify(input),
+});
+export const updateAdminCourse = (courseId, input) => request(`/admin/courses/${encodeURIComponent(courseId)}`, {
+  method: "PUT",
   body: JSON.stringify(input),
 });
 export const submitCourseReview = (courseId) => request(`/admin/courses/${courseId}/submit-review`, { method: "POST" });
@@ -94,10 +99,25 @@ export const decideCourseReview = (reviewId, decision) => request(`/admin/course
   method: "POST",
   body: JSON.stringify(decision),
 });
-export const uploadCourseResource = (courseId, file) => {
+export const uploadCourseResource = (courseId, file, metadata) => {
+  const form = new FormData();
+  form.append("metadata", JSON.stringify(metadata));
+  form.append("file", file);
+  return request(`/admin/courses/${encodeURIComponent(courseId)}/resources`, { method: "POST", body: form });
+};
+export const updateCourseResource = (courseId, resourceId, metadata) => request(`/admin/courses/${encodeURIComponent(courseId)}/resources/${encodeURIComponent(resourceId)}`, {
+  method: "PATCH",
+  body: JSON.stringify(metadata),
+});
+export const uploadCourseCover = (courseId, file) => {
   const form = new FormData();
   form.append("file", file);
-  return request(`/admin/courses/${courseId}/resources`, { method: "POST", body: form });
+  return request(`/admin/courses/${encodeURIComponent(courseId)}/cover`, { method: "POST", body: form });
+};
+export const uploadCourseResourceCover = (courseId, resourceId, file) => {
+  const form = new FormData();
+  form.append("file", file);
+  return request(`/admin/courses/${encodeURIComponent(courseId)}/resources/${encodeURIComponent(resourceId)}/cover`, { method: "POST", body: form });
 };
 
 export const createGenerationJob = (input) => request("/generation-jobs", {

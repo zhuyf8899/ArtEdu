@@ -34,7 +34,7 @@ async function bootstrap() {
   if (environment.fileUploadsEnabled) {
     await mkdir(environment.uploadRoot, { recursive: true, mode: 0o700 });
     await app.register(multipart, {
-      limits: { files: 1, fields: 0, parts: 1, fileSize: maxUploadBytes },
+      limits: { files: 1, fields: 1, parts: 2, fileSize: maxUploadBytes },
       throwFileSizeLimit: true,
     });
   }
