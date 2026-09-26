@@ -20,6 +20,9 @@ test('部署健康检查失败必须退出；备份位于迁移之前', async ()
   assert.match(code,/MemAvailable/);
   assert.match(code,/stop embedding rag-worker/);
   assert.match(code,/start embedding rag-worker/);
+  const backup = await readFile('deploy/backup-staging.sh','utf8');
+  assert.match(backup,/--log-driver=none/);
+  assert.match(backup,/--volumes-from "\$api_container:ro"/);
   const lowmem = await readFile('deploy/deploy-lowmem.sh','utf8');
   assert.match(lowmem,/ALLOW_LOW_MEMORY/);
   assert.match(lowmem,/if \[ "\$\{ALLOW_LOW_MEMORY:-0\}" = 1 \]; then[^]*?ARTEDU_ALLOW_LOW_MEMORY=1 bash deploy\/deploy-staging\.sh/);
