@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
+import { Body, Controller, Get, HttpException, HttpStatus, Param, Patch, Post, Put, Query, Req, Res } from "@nestjs/common";
 import { createReadStream } from "node:fs";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
@@ -9,6 +9,7 @@ import {
   createCourseSchema,
   listCoursesQuerySchema,
   updateCourseSchema,
+  updateCourseResourceMetadataSchema,
   updateProgressSchema,
 } from "./courses.contracts";
 import type {
@@ -16,6 +17,7 @@ import type {
   CreateCourseInput,
   ProgressInput,
   UpdateCourseInput,
+  UpdateCourseResourceMetadataInput,
 } from "./courses.contracts";
 import { CoursesService } from "./courses.service";
 
@@ -169,5 +171,16 @@ export class AdminCoursesController {
   @Post("courses/:courseId/resources")
   async uploadResource(@Req() request: FastifyRequest, @Param("courseId") courseId: string) {
     return this.courses.uploadResource(await this.auth.getActor(request), courseId, request);
+  }
+
+  @Get("courses/:courseId")
+  async managedDetail(@Req() request: FastifyRequest, @Param("courseId") courseId: string) {
+    return this.courses.getManagedDetail(await this.auth.getActor(request), courseId);
+  }
+
+  @Patch("courses/:courseId/resources/:resourceId")
+  async updateResource(@Req() request: FastifyRequest, @Param("courseId") courseId: string, @Param("resourceId") resourceId: string, @Body() body: unknown) {
+    return this.courses.updateResourceMetadata(await this.auth.getActor(request), courseId, resourceId,
+      parseInput(updateCourseResourceMetadataSchema, body) as UpdateCourseResourceMetadataInput);
   }
 }

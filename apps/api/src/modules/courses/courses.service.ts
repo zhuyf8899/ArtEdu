@@ -11,11 +11,13 @@ import { getEnvironment } from "../../common/environment";
 import { courseUploadPolicy } from "../../common/upload-policy";
 import { storePrivateUpload } from "../studio/private-upload";
 import { RagService } from "../rag/rag.service";
+import { uploadCourseResourceMetadataSchema } from "./courses.contracts";
 import type {
   CourseReviewDecisionInput,
   CreateCourseInput,
   ProgressInput,
   UpdateCourseInput,
+  UpdateCourseResourceMetadataInput,
 } from "./courses.contracts";
 
 interface CourseRow extends QueryResultRow {
@@ -26,6 +28,7 @@ interface CourseRow extends QueryResultRow {
   category: string | null;
   difficulty: string | null;
   cover_asset_key: string | null;
+  cover_url: string | null;
   is_featured: boolean;
   status: string;
   rejection_note: string | null;
@@ -78,6 +81,10 @@ interface CourseResourceRow extends QueryResultRow {
   course_status: string;
   resource_type: string;
   file_size: number | null;
+  summary?: string;
+  tags?: string[];
+  cover_url?: string | null;
+  lesson_id?: string | null;
   created_by: string | null;
   enrolled: boolean;
 }
@@ -181,7 +188,7 @@ export class CoursesService {
         ORDER BY l.sort_order, l.created_at
       `, [actor.id, courseId]),
       this.database.query<CourseResourceRow & { lesson_id: string | null; resource_type: string; external_url: string | null; sort_order: number }>(`
-        SELECT id, course_id, lesson_id, title, resource_type, storage_key, external_url, file_name,
+        SELECT id, course_id, lesson_id, title, summary, tags, cover_url, resource_type, storage_key, external_url, file_name,
           mime_type, transcript_text, sort_order, status, 'published'::text AS course_status
         FROM course_resources
         WHERE course_id = $1 AND status = 'published'
@@ -206,6 +213,9 @@ export class CoursesService {
         id: resource.id,
         lessonId: resource.lesson_id,
         title: resource.title,
+        summary: resource.summary ?? "",
+        tags: resource.tags ?? [],
+        coverUrl: resource.cover_url,
         resourceType: resource.resource_type,
         externalUrl: resource.external_url,
         fileName: resource.file_name,
@@ -328,6 +338,36 @@ export class CoursesService {
     return { items: result.rows.map((row) => this.mapCourse(row)) };
   }
 
+  async getManagedDetail(actor: Actor, courseId: string) {
+    this.authService.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
+    const course = await this.getManaged(actor, courseId);
+    const [lessons, resources] = await Promise.all([
+      this.database.query<LessonRow>(`
+        SELECT id,title,summary,lesson_type,sort_order,estimated_minutes,workflow_id,model_config_ids,
+          0::int AS progress_percent,'not_started'::text AS progress_status
+        FROM course_lessons WHERE course_id=$1 ORDER BY sort_order,created_at
+      `, [courseId]),
+      this.database.query<CourseResourceRow>(`
+        SELECT id,course_id,lesson_id,title,summary,tags,cover_url,resource_type,file_name,mime_type,file_size,status
+        FROM course_resources WHERE course_id=$1 ORDER BY sort_order,created_at
+      `, [courseId]),
+    ]);
+    return {
+      ...course,
+      lessons: lessons.rows.map((lesson) => ({
+        id: lesson.id, title: lesson.title, summary: lesson.summary ?? "", lessonType: lesson.lesson_type,
+        estimatedMinutes: lesson.estimated_minutes ?? 0, workflowId: lesson.workflow_id,
+        modelConfigIds: lesson.model_config_ids ?? [],
+      })),
+      resources: resources.rows.map((resource) => ({
+        id: resource.id, lessonId: resource.lesson_id, title: resource.title,
+        summary: resource.summary ?? "", tags: resource.tags ?? [], coverUrl: resource.cover_url,
+        resourceType: resource.resource_type, fileName: resource.file_name, mimeType: resource.mime_type,
+        sizeBytes: resource.file_size, status: resource.status,
+      })),
+    };
+  }
+
   async uploadResource(actor: Actor, courseId: string, request: FastifyRequest) {
     if (!getEnvironment().fileUploadsEnabled) throw new ForbiddenException("文件上传未启用");
     const course = await this.getOwnedCourse(actor, courseId);
@@ -336,6 +376,16 @@ export class CoursesService {
     // 全局 multipart 上限是 10 MiB，这里按课件策略放宽（视频 100 MiB，其他仍 10 MiB）。
     const part = await request.file({ limits: { fileSize: policy.videoBytes } });
     if (!part) throw new BadRequestException("请选择课件文件：PDF、Word、PPT、视频、图片，或 HTML/CSS/JS 前端界面");
+    const metadataField = part.fields.metadata;
+    if (!metadataField || Array.isArray(metadataField) || metadataField.type !== "field" || typeof metadataField.value !== "string") {
+      throw new BadRequestException("请填写资料标题和上传信息");
+    }
+    let metadataJson: unknown;
+    try { metadataJson = JSON.parse(metadataField.value); }
+    catch { throw new BadRequestException("资料信息不是有效的 JSON"); }
+    const parsed = uploadCourseResourceMetadataSchema.safeParse(metadataJson);
+    if (!parsed.success) throw new BadRequestException(parsed.error.issues.map((issue) => issue.message).join("；"));
+    const metadata = parsed.data;
     const upload = await storePrivateUpload(part, getEnvironment().uploadRoot, courseResourceMimeTypes, `admin/courses/${courseId}`, policy.videoBytes);
     try {
       const resource = await this.database.transaction(async (client) => {
@@ -345,12 +395,16 @@ export class CoursesService {
         if (!["draft", "rejected"].includes(locked.rows[0].status)) throw new ConflictException("课程状态已变化，请刷新后重试");
         const count = await client.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM course_resources WHERE course_id=$1", [courseId]);
         if (count.rows[0].count >= 30) throw new BadRequestException("每门课程最多上传 30 个资料文件");
+        await this.assertLessonBelongsToCourse(client, courseId, metadata.lessonId);
         const id = `course-resource-${randomUUID()}`;
         await client.query(`
-          INSERT INTO course_resources (id,course_id,title,resource_type,storage_key,external_url,file_name,mime_type,file_size,source_name,sort_order,status)
-          VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,$8,$9,$10,'published')
-        `, [id, courseId, upload.fileName, resourceTypeForMime(upload.mimeType as typeof courseResourceMimeTypes[number]), upload.storageKey, upload.fileName, upload.mimeType, upload.sizeBytes, actor.displayName, count.rows[0].count]);
-        return { id, title: upload.fileName, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes };
+          INSERT INTO course_resources (id,course_id,lesson_id,title,summary,tags,cover_url,resource_type,storage_key,external_url,file_name,mime_type,file_size,source_name,sort_order,status)
+          VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,NULL,$10,$11,$12,$13,$14,'published')
+        `, [id, courseId, metadata.lessonId ?? null, metadata.title, metadata.summary,
+          JSON.stringify(metadata.tags), metadata.coverUrl ?? null,
+          resourceTypeForMime(upload.mimeType as typeof courseResourceMimeTypes[number]), upload.storageKey,
+          upload.fileName, upload.mimeType, upload.sizeBytes, actor.displayName, count.rows[0].count]);
+        return { id, ...metadata, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes };
       });
       // RAG 是课件上传后的异步能力。队列表未迁移或 Provider 未接入时，
       // 不能让已保存的原始课件被回滚或误删。
@@ -362,6 +416,35 @@ export class CoursesService {
       await import("node:fs/promises").then(({ rm }) => rm(path.join(getEnvironment().uploadRoot, upload.storageKey), { force: true }));
       throw error;
     }
+  }
+
+  async updateResourceMetadata(actor: Actor, courseId: string, resourceId: string, input: UpdateCourseResourceMetadataInput) {
+    this.authService.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
+    await this.database.transaction(async (client) => {
+      const course = await client.query<{ status: string; created_by: string | null }>(
+        "SELECT status,created_by FROM courses WHERE id=$1 FOR UPDATE", [courseId]);
+      if (!course.rows[0]) throw new NotFoundException("课程不存在");
+      if (!actor.roles.includes("admin") && course.rows[0].created_by !== actor.id) throw new ForbiddenException("只能管理自己创建的课程");
+      if (!["draft", "rejected"].includes(course.rows[0].status)) throw new ConflictException("只有草稿或已驳回课程可以修改资料");
+      const resource = await client.query<CourseResourceRow>(
+        "SELECT id,course_id,lesson_id,title,summary,tags,cover_url,resource_type,storage_key,file_name,mime_type,file_size,status FROM course_resources WHERE id=$1 AND course_id=$2 FOR UPDATE",
+        [resourceId, courseId]);
+      if (!resource.rows[0]) throw new NotFoundException("课程资料不存在");
+      await this.assertLessonBelongsToCourse(client, courseId, input.lessonId);
+      const current = resource.rows[0];
+      await client.query(`UPDATE course_resources SET title=$3,summary=$4,tags=$5::jsonb,cover_url=$6,lesson_id=$7,updated_at=CURRENT_TIMESTAMP
+        WHERE id=$1 AND course_id=$2`, [resourceId, courseId, input.title ?? current.title,
+        input.summary ?? current.summary ?? "", JSON.stringify(input.tags ?? current.tags ?? []),
+        input.coverUrl === undefined ? current.cover_url : input.coverUrl,
+        input.lessonId === undefined ? current.lesson_id : input.lessonId]);
+    });
+    return this.getManagedDetail(actor, courseId);
+  }
+
+  private async assertLessonBelongsToCourse(client: PoolClient, courseId: string, lessonId: string | null | undefined) {
+    if (!lessonId) return;
+    const lesson = await client.query("SELECT 1 FROM course_lessons WHERE id=$1 AND course_id=$2", [lessonId, courseId]);
+    if (!lesson.rows[0]) throw new BadRequestException("所属课时不属于当前课程");
   }
 
   async openResource(actor: Actor, courseId: string, resourceId: string, mode: "preview" | "download" = "download") {
@@ -411,15 +494,15 @@ export class CoursesService {
     await this.database.transaction(async (client) => {
       await client.query(`
         INSERT INTO courses (
-          id, slug, title, summary, category, difficulty, cover_asset_key,
+          id, slug, title, summary, category, difficulty, cover_asset_key, cover_url,
           is_featured, status, created_by, estimated_minutes
-        ) VALUES ($1, $1, $2, $3, $4, $5, $6, $7, 'draft', $8, $9)
+        ) VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, 'draft', $9, $10)
       `, [
         courseId, input.title, input.summary, input.category, input.difficulty,
-        input.coverAssetKey ?? null, input.isFeatured, actor.id,
+        input.coverAssetKey ?? null, input.coverUrl ?? null, input.isFeatured, actor.id,
         input.lessons.reduce((sum, lesson) => sum + lesson.estimatedMinutes, 0),
       ]);
-      await this.replaceLessons(client, courseId, input.lessons);
+      await this.replaceLessons(client, courseId, input.lessons, true);
     });
     return this.getManaged(actor, courseId);
   }
@@ -436,15 +519,16 @@ export class CoursesService {
       category: input.category ?? current.category ?? "未分类",
       difficulty: input.difficulty ?? (current.difficulty as "beginner" | "intermediate" | "advanced") ?? "beginner",
       coverAssetKey: input.coverAssetKey === undefined ? current.cover_asset_key : input.coverAssetKey,
+      coverUrl: input.coverUrl === undefined ? current.cover_url : input.coverUrl,
       isFeatured: input.isFeatured ?? current.is_featured,
     };
     await this.database.transaction(async (client) => {
       await client.query(`
         UPDATE courses SET title = $2, summary = $3, category = $4, difficulty = $5,
-          cover_asset_key = $6, is_featured = $7, status = 'draft', rejection_note = NULL,
+          cover_asset_key = $6, cover_url = $7, is_featured = $8, status = 'draft', rejection_note = NULL,
           version_number = version_number + 1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
-      `, [courseId, merged.title, merged.summary, merged.category, merged.difficulty, merged.coverAssetKey, merged.isFeatured]);
+      `, [courseId, merged.title, merged.summary, merged.category, merged.difficulty, merged.coverAssetKey, merged.coverUrl, merged.isFeatured]);
       if (input.lessons) {
         await this.replaceLessons(client, courseId, input.lessons);
         await client.query(`
@@ -548,20 +632,29 @@ export class CoursesService {
     return course;
   }
 
-  private async replaceLessons(client: PoolClient, courseId: string, lessons: CreateCourseInput["lessons"]) {
-    await client.query("DELETE FROM course_lessons WHERE course_id = $1", [courseId]);
-    for (const [index, lesson] of lessons.entries()) {
-      await client.query(`
-        INSERT INTO course_lessons (
-          id, course_id, title, summary, lesson_type, sort_order, estimated_minutes,
-          workflow_id, model_config_ids, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, 'published')
-      `, [
-        lesson.id ?? `lesson-${randomUUID()}`, courseId, lesson.title, lesson.summary,
-        lesson.lessonType, index, lesson.estimatedMinutes, lesson.workflowId ?? null,
-        JSON.stringify(lesson.modelConfigIds),
-      ]);
+  private async replaceLessons(client: PoolClient, courseId: string, lessons: CreateCourseInput["lessons"], creating = false) {
+    const existing = await client.query<{ id: string }>("SELECT id FROM course_lessons WHERE course_id=$1", [courseId]);
+    const existingIds = new Set(existing.rows.map((row) => row.id));
+    const suppliedIds = lessons.map((lesson) => lesson.id).filter((id): id is string => !!id);
+    if (new Set(suppliedIds).size !== suppliedIds.length || (!creating && suppliedIds.some((id) => !existingIds.has(id)))) {
+      throw new BadRequestException("课时 ID 重复或不属于当前课程");
     }
+    for (const [index, lesson] of lessons.entries()) {
+      const values = [lesson.id ?? `lesson-${randomUUID()}`, courseId, lesson.title, lesson.summary,
+        lesson.lessonType, index, lesson.estimatedMinutes, lesson.workflowId ?? null,
+        JSON.stringify(lesson.modelConfigIds)];
+      if (lesson.id && !creating) {
+        await client.query(`UPDATE course_lessons SET title=$3,summary=$4,lesson_type=$5,sort_order=$6,
+          estimated_minutes=$7,workflow_id=$8,model_config_ids=$9::jsonb,updated_at=CURRENT_TIMESTAMP
+          WHERE id=$1 AND course_id=$2`, values);
+      } else {
+        await client.query(`INSERT INTO course_lessons (
+          id,course_id,title,summary,lesson_type,sort_order,estimated_minutes,workflow_id,model_config_ids,status
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,'published')`, values);
+      }
+    }
+    const removedIds = [...existingIds].filter((id) => !suppliedIds.includes(id));
+    if (removedIds.length) await client.query("DELETE FROM course_lessons WHERE course_id=$1 AND id=ANY($2::text[])", [courseId, removedIds]);
   }
 
   private async writeAudit(client: PoolClient, targetType: string, targetId: string, reviewerId: string, action: string, reason: string) {
@@ -580,6 +673,7 @@ export class CoursesService {
       category: row.category ?? "未分类",
       difficulty: row.difficulty ?? "beginner",
       coverAssetKey: row.cover_asset_key,
+      coverUrl: row.cover_url,
       isFeatured: row.is_featured,
       status: row.status,
       rejectionNote: row.rejection_note ?? "",

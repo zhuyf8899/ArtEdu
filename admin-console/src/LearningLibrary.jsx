@@ -95,7 +95,7 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
     <button className="learning-back" onClick={() => setSelected(null)}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
     <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟 · {selected.lessonCount} 个课时 · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div><aside><strong>{selected.progressPercent}%</strong><span>学习进度</span><i><b style={{ width: `${selected.progressPercent}%` }} /></i>{selected.enrollmentStatus ? <em>已加入学习</em> : <button disabled={loading} onClick={enroll}><PlayCircle size={18} weight="fill" /> 加入课程</button>}</aside></div>
     <div className="lesson-list">{selected.lessons.map((lesson, index) => <article key={lesson.id}><span>{String(index + 1).padStart(2, "0")}</span><div><small>{lesson.lessonType === "workflow" ? "AI 工作流实践" : "课程课时"}</small><strong>{lesson.title}</strong><p>{lesson.summary}</p></div><div><em>{lesson.estimatedMinutes} 分钟</em>{lesson.progressPercent >= 100 ? <b><CheckCircle size={17} weight="fill" /> 已完成</b> : <button disabled={loading} onClick={() => completeLesson(lesson.id)}>标记完成 <ArrowRight size={15} /></button>}</div></article>)}</div>
-    {selected.resources?.length > 0 && <CourseMaterials resources={selected.resources} />}
+    {selected.resources?.length > 0 && <CourseMaterials resources={selected.resources} lessons={selected.lessons} />}
   </section>;
 
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载教学资源</strong><p>正在同步课程、作者和工具标签。</p></section>;
@@ -109,7 +109,7 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
       <FilterRow label="使用工具" items={["全部工具", ...tools]} value={toolFilter} onChange={setToolFilter} />
     </section>
     {filteredCourses.length ? <section className="course-grid">{filteredCourses.map((course, index) => <article className="course-card" key={course.id}>
-      <div className={`course-cover course-cover--${index % 3}`}><img src={COURSE_IMAGES[course.id] ?? FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]} alt="" /><span>{course.method}</span></div>
+      <div className={`course-cover course-cover--${index % 3}`}><img src={course.coverUrl || COURSE_IMAGES[course.id] || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]} alt="" /><span>{course.method}</span></div>
       <div className="course-card__content">
         <div className="course-card__tags"><b>{course.method}</b><span>{course.category}</span></div>
         <small>{course.lessonCount ?? 0} 个课时 · {difficultyName(course.difficulty)}</small>
@@ -148,16 +148,16 @@ const OFFICE_TYPES = ["ppt", "word"];
  * 视频用播放器、图片直接铺开、PDF 与网页课件内嵌、Office 原件浏览器无法内嵌预览，
  * 因此给出下载入口由学生本地打开。没有 previewUrl 说明账号还没加入课程。
  */
-function CourseMaterials({ resources }) {
+function CourseMaterials({ resources, lessons }) {
   return <section className="course-materials">
     <p>// COURSE MATERIALS</p>
     <h3>课程资料</h3>
     <small className="course-materials__note">课件默认在线预览，不提倡下载；只有 PPT / Word 因为浏览器无法渲染，需要下载后用本机软件打开。</small>
-    <div className="course-material-list">{resources.map((resource) => <CourseMaterial key={resource.id} resource={resource} />)}</div>
+    <div className="course-material-list">{resources.map((resource) => <CourseMaterial key={resource.id} resource={resource} lessonTitle={lessons.find((lesson) => lesson.id === resource.lessonId)?.title} />)}</div>
   </section>;
 }
 
-function CourseMaterial({ resource }) {
+function CourseMaterial({ resource, lessonTitle }) {
   const kind = MATERIAL_KINDS[resource.resourceType] ?? MATERIAL_KINDS.other;
   const Icon = kind.icon;
   const preview = resource.previewUrl || resource.externalUrl || "";
@@ -165,8 +165,12 @@ function CourseMaterial({ resource }) {
   const source = preview || download;
   const fileName = resource.fileName ? ` · ${resource.fileName}` : "";
   const meta = (note) => <span className="course-material__meta">
+    {resource.coverUrl && <img className="course-material-cover" src={resource.coverUrl} alt="" />}
     <strong>{resource.title}</strong>
     <small>{kind.label}{fileName}</small>
+    <small>{lessonTitle ?? "课程通用资料"}</small>
+    {resource.summary && <small>{resource.summary}</small>}
+    {resource.tags?.length > 0 && <small>{resource.tags.join(" · ")}</small>}
     {note && <small>{note}</small>}
   </span>;
   // 下载是备选方案，统一做成弱化的小字链接；只有浏览器确实无法预览的 Office 才用按钮。
@@ -183,7 +187,7 @@ function CourseMaterial({ resource }) {
   </article>;
 
   if (resource.resourceType === "video") return <article className="course-material course-material--video">
-    <video controls preload="metadata" src={source} aria-label={resource.title} />
+    <video controls preload="metadata" src={source} aria-label={resource.title} poster={resource.coverUrl || undefined} />
     <div>
       {meta("仅提供在线播放；加入课程后即可观看")}
       {resource.transcriptText && <details><summary>查看文字稿</summary><p>{resource.transcriptText}</p></details>}
