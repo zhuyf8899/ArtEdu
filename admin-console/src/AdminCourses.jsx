@@ -4,7 +4,9 @@ import { ArrowRight, BookOpenText, Check, Clock, Plus, X } from "@phosphor-icons
 import {
   createAdminCourse, decideCourseReview, getAdminCourse, getAdminCourses, getCourseReviews,
   submitCourseReview, updateAdminCourse, updateCourseResource, uploadCourseResource,
+  uploadCourseCover, uploadCourseResourceCover,
 } from "./services/adminApi.js";
+import { coverImageFor, prepareCoverFile } from "./coverImages.js";
 
 const statusNames = { draft: "草稿", pending_review: "待审核", published: "已发布", rejected: "已驳回", archived: "已归档" };
 const editable = (course) => ["draft", "rejected"].includes(course.status);
@@ -67,15 +69,24 @@ export function AdminCourses({ showToast }) {
         {!reviews.length && <div className="empty-state"><Check size={34} /><strong>暂无审核记录</strong><span>课程提交后会出现在这里。</span></div>}
       </article>
     </section>
-    {courseEditor && <CourseEditor key={courseEditor.id ?? "new"} course={courseEditor} busy={busy} onClose={() => setCourseEditor(null)} onSave={(input) => run(async () => {
-      if (courseEditor.new) await createAdminCourse(input);
-      else await updateAdminCourse(courseEditor.id, input);
+    {courseEditor && <CourseEditor key={courseEditor.id ?? "new"} course={courseEditor} busy={busy} onClose={() => setCourseEditor(null)} onSave={(input, coverFile) => run(async () => {
+      const preparedCover = coverFile ? await prepareCoverFile(coverFile) : null;
+      const saved = courseEditor.new ? await createAdminCourse(input) : await updateAdminCourse(courseEditor.id, input);
+      if (courseEditor.new) { setCourseEditor(await getAdminCourse(saved.id)); await load(); }
+      if (preparedCover) await uploadCourseCover(saved.id, preparedCover);
       setCourseEditor(null);
     }, courseEditor.new ? "课程草稿已创建" : "课程草稿已更新")} />}
     {resourceCourse && <ResourceManager course={resourceCourse} busy={busy} onClose={() => setResourceCourse(null)} onAdd={() => setResourceEditor({ new: true })} onEdit={setResourceEditor} />}
-    {resourceCourse && resourceEditor && <ResourceEditor key={resourceEditor.id ?? "new"} course={resourceCourse} resource={resourceEditor} busy={busy} onClose={() => setResourceEditor(null)} onSave={(file, metadata) => run(async () => {
-      if (resourceEditor.new) await uploadCourseResource(resourceCourse.id, file, metadata);
-      else await updateCourseResource(resourceCourse.id, resourceEditor.id, metadata);
+    {resourceCourse && resourceEditor && <ResourceEditor key={resourceEditor.id ?? "new"} course={resourceCourse} resource={resourceEditor} busy={busy} onClose={() => setResourceEditor(null)} onSave={(file, metadata, coverFile) => run(async () => {
+      const preparedCover = coverFile ? await prepareCoverFile(coverFile, 480, 270) : null;
+      const saved = resourceEditor.new
+        ? await uploadCourseResource(resourceCourse.id, file, metadata)
+        : await updateCourseResource(resourceCourse.id, resourceEditor.id, metadata);
+      if (resourceEditor.new) {
+        setResourceCourse(await getAdminCourse(resourceCourse.id));
+        setResourceEditor({ ...metadata, id: saved.id, new: false });
+      }
+      if (preparedCover) await uploadCourseResourceCover(resourceCourse.id, resourceEditor.new ? saved.id : resourceEditor.id, preparedCover);
       setResourceCourse(await getAdminCourse(resourceCourse.id));
       setResourceEditor(null);
     }, resourceEditor.new ? "课程资料已上传" : "资料信息已更新")} />}
@@ -90,6 +101,14 @@ function Modal({ title, subtitle, onClose, children, className = "" }) {
 }
 
 function CourseEditor({ course, busy, onClose, onSave }) {
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState("");
+  useEffect(() => {
+    if (!coverFile) { setCoverPreview(""); return; }
+    const url = URL.createObjectURL(coverFile);
+    setCoverPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [coverFile]);
   const [form, setForm] = useState({
     title: course.title ?? "", summary: course.summary ?? "", category: course.category ?? "",
     difficulty: course.difficulty ?? "beginner", coverUrl: course.coverUrl ?? "",
@@ -105,7 +124,7 @@ function CourseEditor({ course, busy, onClose, onSave }) {
       coverUrl: form.coverUrl.trim() || null, coverAssetKey: form.coverAssetKey.trim() || null, isFeatured: form.isFeatured,
       lessons: form.lessons.map((lesson) => ({ ...lesson, title: lesson.title.trim(), summary: lesson.summary.trim(),
         estimatedMinutes: Number(lesson.estimatedMinutes), workflowId: lesson.workflowId?.trim() || null,
-        modelConfigIds: typeof lesson.modelConfigIds === "string" ? splitTags(lesson.modelConfigIds) : lesson.modelConfigIds ?? [] })) });
+        modelConfigIds: typeof lesson.modelConfigIds === "string" ? splitTags(lesson.modelConfigIds) : lesson.modelConfigIds ?? [] })) }, coverFile);
   };
   return <Modal title={course.new ? "新建课程草稿" : "编辑课程草稿"} subtitle="// COURSE DETAILS" onClose={onClose} className="course-modal--wide">
     <form onSubmit={save}>
@@ -116,6 +135,8 @@ function CourseEditor({ course, busy, onClose, onSave }) {
         <label>难度<select value={form.difficulty} onChange={(event) => set("difficulty", event.target.value)}><option value="beginner">入门</option><option value="intermediate">进阶</option><option value="advanced">高级</option></select></label>
         <label>封面图片链接（HTTPS）<input type="url" pattern="https://.*" maxLength="2000" value={form.coverUrl} onChange={(event) => set("coverUrl", event.target.value)} placeholder="https://example.com/cover.jpg" /></label>
         <label>封面资源键（可选）<input maxLength="500" value={form.coverAssetKey} onChange={(event) => set("coverAssetKey", event.target.value)} placeholder="对象存储中的相对路径" /></label>
+        <label>上传封面图片（JPG、PNG、WebP）<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setCoverFile(event.target.files?.[0] ?? null)} /><small>会裁切为 640 × 360，未上传时使用白底黑字标题封面。</small></label>
+        <div className="course-form-full course-cover-preview"><img src={coverPreview || (form.coverUrl !== (course.coverUrl ?? "") ? form.coverUrl : course.coverImageUrl) || coverImageFor({ title: form.title })} alt="课程封面预览" /></div>
         <label className="course-check"><input type="checkbox" checked={form.isFeatured} onChange={(event) => set("isFeatured", event.target.checked)} /> 设为推荐课程</label>
       </div>
       <div className="course-lessons-heading"><div><h3>课时设置</h3><p>总预计时长：{totalMinutes} 分钟</p></div><button type="button" onClick={() => set("lessons", [...form.lessons, emptyLesson()])} disabled={form.lessons.length >= 100}><Plus size={15} /> 添加课时</button></div>
@@ -139,7 +160,7 @@ function ResourceManager({ course, busy, onClose, onAdd, onEdit }) {
   return <Modal title={`${course.title} · 课程资料`} subtitle="// COURSE MATERIALS" onClose={onClose} className="course-modal--wide">
     <div className="course-manager-heading"><span>{course.resources.length} / 30 个资料</span><button className="primary-button" disabled={busy || !editable(course) || course.resources.length >= 30} onClick={onAdd}><Plus size={15} /> 上传资料</button></div>
     {course.resources.length ? <div className="course-resource-list">{course.resources.map((resource) => <article key={resource.id}>
-      {resource.coverUrl && <img src={resource.coverUrl} alt="" />}
+      <img src={coverImageFor(resource, 480, 270)} alt="" />
       <div><strong>{resource.title}</strong><p>{resource.summary || resource.fileName}</p><small>{resource.tags?.join(" · ") || "无标签"} · {course.lessons.find((lesson) => lesson.id === resource.lessonId)?.title ?? "未关联课时"}</small></div>
       <button disabled={busy || !editable(course)} onClick={() => onEdit(resource)}>编辑</button>
     </article>)}</div> : <p className="course-modal-empty">暂无资料，可上传 PDF、DOCX、PPTX、MP4 或 WebM。</p>}
@@ -148,13 +169,21 @@ function ResourceManager({ course, busy, onClose, onAdd, onEdit }) {
 
 function ResourceEditor({ course, resource, busy, onClose, onSave }) {
   const [file, setFile] = useState(null);
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState("");
+  useEffect(() => {
+    if (!coverFile) { setCoverPreview(""); return; }
+    const url = URL.createObjectURL(coverFile);
+    setCoverPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [coverFile]);
   const [form, setForm] = useState({ title: resource.title ?? "", summary: resource.summary ?? "", tags: resource.tags?.join(", ") ?? "", coverUrl: resource.coverUrl ?? "", lessonId: resource.lessonId ?? "" });
   const set = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const save = (event) => {
     event.preventDefault();
     if (resource.new && !file) return;
     onSave(file, { title: form.title.trim(), summary: form.summary.trim(), tags: splitTags(form.tags),
-      coverUrl: form.coverUrl.trim() || null, lessonId: form.lessonId || null });
+      coverUrl: form.coverUrl.trim() || null, lessonId: form.lessonId || null }, coverFile);
   };
   return <Modal title={resource.new ? "上传课程资料" : "编辑资料信息"} subtitle="// RESOURCE DETAILS" onClose={onClose} className="course-modal--wide course-modal--nested">
     <form onSubmit={save}>
@@ -165,6 +194,8 @@ function ResourceEditor({ course, resource, busy, onClose, onSave }) {
         <label className="course-form-full">资料简介<textarea maxLength="2000" value={form.summary} onChange={(event) => set("summary", event.target.value)} /></label>
         <label>标签（逗号分隔，最多 20 个）<input value={form.tags} onChange={(event) => set("tags", event.target.value)} /></label>
         <label>封面图片链接（HTTPS）<input type="url" pattern="https://.*" maxLength="2000" value={form.coverUrl} onChange={(event) => set("coverUrl", event.target.value)} /></label>
+        <label>上传封面图片（JPG、PNG、WebP）<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setCoverFile(event.target.files?.[0] ?? null)} /><small>会裁切为 480 × 270，未上传时使用白底黑字标题封面。</small></label>
+        <div className="course-form-full course-cover-preview"><img src={coverPreview || (form.coverUrl !== (resource.coverUrl ?? "") ? form.coverUrl : resource.coverImageUrl) || coverImageFor({ title: form.title }, 480, 270)} alt="资料封面预览" /></div>
       </div>
       <footer><button type="button" className="outline-button" onClick={onClose}>取消</button><button disabled={busy || (resource.new && !file)} className="primary-button" type="submit">{resource.new ? "上传资料" : "保存资料信息"} <ArrowRight size={16} /></button></footer>
     </form>

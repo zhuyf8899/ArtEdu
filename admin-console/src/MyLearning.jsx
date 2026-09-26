@@ -14,6 +14,7 @@ import {
   updateLearningTask,
 } from "./services/adminApi.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
+import { coverImageFor } from "./coverImages.js";
 
 const COURSE_IMAGES = {
   "course-ai-design-foundation": "/assets/learning/ai-design-foundations.jpg",
@@ -227,6 +228,6 @@ function LearningLoadError({ message, onRetry }) {
   return <div className="learning-load-error"><ArrowClockwise size={30} weight="bold" /><strong>学习空间暂时无法加载</strong><span>{message}</span><button onClick={onRetry}>重新加载</button></div>;
 }
 
-function courseImage(course, index) { return COURSE_IMAGES[course.id] || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]; }
+function courseImage(course) { return coverImageFor(course); }
 function taskTypeName(type) { return { course: "课程学习", workflow: "工作流", review: "复习", note: "学习笔记", custom: "自定义" }[type] || "学习任务"; }
 function formatDate(value) { return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(new Date(value)); }

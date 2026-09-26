@@ -14,6 +14,9 @@ interface LearningCourseRow extends QueryResultRow {
   id: string;
   title: string;
   summary: string | null;
+  cover_url: string | null;
+  cover_asset_key: string | null;
+  cover_mime_type: string | null;
   category: string | null;
   difficulty: string | null;
   estimated_minutes: number;
@@ -173,6 +176,7 @@ export class LearningService {
   private async listCourses(userId: string) {
     const result = await this.database.query<LearningCourseRow>(`
       SELECT c.id, c.title, c.summary, c.category, c.difficulty, c.estimated_minutes,
+        c.cover_url, c.cover_asset_key, c.cover_mime_type,
         creator.display_name AS creator_name, e.status AS enrollment_status,
         COUNT(DISTINCT l.id)::int AS lesson_count,
         COUNT(DISTINCT l.id) FILTER (WHERE p.progress_percent = 100)::int AS completed_lessons,
@@ -192,6 +196,8 @@ export class LearningService {
       id: row.id,
       title: row.title,
       summary: row.summary ?? "",
+      coverUrl: row.cover_url,
+      coverImageUrl: row.cover_asset_key && row.cover_mime_type ? `/api/courses/${row.id}/cover` : null,
       category: row.category ?? "未分类",
       difficulty: row.difficulty ?? "beginner",
       estimatedMinutes: Number(row.estimated_minutes ?? 0),
