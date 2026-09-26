@@ -187,7 +187,7 @@ function ResourceEditor({ course, resource, busy, onClose, onSave }) {
   };
   return <Modal title={resource.new ? "上传课程资料" : "编辑资料信息"} subtitle="// RESOURCE DETAILS" onClose={onClose} className="course-modal--wide course-modal--nested">
     <form onSubmit={save}>
-      {resource.new && <label>资料文件（最多 10 MiB）<input type="file" required accept=".pdf,.docx,.pptx,.mp4,.webm" onChange={(event) => { const selected = event.target.files?.[0] ?? null; setFile(selected); if (selected && !form.title) set("title", selected.name); }} /></label>}
+      {resource.new && <label>资料文件（视频限额按服务器配置，其余最多 10 MiB）<input type="file" required accept=".pdf,.docx,.pptx,.mp4,.webm,.jpg,.jpeg,.png,.webp,.gif,.svg,.avif,.bmp,.html,.css,.js,.mjs" onChange={(event) => { const selected = event.target.files?.[0] ?? null; setFile(selected); if (selected && !form.title) set("title", selected.name); }} /></label>}
       <div className="course-form-grid">
         <label>资料标题<input required maxLength="200" value={form.title} onChange={(event) => set("title", event.target.value)} /></label>
         <label>所属课时<select value={form.lessonId} onChange={(event) => set("lessonId", event.target.value)}><option value="">不关联课时</option>{course.lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</select></label>

@@ -1,35 +1,47 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { readFile } from "node:fs/promises";
-import { PiyingToolCard, PIYING_TOOL_URL } from "../src/PiyingToolCard.js";
+import { access, readFile } from "node:fs/promises";
 
-const render = () => renderToStaticMarkup(createElement(PiyingToolCard));
-test("皮影入口只链接固定 HTTPS 地址，新标签页打开且不传递来源信息", () => {
-  const url = new URL(PIYING_TOOL_URL);
-  assert.equal(url.href, "https://piying.woooostudio.com/");
-  assert.equal(url.search, ""); assert.equal(url.username, "");
-  const html = render();
-  assert.match(html, /href="https:\/\/piying\.woooostudio\.com\/"/);
-  assert.match(html, /target="_blank"/);
-  assert.match(html, /rel="noopener noreferrer"/);
-  assert.match(html, /referrerPolicy="no-referrer"/i);
-  assert.doesNotMatch(html, /<iframe|<form|<img|<script/);
+const read = (relative) => readFile(new URL(relative, import.meta.url), "utf8");
+const exists = async (relative) => {
+  try { await access(new URL(relative, import.meta.url)); return true; } catch { return false; }
+};
+
+// 皮影实验室来自工具目录里的数据行，不再单独占一张大卡片；
+// 少了独立组件，就不会再出现“皮影一种规格、其他工具另一种规格”的分叉。
+test("数字皮影实验室与其他工具同属一个工具目录，没有独立大卡片", async () => {
+  const portal = await read("../src/Portal.jsx");
+  assert.match(portal, /section === "studio"[^\n]*<WorkflowStudio/);
+  assert.doesNotMatch(portal, /PiyingToolCard/);
+  assert.doesNotMatch(portal, /piying-tool\.css/);
+  assert.equal(await exists("../src/PiyingToolCard.js"), false);
+  assert.equal(await exists("../src/piying-tool.css"), false);
 });
-test("皮影入口说明用途、跳转行为和独立账号额度，帮助默认收起", () => {
-  const html = render();
-  for (const text of ["数字皮影实验室", "外部工具", "素材与模板", "插件教学", "新标签页", "不会自动同步 ArtEdu 账号、对话、作品或额度", "登录或收费"]) assert.ok(html.includes(text), text);
-  assert.match(html, /<details[^>]*><summary>/);
-  assert.doesNotMatch(html, /<details[^>]*\bopen(?:[ =>])/);
-  assert.match(html, /aria-describedby="piying-tool-destination"/);
-  assert.match(html, /id="piying-tool-destination"/);
+
+test("所有工具卡片走同一个组件与同一套样式", async () => {
+  const studio = await read("../src/WorkflowStudio.jsx");
+  assert.equal((studio.match(/function ToolDirectoryCard/g) ?? []).length, 1);
+  assert.match(studio, /visibleLinks\.map\(\(tool\) => <ToolDirectoryCard/);
+  assert.match(studio, /className="tool-directory__card"/);
+  const css = await read("../src/styles.css");
+  // 统一的卡片规格：同一层级、同一封面高度、同一编辑按钮。
+  for (const rule of [
+    ".tool-directory__card { border: 1px solid #e2e0da; border-radius: 16px; }",
+    ".tool-directory__list { gap: 16px !important; }",
+    ".tool-directory__cover { height: 142px; }",
+    ".tool-directory__list--list .tool-directory__card > :is(a, .tool-directory__launch) { min-height: 100px !important;",
+  ]) assert.ok(css.includes(rule), rule);
+  assert.match(css, /\.tool-directory__edit:hover, \.tool-directory__edit:focus-visible/);
+  assert.match(css, /@media \(max-width: 620px\)/);
 });
-test("外链入口位于设计工作台，不替换原工作流，样式包含键盘和窄屏保护", async () => {
-  const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
-  assert.match(portal, /section === "studio"[^\n]*<PiyingToolCard \/><WorkflowStudio/);
-  const css = await readFile(new URL("../src/piying-tool.css", import.meta.url), "utf8");
-  assert.match(css, /:focus-visible/);
-  assert.match(css, /@media \(max-width: 440px\)/);
-  assert.match(css, /min-height: 48px/);
+
+test("工具目录的外链入口带新标签页与不传来源信息保护", async () => {
+  const studio = await read("../src/WorkflowStudio.jsx");
+  assert.match(studio, /target=\{external \? "_blank" : undefined\}/);
+  assert.match(studio, /rel=\{external \? "noopener noreferrer" : undefined\}/);
+  assert.match(studio, /referrerPolicy=\{external \? "no-referrer" : undefined\}/);
+  // 皮影入口是同一条数据行：有用途说明、外部打开方式，地址固定不带参数。
+  const migration = await read("../../migrations/0026_tool_directory_catalog.sql");
+  assert.match(migration, /'tool-directory-piying', '灵感与素材', '数字皮影实验室', '探索数字皮影的生成、演绎与制作'/);
+  assert.match(migration, /'https:\/\/piying\.woooostudio\.com\/'/);
 });

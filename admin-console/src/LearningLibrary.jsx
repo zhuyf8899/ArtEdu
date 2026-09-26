@@ -157,7 +157,10 @@ function CourseMaterial({ resource }) {
   const download = resource.downloadUrl || "";
   const source = preview || download;
   const fileName = resource.fileName ? ` · ${resource.fileName}` : "";
+  // 封面优先用上传的图片；没上传时由标题生成白底黑字图，保证资料列表始终有可扫读的视觉。
+  const cover = coverImageFor(resource, 480, 270);
   const meta = (note) => <span className="course-material__meta">
+    <img className="course-material-cover" src={cover} alt="" />
     <strong>{resource.title}</strong>
     <small>{kind.label}{fileName}</small>
     {note && <small>{note}</small>}
@@ -176,7 +179,7 @@ function CourseMaterial({ resource }) {
   </article>;
 
   if (resource.resourceType === "video") return <article className="course-material course-material--video">
-    <video controls preload="metadata" src={source} aria-label={resource.title} />
+    <video controls preload="metadata" src={source} poster={cover} aria-label={resource.title} />
     <div>
       {meta("仅提供在线播放；加入课程后即可观看")}
       {resource.transcriptText && <details><summary>查看文字稿</summary><p>{resource.transcriptText}</p></details>}
