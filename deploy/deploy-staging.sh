@@ -9,6 +9,30 @@ cd "$(dirname "$0")/.."
 COMPOSE=(docker compose -f docker-compose.staging.yml)
 export ARTEDU_VERSION="$(git rev-parse --short HEAD)"
 MIN_AVAILABLE_MB="${ARTEDU_MIN_AVAILABLE_MB:-150}"
+
+# 2026-09-26 事故：本脚本曾两次"静默死亡"——set -e 下某条命令失败后直接退出，日志停在
+# 阶段标题上、干干净净没有任何报错，排障时极易误判成"还在跑"。加 ERR trap 兜底，
+# 任何失败都留下行号，并把最后一条 [n/14] 标题指认为失败阶段。
+trap 'status=$?; printf "[deploy] ✘ 命令失败（第 %s 行，退出码 %s）；上方最后一条 [n/14] 标题即失败阶段。\n" "$LINENO" "$status" >&2' ERR
+
+# 2026-09-26 事故：线上容器属于 compose 项目 artedu。compose 默认按**当前目录名**推导项目名，
+# 从 worktree 目录（如 ~/artedu-positive-negative-<date>）运行时得到的是另一个项目名，
+# 于是 start/up 找不到既有容器（"service embedding has no container to start"），
+# 构建出的镜像也被打上无人会用的前缀。这里显式钉死，可用 COMPOSE_PROJECT_NAME 覆盖。
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-artedu}"
+
+# 2026-09-26 事故：部署目录常常只有 .env.example（线上变量由 --env-file /
+# COMPOSE_ENV_FILES 注入）。缺少解析来源时 compose 会在插值阶段失败，这里提前给出
+# 可操作的提示，而不是中途抛一个看不懂的错。
+if ! "${COMPOSE[@]}" config --quiet >/dev/null 2>&1; then
+  cat >&2 <<'MSG'
+  ✘ compose 配置无法解析（通常就是缺少 .env）：部署目录只有 .env.example 属正常现象。
+    本仓库通过环境变量注入线上配置，请这样运行：
+      COMPOSE_ENV_FILES=$HOME/artedu/.env bash deploy/deploy-staging.sh
+MSG
+  exit 1
+fi
+echo "  compose 项目名：${COMPOSE_PROJECT_NAME}（若与线上容器不一致，下面会找不到容器）"
 MEMORY_MONITOR_FILE=""
 MEMORY_MONITOR_PID=""
 OPTIONAL_SERVICES_STOPPED=0
@@ -93,17 +117,29 @@ elif [ "$SWAP_TOTAL" -lt 256 ] && [ "$TOTAL_MB" -lt 2048 ]; then
 fi
 
 echo "[2/14] 暂停非必需容器，为构建腾出内存"
-"${COMPOSE[@]}" stop embedding rag-worker
-OPTIONAL_SERVICES_STOPPED=1
+# 容器可能尚未创建（首次部署/项目名不匹配）。此处失败不应终止整个部署，
+# 但必须留下痕迹——2026-09-26 就是在这里被 set -e 静默杀掉的。
+if "${COMPOSE[@]}" stop embedding rag-worker; then
+  OPTIONAL_SERVICES_STOPPED=1
+else
+  echo "  ! 暂停 embedding/rag-worker 未成功（容器可能尚未创建）；继续构建。" >&2
+  OPTIONAL_SERVICES_STOPPED=0
+fi
 start_build_memory_monitor
 echo "[3/14] 构建 api 镜像（串行）"; build_service api
 echo "[4/14] 构建 rag-worker 镜像（串行）"; build_service rag-worker
-echo "[5/14] 准备本地 embedding 模型"; ARTEDU_MODEL_DIR="${ARTEDU_MODEL_DIR:-}" bash deploy/fetch-embedding-model.sh
+# 不要写成 ARTEDU_MODEL_DIR="${ARTEDU_MODEL_DIR:-}"：那会把变量强制成"已定义但为空"，
+# 反而让下游的 ${ARTEDU_MODEL_DIR:-$(grep .env)} 兜底逻辑真的去执行 grep(1)。原样透传即可，
+# 由脚本内部按 环境变量 > .env > ./models 解析。
+echo "[5/14] 准备本地 embedding 模型"; bash deploy/fetch-embedding-model.sh
 echo "[6/14] 构建 embedding 镜像（串行）"; build_service embedding
 echo "[7/14] 构建 web 镜像（串行）"; build_service web
 report_build_memory
 echo "[8/14] 恢复暂时停掉的 embedding 与 RAG Worker"
-"${COMPOSE[@]}" start embedding rag-worker
+if ! "${COMPOSE[@]}" start embedding rag-worker; then
+  # 不影响后续：第 12 步的 up -d 会按需创建/重建这两个服务。
+  echo "  ! start embedding/rag-worker 未成功；交给第 12 步的 up -d 处理。" >&2
+fi
 OPTIONAL_SERVICES_STOPPED=0
 echo "[9/14] 确保 postgres 运行并健康"
 "${COMPOSE[@]}" up -d postgres

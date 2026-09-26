@@ -32,6 +32,7 @@ interface WorkRow {
   title: string;
   summary: string | null;
   discipline: string | null;
+  tags: string[] | null;
   status: string;
   author_id: string;
   author: string;
@@ -324,8 +325,10 @@ export class StudioService {
       ? this.mergeNodeStates(saved, parents)
       : this.workflowContext({ prompt: saved.initialPrompt, size: saved.initialSize });
     if (input.prompt && node.type !== "input") throw new BadRequestException("只可在输入节点填写创作需求");
+    if (input.negativePrompt !== undefined && node.type !== "negative_prompt") throw new BadRequestException("只可在负向提示词节点填写排除内容");
     if (input.referenceFileId && node.type !== "load_image") throw new BadRequestException("只可在参考素材节点上传图片");
     if (input.prompt) context.prompt = input.prompt;
+    if (input.negativePrompt !== undefined) context.negativePrompt = input.negativePrompt;
     if (input.referenceFileId) context.referenceFileId = input.referenceFileId;
     const output = await this.executeNode(actor, node, context);
     saved.nodeResults[node.id] = output;
@@ -620,6 +623,7 @@ export class StudioService {
     return `SELECT w.id,w.title,w.summary,w.discipline,w.status,w.author_id,w.story_json,author.display_name AS author,w.published_at,w.created_at,
       COUNT(DISTINCT likes.user_id)::int AS like_count,COUNT(DISTINCT favorites.user_id)::int AS favorite_count,
       BOOL_OR(likes.user_id=${actorParameter}) AS liked,BOOL_OR(favorites.user_id=${actorParameter}) AS favorited,
+      ARRAY_REMOVE(ARRAY_AGG(DISTINCT case_tags.name), NULL) AS tags,
       COALESCE((SELECT '/api/works/' || w.id || '/assets/' || cover.id || '/download' FROM work_assets cover
         WHERE cover.work_id=w.id AND cover.asset_type='image' AND cover.storage_key IS NOT NULL
         AND (w.status<>'approved' OR cover.moderation_status='approved')
@@ -627,6 +631,7 @@ export class StudioService {
         MIN(assets.external_url) FILTER (WHERE assets.asset_type='image')) AS preview_url
       FROM works w JOIN users author ON author.id=w.author_id
       LEFT JOIN work_likes likes ON likes.work_id=w.id LEFT JOIN work_favorites favorites ON favorites.work_id=w.id
+      LEFT JOIN work_tags case_relation ON case_relation.work_id=w.id LEFT JOIN tags case_tags ON case_tags.id=case_relation.tag_id
       LEFT JOIN work_assets assets ON assets.work_id=w.id`;
   }
 
@@ -745,7 +750,7 @@ export class StudioService {
     context.adapters ??= [];
     context.size ??= "1024x1024";
     return context as {
-      prompt?: string; initialPrompt?: string; initialSize?: string; text?: string; size: string; modelConfigId?: string;
+      prompt?: string; negativePrompt?: string; initialPrompt?: string; initialSize?: string; text?: string; size: string; modelConfigId?: string;
       adapters: Array<{ type: string; value: string }>;
       referenceFileId?: string;
       artifact?: { downloadUrl?: string; fileName?: string; mimeType?: string; fileSize?: number };
@@ -756,7 +761,7 @@ export class StudioService {
 
   private snapshotNodeState(context: ReturnType<StudioService["workflowContext"]>) {
     return {
-      prompt: context.prompt, text: context.text, size: context.size,
+      prompt: context.prompt, negativePrompt: context.negativePrompt, text: context.text, size: context.size,
       modelConfigId: context.modelConfigId, referenceFileId: context.referenceFileId,
       artifact: context.artifact, adapters: context.adapters,
     };
@@ -769,7 +774,7 @@ export class StudioService {
     merged.nodeResults = saved.nodeResults;
     merged.nodeStates = saved.nodeStates;
     for (const state of states) {
-      for (const key of ["prompt", "text", "size", "modelConfigId", "referenceFileId", "artifact"] as const) {
+      for (const key of ["prompt", "negativePrompt", "text", "size", "modelConfigId", "referenceFileId", "artifact"] as const) {
         if (state[key] !== undefined) (merged as any)[key] = state[key];
       }
       merged.adapters.push(...(state.adapters ?? []));
@@ -793,6 +798,10 @@ export class StudioService {
         if (!value) throw new BadRequestException(`${label} 需要填写提示词`);
         appendPrompt(value);
         return { kind: "prompt", prompt: context.prompt };
+      case "negative_prompt":
+        if (value.length > 1500) throw new BadRequestException("负向提示词不能超过 1500 字");
+        context.negativePrompt = context.negativePrompt ?? value;
+        return { kind: "negative_prompt", negativePrompt: context.negativePrompt };
       case "skill":
         if (!value) throw new BadRequestException("Skill 节点需要填写可执行的创作约束");
         appendPrompt(value);
@@ -837,7 +846,7 @@ export class StudioService {
           jobType: "image", prompt: context.prompt,
           context: reference ? [{ role: "user", content: `这是用户已授权的参考图片“${reference.fileName}”。仅用于提取构图、色彩、材质或风格特征，不复制具体作品。`, images: [{ dataUrl: reference.dataUrl, detail: "high" }] }] : [],
           modelConfigId: context.modelConfigId,
-          parameters: { size: context.size, source: "workflow-canvas", workflowNodeId: node.id, adapters: context.adapters },
+          parameters: { size: context.size, negativePrompt: context.negativePrompt, source: "workflow-canvas", workflowNodeId: node.id, adapters: context.adapters },
         });
         if (!generated.artifact) throw new ConflictException("图片服务未返回可保存产物");
         context.artifact = generated.artifact;
@@ -865,7 +874,7 @@ export class StudioService {
   }
 
   private mapWork(row: WorkRow) {
-    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
+    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], tags: row.tags ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
   }
 
   // 对外只暴露目录展示所需字段；不返回维护者身份，避免把后台账号信息带到学生端。

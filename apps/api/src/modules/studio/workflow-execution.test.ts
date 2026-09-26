@@ -92,10 +92,12 @@ test("作者可试运行自己的草稿，其他用户不能读取未发布版�
 test("图像节点调用统一生成服务并持久化真实产物", async () => {
   const definition = { nodes: [
     { id: "input", type: "input", data: { label: "输入" } },
+    { id: "positive", type: "prompt", data: { label: "正向提示词", value: "画面主体明确，构图清晰" } },
+    { id: "negative", type: "negative_prompt", data: { label: "负向提示词", value: "水印、模糊" } },
     { id: "sampler", type: "ksampler", data: { label: "生成图片" } },
     { id: "save", type: "save_image", data: { label: "保存" } },
-  ], edges: [{ source: "input", target: "sampler" }, { source: "sampler", target: "save" }] };
-  const row: Record<string, any> = { id: "run-image", user_id: actor.id, workflow_id: "flow-image", status: "in_progress", current_step: 0, total_steps: 3, context_json: { initialPrompt: "", initialSize: "1024x1024", size: "1024x1024", nodeResults: {}, nodeStates: {} }, definition_json: definition };
+  ], edges: [{ source: "input", target: "positive" }, { source: "positive", target: "negative" }, { source: "negative", target: "sampler" }, { source: "sampler", target: "save" }] };
+  const row: Record<string, any> = { id: "run-image", user_id: actor.id, workflow_id: "flow-image", status: "in_progress", current_step: 0, total_steps: 5, context_json: { initialPrompt: "", initialSize: "1024x1024", size: "1024x1024", nodeResults: {}, nodeStates: {} }, definition_json: definition };
   const query = async (sql: string, values: any[] = []) => {
     if (sql.includes("SELECT r.*,w.name")) return { rows: [{ ...row }], rowCount: 1 };
     if (sql.includes("RETURNING id") && sql.includes("context_json=jsonb_set")) return { rows: [{ id: row.id }], rowCount: 1 };
@@ -107,10 +109,16 @@ test("图像节点调用统一生成服务并持久化真实产物", async () =>
   const service = new StudioService({ query, transaction: async (fn: any) => fn({ query }) } as any, {} as any, generation as any, {} as any);
   await service.executeRun(actor, row.id, { prompt: "青绿色传统纹样海报" });
   await service.executeRun(actor, row.id, {});
+  await service.executeRun(actor, row.id, { negativePrompt: "文字、水印" });
+  await service.executeRun(actor, row.id, {});
   const result = await service.executeRun(actor, row.id, {});
   assert.equal(inputs[0].jobType, "image");
   assert.match(inputs[0].prompt, /青绿色传统纹样海报/);
+  assert.match(inputs[0].prompt, /画面主体明确/);
+  assert.doesNotMatch(inputs[0].prompt, /水印/);
+  assert.equal(inputs[0].parameters.negativePrompt, "文字、水印");
   assert.equal(result.status, "completed");
   assert.equal(result.context.artifact.id, "image-asset");
+  assert.equal(result.context.nodeResults.negative.negativePrompt, "文字、水印");
   assert.equal(result.context.nodeResults.save.kind, "saved_asset");
 });

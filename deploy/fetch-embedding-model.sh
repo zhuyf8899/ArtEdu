@@ -8,7 +8,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-MODEL_DIR="${ARTEDU_MODEL_DIR:-$(grep -E '^ARTEDU_MODEL_DIR=' .env 2>/dev/null | tail -1 | cut -d= -f2-)}"
+# 解析优先级：环境变量 > 项目目录 .env > 默认 ./models。
+# 注意：部署目录常常没有 .env（只有 .env.example，线上变量由 compose 的 --env-file /
+# COMPOSE_ENV_FILES 注入）。所以必须先判断文件是否存在——否则 grep 会以退出码 2 结束，
+# 在 set -e + pipefail 下直接把整个部署**静默中止**（2026-09-26 实测事故，日志无任何报错）。
+MODEL_DIR="${ARTEDU_MODEL_DIR:-}"
+if [ -z "$MODEL_DIR" ] && [ -f .env ]; then
+  MODEL_DIR="$(grep -E '^ARTEDU_MODEL_DIR=' .env 2>/dev/null | tail -1 | cut -d= -f2- || true)"
+fi
 MODEL_DIR="${MODEL_DIR:-./models}"
 MODEL_BASE_URL="${RAG_EMBEDDING_MODEL_BASE_URL:-https://huggingface.co/Xenova/bge-base-zh-v1.5/resolve/main}"
 
