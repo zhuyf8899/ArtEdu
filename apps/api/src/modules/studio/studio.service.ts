@@ -624,7 +624,9 @@ export class StudioService {
       const workflows = await client.query("SELECT id FROM workflows WHERE id=ANY($1::text[]) AND status='published'", [input.workflowIds]);
       if (workflows.rowCount !== input.workflowIds.length) throw new BadRequestException("引用的工作流不存在或尚未发布");
     }
-    for (const workflowId of input.workflowIds) await client.query("INSERT INTO work_workflows (work_id,workflow_id) VALUES ($1,$2)", [workId, workflowId]);
+    // 创建与更新都会走这里，同一关联可能被写入两次；没有 ON CONFLICT 时
+    // 第二次插入会撞 work_workflows 主键并抛出 500，表现为"作品保存失败"。
+    for (const workflowId of input.workflowIds) await client.query("INSERT INTO work_workflows (work_id,workflow_id) VALUES ($1,$2) ON CONFLICT (work_id,workflow_id) DO NOTHING", [workId, workflowId]);
     for (const tagName of [...new Set(input.tagNames)]) {
       const slug = this.slugify(tagName);
       const tag = await client.query<{ id: string }>(`
