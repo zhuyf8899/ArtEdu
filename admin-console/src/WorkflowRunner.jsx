@@ -4,6 +4,7 @@ import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, Play, SpinnerGap } from "@phosphor-icons/react";
 import { uploadTemporaryCreationFile } from "./services/adminApi.js";
 import { ZoomableImage } from "./ImageLightbox.jsx";
+import { isImageArtifact } from "./imageSources.js";
 import "@xyflow/react/dist/style.css";
 
 const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", negative_prompt: "#a15e8c", text_encode: "#b268ff", skill: "#b268ff", text_generate: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b" };
@@ -50,9 +51,11 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
           {run?.status === "in_progress" && activeStep && <NodeExecutionPanel key={activeStep.id} step={activeStep} node={currentNode} output={run.context?.nodeResults?.[activeStep.id]} loading={loading} onExecute={onExecute} />}
           {autoError && <div className="workflow-graph-runner__error" role="alert"><strong>自动运行暂停</strong><p>{autoError}</p><button type="button" onClick={onRetry}>重试当前节点</button></div>}
           {run?.status === "completed" && <div className="workflow-complete"><CheckCircle size={40} weight="fill" /><strong>运行完成</strong></div>}
-          {run?.context?.artifact?.downloadUrl && (/\.(png|jpe?g|webp|gif|avif|bmp)$/i.test(String(run.context.artifact.fileName ?? "")) || String(run.context.artifact.mimeType ?? "").startsWith("image/"))
+          {/* 必须整块包在 && 里：run 还没开始时 run?.context?.artifact 是 undefined，
+              原来写成三元表达式会走 else 分支去读 run.context.artifact.downloadUrl 直接崩页。 */}
+          {run?.context?.artifact?.downloadUrl && (isImageArtifact(run.context.artifact)
             ? <ZoomableImage src={run.context.artifact.downloadUrl} alt={run.context.artifact.fileName ?? "工作流生成的图片"} fileName={run.context.artifact.fileName ?? ""} />
-            : <a className="workflow-result-link" href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看或下载生成图片 <ArrowRight size={16} /></a>}
+            : <a className="workflow-result-link" href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看或下载生成图片 <ArrowRight size={16} /></a>)}
           {run?.context?.text && <section className="workflow-result-text"><strong>生成文字</strong><p>{run.context.text}</p></section>}
         </div>
       </aside>
