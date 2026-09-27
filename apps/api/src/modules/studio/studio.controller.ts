@@ -49,13 +49,13 @@ export class StudioController {
   }
 
   @Get("workflows")
-  listWorkflows(@Query() query: unknown) {
-    return this.studio.listWorkflows(parseInput(catalogQuerySchema, query) as CatalogQuery);
+  async listWorkflows(@Req() request: FastifyRequest, @Query() query: unknown) {
+    return this.studio.listWorkflows(parseInput(catalogQuerySchema, query) as CatalogQuery, await this.auth.getOptionalActor(request));
   }
 
   @Get("workflows/:workflowId")
-  getWorkflow(@Param("workflowId") workflowId: string) {
-    return this.studio.getWorkflow(workflowId);
+  async getWorkflow(@Req() request: FastifyRequest, @Param("workflowId") workflowId: string) {
+    return this.studio.getWorkflow(workflowId, await this.auth.getOptionalActor(request));
   }
 
   @Post("workflows")

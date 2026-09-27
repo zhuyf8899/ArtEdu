@@ -49,6 +49,14 @@ export class AuthService {
     throw new UnauthorizedException("缺少有效登录会话。");
   }
 
+  /** 可选身份：公开目录在带登录态时要能额外带出「我自己的草稿」，未登录就按游客处理。 */
+  async getOptionalActor(request: FastifyRequest): Promise<Actor | null> {
+    const cachedActor = (request as FastifyRequest & { actor?: Actor }).actor;
+    if (cachedActor) return cachedActor;
+    const sessionActor = await this.getSessionActor(request);
+    return sessionActor ? this.cacheActor(request, sessionActor) : null;
+  }
+
   async loginLocal(input: LocalLoginInput, ip: string) {
     const environment = getEnvironment();
     if (!environment.localAuthenticationEnabled) throw new ForbiddenException("本地账号登录未启用");

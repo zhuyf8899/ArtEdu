@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowClockwise, ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
-  Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
+  Compass, GraduationCap, GridFour, House, ImageSquare, Lightbulb, LockKey,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
 import { createAgentRun, executeAgentRun, executeAgentRunStream, getApiHealth, getPortalHome, runGenerationJob } from "./services/adminApi.js";
@@ -226,9 +226,13 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
   // 创作对话页独立成屏：不带站点导航与两侧装饰，整屏都留给对话。
   const standalone = section === "creation";
+  // 设计工作台同样独立成屏：站点顶栏与两侧装饰都让位给画布与工作流目录。
+  // 顶栏原本是这里唯一的回首页入口，所以下面补了一条自带「返回首页」的工作台栏。
+  const workbench = section === "studio";
+  const chromeFree = standalone || workbench;
 
-  return <div className={`portal-shell${standalone ? " portal-shell--standalone" : ""}`} data-section={section} data-standalone={standalone ? "true" : undefined}>
-    {!standalone && <header className="portal-topbar">
+  return <div className={`portal-shell${standalone ? " portal-shell--standalone" : ""}${workbench ? " portal-shell--workbench" : ""}`} data-section={section} data-standalone={standalone ? "true" : undefined} data-chrome={chromeFree ? "none" : undefined}>
+    {!chromeFree && <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
       <nav className="portal-nav" aria-label="顶部主导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       <GlobalSearchForm value={searchQuery} onSearch={navigateSearch} />
@@ -236,11 +240,18 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "API 已验证" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
     </header>}
 
-    {!standalone && <PortalArtRails />}
+    {!chromeFree && <PortalArtRails />}
 
-    <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}`}>
+    <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}${workbench ? " portal-main--workbench" : ""}`}>
       <div key={`${section}:${searchQuery}`} className="route-transition">
-      {section !== "home" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
+      {/* 工作台自己带表头：站点顶栏被隐藏后，这里是唯一的「返回首页」入口。 */}
+      {workbench && <header className="portal-workbench-bar">
+        <button className="portal-workbench-bar__home" onClick={() => navigateSection("home")}><House size={17} weight="bold" /> 返回首页</button>
+        <div className="portal-workbench-bar__title"><p>// STUDIO</p><strong>{pageTitle}</strong></div>
+        <span className="portal-workbench-bar__hint">课程负责学习，工作台负责动手。</span>
+        {canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}
+      </header>}
+      {section !== "home" && section !== "myLearning" && section !== "search" && section !== "creation" && section !== "studio" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
         <AiCreationLauncher account={account} creation={data.creation} onNotice={showToast} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />

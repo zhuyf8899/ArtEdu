@@ -130,8 +130,10 @@ test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条
 test("创作对话页独立成屏：不显示站点导航，也不显示两侧装饰", async () => {
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   assert.ok(portal.includes('const standalone = section === "creation"'), "对话页要单独标记");
-  assert.ok(portal.includes('{!standalone && <header className="portal-topbar">'), "对话页不渲染顶部导航");
-  assert.ok(portal.includes("{!standalone && <PortalArtRails />}"), "对话页不渲染两侧装饰");
+  // 设计工作台也走同一套「无站点外壳」开关（chromeFree = standalone || workbench）。
+  assert.ok(portal.includes("const chromeFree = standalone || workbench"), "无外壳页面要统一开关");
+  assert.ok(portal.includes('{!chromeFree && <header className="portal-topbar">'), "无外壳页面不渲染顶部导航");
+  assert.ok(portal.includes("{!chromeFree && <PortalArtRails />}"), "无外壳页面不渲染两侧装饰");
   assert.ok(portal.includes("portal-main--standalone"));
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
   // 腾出来的空间要让给对话本体：更宽的主区、更高的消息区。
@@ -140,6 +142,18 @@ test("创作对话页独立成屏：不显示站点导航，也不显示两侧�
   assert.ok(css.includes(".portal-shell--standalone { height: 100vh; overflow: hidden;"));
   assert.ok(css.includes(".portal-shell--standalone .creation-canvas__thread { flex: 1 1 auto; min-height: 0; max-height: none; }"));
   assert.ok(css.includes(".portal-shell--standalone .creation-canvas__composer { flex: 0 0 auto;"));
+});
+
+test("设计工作台是独立页面，并自带「返回首页」入口", async () => {
+  const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
+  // 顶栏是这两页唯一的回首页入口：隐藏外壳后必须自己补一个，否则用户被困住。
+  assert.ok(portal.includes('const workbench = section === "studio"'), "设计工作台要标记为无外壳页面");
+  assert.ok(portal.includes('className="portal-workbench-bar"'), "工作台要有自己的表头");
+  assert.ok(portal.includes("返回首页"), "工作台表头必须有返回首页按钮");
+  assert.ok(portal.includes('onClick={() => navigateSection("home")}'), "返回首页要真的回到首页路由");
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  assert.ok(css.includes(".portal-main--workbench { width: min(1360px"), "工作台主区要更宽");
+  assert.ok(css.includes(".portal-workbench-bar__home"), "返回首页按钮要有样式");
 });
 
 test("历次会话是常驻左侧栏，收起后按钮仍在", async () => {

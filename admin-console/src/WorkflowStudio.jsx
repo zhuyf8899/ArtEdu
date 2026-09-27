@@ -18,7 +18,9 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
   const [autoError, setAutoError] = useState("");
   const advancing = useRef("");
 
-  useEffect(() => { getWorkflows().then((payload) => setWorkflows(payload.items ?? [])).catch((error) => onNotice(error.message)); }, []);
+  // 目录带 includeDrafts：作者在这里就能看到自己的草稿并直接试运行，不用先发布。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { getWorkflows("", { includeDrafts: true }).then((payload) => setWorkflows(payload.items ?? [])).catch((error) => onNotice(error.message)); }, []);
 
   const open = async (workflow) => {
     setLoading(true);
@@ -56,9 +58,10 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
     if (!run || !selected || loading || autoError || run.status !== "in_progress") return;
     const step = run.steps[run.currentStep];
     const node = run.nodes.find((item) => item.id === step?.id);
-    // 需要用户参与的两个节点停下来：输入节点（没填默认值时）与负向提示词节点
-    // （让人先看一眼、改掉不想要的内容，再继续采样）。
-    if (!node || node.type === "load_image" || node.type === "negative_prompt" || (node.type === "input" && !String(node.data?.value ?? "").trim())) return;
+    // 一键跑到底：整条链路自己往下走，直到出图，不再让人一个节点一个节点点。
+    // 只有「非现场给不可」的两件事才停下来：没配默认值的创作需求、要上传的参考图片。
+    // 负向提示词直接用节点里配好的默认值继续采样。
+    if (!node || node.type === "load_image" || (node.type === "input" && !String(node.data?.value ?? "").trim())) return;
     const key = `${run.id}:${run.currentStep}`;
     if (advancing.current === key) return;
     advancing.current = key;
@@ -81,16 +84,21 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
     {/* 工具入口之后必须有节点工作流列表：之前这一块被工具目录挤掉了，学生根本点不进工作流。 */}
     <div className="workflow-catalog__list">
       <header className="workflow-catalog__toolbar">
-        <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>点开就是独立画布，直接运行；要改图请用上面的「新建节点工作流」。</span></div>
+        <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>点开就是独立画布：点一次运行就一路跑到出图，只有填需求和传参考图会停下来问你。</span></div>
         <button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button>
       </header>
-      {workflows.length ? <section className="workflow-grid">{workflows.map((workflow) => <article className="workflow-card" key={workflow.id}>
-        <Wrench size={21} weight="bold" />
-        <span>{workflow.category}</span>
-        <h3>{workflow.name}</h3>
-        <p>{workflow.description}</p>
-        <button disabled={loading} onClick={() => open(workflow)}>打开节点画布 <ArrowRight size={16} weight="bold" /></button>
-      </article>)}</section> : <div className="empty-state"><Wrench size={28} weight="thin" /><strong>还没有节点工作流</strong><span>点右侧「新建节点工作流」搭一个，保存发布后就会出现在这里。</span></div>}
+      {workflows.length ? <section className="workflow-grid">{workflows.map((workflow) => {
+        // 只有作者本人能在这里看到草稿，所以「草稿」标记同时也是一次试运行的入口。
+        const draft = workflow.versionPublished === false;
+        return <article className={`workflow-card${draft ? " workflow-card--draft" : ""}`} key={workflow.id}>
+          <Wrench size={21} weight="bold" />
+          <span>{workflow.category}{draft ? " · 草稿" : ""}</span>
+          <h3>{workflow.name}</h3>
+          <p>{workflow.description}</p>
+          <small className="workflow-card__state">{draft ? "未发布 · 只有你能试运行" : workflow.versionNumber ? `V${workflow.versionNumber} · 已发布` : "尚无保存版本"}</small>
+          <button disabled={loading} onClick={() => open(workflow)}>{draft ? "草稿试运行" : "打开节点画布"} <ArrowRight size={16} weight="bold" /></button>
+        </article>;
+      })}</section> : <div className="empty-state"><Wrench size={28} weight="thin" /><strong>还没有节点工作流</strong><span>点右侧「新建节点工作流」搭一个：保存后你就能在这里试运行，发布后其他人也能看到。</span></div>}
     </div>
   </section>;
 }

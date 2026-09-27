@@ -282,6 +282,9 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
   const [referenceFile, setReferenceFile] = useState(null);
   const [runBusy, setRunBusy] = useState(false);
   const [runError, setRunError] = useState("");
+  // 发布是独立动作：点「保存并发布」先弹二次确认，确认后才真的发布。
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishBusy, setPublishBusy] = useState(false);
   const runSteps = run?.steps ?? [];
   const activeStep = run?.status === "in_progress" ? runSteps[run.currentStep] : null;
   const activeNode = activeStep ? editor.definition.nodes.find((node) => node.id === activeStep.id) : null;
@@ -340,20 +343,31 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
     window.setTimeout(() => flow?.fitView({ padding: 0.2, duration: 280 }), 0);
   };
   const fitCanvas = () => flow?.fitView({ padding: 0.2, duration: 280 });
+  /**
+   * 试运行与发布彻底分开：点运行只会把当前画布存成一个「草稿版本」再跑，
+   * 绝不会顺手发布给别人。发布是右下角那个单独按钮 + 二次确认的事。
+   */
   const runWorkflow = async () => {
     if (issues.length) { onNotice(issues[0]); return; }
     if (publishIssues(editor.definition).length) { onNotice(publishIssues(editor.definition)[0]); return; }
     setRunBusy(true);
     setRunError("");
     try {
-      if (dirty || !selected.versions?.length || (canPublish && selected.status !== "published")) {
-        const saved = await onSave(canPublish);
+      // 画布上有未保存改动、或这张图还没存过版本时，先落一个草稿版本再试运行。
+      if (dirty || !selected.versions?.length) {
+        const saved = await onSave(false);
         if (!saved) return;
       }
       const next = await startWorkflowRun(selected.id, {});
-      setRun(next); setRunPrompt(""); setRunNegativePrompt(""); onNotice("运行已启动：节点将按连接顺序执行。");
+      setRun(next); setRunPrompt(""); setRunNegativePrompt("");
+      onNotice(next.trialRun ? "草稿试运行已启动：这一版没有发布，其他人看不到。" : "运行已启动：节点将按连接顺序执行。");
     } catch (error) { onNotice(error.message); }
     finally { setRunBusy(false); }
+  };
+  const confirmPublish = async () => {
+    setPublishBusy(true);
+    try { if (await onSave(true)) setPublishOpen(false); }
+    finally { setPublishBusy(false); }
   };
   const executeCurrentNode = async () => {
     if (!run || !activeNode) return;
@@ -374,6 +388,24 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
     } catch (error) { setRunError(error.message); onNotice(error.message); }
     finally { setRunBusy(false); }
   };
+
+  /**
+   * 一键跑到底：试运行开始后，能自己跑的节点全部自己跑完（含负向提示词与出图），
+   * 不再要求一个节点一个节点点「执行当前节点」。
+   * 只有非现场给不可的两件事会停下来等人：没配默认值的创作需求、要上传的参考图片。
+   */
+  const autoAdvanced = useRef("");
+  useEffect(() => {
+    if (!run || run.status !== "in_progress" || runBusy || runError) return;
+    const step = run.steps[run.currentStep];
+    const node = editor.definition.nodes.find((item) => item.id === step?.id);
+    if (!node) return;
+    if (node.type === "load_image" || (node.type === "input" && !String(node.data?.value ?? "").trim())) return;
+    const key = `${run.id}:${run.currentStep}`;
+    if (autoAdvanced.current === key) return;
+    autoAdvanced.current = key;
+    void executeCurrentNode();
+  }, [run, runBusy, runError, editor.definition.nodes]);
 
   useEffect(() => {
     if (!flow || !editor.definition.nodes.length) return;
@@ -405,15 +437,27 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
       <aside className="workflow-inspector"><p>// INSPECTOR</p><h2>{selectedNode ? "节点配置" : selectedEdge ? "连线配置" : "工作流配置"}</h2>{selectedNode ? <div className="workflow-form"><div className="node-type-badge" style={{ "--node-color": palette[selectedNode.type]?.color }}>{palette[selectedNode.type]?.title}</div><label>节点名称<input value={selectedNode.data.label || ""} onChange={(event) => updateNode("label", event.target.value)} /></label><label>节点说明<textarea value={selectedNode.data.description || ""} onChange={(event) => updateNode("description", event.target.value)} /></label><label>默认值 / 参数<textarea value={selectedNode.data.value || ""} onChange={(event) => updateNode("value", event.target.value)} placeholder={selectedNode.type === "skill" ? "例如：提取纹样骨架；保持四方连续；应用低饱和配色" : "例如：1024×1024、写实摄影、低饱和"} /></label><label>示例输入<textarea value={selectedNode.data.exampleInput || ""} onChange={(event) => updateNode("exampleInput", event.target.value)} placeholder="给学习者一个可直接参考的输入" /></label><label>参数说明<textarea value={selectedNode.data.parameterDescription || ""} onChange={(event) => updateNode("parameterDescription", event.target.value)} placeholder="解释尺寸、风格、步骤数等参数如何影响结果" /></label><label>示例输出<textarea value={selectedNode.data.exampleOutput || ""} onChange={(event) => updateNode("exampleOutput", event.target.value)} placeholder="描述或粘贴该步骤预期的输出示例" /></label><label>预计用时<input type="number" min="0" max="1440" value={selectedNode.data.estimatedMinutes ?? 10} onChange={(event) => updateNode("estimatedMinutes", Number(event.target.value))} /><small>用于学生端步骤提示，不影响图结构。</small></label><button className="outline-button" onClick={duplicateNode}><Plus size={15} /> 复制节点</button><button className="danger-text-button" onClick={deleteNode}><X size={15} /> 删除节点</button></div> : selectedEdge ? <div className="workflow-edge-inspector"><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.source)?.data?.label || selectedEdge.source}</strong><FlowArrow size={18} weight="bold" /><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.target)?.data?.label || selectedEdge.target}</strong><span>这条连线代表数据从上游节点传递到下游节点。</span><button className="danger-text-button" onClick={deleteEdge}><X size={15} /> 删除连线</button></div> : <div className="workflow-form"><label>工作流名称<input value={editor.name} onChange={(event) => onChange("name", event.target.value)} /></label><label>工作流描述<textarea value={editor.description} onChange={(event) => onChange("description", event.target.value)} /></label><label>分类<input value={editor.category} onChange={(event) => onChange("category", event.target.value)} /></label><label>入口<select value={editor.entryType} onChange={(event) => onChange("entryType", event.target.value)}><option value="chat">教学对话</option><option value="workbench">设计工作台</option><option value="external_tool">外部工具</option></select></label><label>提示模板（可选）<textarea value={editor.promptTemplate} onChange={(event) => onChange("promptTemplate", event.target.value)} placeholder="供未来模型节点调用的全局提示词" /></label></div>}<div className={`workflow-graph-check ${issues.length ? "is-error" : ""}`}><strong>{issues.length ? "图结构待修复" : "图结构有效"}</strong><span>{issues[0] || `${editor.definition.nodes.length} 个节点 · ${editor.definition.edges.length} 条连接`}</span>{!issues.length && warnings[0] && <em>{warnings[0]}</em>}</div></aside>
     </section>
     <section className="workflow-canvas-runner" aria-live="polite">
-      <div><p>// RUN ON CANVAS</p><h2>{run?.status === "completed" ? "本次运行已完成" : activeNode ? `正在执行：${activeNode.data.label || activeNode.type}` : "从画布直接运行"}</h2><span>{run ? `${Math.round((run.currentStep / Math.max(run.totalSteps, 1)) * 100)}% · ${run.currentStep}/${run.totalSteps} 个节点已完成` : "先校验并发布当前节点图，再按连接关系逐节点执行。"}</span></div>
-      {!run && <button className="primary-button" disabled={loading || runBusy} onClick={runWorkflow}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}{canPublish ? (dirty || selected.status !== "published" ? "发布并运行" : "运行工作流") : "保存并试运行"}</button>}
+      <div><p>// TRY RUN ON CANVAS</p><h2>{run?.status === "completed" ? (run.trialRun ? "本次草稿试运行已完成" : "本次运行已完成") : activeNode ? `正在执行：${activeNode.data.label || activeNode.type}` : "从画布试运行"}</h2><span>{run ? `${run.trialRun ? "草稿试运行 · " : ""}${Math.round((run.currentStep / Math.max(run.totalSteps, 1)) * 100)}% · ${run.currentStep}/${run.totalSteps} 个节点已完成` : "点一次试运行就自动跑到出图，只有「没填默认值的创作需求」和「要上传的参考图片」会停下来问你。试运行不会发布；要让别人用，再点右下角的「保存并发布」。"}</span></div>
+      {!run && <button className="primary-button" disabled={loading || runBusy} onClick={runWorkflow}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}{dirty || !selected.versions?.length ? "保存草稿并试运行" : "试运行（不发布）"}</button>}
       {run?.status === "in_progress" && activeNode && <div className="workflow-canvas-runner__step"><div><strong>{activeNode.data.label || activeNode.type}</strong><small>{activeNode.data.description || palette[activeNode.type]?.hint}</small></div>{activeNode.type === "input" && <label>创作需求<textarea value={runPrompt} onChange={(event) => setRunPrompt(event.target.value)} placeholder="例如：为新生设计一张青绿色的传统纹样海报" /></label>}{activeNode.type === "negative_prompt" && <label>本次负向提示词<textarea value={runNegativePrompt} onChange={(event) => setRunNegativePrompt(event.target.value)} placeholder={activeNode.data.value || "例如：文字、水印、模糊"} maxLength={1500} /><small>留空使用节点默认值</small></label>}{activeNode.type === "load_image" && <label className="workflow-reference-upload">参考图片<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small></label>}<button className="primary-button" disabled={runBusy} onClick={executeCurrentNode}>{runBusy ? <SpinnerGap className="spin" /> : <Play size={16} weight="fill" />}执行当前节点</button></div>}
       {runBusy && activeNode?.type === "ksampler" && <small className="workflow-canvas-runner__status">图片服务可能排队数分钟，请勿重复点击或关闭页面。</small>}
       {runError && <p className="workflow-canvas-runner__error" role="alert">{runError}</p>}
       {run?.status === "completed" && <div className="workflow-canvas-runner__done"><CheckCircle size={20} weight="fill" /> 已完成。{run.context?.artifact?.downloadUrl && <a href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看生成作品</a>}{run.context?.text && <span>{run.context.text}</span>}</div>}
       {!canPublish && <small>草稿可自行试运行；发布给其他人使用需要教师、运营或管理员身份。</small>}
     </section>
-    <section className="workflow-runbar"><div><FlowArrow size={19} weight="bold" /><span>拖动节点：顶部栏；平移画布：空白处；缩放：滚轮。Delete 删除选中节点或连线，Ctrl/⌘+S 保存。</span></div><div><span className="workflow-canvas-selection-hint"><Keyboard size={14} /> {selectedNode ? `已选节点：${selectedNode.data.label || "未命名"}` : selectedEdge ? "已选连线" : "未选择对象"}</span><button className="outline-button" onClick={() => setPreview(issues.length ? issues[0] : `连接关系有效：${editor.definition.nodes.length} 个节点将按画布关系传递数据。`)}>本地预览</button><button className="outline-button" disabled={loading || runBusy} onClick={() => onSave(false)}><FloppyDisk size={16} /> 保存版本</button>{canPublish ? <button className="outline-button" disabled={loading || runBusy} onClick={() => onSave(true)}>保存并发布 <ArrowRight size={16} /></button> : <span className="workflow-publish-hint">保存后由教师、运营或管理员发布。</span>}</div></section>
+    <section className="workflow-runbar"><div><FlowArrow size={19} weight="bold" /><span>拖动节点：顶部栏；平移画布：空白处；缩放：滚轮。Delete 删除选中节点或连线，Ctrl/⌘+S 保存草稿（不发布）。</span></div><div><span className="workflow-canvas-selection-hint"><Keyboard size={14} /> {selectedNode ? `已选节点：${selectedNode.data.label || "未命名"}` : selectedEdge ? "已选连线" : "未选择对象"}</span><button className="outline-button" onClick={() => setPreview(issues.length ? issues[0] : `连接关系有效：${editor.definition.nodes.length} 个节点将按画布关系传递数据。`)}>本地预览</button><button className="outline-button" disabled={loading || runBusy} onClick={() => onSave(false)}><FloppyDisk size={16} /> 保存草稿版本</button>{canPublish ? <button className="outline-button workflow-publish-button" disabled={loading || runBusy} onClick={() => setPublishOpen(true)}>保存并发布 <ArrowRight size={16} /></button> : <span className="workflow-publish-hint">保存后由教师、运营或管理员发布。</span>}</div></section>
+    {publishOpen && <div className="workflow-publish-confirm" role="dialog" aria-modal="true" aria-label="确认发布工作流">
+      <button className="workflow-publish-confirm__scrim" aria-label="取消发布" onClick={() => setPublishOpen(false)} />
+      <section className="workflow-publish-confirm__card">
+        <p>// CONFIRM PUBLISH</p>
+        <h2>把这一版发布给所有人？</h2>
+        <span>发布后，学生与其他成员就能在「设计工作台」看到并运行它。试运行不会发布，只有这一步会改变别人看到的内容。</span>
+        <div className="workflow-publish-confirm__actions">
+          <button className="outline-button" disabled={publishBusy} onClick={() => setPublishOpen(false)}>再改改</button>
+          <button className="primary-button" disabled={publishBusy} onClick={confirmPublish}>{publishBusy ? <SpinnerGap className="spin" /> : <ArrowRight size={16} weight="bold" />} 确认发布</button>
+        </div>
+      </section>
+    </div>}
     {selected.versions?.length > 0 && <section className="table-panel workflow-versions"><div className="panel__heading"><div><p>// VERSION HISTORY</p><h2>版本记录</h2></div><span>{selected.versions.length} 个版本</span></div>{selected.versions.map((version) => <div key={version.id}><strong>V{version.versionNumber}</strong><span>{version.nodes?.length ?? version.steps?.length ?? 0} 个节点 · {version.edges?.length ?? 0} 条连接 · {version.published ? "已发布" : "草稿"}</span><small>{version.createdAt ? new Date(version.createdAt).toLocaleString("zh-CN") : ""}</small></div>)}</section>}
   </div>;
 }

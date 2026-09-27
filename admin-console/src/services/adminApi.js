@@ -201,7 +201,17 @@ export const uploadTemporaryCreationFile = (file, conversationLocalId) => {
   return request(`/creation-files${conversationLocalId ? `?conversationLocalId=${encodeURIComponent(conversationLocalId)}` : ""}`, { method: "POST", body: form });
 };
 
-export const getWorkflows = (query = "") => request(`/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
+/**
+ * 工作流目录。设计工作台会带上 includeDrafts：作者能看到自己的草稿去试运行，
+ * 服务端只对作者本人放行，其他人（含未登录）拿到的仍然是已发布工作流。
+ */
+export const getWorkflows = (query = "", options = {}) => {
+  const params = new URLSearchParams();
+  if (query) params.set("query", query);
+  if (options.includeDrafts) params.set("includeDrafts", "1");
+  const search = params.toString();
+  return request(`/workflows${search ? `?${search}` : ""}`);
+};
 export const getWorkflow = (workflowId) => request(`/workflows/${workflowId}`);
 export const getToolDirectoryLinks = () => request("/tool-directory-links");
 export const getManagedToolDirectoryLinks = () => request("/admin/tool-directory-links");

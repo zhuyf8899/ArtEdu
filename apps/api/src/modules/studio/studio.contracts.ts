@@ -5,6 +5,8 @@ export const catalogQuerySchema = z.object({
   query: z.string().trim().max(100).optional(),
   category: z.string().trim().max(100).optional(),
   discipline: z.string().trim().max(100).optional(),
+  // 只有「设计工作台」的目录会带上这个开关：作者要能看到自己的草稿并试运行。
+  includeDrafts: z.enum(["1", "true"]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });

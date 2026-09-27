@@ -58,7 +58,8 @@ function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items,
       <nav className="side-nav" aria-label="管理员导航">
         {items.map((item, index) => { const Icon = item.icon; return <button key={item.id} className={section === item.id ? "is-active" : ""} onClick={() => { onSectionChange(item.id); onClose(); }}><span className="side-nav__index">0{index + 1}</span><Icon size={20} weight={section === item.id ? "fill" : "regular"} /><span>{item.label}</span>{item.id === "reviews" && <b>{pendingCount}</b>}</button>; })}
       </nav>
-      <button className="sidebar__back" onClick={onBack}>← 返回 ArtEdu 测试站</button>
+      {/* 管理台是独立页面，站点顶栏不在场：这里必须留一个明确的「返回首页」入口。 */}
+      <button className="sidebar__back" onClick={onBack}>← 返回首页（ArtEdu 测试站）</button>
       <div className="sidebar__notice"><div className="sidebar__notice-label"><Sparkle size={15} weight="fill" /> 系统状态</div><strong>本地模型执行未启用</strong><div className="status-line"><span /> {dashboard ? `${dashboard.activeModels} 个模型配置已启用` : "正在读取模型配置"}</div></div>
       <div className="sidebar__account"><div className="avatar avatar--light">{actor?.shortName?.slice(0, 1) ?? "管"}</div><div><strong>{actor?.shortName ?? "平台管理员"}</strong><span>{actor?.roleLabel ?? "管理员"}</span></div><CaretDown size={16} weight="bold" /></div>
     </aside>
@@ -88,7 +89,7 @@ function Topbar({ section, onOpenMenu, actor, onBack, users, reviews, dashboard,
   return <header className="topbar">
     <button className="icon-button menu-button" onClick={onOpenMenu} aria-label="打开导航"><List size={22} weight="bold" /></button>
     <div className="topbar__title"><p>// CONTROL CENTER</p><div><strong>{titles[section][0]}</strong><span>{titles[section][1]}</span></div></div>
-    <button className="topbar__back" onClick={onBack}>← ArtEdu</button>
+    <button className="topbar__back" onClick={onBack}>← 返回首页</button>
     <form className="global-search" onSubmit={(event) => { event.preventDefault(); if (results[0]) { onNavigate(results[0].section); setQuery(""); } }}><MagnifyingGlass size={18} weight="bold" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="全局搜索" placeholder="搜索用户或投稿作品……" />{query ? <button type="button" aria-label="清空搜索" onClick={() => setQuery("")}><X size={14} weight="bold" /></button> : <kbd>Enter</kbd>}{results.length > 0 && <div className="admin-search-results">{results.map((result) => <button type="button" key={result.id} onClick={() => { onNavigate(result.section); setQuery(""); }}><strong>{result.label}</strong><span>{result.detail}</span></button>)}</div>}</form>
     <div className="topbar__notification-wrap"><button className="topbar__alert" aria-label="通知" aria-expanded={showNotifications} onClick={() => setShowNotifications((open) => !open)}><Bell size={21} weight="bold" />{notifications.length > 0 && <span>{notifications.length}</span>}</button>{showNotifications && <section className="notification-panel"><header><strong>待处理提醒</strong><button onClick={() => setShowNotifications(false)} aria-label="关闭通知"><X size={15} weight="bold" /></button></header>{notifications.length ? notifications.map((item) => <button key={item.id} onClick={() => { onNavigate(item.section); setShowNotifications(false); }}><strong>{item.title}</strong><span>{item.detail}</span></button>) : <p>目前没有待处理事项。</p>}</section>}</div>
     <div className="topbar__admin"><div className="avatar">{actor?.shortName?.slice(0, 1) ?? "管"}</div><div><strong>{actor?.shortName ?? "管理员"}</strong><span>{actor?.roleLabel ?? "超级管理员"}</span></div></div>

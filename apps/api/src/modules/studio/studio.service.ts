@@ -93,9 +93,13 @@ export class StudioService {
     return this.mapToolDirectoryLink(result.rows[0]);
   }
 
-  async listWorkflows(query: CatalogQuery) {
+  async listWorkflows(query: CatalogQuery, actor: Actor | null = null) {
+    // includeDrafts 只在「设计工作台」目录里打开：作者能看到并试运行自己的草稿，
+    // 其他人（含未登录）依旧只看到已发布工作流。
+    const withDrafts = Boolean(actor) && query.includeDrafts !== undefined;
     const values: unknown[] = [];
-    const where = ["w.status = 'published'"];
+    const where = [withDrafts ? "(w.status = 'published' OR w.created_by = $1)" : "w.status = 'published'"];
+    if (withDrafts) values.push(actor!.id);
     if (query.query) {
       values.push(`%${query.query}%`);
       where.push(`(w.name ILIKE $${values.length} OR w.description ILIKE $${values.length})`);
@@ -106,13 +110,14 @@ export class StudioService {
     }
     values.push(query.pageSize, (query.page - 1) * query.pageSize);
     const result = await this.database.query(`
-      SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url,
+      SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url, w.status,
         latest.id AS version_id, latest.version_number, latest.definition_json,
+        latest.published_at,
         COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN LATERAL (
-        SELECT id, version_number, definition_json FROM workflow_versions
-        WHERE workflow_id = w.id AND published_at IS NOT NULL
+        SELECT id, version_number, definition_json, published_at FROM workflow_versions
+        WHERE workflow_id = w.id AND (published_at IS NOT NULL OR ${withDrafts ? "w.created_by = $1" : "FALSE"})
         ORDER BY version_number DESC LIMIT 1
       ) latest ON TRUE
       WHERE ${where.join(" AND ")}
@@ -122,18 +127,24 @@ export class StudioService {
     return { items: result.rows.map((row) => this.mapWorkflow(row)), page: query.page, pageSize: query.pageSize };
   }
 
-  async getWorkflow(workflowId: string) {
+  async getWorkflow(workflowId: string, actor: Actor | null = null) {
+    // 作者本人可以直接打开自己还没发布的草稿去试运行；其他人只能打开已发布版本。
+    const values: unknown[] = [workflowId];
+    const visibility = actor ? "w.status = 'published' OR w.created_by = $2" : "w.status = 'published'";
+    if (actor) values.push(actor.id);
     const result = await this.database.query(`
-      SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url,
+      SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url, w.status,
         latest.id AS version_id, latest.version_number, latest.definition_json, latest.prompt_template,
+        latest.published_at,
         COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN LATERAL (
-        SELECT * FROM workflow_versions WHERE workflow_id = w.id AND published_at IS NOT NULL
+        SELECT * FROM workflow_versions
+        WHERE workflow_id = w.id AND (published_at IS NOT NULL OR ${actor ? "w.created_by = $2" : "FALSE"})
         ORDER BY version_number DESC LIMIT 1
       ) latest ON TRUE
-      WHERE w.id = $1 AND w.status = 'published'
-    `, [workflowId]);
+      WHERE w.id = $1 AND (${visibility})
+    `, values);
     if (!result.rows[0]) throw new NotFoundException("工作流不存在或尚未发布");
     return this.mapWorkflow(result.rows[0]);
   }
@@ -240,25 +251,30 @@ export class StudioService {
   }
 
   async startWorkflow(actor: Actor, workflowId: string, input: WorkflowRunInput) {
+    // 试运行与发布解耦：作者本人（以及教师/运营/管理员）可以直接跑最新版本，
+    // 包括还没发布的草稿；其它人仍然只能跑已发布版本。
+    const canTrialDraft = WORKFLOW_PUBLISH_ROLES.some((role) => actor.roles.includes(role));
     const result = await this.database.query(`
       SELECT w.id,w.name,w.description,w.category,w.entry_type,w.entry_url,w.status,w.created_by,
-        latest.id AS version_id,latest.version_number,latest.definition_json,latest.prompt_template,
+        latest.id AS version_id,latest.version_number,latest.definition_json,latest.prompt_template,latest.published_at,
         COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN LATERAL (
         SELECT * FROM workflow_versions
-        WHERE workflow_id=w.id AND (published_at IS NOT NULL OR w.created_by=$2)
+        WHERE workflow_id=w.id AND (published_at IS NOT NULL OR w.created_by=$2 OR $3::boolean)
         ORDER BY version_number DESC LIMIT 1
       ) latest ON TRUE
-      WHERE w.id=$1 AND (w.status='published' OR w.created_by=$2) AND w.status<>'archived'
-    `, [workflowId, actor.id]);
+      WHERE w.id=$1 AND (w.status='published' OR w.created_by=$2 OR $3::boolean) AND w.status<>'archived'
+    `, [workflowId, actor.id, canTrialDraft]);
     if (!result.rows[0]) throw new NotFoundException("工作流不存在或尚未发布");
     const workflow = this.mapWorkflow(result.rows[0]);
     if (!workflow.versionId) throw new ConflictException("工作流还没有可运行版本");
     this.assertExecutableDefinition(workflow.definition);
     const initialPrompt = typeof input.context.prompt === "string" ? input.context.prompt.trim().slice(0, 10000) : "";
     const initialSize = typeof input.context.size === "string" && /^\d{3,4}x\d{3,4}$/.test(input.context.size) ? input.context.size : "1024x1024";
-    const runContext = { initialPrompt, initialSize, size: initialSize, nodeResults: {}, nodeStates: {} };
+    // 这次运行跑的是草稿还是已发布版本，前端要据此标注「草稿试运行」。
+    const trialRun = !result.rows[0].published_at;
+    const runContext = { initialPrompt, initialSize, size: initialSize, trialRun, versionNumber: workflow.versionNumber, nodeResults: {}, nodeStates: {} };
     const id = `workflow-run-${randomUUID()}`;
     await this.database.transaction(async (client) => {
       await client.query(`
@@ -272,8 +288,9 @@ export class StudioService {
 
   async listMyRuns(actor: Actor) {
     const result = await this.database.query(`
-      SELECT r.*, w.name AS workflow_name, w.category
+      SELECT r.*, w.name AS workflow_name, w.category, v.version_number, v.published_at
       FROM workflow_runs r JOIN workflows w ON w.id = r.workflow_id
+      JOIN workflow_versions v ON v.id = r.workflow_version_id
       WHERE r.user_id = $1 ORDER BY r.updated_at DESC
     `, [actor.id]);
     // Pass the mapper through an arrow function so it keeps the service
@@ -321,9 +338,11 @@ export class StudioService {
     try {
     const saved = this.workflowContext(current.context);
     const parents = current.edges.filter((edge: Record<string, any>) => edge.target === node.id).map((edge: Record<string, any>) => edge.source);
+    // 起跑时约定的需求为空时要留空（undefined），不能写成空字符串：
+    // 空字符串会让输入节点判空失败，把「节点里已经配好默认值」的草稿试运行挡在门外。
     const context = parents.length
       ? this.mergeNodeStates(saved, parents)
-      : this.workflowContext({ prompt: saved.initialPrompt, size: saved.initialSize });
+      : this.workflowContext({ prompt: saved.initialPrompt || undefined, size: saved.initialSize });
     if (input.prompt && node.type !== "input") throw new BadRequestException("只可在输入节点填写创作需求");
     if (input.negativePrompt !== undefined && node.type !== "negative_prompt") throw new BadRequestException("只可在负向提示词节点填写排除内容");
     if (input.referenceFileId && node.type !== "load_image") throw new BadRequestException("只可在参考素材节点上传图片");
@@ -610,7 +629,7 @@ export class StudioService {
 
   private async getRun(actor: Actor, runId: string) {
     const result = await this.database.query(`
-      SELECT r.*,w.name AS workflow_name,w.category,v.definition_json
+      SELECT r.*,w.name AS workflow_name,w.category,v.definition_json,v.version_number,v.published_at
       FROM workflow_runs r JOIN workflows w ON w.id=r.workflow_id
       JOIN workflow_versions v ON v.id=r.workflow_version_id
       WHERE r.id=$1 AND r.user_id=$2
@@ -662,8 +681,13 @@ export class StudioService {
       category: row.category,
       entryType: row.entry_type,
       entryUrl: row.entry_url,
+      status: row.status ?? null,
       versionId: row.version_id,
       versionNumber: row.version_number,
+      // null = 这次查询没带版本发布状态（例如管理端列表自己另算），
+      // false = 最新版本还是草稿，true = 最新版本已发布。
+      publishedAt: row.published_at ?? null,
+      versionPublished: row.published_at === undefined ? null : Boolean(row.published_at),
       stepCount: Number(row.step_count ?? definition.nodes.length),
       definition,
       nodes: definition.nodes,
@@ -761,7 +785,19 @@ export class StudioService {
 
   private mapRun(row: Record<string, any>) {
     const definition = this.normalizeWorkflowDefinition(row.definition_json);
-    return { id: row.id, workflowId: row.workflow_id, workflowName: row.workflow_name, category: row.category, status: row.status, currentStep: Number(row.current_step), totalSteps: Number(row.total_steps), context: row.context_json ?? {}, definition, nodes: definition.nodes, edges: definition.edges, steps: this.definitionToSteps(definition), startedAt: row.started_at, completedAt: row.completed_at, updatedAt: row.updated_at };
+    // 试运行跑的是草稿还是已发布版本：运行页据此显示「草稿试运行」。
+    const versionPublished = row.published_at === undefined ? null : Boolean(row.published_at);
+    const context = row.context_json ?? {};
+    return {
+      id: row.id, workflowId: row.workflow_id, workflowName: row.workflow_name, category: row.category,
+      status: row.status, currentStep: Number(row.current_step), totalSteps: Number(row.total_steps),
+      context, definition, nodes: definition.nodes, edges: definition.edges, steps: this.definitionToSteps(definition),
+      versionId: row.workflow_version_id ?? null,
+      versionNumber: row.version_number ?? null,
+      versionPublished,
+      trialRun: context.trialRun === true || versionPublished === false,
+      startedAt: row.started_at, completedAt: row.completed_at, updatedAt: row.updated_at,
+    };
   }
 
   private workflowContext(value: Record<string, any> | null | undefined) {
@@ -772,6 +808,7 @@ export class StudioService {
     context.size ??= "1024x1024";
     return context as {
       prompt?: string; negativePrompt?: string; initialPrompt?: string; initialSize?: string; text?: string; size: string; modelConfigId?: string;
+      trialRun?: boolean; versionNumber?: number;
       adapters: Array<{ type: string; value: string }>;
       referenceFileId?: string;
       artifact?: { downloadUrl?: string; fileName?: string; mimeType?: string; fileSize?: number };
