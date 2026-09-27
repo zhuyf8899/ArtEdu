@@ -380,7 +380,12 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
   };
   const executeCurrentNode = async () => {
     if (!run || !activeNode) return;
-    if (activeNode.type === "input" && !runPrompt.trim() && !String(activeNode.data.value || "").trim()) { onNotice("请填写创作需求，或在输入节点配置默认值。"); return; }
+    // 只有整条链路一句提示词都没有时，才真的需要人写一句需求；
+    // 工作流自带正向提示词时这里必须放行，否则自动推进会被这条守卫悄悄掐断。
+    if (activeNode.type === "input" && !runPrompt.trim() && !String(activeNode.data.value || "").trim() && !nodesCarryPrompt(editor.definition.nodes)) {
+      onNotice("请填写创作需求，或在输入节点配置默认值。");
+      return;
+    }
     setRunBusy(true);
     setRunError("");
     try {
