@@ -123,10 +123,42 @@ export class AgentWorkspaceService {
   }
 }
 
-function contentType(filePath: string) {
-  if (/\.html?$/i.test(filePath)) return "text/html; charset=utf-8";
-  if (/\.css$/i.test(filePath)) return "text/css; charset=utf-8";
-  if (/\.js$/i.test(filePath)) return "text/javascript; charset=utf-8";
-  if (/\.json$/i.test(filePath)) return "application/json; charset=utf-8";
+/**
+ * 工作区文件的响应类型。
+ *
+ * 这里必须把 Agent 真正会写的产物列全：早期只识别 html/css/js/json，其余一律
+ * text/plain + nosniff，于是 Agent 画出来的 .svg 会被浏览器当成纯文本下载/显示，
+ * 引用它的页面里图片直接不渲染 —— 看起来就是"Agent 支持了 SVG 但画出来是白板"。
+ * 图片、字体、音视频同理：预览页引用它们时也依赖正确的 Content-Type。
+ */
+export function workspaceContentType(filePath: string) {
+  const imageTypes: Record<string, string> = {
+    svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+    webp: "image/webp", gif: "image/gif", avif: "image/avif", bmp: "image/bmp", ico: "image/x-icon",
+  };
+  const extension = /\.([A-Za-z0-9]+)$/.exec(filePath)?.[1]?.toLowerCase() ?? "";
+  const image = imageTypes[extension];
+  if (image) return image;
+  if (extension === "html" || extension === "htm") return "text/html; charset=utf-8";
+  if (extension === "css") return "text/css; charset=utf-8";
+  if (extension === "js" || extension === "mjs") return "text/javascript; charset=utf-8";
+  if (extension === "json" || extension === "map") return "application/json; charset=utf-8";
+  if (extension === "md" || extension === "markdown") return "text/markdown; charset=utf-8";
+  if (extension === "csv") return "text/csv; charset=utf-8";
+  if (extension === "xml") return "application/xml; charset=utf-8";
+  if (extension === "txt" || extension === "text") return "text/plain; charset=utf-8";
+  if (extension === "woff") return "font/woff";
+  if (extension === "woff2") return "font/woff2";
+  if (extension === "ttf") return "font/ttf";
+  if (extension === "otf") return "font/otf";
+  if (extension === "mp4") return "video/mp4";
+  if (extension === "webm") return "video/webm";
+  if (extension === "mp3") return "audio/mpeg";
+  if (extension === "wav") return "audio/wav";
+  if (extension === "pdf") return "application/pdf";
   return "text/plain; charset=utf-8";
+}
+
+function contentType(filePath: string) {
+  return workspaceContentType(filePath);
 }

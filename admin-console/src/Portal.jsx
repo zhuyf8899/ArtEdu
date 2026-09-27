@@ -139,6 +139,22 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
   const nextCourse = useMemo(() => data.courses.find((course) => course.progressPercent > 0 && course.progressPercent < 100) ?? data.courses[0], [data.courses]);
   const showToast = notify;
+  const suggestFollowups = async ({ question, answer, modelId }, signal) => {
+    if (!data.creation.enabled || !modelId) return null;
+    const run = await createAgentRun({
+      scenario: "chat",
+      prompt: `用户刚问：${question.slice(0, 1200)}\n\n助教回答：${answer.slice(0, 4000)}\n\n请给出恰好 3 个与这轮内容直接相关、适合继续追问的简短问题。只输出 JSON 字符串数组，不要解释。`,
+      parameters: { source: "followup-suggestions" },
+    }, { signal });
+    const completed = await executeAgentRun(run.id, {
+      mode: "server",
+      providerId: modelId,
+      systemPrompt: "你只负责为艺术教育对话拟定后续提问。输出恰好 3 个自然、具体、互不重复的问题，格式为 JSON 字符串数组。不要调用工具，不要回答问题。",
+      model: { maxTokens: 240, toolChoice: "auto" },
+    }, { signal });
+    if (completed.status !== "succeeded") throw new Error("建议问题生成未完成");
+    return [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent")?.content ?? "";
+  };
   // signal 由创作页下发：用户点「暂停输出」时中断在途请求。
   // onDelta 同样由创作页下发：正文增量实时回到气泡里，实现逐字输出。
   const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal, onDelta) => {
@@ -248,7 +264,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
         {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
 
-        {section === "creation" && <AiCreationWorkspace key={creationId || (creationStartNew ? "new" : "latest")} account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} creation={data.creation} onNotice={showToast} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
+        {section === "creation" && <AiCreationWorkspace key={creationId || (creationStartNew ? "new" : "latest")} account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} onSuggest={suggestFollowups} creation={data.creation} onNotice={showToast} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
       </Suspense>
       </div>
     </main>

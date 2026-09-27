@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowRight, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
 import { AiMarkdown, safeReplyUrl } from "./AiMarkdown.js";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
@@ -11,11 +11,13 @@ import {
   createConversation, deleteConversation, listConversations, makeModelContext, saveConversation,
 } from "./conversationStore.js";
 import { uploadTemporaryCreationFile } from "./services/adminApi.js";
+import { createDeltaBuffer } from "./chatStream.js";
+import { findReplyIndex, mergeFollowupQuestions, parseFollowupQuestions, withSuggestions } from "./followupQuestions.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
 
 // 专用创作对话页：左侧历次对话，右侧长文本阅读区与续写输入。
 // 起始页提交的需求以 pending 形式落进本地对话，由本页接管真实的模型/演示调用。
-export function AiCreationWorkspace({ account, creation, ready = true, onCreate, onNotice, startNew = false, conversationId = "", onBack = () => {} }) {
+export function AiCreationWorkspace({ account, creation, ready = true, onCreate, onSuggest, onNotice, startNew = false, conversationId = "", onBack = () => {} }) {
   const [conversations, setConversations] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -30,13 +32,19 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   const [pageCount, setPageCount] = useState("");
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [openConversationMenuId, setOpenConversationMenuId] = useState("");
+  const [suggestingFor, setSuggestingFor] = useState(null);
   const { confirmAction } = useFeedback();
 
   const conversationsRef = useRef([]);
+  // 消息列表的"最新值"引用：让「重新输出」这类回调保持稳定，不必把 messages 放进依赖。
+  // 否则它每帧都会换一个函数身份，memo 化的消息行每次增量都要全部重渲染，性能改良就白做了。
+  const messagesRef = useRef([]);
   const loadedIdRef = useRef("");
   const ranPendingRef = useRef("");
   const scrollRef = useRef(null);
   const referenceInput = useRef(null);
+  const promptInput = useRef(null);
+  const activeIdRef = useRef("");
   // 本轮生成的取消句柄：暂停输出只中断当前这一轮，不影响后续请求。
   const abortRef = useRef(null);
 
@@ -52,6 +60,9 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
 
   const activeConversation = conversations.find((item) => item.id === activeId) ?? null;
   const method = useMemo(() => creationMethod(methodId), [methodId]);
+
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const updateConversations = useCallback((updater) => {
     setConversations((current) => {
@@ -98,6 +109,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     setReference(null);
     setPrompt("");
     setSearchEnabled(false);
+    setSuggestingFor(null);
   }, []);
 
   useEffect(() => {
@@ -113,6 +125,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     setReference(target.reference ?? target.pending?.reference ?? null);
     setPageCount(target.pending?.pageCount ?? target.pageCount ?? "");
     setSearchEnabled(target.pending?.searchEnabled === true);
+    setSuggestingFor(null);
   }, [activeId, conversations, loaded]);
 
   const persist = useCallback(async (id, patch) => {
@@ -149,6 +162,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
    */
   const generate = useCallback(async ({ conversation, baseMessages, content, operationDefinition, methodId: usedMethodId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount, modelId, modelName }) => {
     setSending(true);
+    setSuggestingFor(null);
     setFailed(false);
     const controller = new AbortController();
     abortRef.current = controller;
@@ -161,11 +175,15 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     const attachmentName = usedReference?.fileName ? `\n\n📎 已附参考文件：${usedReference.fileName}` : "";
     let rendered = [...baseMessages, { role: "user", content: `${content}${attachmentName}`, attachment: usedReference ?? null }, { role: "assistant", content: "", placeholder: placeholderText, streaming: true }];
     setMessages(rendered);
-    const onDelta = (text) => {
-      const last = rendered[rendered.length - 1];
-      rendered = [...rendered.slice(0, -1), { ...last, content: `${last.content ?? ""}${text}` }];
-      setMessages(rendered);
-    };
+    // 增量先合帧再上屏：SSE 一秒可能来几十帧，逐帧 setState 会让长回复越写越卡。
+    const deltaBuffer = createDeltaBuffer({
+      onFlush: (text) => {
+        const last = rendered[rendered.length - 1];
+        rendered = [...rendered.slice(0, -1), { ...last, content: `${last.content ?? ""}${text}` }];
+        setMessages(rendered);
+      },
+    });
+    const onDelta = (text) => { deltaBuffer.push(text); };
     try {
       await persist(conversation.id, { pending: null, methodId: usedMethodId, messages: rendered });
       const result = await onCreate({
@@ -175,16 +193,48 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),
         context,
       }, controller.signal, onDelta);
+      // 最终正文以服务端返回为准，尚未画出的那一帧不必再补。
+      deltaBuffer.cancelFrame();
       const finalMessages = [...rendered.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), sources: result?.sources ?? null, localFile: result?.localFile ?? null }];
       setMessages(finalMessages);
       setFailed(!result);
       if (!result) setPrompt(content);
       await persist(conversation.id, { messages: finalMessages, methodId: usedMethodId, pageCount: usedPageCount ?? "" });
+      if (result) {
+        const replyIndex = finalMessages.length - 1;
+        const replyContent = finalMessages[replyIndex].content;
+        const stopSuggesting = () => setSuggestingFor((value) => value?.conversationId === conversation.id && value?.replyIndex === replyIndex ? null : value);
+        setSuggestingFor({ conversationId: conversation.id, replyIndex });
+        const suggestionModelId = models.find((item) => item.capabilities?.includes("chat"))?.id;
+        void (async () => {
+          let questions = [];
+          try {
+            if (suggestionModelId && onSuggest) {
+              const raw = await onSuggest({ question: content, answer: replyContent, modelId: suggestionModelId });
+              questions = parseFollowupQuestions(raw);
+            }
+          } catch (error) {
+            console.warn("[creation] 建议提问生成失败", error);
+          }
+          questions = mergeFollowupQuestions(questions);
+          // 定位这条回复时不能看数组长度：长对话会被自动压缩，用户也可能已经发了新消息。
+          // 按「助手回复 + 正文一致」从后往前找，本地与已落库的两份记录各自定位。
+          if (activeIdRef.current === conversation.id) setMessages((items) => withSuggestions(items, findReplyIndex(items, replyContent), questions));
+          const current = conversationsRef.current.find((item) => item.id === conversation.id);
+          const storedIndex = findReplyIndex(current?.messages, replyContent);
+          if (!current || storedIndex === -1) { stopSuggesting(); return; }
+          await persist(conversation.id, { messages: withSuggestions(current.messages, storedIndex, questions) }).catch(() => {});
+          stopSuggesting();
+        })();
+      }
     } catch (error) {
       if (error?.name === "AbortError") {
+        // 暂停时要把还在缓冲里的最后一段正文交给界面，否则会丢掉已生成的尾巴。
+        deltaBuffer.flush();
         await settlePaused(conversation.id, rendered, content);
         return;
       }
+      deltaBuffer.cancelFrame();
       setFailed(true);
       setPrompt(content);
       const failedMessages = [...rendered.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true }];
@@ -196,7 +246,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       if (abortRef.current === controller) abortRef.current = null;
       setSending(false);
     }
-  }, [onCreate, onNotice, persist, serviceReady, settlePaused]);
+  }, [models, onCreate, onNotice, onSuggest, persist, serviceReady, settlePaused]);
 
   // 起始页带过来的 pending 任务：转成统一入口的参数后执行。
   const run = useCallback(async (conversation, job, modeDefinition, modelName) => {
@@ -226,10 +276,15 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     void run(target, job, creationMethod(job.methodId), modelName);
   }, [activeId, conversations, loaded, models, model, run, ready]);
 
+  // 跟随输出自动滚到底：流式时正文长度一直在变，所以增量长度也要进依赖；
+  // 但用户往回翻看历史时（离底部较远）不抢滚动，直接把控制权留给用户。
+  const streamingLength = messages[messages.length - 1]?.content?.length ?? 0;
   useEffect(() => {
     const node = scrollRef.current;
-    if (node) node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
-  }, [messages.length]);
+    if (!node) return;
+    if (node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;
+    node.scrollTo({ top: node.scrollHeight, behavior: "auto" });
+  }, [messages.length, streamingLength, messages[messages.length - 1]?.suggestions?.length, suggestingFor]);
 
   const send = async (event) => {
     event.preventDefault();
@@ -293,6 +348,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
    */
   const retryReply = useCallback(async (index) => {
     if (sending || !ready) return;
+    const messages = messagesRef.current;
     const previousUser = [...messages.slice(0, index)].reverse().find((message) => message.role === "user");
     if (!previousUser?.content) return;
     const conversation = conversationsRef.current.find((item) => item.id === activeId);
@@ -319,12 +375,18 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       modelId: serviceReady && modelSupportsOperation ? model?.id : undefined,
       modelName: modelLabel,
     });
-  }, [activeId, generate, messages, methodId, model, modelLabel, onNotice, pageCount, quotaBlocked, ready, reference, searchEnabled, sending, serviceReady]);
+  }, [activeId, generate, methodId, model, modelLabel, onNotice, pageCount, quotaBlocked, ready, reference, searchEnabled, sending, serviceReady]);
 
   const editPrompt = useCallback((content) => {
     setPrompt(content);
     onNotice?.("已带回输入框，可修改后重新发送", "success");
   }, [onNotice]);
+
+  // 点一条建议提问＝带回输入框并聚焦，等用户确认后再发送（不擅自替他发问）。
+  const pickSuggestion = useCallback((content) => {
+    setPrompt(content);
+    promptInput.current?.focus();
+  }, []);
 
   const removeConversation = async (targetId = activeId) => {
     const target = conversationsRef.current.find((item) => item.id === targetId);
@@ -390,16 +452,21 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       <section className="creation-canvas__conversation ai-conversation">
         <header className="creation-canvas__conversation-title"><div><p>{method.eyebrow}</p><h1>{activeConversation?.title ?? "新的创作对话"}</h1></div><span>建议模式：{method.label}</span></header>
         <div className="ai-thread creation-canvas__thread" ref={scrollRef} aria-busy={sending} aria-live="polite">
-              {messages.length ? messages.map((message, index) => {
-                return message.role === "user"
-                  ? <div className="ai-message--user" aria-label="你的问题" key={`${index}-${message.role}`}><span className="ai-message__author">你</span><p>{message.content}</p><button type="button" className="ai-message__action" onClick={() => editPrompt(message.content)}><PencilSimple size={14} />编辑</button></div>
-                  : <div className={`ai-message ai-message--assistant${message.streaming ? " ai-message--streaming" : ""}`} key={`${index}-${message.role}`}><span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span><div className="ai-message__body"><span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span><AiMarkdown>{message.content || message.placeholder}</AiMarkdown>{(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}<div className="ai-message__actions"><button type="button" onClick={() => copyReply(message.content)} title="复制回复"><Copy size={14} />复制</button><button type="button" onClick={() => retryReply(index)} title="清除这一轮的回复并重新生成"><ArrowClockwise size={14} />重新输出</button></div></div></div>;
-              }) : <div className="ai-thread__empty creation-canvas__empty">
+              {messages.length ? messages.map((message, index) => <ChatMessage
+                key={`${index}-${message.role}`}
+                message={message}
+                index={index}
+                suggesting={suggestingFor?.conversationId === activeId && suggestingFor.replyIndex === index}
+                onCopy={copyReply}
+                onRetry={retryReply}
+                onEdit={editPrompt}
+                onPick={pickSuggestion}
+              />) : <div className="ai-thread__empty creation-canvas__empty">
                 <span><Sparkle size={25} weight="fill" /></span>
                 <strong>今天，想弄明白什么？</strong>
                 <p>{loadError || "提问、讲解、思路梳理，直接说就行；需要产物时，在这句话里明确写出“生成图片 / 生成网页 / 生成 PPT”等意图。"}</p>
-                <div>
-                  {suggestions.map((item) => <button type="button" key={item} onClick={() => setPrompt(item)}>{titleFromPrompt(item)}</button>)}
+                <div className="creation-canvas__starter-suggestions" aria-label="建议提问内容">
+                  {suggestions.slice(0, 3).map((item) => <button type="button" key={item} onClick={() => { setPrompt(item); promptInput.current?.focus(); }}>{item}</button>)}
                 </div>
               </div>}
         </div>
@@ -408,7 +475,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       <form className="creation-canvas__composer" onSubmit={send}>
         <div className="creation-canvas__input">
               <label htmlFor="artedu-thread-prompt" className="sr-only">继续描述你的创作想法</label>
-              <textarea id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={2} disabled={sending} />
+              <textarea ref={promptInput} id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={2} disabled={sending} />
               <div className="creation-canvas__toolbar">
                 <div className="creation-canvas__tools">
                 <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx,.txt,.md,.csv" onChange={async (event) => {
@@ -452,6 +519,40 @@ function responseText(result, methodDefinition) {
   if (result.content) return result.localFile?.downloadUrl ? `${result.content}\n\n[打开本次生成的 ${result.localFile.fileName ?? methodDefinition.label}](${result.localFile.downloadUrl})` : result.content;
   return `任务 ${String(result.id).slice(0, 8)} 已创建（${methodDefinition.label}）。你可以继续输入下一步。`;
 }
+
+/**
+ * 一条对话消息。
+ *
+ * 用 memo 包住是有意的：流式输出时每帧只有最后一条气泡的 content 变化，
+ * 历史消息的对象引用与 props 都没变，可以直接跳过重渲染；再配合 memo 化的
+ * AiMarkdown，历史正文的 Markdown 解析也不会被反复触发（这是长对话发卡的主因）。
+ */
+const ChatMessage = memo(function ChatMessage({ message, index, suggesting, onCopy, onRetry, onEdit, onPick }) {
+  if (message.role === "user") return <div className="ai-message--user" aria-label="你的问题">
+    <span className="ai-message__author">你</span>
+    <p>{message.content}</p>
+    <button type="button" className="ai-message__action" onClick={() => onEdit(message.content)}><PencilSimple size={14} />编辑</button>
+  </div>;
+  const pendingSuggestions = suggesting && !message.suggestions?.length;
+  return <div className={`ai-message ai-message--assistant${message.streaming ? " ai-message--streaming" : ""}`}>
+    <span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span>
+    <div className="ai-message__body">
+      <span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span>
+      <AiMarkdown>{message.content || message.placeholder}</AiMarkdown>
+      {(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}
+      <div className="ai-message__actions">
+        <button type="button" onClick={() => onCopy(message.content)} title="复制回复"><Copy size={14} />复制</button>
+        <button type="button" onClick={() => onRetry(index)} title="清除这一轮的回复并重新生成"><ArrowClockwise size={14} />重新输出</button>
+      </div>
+      {(message.suggestions?.length > 0 || pendingSuggestions) && <div className="creation-canvas__followups" aria-label="建议提问内容">
+        <span>建议提问内容</span>
+        {message.suggestions?.length
+          ? <div>{message.suggestions.map((item) => <button type="button" key={item} onClick={() => onPick(item)}>{item}<ArrowRight size={14} weight="bold" /></button>)}</div>
+          : <p>正在生成建议提问…</p>}
+      </div>}
+    </div>
+  </div>;
+});
 
 /**
  * 联网检索来源卡片。

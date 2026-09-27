@@ -14,6 +14,10 @@
 - 案例社区投稿、外部资源登记、审核发布、评论、点赞与收藏。
 - 全站统一搜索，覆盖教学资源、工作流与案例社区，并提供内容类型和标签组合筛选。
 - 全站统一操作反馈、危险操作确认和可重试加载状态；首页创作输入支持按账号自动保存草稿。
+- 创作对话流式输出，并在回复结束后给出三条「建议提问内容」（长对话自动压缩后仍然保留）。
+- Agent 可直接绘制 SVG 图形：工作区 `.svg` 按图片下发，HTML 与 SVG 预览分别套用沙箱与禁脚本策略。
+- 课程资料按类型显示：PDF 交给浏览器新标签页阅读，视频可页内播放或放大观看，网页课件页内预览，Office 原件下载打开。
+- 前端按路由懒加载；流式渲染按帧合批、消息与 Markdown 渲染 memo 化，入口包拆分 React / Markdown 依赖。
 - React 测试门户与管理后台，支持学生、教师、运营和管理员四种演示身份。
 - 根目录统一启动/检查命令，以及 GitHub Actions CI。
 
@@ -156,3 +160,6 @@ PostgreSQL 保存用户、权限、课程、工作流、额度、任务、作品
 - 对话记录保存在浏览器 IndexedDB（`admin-console/src/conversationStore.js`），按账号隔离并自动压缩超长对话；服务端只记录生成任务、额度和审计。临时参考文件由 `creation-storage` 模块管理，默认 72 小时未活动自动清理（`TEMPORARY_UPLOAD_RETENTION_HOURS`、`TEMPORARY_UPLOAD_QUOTA_MB`）。
 
 视觉验收证据见 [`design-qa-creation.md`](design-qa-creation.md)。
+
+回复结束后的「建议提问内容」、课程资料里 PDF 与视频的显示方式、Agent 绘制 SVG 的下发策略，
+以及流式渲染与入口包的性能改良记录见 [`docs/agent-svg-courseware-perf.md`](docs/agent-svg-courseware-perf.md)。

@@ -94,6 +94,46 @@ test("OpenAI Images 兼容服务复用统一图片参数并将 base64 产物交�
   }
 });
 
+test("SiliconFlow 图片通道使用 image_size 并接收 images[].url", async () => {
+  const saved = { providers: process.env.MODEL_PROVIDERS_JSON, key: process.env.SILICONFLOW_API_KEY, fetch: globalThis.fetch };
+  let storageKey: string | undefined;
+  try {
+    process.env.MODEL_PROVIDERS_JSON = JSON.stringify([{
+      id: "siliconflow-kolors-test", baseUrl: "https://api.siliconflow.cn/v1", model: "Kwai-Kolors/Kolors",
+      capabilities: ["image", "pattern"], apiKeyEnv: "SILICONFLOW_API_KEY", timeoutMs: 5000,
+      protocol: "siliconflow-image", internal: true,
+    }]);
+    process.env.SILICONFLOW_API_KEY = "test-key";
+    let requestBody: Record<string, unknown> | undefined;
+    globalThis.fetch = (async (input: unknown, init?: { body?: string }) => {
+      if (init?.body) {
+        requestBody = JSON.parse(init.body) as Record<string, unknown>;
+        return jsonResponse({ images: [{ url: "https://images.example.test/generated.png" }] });
+      }
+      assert.equal(String(input), "https://images.example.test/generated.png");
+      return new Response(Buffer.from("test-image"), { status: 200, headers: { "content-type": "image/png" } });
+    }) as typeof fetch;
+    const result = await new ModelRegistry().getForJob({ jobType: "image" }).execute({
+      jobType: "image", prompt: "蓝色花朵", jobId: "siliconflow-image-test",
+      parameters: { providerOptions: { aspectRatio: "3:4", negativePrompt: "水印" } },
+    });
+    storageKey = result.content;
+    assert.equal(result.kind, "asset");
+    assert.equal(result.mimeType, "image/png");
+    assert.equal(requestBody?.image_size, "960x1280");
+    assert.equal(requestBody?.negative_prompt, "水印");
+    assert.equal("size" in (requestBody ?? {}), false);
+    assert.equal("n" in (requestBody ?? {}), false);
+  } finally {
+    if (storageKey) await rm(path.resolve(getEnvironment().uploadRoot, storageKey), { force: true });
+    globalThis.fetch = saved.fetch;
+    if (saved.providers === undefined) delete process.env.MODEL_PROVIDERS_JSON;
+    else process.env.MODEL_PROVIDERS_JSON = saved.providers;
+    if (saved.key === undefined) delete process.env.SILICONFLOW_API_KEY;
+    else process.env.SILICONFLOW_API_KEY = saved.key;
+  }
+});
+
 // ── 备用 key（apiKeyFallbackEnv）──────────────────────────────────────────
 // 场景：主 key 是学校/老师那把，备用 key 是自费的平替。
 // 期望：主 key 能用就一直用主 key；主 key 失效/欠费才自动切备用 key。

@@ -1,4 +1,4 @@
-import { createElement as h } from "react";
+import { createElement as h, memo } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -26,8 +26,13 @@ const components = {
   table: ({ children }) => h("div", { className: "ai-markdown__table", tabIndex: 0, role: "region", "aria-label": "回复表格，可横向滚动" }, h("table", null, children)),
 };
 
-export function AiMarkdown({ children }) {
+/**
+ * memo 不是装饰：流式输出期间每个增量都会重渲染对话区，已完成的回复正文并没有变。
+ * 不 memo 的话每次增量都会把所有历史回复重新跑一遍 Markdown 解析，长对话越写越卡。
+ * props 只有 children（字符串），默认的浅比较就足够精确。
+ */
+export const AiMarkdown = memo(function AiMarkdown({ children }) {
   return h("div", { className: "ai-markdown" }, h(Markdown, {
     remarkPlugins: [remarkGfm], components, skipHtml: true, urlTransform: safeReplyUrl,
   }, String(children ?? "")));
-}
+});

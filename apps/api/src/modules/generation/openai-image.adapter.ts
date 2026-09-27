@@ -22,22 +22,31 @@ export class OpenAIImageAdapter implements ModelAdapter {
     if (!apiKey) throw new Error(`模型 ${this.id} 未配置环境变量 ${describeProviderApiKeyEnvs(this.config)}`);
     const prompt = this.prompt(request);
     const options = (request.parameters?.providerOptions ?? {}) as Record<string, unknown>;
+    const siliconFlow = this.config.protocol === "siliconflow-image";
     const response = await fetch(new URL("images/generations", this.baseUrl()), {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: this.config.model,
-        prompt,
-        size: imageSize(options),
-        n: typeof options.imageCount === "number" ? options.imageCount : 1,
-        ...(typeof options.seed === "number" ? { seed: options.seed } : {}),
-        ...(typeof options.style === "string" ? { style: options.style } : {}),
-      }),
+      body: JSON.stringify(siliconFlow
+        ? {
+          model: this.config.model,
+          prompt,
+          image_size: siliconFlowImageSize(options),
+          ...(typeof options.negativePrompt === "string" && options.negativePrompt.trim() ? { negative_prompt: options.negativePrompt.trim() } : {}),
+          ...(typeof options.seed === "number" ? { seed: options.seed } : {}),
+        }
+        : {
+          model: this.config.model,
+          prompt,
+          size: imageSize(options),
+          n: typeof options.imageCount === "number" ? options.imageCount : 1,
+          ...(typeof options.seed === "number" ? { seed: options.seed } : {}),
+          ...(typeof options.style === "string" ? { style: options.style } : {}),
+        }),
       signal: request.signal ?? AbortSignal.timeout(this.config.timeoutMs),
     });
     if (!response.ok) throw new Error(`模型接口返回 HTTP ${response.status}`);
-    const body = await response.json() as { data?: Array<{ url?: string; b64_json?: string; revised_prompt?: string }> };
-    const image = body.data?.[0];
+    const body = await response.json() as { data?: Array<{ url?: string; b64_json?: string; revised_prompt?: string }>; images?: Array<{ url?: string; b64_json?: string; revised_prompt?: string }> };
+    const image = siliconFlow ? body.images?.[0] : body.data?.[0];
     if (!image?.url && !image?.b64_json) throw new Error("图片接口没有返回可下载产物");
     const { bytes, mimeType } = image.b64_json
       ? { bytes: Buffer.from(image.b64_json, "base64"), mimeType: "image/png" }
@@ -80,6 +89,14 @@ async function downloadImage(url: string, timeoutMs: number) {
 function imageSize(options: Record<string, unknown>) {
   if (typeof options.size === "string" && /^\d{3,4}x\d{3,4}$/.test(options.size)) return options.size;
   return ({ "1:1": "1024x1024", "4:3": "1024x768", "3:4": "768x1024", "16:9": "1536x864", "9:16": "864x1536" } as Record<string, string>)[String(options.aspectRatio)] ?? "1024x1024";
+}
+
+function siliconFlowImageSize(options: Record<string, unknown>) {
+  // Kolors 官方支持的尺寸。临时通道默认使用方图；不把通用适配器的
+  // 1536x864 等尺寸直接交给 SiliconFlow，否则可能返回 400。
+  const supported = new Set(["1024x1024", "960x1280", "768x1024", "720x1440", "720x1280"]);
+  if (typeof options.size === "string" && supported.has(options.size)) return options.size;
+  return ({ "3:4": "960x1280", "9:16": "720x1280" } as Record<string, string>)[String(options.aspectRatio)] ?? "1024x1024";
 }
 
 function safeJoin(root: string, storageKey: string) {

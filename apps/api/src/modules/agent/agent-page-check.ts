@@ -42,7 +42,11 @@ export function extractPageReferences(html: string): PageReferences {
   const scripts = attribute(/<script\b[^>]*\bsrc\s*=[^>]*>/gi, "src");
   const images = attribute(/<img\b[^>]*>/gi, "src")
     .concat(attribute(/<source\b[^>]*>/gi, "src"))
-    .concat(attribute(/<video\b[^>]*>/gi, "src"));
+    .concat(attribute(/<video\b[^>]*>/gi, "src"))
+    // 内联 SVG 也会引用外部文件（<image href="x.png">、<use href="sprite.svg#id">）：
+    // Agent 手绘图形时很容易画完忘了把被引用的文件写进工作区，这里一并纳入存在性检查。
+    // 纯内部锚点（href="#gradient"）随后会按普通图片引用的规则被跳过。
+    .concat(attribute(/<(?:image|use)\b[^>]*>/gi, "(?:xlink:)?href"));
 
   const all = [...new Set([...stylesheets, ...stylesheetLinks, ...scripts, ...images])];
   return {

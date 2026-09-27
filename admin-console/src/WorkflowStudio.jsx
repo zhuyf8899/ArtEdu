@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
 import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflowRun, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 
@@ -14,6 +14,8 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [autoError, setAutoError] = useState("");
+  const advancing = useRef("");
 
   useEffect(() => { getWorkflows().then((payload) => setWorkflows(payload.items ?? [])).catch((error) => onNotice(error.message)); }, []);
 
@@ -23,7 +25,11 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
       const detail = await getWorkflow(workflow.id);
       const previous = initialRunId ? await getWorkflowRun(initialRunId) : null;
       if (previous && previous.workflowId !== detail.id) throw new Error("执行记录与工作流不匹配");
-      setSelected(detail); setRun(previous);
+      setSelected(detail);
+      setRun(null);
+      setAutoError("");
+      const next = previous ?? (detail.versionId ? await startWorkflowRun(detail.id) : null);
+      setRun(next);
     }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
@@ -35,33 +41,32 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
   }, [initialWorkflowId, loading, selected, workflows]);
   const start = async () => {
     setLoading(true);
-    try { const next = await startWorkflowRun(selected.id, { source: "web-node-canvas" }); setRun(next); onNotice("工作流已开始，节点进度会保存到本地数据库"); }
+    try { const next = await startWorkflowRun(selected.id); setAutoError(""); setRun(next); onNotice("工作流已开始，节点进度会自动保存"); }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
   const executeNode = async (input = {}) => {
     setLoading(true);
-    try { const next = await executeWorkflowRun(run.id, input); setRun(next); onNotice(next.status === "completed" ? "节点工作流已完成" : "节点已执行，正在进入下一节点"); }
+    try { const next = await executeWorkflowRun(run.id, input); setAutoError(""); setRun(next); onNotice(next.status === "completed" ? "节点工作流已完成" : "节点已执行，正在进入下一节点"); }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
-  const executeRemaining = async () => {
+  useEffect(() => {
+    if (!run || !selected || loading || autoError || run.status !== "in_progress") return;
+    const step = run.steps[run.currentStep];
+    const node = run.nodes.find((item) => item.id === step?.id);
+    if (!node || node.type === "load_image" || (node.type === "input" && !String(node.data?.value ?? "").trim())) return;
+    const key = `${run.id}:${run.currentStep}`;
+    if (advancing.current === key) return;
+    advancing.current = key;
     setLoading(true);
-    try {
-      let current = run;
-      while (current?.status === "in_progress") {
-        const step = current.steps[current.currentStep];
-        const node = current.nodes.find((item) => item.id === step?.id);
-        if (node?.type === "input" || node?.type === "load_image") break;
-        current = await executeWorkflowRun(current.id);
-        setRun(current);
-      }
-      onNotice(current?.status === "completed" ? "工作流已完成，成果已保存" : "需要填写下一节点的输入");
-    } catch (error) { onNotice(error.message); }
-    finally { setLoading(false); }
-  };
+    executeWorkflowRun(run.id).then((next) => setRun(next)).catch((error) => {
+      setAutoError(error.message || "节点运行失败");
+      onNotice(error.message);
+    }).finally(() => setLoading(false));
+  }, [run, selected, loading, autoError, onNotice]);
 
-  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} onBack={() => { setSelected(null); setRun(null); }} onStart={start} onExecute={executeNode} onExecuteRemaining={executeRemaining} /></Suspense>;
+  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={() => { setSelected(null); setRun(null); setAutoError(""); }} onStart={start} onExecute={executeNode} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
     <button className="learning-back" onClick={() => setBuilderOpen(false)}><ArrowLeft size={16} weight="bold" /> 返回设计工作台</button>
     <Suspense fallback={<section className="portal-empty"><p>正在加载工作流创建器…</p></section>}>

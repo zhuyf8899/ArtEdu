@@ -27,25 +27,71 @@
  */
 export function workspacePreviewCsp(hostHeader: string | string[] | undefined) {
   const host = normalizeHost(hostHeader);
-  // 允许任何端口：开发环境是 :4000/:4173，staging 走 nginx 的 :8080，
-  // 而反代只透传主机名，不带端口，所以必须用通配端口。
-  const assetSources = host ? `http://${host}:* https://${host}:*` : "";
-  const sources = (...parts: string[]) => parts.filter((part) => part.length > 0).join(" ");
+  const assetSources = assetSourcesFor(host);
   return [
     // 必须带 allow-same-origin，见下方说明：只写 allow-scripts 会让同目录 CSS/JS 全被 ORB 拦掉。
     "sandbox allow-scripts allow-same-origin",
     "default-src 'none'",
-    sources("style-src", assetSources, "'unsafe-inline'"),
-    sources("script-src", assetSources, "'unsafe-inline'"),
-    sources("img-src", assetSources, "data:", "blob:"),
-    sources("font-src", assetSources, "data:"),
-    sources("media-src", assetSources, "blob:"),
+    joinSources("style-src", assetSources, "'unsafe-inline'"),
+    joinSources("script-src", assetSources, "'unsafe-inline'"),
+    joinSources("img-src", assetSources, "data:", "blob:"),
+    joinSources("font-src", assetSources, "data:"),
+    joinSources("media-src", assetSources, "blob:"),
     "connect-src 'none'",
     "form-action 'none'",
     "base-uri 'none'",
     "frame-src 'none'",
     "object-src 'none'",
   ].join("; ");
+}
+
+/**
+ * SVG 预览的安全策略。
+ *
+ * Agent 画的图同样是不可信内容：SVG 是能内嵌 <script>、<foreignObject> 的活动格式，
+ * 直接用浏览器打开就是同源可执行页面，所以必须限制。
+ *
+ * 这里刻意**不用** sandbox，而是直接 script-src 'none'：sandbox 只在文档型浏览上下文里
+ * 有意义，而同一份 SVG 还会被生成页用 <img src="x.svg"> 引用；对图片加载路径来说，
+ * 少一个语义可能不一致的指令，少一份"图片渲染不出来"的风险。绘图本来也不需要脚本。
+ * 允许的只有同目录（同主机）的样式、图片、字体和 data:/blob:，依旧不能联网。
+ */
+export function svgPreviewCsp(hostHeader: string | string[] | undefined) {
+  const assetSources = assetSourcesFor(normalizeHost(hostHeader));
+  return [
+    "default-src 'none'",
+    joinSources("style-src", assetSources, "'unsafe-inline'"),
+    "script-src 'none'",
+    joinSources("img-src", assetSources, "data:", "blob:"),
+    joinSources("font-src", assetSources, "data:"),
+    joinSources("media-src", assetSources, "blob:"),
+    "connect-src 'none'",
+    "form-action 'none'",
+    "base-uri 'none'",
+    "frame-src 'none'",
+    "object-src 'none'",
+  ].join("; ");
+}
+
+/**
+ * 按 Content-Type 选预览策略：只有能执行脚本的文档型格式才需要额外限制。
+ * 其余文件（图片、字体、媒体、纯文本）交给主程序的默认策略即可。
+ */
+export function previewCspFor(contentType: string, hostHeader: string | string[] | undefined) {
+  const type = contentType.split(";")[0].trim().toLowerCase();
+  if (type === "image/svg+xml") return svgPreviewCsp(hostHeader);
+  if (type === "text/html" || type === "application/xhtml+xml") return workspacePreviewCsp(hostHeader);
+  return "";
+}
+
+// 允许任何端口：开发环境是 :4000/:4173，staging 走 nginx 的 :8080，
+// 而反代只透传主机名，不带端口，所以必须用通配端口。
+function assetSourcesFor(host: string) {
+  return host ? `http://${host}:* https://${host}:*` : "";
+}
+
+function joinSources(...parts: string[]) {
+  return parts.filter((part) => part.length > 0).join(" ");
 }
 
 /**

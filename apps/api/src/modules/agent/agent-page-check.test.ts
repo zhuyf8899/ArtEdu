@@ -35,6 +35,19 @@ test("相对引用解析：处理 ./ 与 ../，越界返回 null", () => {
   assert.equal(normalizeRelative("galaxy-ui/", ""), null);
 });
 
+test("内联 SVG 引用的图片也纳入存在性检查", () => {
+  const references = extractPageReferences(pageHtml(`
+    <style>svg{width:40px}</style>
+    <svg viewBox="0 0 10 10"><use href="sprite.svg#leaf" /><image xlink:href="texture.png" /></svg>
+    <img src="logo.svg" />
+  `));
+  // 顺序按标签类型归集（img/source/video 先，内联 SVG 的 image/use 后），不是文档顺序。
+  assert.deepEqual(references.images, ["logo.svg", "sprite.svg#leaf", "texture.png"]);
+  // 纯内部锚点不是文件引用，check_page 会按既有规则跳过它。
+  const anchored = extractPageReferences(pageHtml('<svg><use href="#gradient" /></svg>'));
+  assert.deepEqual(anchored.images, ["#gradient"]);
+});
+
 test("自检结论：必须能抓出裸 HTML、丢失的文件与外部引用", () => {
   // 没有任何样式来源 → 必然是无样式裸页面
   const bare = summarizePageCheck({ htmlBytes: 200, references: extractPageReferences(pageHtml("<h1>x</h1>")), assets: [] });

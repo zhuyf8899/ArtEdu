@@ -6,7 +6,7 @@ import { createAgentRunSchema, executeAgentRunSchema, type CreateAgentRunInput, 
 import { AgentHarnessService } from "./agent-harness.service";
 import { AgentService } from "./agent.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
-import { workspacePreviewCsp } from "./workspace-preview-csp";
+import { previewCspFor } from "./workspace-preview-csp";
 
 @Controller("agent-runs")
 export class AgentController {
@@ -32,9 +32,10 @@ export class AgentController {
     // 也禁止它联网、提交表单或借机调用平台 API。
     // 资源来源必须显式写成主机名：沙箱下文档是不透明来源，CSP 里的 'self' 什么都不匹配，
     // 于是同目录的 CSS/JS 全被拦掉，页面会变成没有样式的裸 HTML。
-    if (asset.contentType.startsWith("text/html")) {
-      reply.header("Content-Security-Policy", workspacePreviewCsp(request.headers["x-forwarded-host"] ?? request.headers.host));
-    }
+    // SVG 也走同一条思路：它同样可以内嵌脚本，不能因为"只是图片"就跳过限制，
+    // 只是策略更紧（script-src 'none'，见 workspace-preview-csp）。
+    const csp = previewCspFor(asset.contentType, request.headers["x-forwarded-host"] ?? request.headers.host);
+    if (csp) reply.header("Content-Security-Policy", csp);
     return asset.stream;
   }
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowClockwise, ArrowLeft, ArrowRight, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, Wrench } from "@phosphor-icons/react";
+import { createPortal } from "react-dom";
+import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowsOutSimple, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, Wrench, X } from "@phosphor-icons/react";
 import { enrollCourse, getCourse, getCourses, updateLessonProgress } from "./services/adminApi.js";
 import { coverImageFor } from "./coverImages.js";
 
@@ -46,6 +47,16 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
   };
 
   useEffect(() => { void loadCatalog(); }, []);
+
+  /**
+   * 首页、搜索结果和 Agent 回复里的「打开课程」都是 /learning?course=<id>，
+   * 进到资源库后要直接把那门课展开。这个 effect 之前被误放进 SourcePreview
+   * （那里没有 initialCourseId/openCourse，一渲染源码类课件就会整页报错），
+   * 现在放回它该在的位置。
+   */
+  useEffect(() => {
+    if (initialCourseId && !selected && !loading) void openCourse(initialCourseId);
+  }, [initialCourseId]);
 
   const openCourse = async (courseId) => {
     setLoading(true);
@@ -138,16 +149,64 @@ const OFFICE_TYPES = ["ppt", "word"];
 
 /**
  * 课程资料区按课件类型分别渲染：
- * 视频用播放器、图片直接铺开、PDF 与网页课件内嵌、Office 原件浏览器无法内嵌预览，
+ * 视频用播放器（可放大观看）、图片直接铺开、PDF 直接交给浏览器新标签页打开
+ * —— 不再塞进页面里的小窗口；网页课件仍在页内预览、Office 原件浏览器无法内嵌预览，
  * 因此给出下载入口由学生本地打开。没有 previewUrl 说明账号还没加入课程。
  */
 function CourseMaterials({ resources }) {
   return <section className="course-materials">
     <p>// COURSE MATERIALS</p>
     <h3>课程资料</h3>
-    <small className="course-materials__note">课件默认在线预览，不提倡下载；只有 PPT / Word 因为浏览器无法渲染，需要下载后用本机软件打开。</small>
+    <small className="course-materials__note">PDF 课件由浏览器自己的阅读器在新标签页打开，不再嵌在页面里的小窗口中；视频可在页内播放或放大观看；只有 PPT / Word 因为浏览器无法渲染，需要下载后用本机软件打开。</small>
     <div className="course-material-list">{resources.map((resource) => <CourseMaterial key={resource.id} resource={resource} />)}</div>
   </section>;
+}
+
+/**
+ * 视频课件：默认页内播放，另外给一个「放大观看」入口。
+ * 放大走页面内的浮层而不是新标签页——课件上下文（进度、跟随的课时）留在原页面，
+ * 关掉浮层就能继续；放大后的播放器仍带原生控件，需要全屏时再按播放器的全屏键。
+ */
+function VideoMaterial({ resource, source, cover, meta }) {
+  const [enlarged, setEnlarged] = useState(false);
+  useEffect(() => {
+    if (!enlarged) return undefined;
+    const onKeyDown = (event) => { if (event.key === "Escape") setEnlarged(false); };
+    window.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [enlarged]);
+
+  // 浮层必须挂到 body：`.route-transition` 的入场动画会留下 transform，
+  // 而 transform 会让 position: fixed 相对这个容器定位，浮层就会跑到视口外。
+  // 仓库里其他弹层（课程编辑、案例编辑器、工作流播放器）同样用 createPortal。
+  return <>
+    <article className="course-material course-material--video">
+      <video controls preload="metadata" src={source} poster={cover} aria-label={resource.title} />
+      <div>
+        {meta("仅提供在线播放；加入课程后即可观看")}
+        <button type="button" className="course-material__expand" onClick={() => setEnlarged(true)}>
+          <ArrowsOutSimple size={14} weight="bold" />放大观看
+        </button>
+        {resource.transcriptText && <details><summary>查看文字稿</summary><p>{resource.transcriptText}</p></details>}
+      </div>
+    </article>
+    {enlarged && createPortal(<div className="course-material-lightbox" role="dialog" aria-modal="true" aria-label={`${resource.title}（放大观看）`}>
+      <button type="button" className="course-material-lightbox__scrim" aria-label="关闭放大观看" onClick={() => setEnlarged(false)} />
+      <div className="course-material-lightbox__panel">
+        <header>
+          <strong>{resource.title}</strong>
+          <button type="button" onClick={() => setEnlarged(false)} aria-label="关闭放大观看"><X size={18} weight="bold" /></button>
+        </header>
+        <video controls autoPlay playsInline src={source} poster={cover} aria-label={`${resource.title}（放大）`} />
+        <small>按 Esc 或点击空白处退出；需要更大画面时用播放器自带的全屏按钮。</small>
+      </div>
+    </div>, document.body)}
+  </>;
 }
 
 function CourseMaterial({ resource }) {
@@ -178,13 +237,7 @@ function CourseMaterial({ resource }) {
     {meta("加入课程后可在线预览")}
   </article>;
 
-  if (resource.resourceType === "video") return <article className="course-material course-material--video">
-    <video controls preload="metadata" src={source} poster={cover} aria-label={resource.title} />
-    <div>
-      {meta("仅提供在线播放；加入课程后即可观看")}
-      {resource.transcriptText && <details><summary>查看文字稿</summary><p>{resource.transcriptText}</p></details>}
-    </div>
-  </article>;
+  if (resource.resourceType === "video") return <VideoMaterial resource={resource} source={source} cover={cover} meta={meta} />;
 
   if (resource.resourceType === "image") return <article className="course-material course-material--image">
     <a href={source} target="_blank" rel="noreferrer"><img loading="lazy" src={source} alt={resource.title} /></a>
@@ -203,16 +256,16 @@ function CourseMaterial({ resource }) {
     <iframe src={source} title={resource.title} loading="lazy" referrerPolicy="no-referrer" />
   </article>;
 
-  // PDF 浏览器能直接渲染，页内阅读为主，下载只作为备选方案。
-  if (resource.resourceType === "pdf") return <article className="course-material course-material--document">
+  // PDF 交给浏览器自己的阅读器：新标签页整页阅读，不再嵌进页面里的小窗口。
+  // 嵌在小窗口里既看不清，又会因为沙箱化的 iframe 丢掉浏览器自带的缩放、目录和下载。
+  if (resource.resourceType === "pdf") return <article className="course-material course-material--document course-material--pdf">
     <header>
-      {meta("页内可直接阅读；需要离线使用时再下载原件。")}
+      {meta("用浏览器阅读器打开，可整页缩放、翻页与检索；需要离线使用时再下载原件。")}
       <span className="course-material__actions">
-        <a className="outline-button" href={source} target="_blank" rel="noreferrer">新窗口打开</a>
+        <a className="outline-button course-material__open" href={source} target="_blank" rel="noreferrer"><FilePdf size={16} weight="bold" />在浏览器中打开 PDF</a>
         {downloadLink("下载 PDF")}
       </span>
     </header>
-    <iframe src={`${source}#view=FitH`} title={resource.title} loading="lazy" referrerPolicy="no-referrer" />
   </article>;
 
   // 前端源码课件（.css / .js）：页内查看源码为主，下载只作为备选。
@@ -245,9 +298,6 @@ function SourcePreview({ url, title }) {
     }
   };
 
-  useEffect(() => {
-    if (initialCourseId && !selected && !loading) void openCourse(initialCourseId);
-  }, [initialCourseId]);
   return <details className="course-material__code" onToggle={(event) => { if (event.currentTarget.open && !state.text && !state.loading) void load(); }}>
     <summary>查看{title ? `「${title}」` : ""}源码</summary>
     {state.loading && <p>正在读取源码…</p>}

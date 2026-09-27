@@ -22,6 +22,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
   const [pageCount, setPageCount] = useState(() => storedDraft?.pageCount ?? "");
   const [recent, setRecent] = useState([]);
   const referenceInput = useRef(null);
+  const promptInput = useRef(null);
   const modelRef = useRef(null);
 
   const method = useMemo(() => creationMethod(methodId), [methodId]);
@@ -113,6 +114,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
     <form className="ai-launcher" onSubmit={submit}>
       <label htmlFor="artedu-ai-prompt" className="sr-only">输入你的问题或创作想法</label>
       <textarea
+        ref={promptInput}
         id="artedu-ai-prompt"
         value={prompt}
         disabled={sending}
@@ -160,6 +162,11 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
         <em><FloppyDisk size={13} />{draftSaved ? "草稿已保存" : "输入后自动保存"}</em>
       </div>
     </form>
+
+    <div className="ai-launcher__suggestions" aria-label="建议提问内容">
+      <span>建议提问内容</span>
+      <div>{method.suggestions.slice(0, 3).map((item) => <button type="button" key={item} onClick={() => { setPrompt(item); promptInput.current?.focus(); }}>{item}<ArrowRight size={15} weight="bold" /></button>)}</div>
+    </div>
 
     <p className="ai-launcher__hint">提交后进入标准 Agent 对话页：模式保留为建议环境，不会强制把普通问题变成图片或文档任务。</p>
 

@@ -139,8 +139,8 @@ test("工作区预览页能加载同目录资源，并明确禁止外部 CDN", a
   const harness = await readFile(new URL("../../apps/api/src/modules/agent/agent-harness.service.ts", import.meta.url), "utf8");
   const csp = await readFile(new URL("../../apps/api/src/modules/agent/workspace-preview-csp.ts", import.meta.url), "utf8");
 
-  // 控制器必须走统一的策略构造函数，不能退回内联写死的一段 CSP。
-  assert.ok(controller.includes('workspacePreviewCsp(request.headers["x-forwarded-host"] ?? request.headers.host)'));
+  // 控制器必须按真实 Content-Type 选策略（HTML 沙箱、SVG 禁脚本），不能退回内联写死的一段 CSP。
+  assert.ok(controller.includes('previewCspFor(asset.contentType, request.headers["x-forwarded-host"] ?? request.headers.host)'));
   assert.ok(!controller.includes("default-src 'self'"), "沙箱文档是不透明来源，'self' 什么都匹配不到");
   // allow-same-origin 是必需的：缺了它，同目录 CSS/JS 会被当成跨站请求
   // （cookie 不发送 → 401 JSON → ORB 拦截），页面永远是裸 HTML。
