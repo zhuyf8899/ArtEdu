@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
 import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflowRun, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 import { faviconSourcesFor } from "./imageSources.js";
 
@@ -76,7 +76,23 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
       <WorkflowAdmin showToast={onNotice} canPublish={canPublish} />
     </Suspense>
   </div>;
-  return <section className="workflow-catalog" id="workflow-catalog"><ToolDirectory canManage={canManageToolDirectory} onNotice={onNotice} onOpenWorkflowBuilder={() => setBuilderOpen(true)} /></section>;
+  return <section className="workflow-catalog" id="workflow-catalog">
+    <ToolDirectory canManage={canManageToolDirectory} onNotice={onNotice} onOpenWorkflowBuilder={() => setBuilderOpen(true)} />
+    {/* 工具入口之后必须有节点工作流列表：之前这一块被工具目录挤掉了，学生根本点不进工作流。 */}
+    <div className="workflow-catalog__list">
+      <header className="workflow-catalog__toolbar">
+        <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>点开就是独立画布，直接运行；要改图请用上面的「新建节点工作流」。</span></div>
+        <button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button>
+      </header>
+      {workflows.length ? <section className="workflow-grid">{workflows.map((workflow) => <article className="workflow-card" key={workflow.id}>
+        <Wrench size={21} weight="bold" />
+        <span>{workflow.category}</span>
+        <h3>{workflow.name}</h3>
+        <p>{workflow.description}</p>
+        <button disabled={loading} onClick={() => open(workflow)}>打开节点画布 <ArrowRight size={16} weight="bold" /></button>
+      </article>)}</section> : <div className="empty-state"><Wrench size={28} weight="thin" /><strong>还没有节点工作流</strong><span>点右侧「新建节点工作流」搭一个，保存发布后就会出现在这里。</span></div>}
+    </div>
+  </section>;
 }
 function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder }) {
   const [links, setLinks] = useState([]);
