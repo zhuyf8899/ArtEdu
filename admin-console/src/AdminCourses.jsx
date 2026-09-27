@@ -10,7 +10,11 @@ import { coverImageFor, prepareCoverFile } from "./coverImages.js";
 
 const statusNames = { draft: "草稿", pending_review: "待审核", published: "已发布", rejected: "已驳回", archived: "已归档" };
 const editable = (course) => ["draft", "rejected"].includes(course.status);
-const emptyLesson = () => ({ title: "", summary: "", lessonType: "lesson", estimatedMinutes: 30, workflowId: "", modelConfigIds: [] });
+const emptyLesson = () => ({
+  title: "", summary: "", lessonType: "lesson", estimatedMinutes: 30, workflowId: "", modelConfigIds: [],
+  // 学习闭环：分步学习、练习任务、完成标准与作品门槛都由教师在建课时配置。
+  learningSteps: [], practiceTask: "", completionCriteria: "", requiresWorkSubmission: false,
+});
 const splitTags = (value) => value.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
 
 export function AdminCourses({ showToast }) {
@@ -124,7 +128,12 @@ function CourseEditor({ course, busy, onClose, onSave }) {
       coverUrl: form.coverUrl.trim() || null, coverAssetKey: form.coverAssetKey.trim() || null, isFeatured: form.isFeatured,
       lessons: form.lessons.map((lesson) => ({ ...lesson, title: lesson.title.trim(), summary: lesson.summary.trim(),
         estimatedMinutes: Number(lesson.estimatedMinutes), workflowId: lesson.workflowId?.trim() || null,
-        modelConfigIds: typeof lesson.modelConfigIds === "string" ? splitTags(lesson.modelConfigIds) : lesson.modelConfigIds ?? [] })) }, coverFile);
+        modelConfigIds: typeof lesson.modelConfigIds === "string" ? splitTags(lesson.modelConfigIds) : lesson.modelConfigIds ?? [],
+        learningSteps: (Array.isArray(lesson.learningSteps) ? lesson.learningSteps.join("\n") : lesson.learningSteps ?? "")
+          .split("\n").map((step) => step.trim()).filter(Boolean),
+        practiceTask: (lesson.practiceTask ?? "").trim(),
+        completionCriteria: (lesson.completionCriteria ?? "").trim(),
+        requiresWorkSubmission: Boolean(lesson.requiresWorkSubmission) })) }, coverFile);
   };
   return <Modal title={course.new ? "新建课程草稿" : "编辑课程草稿"} subtitle="// COURSE DETAILS" onClose={onClose} className="course-modal--wide">
     <form onSubmit={save}>
@@ -146,6 +155,10 @@ function CourseEditor({ course, busy, onClose, onSave }) {
           <label>类型<select value={lesson.lessonType} onChange={(event) => setLesson(index, "lessonType", event.target.value)}><option value="lesson">课程</option><option value="practice">练习</option><option value="assignment">作业</option><option value="workflow">工作流</option></select></label>
           <label className="course-form-full">课时说明<textarea maxLength="1000" value={lesson.summary ?? ""} onChange={(event) => setLesson(index, "summary", event.target.value)} /></label>
           <label>预计时长（分钟）<input type="number" min="0" max="1440" required value={lesson.estimatedMinutes} onChange={(event) => setLesson(index, "estimatedMinutes", event.target.value)} /></label>
+          <label className="course-form-full">学习步骤（每行一步）<textarea maxLength="2000" value={Array.isArray(lesson.learningSteps) ? lesson.learningSteps.join("\n") : lesson.learningSteps ?? ""} onChange={(event) => setLesson(index, "learningSteps", event.target.value.split("\n"))} placeholder={"观察参考图\n提取形态\n完成一次练习"} /></label>
+          <label className="course-form-full">练习任务<textarea maxLength="2000" value={lesson.practiceTask ?? ""} onChange={(event) => setLesson(index, "practiceTask", event.target.value)} placeholder="例如：围绕一个传统纹样完成两种配色方案" /></label>
+          <label className="course-form-full">完成标准<textarea maxLength="1000" value={lesson.completionCriteria ?? ""} onChange={(event) => setLesson(index, "completionCriteria", event.target.value)} placeholder="例如：提交两种方案，并说明选色依据" /></label>
+          <label className="course-check course-form-full"><input type="checkbox" checked={Boolean(lesson.requiresWorkSubmission)} onChange={(event) => setLesson(index, "requiresWorkSubmission", event.target.checked)} /> 完成此课时前必须关联一项我的作品</label>
           <label>关联工作流 ID（可选）<input maxLength="100" value={lesson.workflowId ?? ""} onChange={(event) => setLesson(index, "workflowId", event.target.value)} /></label>
           <label className="course-form-full">模型配置 ID（逗号分隔，可选）<input value={Array.isArray(lesson.modelConfigIds) ? lesson.modelConfigIds.join(", ") : lesson.modelConfigIds ?? ""} onChange={(event) => setLesson(index, "modelConfigIds", event.target.value)} /></label>
         </div>

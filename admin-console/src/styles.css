@@ -1976,3 +1976,41 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .tool-directory__edit, .tool-directory__list--list .tool-directory__edit { top: 10px; right: 10px; bottom: auto; }
 }
 @media (max-width: 440px) { .tool-directory__veil, .tool-directory__list--list .tool-directory__veil { padding: 18px; } }
+
+/* 以下样式来自 main 线的学习闭环与案例审核改动（见 66b2822），补齐后学习闭环页面才有版式。 */
+.queue-item__meta em { white-space: nowrap; }
+.editorial-checklist { margin: 0 18px 16px; padding: 12px 14px; color: #603f00; background: #fff6dc; border: 1px solid #e7c36b; font-size: 10px; }
+.editorial-checklist strong { display: block; font-size: 11px; }
+.editorial-checklist ul { margin: 8px 0; padding-left: 18px; display: grid; gap: 4px; }
+.editorial-checklist small { color: #79643d; font-size: 8px; }
+
+/* Learning loop cards: make the lesson sequence, exercise and completion gate explicit. */
+.lesson-card { padding: 20px; display: grid; gap: 16px; background: #fff; border: 1px solid #e5e5e2; border-radius: 16px; }
+.lesson-card__heading { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; align-items: start; gap: 13px; }
+.lesson-card__heading > span { width: 34px; height: 34px; display: grid; place-items: center; color: #fff; background: #202124; border-radius: 10px; font-weight: 700; }
+.lesson-card__heading > div { display: grid; gap: 5px; }.lesson-card__heading small { color: #777; font-size: 12px; }.lesson-card__heading strong { font-size: 17px; }.lesson-card__heading p, .lesson-card__section p, .lesson-card__submission p { margin: 0; color: #68696d; line-height: 1.65; }.lesson-card__heading > em { color: #6b6c70; font-size: 12px; font-style: normal; }
+.lesson-card__section { padding: 14px 16px; background: #f7f7f5; border-radius: 12px; }.lesson-card__section > strong, .lesson-card__submission > strong { display: block; margin-bottom: 8px; font-size: 13px; }.lesson-card__section ol { margin: 0; padding-left: 21px; color: #56575b; line-height: 1.8; }.lesson-card__section p { white-space: pre-wrap; }
+.lesson-card__submission { padding: 14px 16px; background: #f5f8ee; border: 1px solid #e4ebd4; border-radius: 12px; }.lesson-card__submission > div { display: grid; gap: 7px; }.lesson-card__submission select { max-width: 420px; min-height: 38px; padding: 0 10px; background: #fff; border: 1px solid #d9ddcf; border-radius: 8px; }.lesson-card__submission small { color: #72746d; }
+.lesson-card__footer { padding-top: 4px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }.lesson-card__footer label { display: inline-flex; align-items: center; gap: 8px; color: #55565a; font-size: 13px; }.lesson-card__footer > b { display: inline-flex; align-items: center; gap: 7px; color: #4e7a2e; font-size: 13px; }.lesson-card__footer button { min-height: 38px; padding: 0 13px; display: inline-flex; align-items: center; gap: 7px; color: #fff; background: #191a1c; border: 0; border-radius: 9px; }.lesson-card__footer button:disabled { opacity: .4; cursor: not-allowed; }
+/* Override legacy 3-column lesson-row rules: the new detail card has stacked sections,
+   and inheriting its 45px first column squeezed every Chinese character into a vertical strip. */
+.lesson-list > article.lesson-card { min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; text-align: left; writing-mode: horizontal-tb; }
+.lesson-card__heading, .lesson-card__section, .lesson-card__submission, .lesson-card__footer { min-width: 0; width: 100%; writing-mode: horizontal-tb; }
+.lesson-card__heading > div { min-width: 0; }.lesson-card__heading p { font-size: 14px; overflow-wrap: anywhere; }.lesson-card__section p, .lesson-card__section li, .lesson-card__submission p, .lesson-card__submission small { font-size: 14px; overflow-wrap: anywhere; }
+.lesson-card__footer button { font-size: 13px; }.lesson-card__submission select { width: min(100%, 420px); }
+
+/* Search facets and grouped result areas. */
+.search-facet-select { display: grid; gap: 7px; color: #5e5f63; font-size: 12px; }.search-facet-select select, .search-sort select { min-height: 37px; padding: 0 10px; color: #28292c; background: #fff; border: 1px solid #e1e1df; border-radius: 9px; }.search-result-groups { display: grid; gap: 27px; }.search-result-group > h3 { margin: 0 0 11px; display: flex; align-items: center; gap: 9px; font-size: 16px; }.search-result-group > h3 span { padding: 3px 8px; color: #717277; background: #eee; border-radius: 999px; font-size: 11px; font-weight: 500; }.search-results > header > div > small { display: block; margin-top: 5px; color: #777; }.search-sort { display: inline-flex; align-items: center; gap: 8px; color: #68696d; font-size: 12px; }.search-card__facets { display: block; margin-top: 8px; color: #67686c; line-height: 1.6; }
+@media (max-width: 720px) { .lesson-card { padding: 15px; }.lesson-card__heading { grid-template-columns: 34px minmax(0,1fr); }.lesson-card__heading > em { grid-column: 2; }.lesson-card__footer { align-items: flex-start; flex-direction: column; }.search-sort { align-self: start; } }
+
+/* 案例审核意见与历史（配合 CommunityLibrary 的驳回理由与审核轨迹展示）。 */
+.case-review-feedback { margin: 0 0 14px; padding: 12px 14px; color: #7a2f1d; background: #fff3ef; border: 1px solid #f0c3b6; border-radius: 12px; }
+.case-review-feedback strong { display: block; font-size: 13px; }.case-review-feedback p { margin: 6px 0 4px; line-height: 1.7; }.case-review-feedback small { color: #8a5b4d; font-size: 11px; }
+.case-review-history { margin: 0 0 14px; padding: 10px 14px; background: #fafaf7; border: 1px solid #e6e6e0; border-radius: 12px; font-size: 12px; }
+.case-review-history summary { cursor: pointer; font-weight: 700; }.case-review-history article { padding: 9px 0; border-top: 1px solid #ececE6; }.case-review-history article strong { margin-right: 8px; }.case-review-history article time { color: #86868a; font-size: 11px; }.case-review-history article p { margin: 5px 0 0; color: #5f6064; line-height: 1.65; }
+
+/* 工作流跑完 → 存成案例草稿。 */
+.workflow-save-work { margin-top: 12px; padding: 14px 16px; display: grid; gap: 7px; background: #f4f8ea; border: 1px solid #dbe6c4; border-radius: 12px; }
+.workflow-save-work strong { font-size: 13px; }.workflow-save-work p { margin: 0; color: #5f6650; font-size: 12px; line-height: 1.6; }
+.workflow-save-work button { justify-self: start; min-height: 36px; padding: 0 13px; color: #fff; background: #191a1c; border: 0; border-radius: 9px; font-size: 12px; }
+.workflow-save-work button:disabled { opacity: .45; cursor: not-allowed; }

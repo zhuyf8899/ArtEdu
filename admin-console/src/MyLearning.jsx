@@ -230,5 +230,5 @@ function LearningLoadError({ message, onRetry }) {
 }
 
 function courseImage(course) { return coverImageFor(course); }
-function taskTypeName(type) { return { course: "课程学习", workflow: "工作流", review: "复习", note: "学习笔记", custom: "自定义" }[type] || "学习任务"; }
+function taskTypeName(type) { return { course: "课程学习", lesson: "课时完成", workflow: "工作流", review: "复习", note: "学习笔记", custom: "自定义" }[type] || "学习任务"; }
 function formatDate(value) { return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(new Date(value)); }

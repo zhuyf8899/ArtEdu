@@ -66,7 +66,7 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
     }).finally(() => setLoading(false));
   }, [run, selected, loading, autoError, onNotice]);
 
-  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={() => { setSelected(null); setRun(null); setAutoError(""); }} onStart={start} onExecute={executeNode} /></Suspense>;
+  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onNotice={onNotice} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={() => { setSelected(null); setRun(null); setAutoError(""); }} onStart={start} onExecute={executeNode} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
     <button className="learning-back" onClick={() => setBuilderOpen(false)}><ArrowLeft size={16} weight="bold" /> 返回设计工作台</button>
     <Suspense fallback={<section className="portal-empty"><p>正在加载工作流创建器…</p></section>}>

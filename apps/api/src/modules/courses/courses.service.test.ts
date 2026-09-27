@@ -19,6 +19,7 @@ test("编辑已有课时保留课时 ID，资料所属课时不会被清空", as
   await service["replaceLessons"](client, "course-a", [{
     id: "lesson-existing", title: "更新名称", summary: "保留资料关联", lessonType: "lesson",
     estimatedMinutes: 40, modelConfigIds: [],
+    learningSteps: [], practiceTask: "", completionCriteria: "", requiresWorkSubmission: false,
   }]);
   assert.ok(statements.some((sql) => sql.startsWith("UPDATE course_lessons")));
   assert.equal(statements.some((sql) => sql.startsWith("DELETE FROM course_lessons")), false);

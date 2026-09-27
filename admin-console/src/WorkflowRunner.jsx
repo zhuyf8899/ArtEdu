@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, Play, SpinnerGap } from "@phosphor-icons/react";
-import { uploadTemporaryCreationFile } from "./services/adminApi.js";
+import { createWork, uploadTemporaryCreationFile } from "./services/adminApi.js";
 import "@xyflow/react/dist/style.css";
 
 const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", negative_prompt: "#a15e8c", text_encode: "#b268ff", skill: "#b268ff", text_generate: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b" };
@@ -14,11 +14,46 @@ function GraphNode({ data }) {
 }
 const nodeTypes = Object.fromEntries(Object.keys(nodeStyle).map((type) => [type, GraphNode]));
 
-export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onBack, onStart, onExecute }) {
+export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onBack, onStart, onExecute, onNotice }) {
   const steps = run?.steps ?? selected.steps ?? [];
   const activeStep = run?.status === "in_progress" ? steps[run.currentStep] : null;
   const activeId = activeStep?.id;
   const [nodePositions, setNodePositions] = useState({});
+  // 跑完工作流后可以直接存成案例草稿，把"工作台动手"和"案例社区展示"接起来。
+  const [savedWork, setSavedWork] = useState(false);
+  const [savingWork, setSavingWork] = useState(false);
+  const saveAsWork = async () => {
+    setSavingWork(true);
+    try {
+      const nodes = selected.nodes ?? run?.nodes ?? [];
+      const tools = [...new Set(nodes.filter((node) => node.type === "model" || node.type === "skill").map((node) => node.data?.label).filter(Boolean))].slice(0, 12);
+      await createWork({
+        title: `${selected.name} · 我的工作流实践`,
+        summary: `通过「${selected.name}」完成的一次工作流实践。可继续编辑案例内容、补充封面与过程素材后提交审核。`,
+        discipline: selected.category || "艺术创作",
+        workflowIds: [selected.id],
+        tagNames: [...new Set([selected.category, ...tools].filter(Boolean))].slice(0, 12),
+        story: {
+          version: 1, origin: "platform", creators: [], tools, methods: selected.category ? [selected.category] : [],
+          authorization: "confirmed", authorizationNote: "平台工作流实践产生的个人作品草稿。",
+          allowDocumentDownload: false, coverAssetId: "", reflection: "",
+          steps: nodes.slice(0, 20).map((node) => ({
+            title: node.data?.label || "工作流步骤",
+            description: node.data?.description || "",
+            instruction: node.data?.value || "",
+            exampleInput: node.data?.exampleInput || "",
+            exampleOutput: node.data?.exampleOutput || "",
+            parameterDescription: node.data?.parameterDescription || "",
+            assetIds: [],
+          })),
+        },
+      });
+      setSavedWork(true);
+      onNotice?.("已保存为案例草稿，可到案例社区补充封面后提交审核");
+    } catch (error) {
+      onNotice?.(error.message || "保存案例草稿失败");
+    } finally { setSavingWork(false); }
+  };
   useEffect(() => { setNodePositions({}); }, [selected.id]);
   // 仅在拖拽结束后写回位置，避免鼠标移动时反复重算所有节点导致画布卡顿。
   const onNodeDragStop = useCallback((_, node) => setNodePositions((current) => ({ ...current, [node.id]: node.position })), []);
@@ -48,6 +83,11 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
           {run?.status === "in_progress" && activeStep && <NodeExecutionPanel key={activeStep.id} step={activeStep} node={currentNode} output={run.context?.nodeResults?.[activeStep.id]} loading={loading} onExecute={onExecute} />}
           {autoError && <div className="workflow-graph-runner__error" role="alert"><strong>自动运行暂停</strong><p>{autoError}</p><button type="button" onClick={onRetry}>重试当前节点</button></div>}
           {run?.status === "completed" && <div className="workflow-complete"><CheckCircle size={40} weight="fill" /><strong>节点工作流已完成</strong><p>模型生成记录和节点结果已保存，可从“我的学习”继续查看。</p></div>}
+          {run?.status === "completed" && <div className="workflow-save-work">
+            <strong>{savedWork ? "已保存为案例草稿" : "把这次实践存成案例"}</strong>
+            <p>{savedWork ? "到案例社区补充封面与过程素材后即可提交审核。" : "会以当前节点、工具与参数生成一份草稿，不会自动公开。"}</p>
+            <button type="button" disabled={savingWork || savedWork} onClick={() => void saveAsWork()}>{savingWork ? "正在保存…" : savedWork ? "已保存" : "保存为案例草稿"}</button>
+          </div>}
           {run?.context?.artifact?.downloadUrl && <a className="workflow-result-link" href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看或下载生成图片 <ArrowRight size={16} /></a>}
           {run?.context?.text && <section className="workflow-result-text"><strong>生成文字</strong><p>{run.context.text}</p></section>}
         </div>
