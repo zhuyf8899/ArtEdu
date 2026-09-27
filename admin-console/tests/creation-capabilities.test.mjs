@@ -142,13 +142,20 @@ test("创作对话页独立成屏：不显示站点导航，也不显示两侧�
   assert.ok(css.includes(".portal-shell--standalone .creation-canvas__composer { flex: 0 0 auto;"));
 });
 
-test("历次会话默认收起，鼠标移到对话窗口才淡入下滑", async () => {
+test("历次会话是常驻左侧栏，收起后按钮仍在", async () => {
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
-  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__history {\n  position: absolute;"), "会话列表改为浮层");
-  assert.ok(css.includes("opacity: 0; transform: translateY(-10px); pointer-events: none;"));
-  assert.ok(css.includes("transition: opacity .22s ease, transform .22s ease;"));
-  assert.ok(css.includes(".portal-shell--standalone .creation-canvas:hover .creation-canvas__history,"), "悬停对话窗口时出现");
-  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__history:focus-within"), "键盘聚焦也要能出现");
+  const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
+  // 停靠左侧 + 宽度动画（收起时对话区顺势变宽，而不是盖在消息上）。
+  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__body { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; }"));
+  assert.ok(css.includes("flex: 0 0 auto; width: 292px;"));
+  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__body.is-history-collapsed .creation-canvas__history { width: 0;"));
+  assert.ok(css.includes("transition: width .24s ease, opacity .2s ease, padding .24s ease;"));
+  // 收起后必须有按钮能收回来，并记住偏好。
+  assert.ok(workspace.includes("creation-canvas__history-toggle"), "表头要有会话开关按钮");
+  assert.ok(workspace.includes('aria-controls="artedu-creation-history"'));
+  assert.ok(workspace.includes("const [historyOpen, setHistoryOpen] = useState("));
+  assert.ok(workspace.includes('localStorage.getItem("artedu-creation-history-open") !== "0"'));
+  assert.ok(workspace.includes('localStorage.setItem("artedu-creation-history-open"'));
 });
 
 test("进入对话一定停在最新消息处，不因滚动保护而停在顶部", async () => {

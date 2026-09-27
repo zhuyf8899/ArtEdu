@@ -2022,28 +2022,32 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .portal-shell--standalone .route-transition { height: 100%; }
 .portal-shell--standalone .creation-canvas { height: 100%; min-height: 0; display: flex; flex-direction: column; position: relative; border-top: 0; }
 .portal-shell--standalone .creation-canvas__header { flex: 0 0 auto; }
-.portal-shell--standalone .creation-canvas__main { flex: 1 1 auto; min-height: 0; width: min(100%, 1180px); padding: 18px clamp(16px, 3vw, 44px) 14px; }
+.portal-shell--standalone .creation-canvas__main { flex: 1 1 auto; min-width: 0; min-height: 0; width: min(100%, 1180px); padding: 18px clamp(16px, 3vw, 44px) 14px; }
 .portal-shell--standalone .creation-canvas__conversation { display: flex; flex-direction: column; min-height: 0; }
 .portal-shell--standalone .creation-canvas__thread { flex: 1 1 auto; min-height: 0; max-height: none; }
 .portal-shell--standalone .creation-canvas__thread .ai-markdown { max-width: 900px; }
 .portal-shell--standalone .creation-canvas__composer { flex: 0 0 auto; position: relative; z-index: 2; padding-top: 12px; background: #fbfbf8; }
 
-/* 历次会话改成浮层：默认收起，鼠标移到对话窗口上才淡入下滑出现。
-   它不占布局高度，所以"点进对话就是底部的最新消息"这件事不会被它挤走。 */
+/* 历次会话常驻左侧栏：默认展开，点表头的「会话」按钮收起（按钮一直留着）。
+   收起时整列宽度动画到 0，对话区顺势变宽，而不是盖在消息上面。 */
+.portal-shell--standalone .creation-canvas__body { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; }
 .portal-shell--standalone .creation-canvas__history {
-  position: absolute; z-index: 7; top: 74px; left: clamp(12px, 3vw, 42px);
-  width: min(360px, 62vw); max-height: min(62vh, 520px); min-height: 0;
-  padding: 10px; display: block; overflow: auto;
-  background: #fff; border: 1px solid var(--canvas-line); border-radius: 14px;
-  box-shadow: 0 20px 46px rgba(20, 20, 26, .16);
-  opacity: 0; transform: translateY(-10px); pointer-events: none;
-  transition: opacity .22s ease, transform .22s ease;
+  flex: 0 0 auto; width: 292px; min-height: 0; padding: 12px 10px;
+  display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+  background: #f4f4ef; border-right: 1px solid var(--canvas-line);
+  transition: width .24s ease, opacity .2s ease, padding .24s ease;
 }
-.portal-shell--standalone .creation-canvas:hover .creation-canvas__history,
-.portal-shell--standalone .creation-canvas__history:hover,
-.portal-shell--standalone .creation-canvas__history:focus-within { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.portal-shell--standalone .creation-canvas__history-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; overflow: visible; }
+.portal-shell--standalone .creation-canvas__body.is-history-collapsed .creation-canvas__history { width: 0; padding-left: 0; padding-right: 0; opacity: 0; pointer-events: none; }
+.portal-shell--standalone .creation-canvas__history-list { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; overflow-y: auto; }
 .portal-shell--standalone .creation-canvas__history-item { width: auto; min-width: 0; }
+.portal-shell--standalone .creation-canvas__history-open { width: 100%; }
+
+/* 收起/展开的按钮固定在表头左侧，收起状态下依然可见。 */
+.creation-canvas__header-left { display: flex; align-items: center; gap: 6px; }
+.creation-canvas__history-toggle { min-height: 34px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; color: #4a4b51; background: #f4f4ef; border: 1px solid #e4e4de; border-radius: 8px; font-size: 12px; font-weight: 650; }
+.creation-canvas__history-toggle:hover { color: #1f2025; background: #ecece6; border-color: #d8d7d0; }
+.creation-canvas__history-toggle.is-open { color: #1f2025; background: #fff; border-color: #d8d7d0; }
+.creation-canvas__history-toggle b { min-width: 18px; height: 18px; display: grid; place-items: center; color: #55565c; background: #e2e2dc; border-radius: 50%; font-size: 10px; }
 
 /* 工具行图标：外链工具优先用目标站点自己的页标（favicon）。 */
 .tool-directory__favicon { width: 20px; height: 20px; display: block; object-fit: contain; border-radius: 5px; }
@@ -2068,4 +2072,4 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .image-lightbox__tools button:disabled { opacity: .35; cursor: not-allowed; }
 .image-lightbox__tools b { min-width: 54px; font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
 .image-lightbox__hint { color: rgba(255, 255, 255, .62); font-size: 11px; }
-@media (max-width: 720px) { .portal-main--standalone { width: calc(100% - 18px); padding: 8px 0 10px; }.portal-shell--standalone .creation-canvas__history { top: 62px; left: 8px; width: min(300px, 76vw); }.image-lightbox__stage img { max-height: calc(100vh - 132px); } }
+@media (max-width: 720px) { .portal-main--standalone { width: calc(100% - 18px); padding: 8px 0 10px; }.portal-shell--standalone .creation-canvas__history { width: 214px; padding: 10px 8px; }.creation-canvas__history-toggle span { display: none; }.image-lightbox__stage img { max-height: calc(100vh - 132px); } }

@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowClockwise, ArrowLeft, ArrowRight, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, SidebarSimple, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
 import { AiMarkdown, safeReplyUrl } from "./AiMarkdown.js";
 import { ZoomableImage } from "./ImageLightbox.jsx";
 import { isImageArtifact } from "./imageSources.js";
@@ -34,6 +34,10 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   const [pageCount, setPageCount] = useState("");
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [openConversationMenuId, setOpenConversationMenuId] = useState("");
+  // 会话列表常驻左侧栏，可收起；偏好记在本机，刷新后保持。
+  const [historyOpen, setHistoryOpen] = useState(() => {
+    try { return localStorage.getItem("artedu-creation-history-open") !== "0"; } catch { return true; }
+  });
   const [suggestingFor, setSuggestingFor] = useState(null);
   const { confirmAction } = useFeedback();
 
@@ -67,6 +71,9 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   const method = useMemo(() => creationMethod(methodId), [methodId]);
 
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+  useEffect(() => {
+    try { localStorage.setItem("artedu-creation-history-open", historyOpen ? "1" : "0"); } catch { /* 隐私模式下忽略 */ }
+  }, [historyOpen]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const updateConversations = useCallback((updater) => {
@@ -433,7 +440,13 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
 
   return <section className="creation-canvas" aria-label="创作对话">
     <header className="creation-canvas__header">
-      <button type="button" className="creation-canvas__back" onClick={onBack}><ArrowLeft size={17} weight="bold" />返回</button>
+      <div className="creation-canvas__header-left">
+        <button type="button" className="creation-canvas__back" onClick={onBack}><ArrowLeft size={17} weight="bold" />返回</button>
+        {/* 会话列表常驻左侧；收起后必须留按钮，否则用户找不回历史对话。 */}
+        <button type="button" className={`creation-canvas__history-toggle${historyOpen ? " is-open" : ""}`} aria-expanded={historyOpen} aria-controls="artedu-creation-history" onClick={() => setHistoryOpen((open) => !open)} title={historyOpen ? "收起会话列表" : "展开会话列表"}>
+          <SidebarSimple size={16} weight="bold" /><span>会话</span><b>{conversations.length}</b>
+        </button>
+      </div>
       <div className="creation-canvas__identity"><span>ARTEDU</span><i />创作空间</div>
       <div className="creation-canvas__header-actions">
         <span className={sending ? "is-working" : ""}><i />{sending ? "正在生成" : serviceReady ? "模型服务在线" : "本地演示模式"}</span>
@@ -441,7 +454,8 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       </div>
     </header>
 
-    <nav className="creation-canvas__history" aria-label="历次创作对话">
+    <div className={`creation-canvas__body${historyOpen ? "" : " is-history-collapsed"}`}>
+    <nav className="creation-canvas__history" id="artedu-creation-history" aria-label="历次创作对话" aria-hidden={historyOpen ? undefined : "true"}>
       <div className="creation-canvas__history-label"><ChatCircleDots size={17} weight="bold" /><span>会话</span><b>{conversations.length}</b></div>
       <div className="creation-canvas__history-list">
         {conversations.length ? conversations.map((item) => <div className={`creation-canvas__history-item${item.id === activeId ? " is-active" : ""}`} key={item.id}>
@@ -520,6 +534,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
             </div>
       </form>
     </main>
+    </div>
   </section>;
 }
 
