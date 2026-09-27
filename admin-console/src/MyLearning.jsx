@@ -203,7 +203,8 @@ function CourseRow({ course, index, onNavigate }) {
 }
 
 function TaskRow({ task, compact, onToggle, onDelete }) {
-  return <article className={`learning-task-row ${task.status === "completed" ? "is-complete" : ""} ${compact ? "is-compact" : ""}`}><button className="task-check" onClick={() => onToggle(task)} aria-label={task.status === "completed" ? "标记为未完成" : "标记为已完成"}>{task.status === "completed" && <Check size={13} weight="bold" />}</button><div><strong>{task.title}</strong>{!compact && <span>{taskTypeName(task.taskType)} · {task.dueDate ? formatDate(task.dueDate) : "未设置日期"}</span>}</div>{!compact && <button className="task-delete" onClick={() => onDelete(task.id)} aria-label={`删除${task.title}`}><Trash size={16} /></button>}</article>;
+  const autoCompleted = task.taskType === "lesson";
+  return <article className={`learning-task-row ${task.status === "completed" ? "is-complete" : ""} ${compact ? "is-compact" : ""}`}><button className="task-check" disabled={autoCompleted} onClick={() => onToggle(task)} aria-label={autoCompleted ? "课时任务由课程进度自动维护" : task.status === "completed" ? "标记为未完成" : "标记为已完成"}>{task.status === "completed" && <Check size={13} weight="bold" />}</button><div><strong>{task.title}</strong>{!compact && <span>{taskTypeName(task.taskType)} · {task.dueDate ? formatDate(task.dueDate) : "未设置日期"}</span>}</div>{!compact && !autoCompleted && <button className="task-delete" onClick={() => onDelete(task.id)} aria-label={`删除${task.title}`}><Trash size={16} /></button>}</article>;
 }
 
 function WorkMiniCard({ work, index, onClick }) {
