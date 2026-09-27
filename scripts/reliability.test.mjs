@@ -32,6 +32,13 @@ test('部署健康检查失败必须退出；备份位于迁移之前', async ()
   assert.match(start,/if \(\$SeedDemo\)/);
   const nginx = await readFile('deploy/nginx.conf','utf8');
   assert.match(nginx,/client_max_body_size 101m/); assert.match(nginx,/client_max_body_size 11m/);
+  assert.doesNotMatch(nginx,/proxy_pass http:\/\/api:4000/);
+  assert.equal((nginx.match(/proxy_pass http:\/\/\$\{ARTEDU_API_HOST\}:4000/g) ?? []).length,5);
+  const dockerfile = await readFile('deploy/Dockerfile.web','utf8');
+  assert.match(dockerfile,/\/etc\/nginx\/templates\/default\.conf\.template/);
+  const compose = await readFile('docker-compose.staging.yml','utf8');
+  assert.match(compose,/ARTEDU_API_HOST: "\$\{COMPOSE_PROJECT_NAME:-artedu\}-api-1"/);
+  assert.match(compose,/NGINX_ENVSUBST_FILTER: "\^ARTEDU_API_HOST\$"/);
 });
 test('备份失败不标记完成且恢复原来运行的服务；已有备份拒绝覆盖', async () => {
   const temp = await mkdtemp(path.join(tmpdir(),'artedu-backup-test-'));

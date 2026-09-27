@@ -126,6 +126,9 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.web
     restart: unless-stopped
+    environment:
+      ARTEDU_API_HOST: "${COMPOSE_PROJECT_NAME:-artedu}-api-1"
+      NGINX_ENVSUBST_FILTER: "^ARTEDU_API_HOST$"
     ports:
       - "${ARTEDU_BIND_IP:-127.0.0.1}:${ARTEDU_HTTP_PORT:-8080}:80"
     depends_on:
