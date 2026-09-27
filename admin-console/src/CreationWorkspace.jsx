@@ -44,6 +44,9 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   const loadedIdRef = useRef("");
   const ranPendingRef = useRef("");
   const scrollRef = useRef(null);
+  // 进入对话、切换对话、发出新一轮时置位：无论用户上次停在哪里，都必须落到最新消息处。
+  // 平时（流式输出时）才用"离底部近才跟随"的保守规则，避免抢用户翻看历史的滚动。
+  const jumpToBottomRef = useRef(false);
   const referenceInput = useRef(null);
   const promptInput = useRef(null);
   const activeIdRef = useRef("");
@@ -128,6 +131,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     setPageCount(target.pending?.pageCount ?? target.pageCount ?? "");
     setSearchEnabled(target.pending?.searchEnabled === true);
     setSuggestingFor(null);
+    jumpToBottomRef.current = true;
   }, [activeId, conversations, loaded]);
 
   const persist = useCallback(async (id, patch) => {
@@ -177,6 +181,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     const attachmentName = usedReference?.fileName ? `\n\n📎 已附参考文件：${usedReference.fileName}` : "";
     let rendered = [...baseMessages, { role: "user", content: `${content}${attachmentName}`, attachment: usedReference ?? null }, { role: "assistant", content: "", placeholder: placeholderText, streaming: true }];
     setMessages(rendered);
+    jumpToBottomRef.current = true;
     // 增量先合帧再上屏：SSE 一秒可能来几十帧，逐帧 setState 会让长回复越写越卡。
     const deltaBuffer = createDeltaBuffer({
       onFlush: (text) => {
@@ -280,11 +285,14 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
 
   // 跟随输出自动滚到底：流式时正文长度一直在变，所以增量长度也要进依赖；
   // 但用户往回翻看历史时（离底部较远）不抢滚动，直接把控制权留给用户。
+  // 例外是"刚进入/刚切换对话/刚发出新一轮"——那时必须无条件落到最新消息，否则会停在顶部。
   const streamingLength = messages[messages.length - 1]?.content?.length ?? 0;
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
-    if (node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;
+    const force = jumpToBottomRef.current;
+    if (force) jumpToBottomRef.current = false;
+    if (!force && node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;
     node.scrollTo({ top: node.scrollHeight, behavior: "auto" });
   }, [messages.length, streamingLength, messages[messages.length - 1]?.suggestions?.length, suggestingFor]);
 

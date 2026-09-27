@@ -2015,13 +2015,35 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .workflow-save-work button { justify-self: start; min-height: 36px; padding: 0 13px; color: #fff; background: #191a1c; border: 0; border-radius: 9px; font-size: 12px; }
 .workflow-save-work button:disabled { opacity: .45; cursor: not-allowed; }
 
-/* 创作对话页独立成屏：不显示站点导航与两侧装饰，宽度与高度都让给对话本身。 */
-.portal-shell--standalone { background: #fbfbf8; }
-.portal-main--standalone { width: min(1520px, calc(100% - 32px)); padding: 18px 0 22px; }
-.portal-shell--standalone .creation-canvas { min-height: calc(100vh - 44px); border-top: 0; }
-.portal-shell--standalone .creation-canvas__main { width: min(100%, 1180px); padding: 22px clamp(16px, 3vw, 44px) 20px; }
-.portal-shell--standalone .creation-canvas__thread { min-height: 420px; max-height: calc(100vh - 300px); }
+/* 创作对话页独立成屏：不显示站点导航与两侧装饰，宽度与高度都让给对话本身。
+   整屏高度固定、页面不滚动：消息区自己滚，输入区永远钉在底部，不会被任何东西挡住。 */
+.portal-shell--standalone { height: 100vh; overflow: hidden; background: #fbfbf8; }
+.portal-main--standalone { width: min(1520px, calc(100% - 32px)); height: 100%; padding: 14px 0 16px; }
+.portal-shell--standalone .route-transition { height: 100%; }
+.portal-shell--standalone .creation-canvas { height: 100%; min-height: 0; display: flex; flex-direction: column; position: relative; border-top: 0; }
+.portal-shell--standalone .creation-canvas__header { flex: 0 0 auto; }
+.portal-shell--standalone .creation-canvas__main { flex: 1 1 auto; min-height: 0; width: min(100%, 1180px); padding: 18px clamp(16px, 3vw, 44px) 14px; }
+.portal-shell--standalone .creation-canvas__conversation { display: flex; flex-direction: column; min-height: 0; }
+.portal-shell--standalone .creation-canvas__thread { flex: 1 1 auto; min-height: 0; max-height: none; }
 .portal-shell--standalone .creation-canvas__thread .ai-markdown { max-width: 900px; }
+.portal-shell--standalone .creation-canvas__composer { flex: 0 0 auto; position: relative; z-index: 2; padding-top: 12px; background: #fbfbf8; }
+
+/* 历次会话改成浮层：默认收起，鼠标移到对话窗口上才淡入下滑出现。
+   它不占布局高度，所以"点进对话就是底部的最新消息"这件事不会被它挤走。 */
+.portal-shell--standalone .creation-canvas__history {
+  position: absolute; z-index: 7; top: 74px; left: clamp(12px, 3vw, 42px);
+  width: min(360px, 62vw); max-height: min(62vh, 520px); min-height: 0;
+  padding: 10px; display: block; overflow: auto;
+  background: #fff; border: 1px solid var(--canvas-line); border-radius: 14px;
+  box-shadow: 0 20px 46px rgba(20, 20, 26, .16);
+  opacity: 0; transform: translateY(-10px); pointer-events: none;
+  transition: opacity .22s ease, transform .22s ease;
+}
+.portal-shell--standalone .creation-canvas:hover .creation-canvas__history,
+.portal-shell--standalone .creation-canvas__history:hover,
+.portal-shell--standalone .creation-canvas__history:focus-within { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.portal-shell--standalone .creation-canvas__history-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; overflow: visible; }
+.portal-shell--standalone .creation-canvas__history-item { width: auto; min-width: 0; }
 
 /* 工具行图标：外链工具优先用目标站点自己的页标（favicon）。 */
 .tool-directory__favicon { width: 20px; height: 20px; display: block; object-fit: contain; border-radius: 5px; }
@@ -2046,4 +2068,4 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .image-lightbox__tools button:disabled { opacity: .35; cursor: not-allowed; }
 .image-lightbox__tools b { min-width: 54px; font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
 .image-lightbox__hint { color: rgba(255, 255, 255, .62); font-size: 11px; }
-@media (max-width: 720px) { .portal-main--standalone { width: calc(100% - 18px); padding: 10px 0 14px; }.portal-shell--standalone .creation-canvas__thread { max-height: calc(100vh - 260px); }.image-lightbox__stage img { max-height: calc(100vh - 132px); } }
+@media (max-width: 720px) { .portal-main--standalone { width: calc(100% - 18px); padding: 8px 0 10px; }.portal-shell--standalone .creation-canvas__history { top: 62px; left: 8px; width: min(300px, 76vw); }.image-lightbox__stage img { max-height: calc(100vh - 132px); } }

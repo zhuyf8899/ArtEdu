@@ -136,7 +136,26 @@ test("创作对话页独立成屏：不显示站点导航，也不显示两侧�
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
   // 腾出来的空间要让给对话本体：更宽的主区、更高的消息区。
   assert.ok(css.includes(".portal-main--standalone { width: min(1520px"));
-  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__thread { min-height: 420px; max-height: calc(100vh - 300px); }"));
+  // 整屏固定、页面不滚动：消息区自己滚，输入区钉在底部（不会被移动/滚动遮住）。
+  assert.ok(css.includes(".portal-shell--standalone { height: 100vh; overflow: hidden;"));
+  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__thread { flex: 1 1 auto; min-height: 0; max-height: none; }"));
+  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__composer { flex: 0 0 auto;"));
+});
+
+test("历次会话默认收起，鼠标移到对话窗口才淡入下滑", async () => {
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__history {\n  position: absolute;"), "会话列表改为浮层");
+  assert.ok(css.includes("opacity: 0; transform: translateY(-10px); pointer-events: none;"));
+  assert.ok(css.includes("transition: opacity .22s ease, transform .22s ease;"));
+  assert.ok(css.includes(".portal-shell--standalone .creation-canvas:hover .creation-canvas__history,"), "悬停对话窗口时出现");
+  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__history:focus-within"), "键盘聚焦也要能出现");
+});
+
+test("进入对话一定停在最新消息处，不因滚动保护而停在顶部", async () => {
+  const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
+  assert.ok(workspace.includes("const jumpToBottomRef = useRef(false);"), "要有强制到底的标记");
+  assert.ok(workspace.includes("jumpToBottomRef.current = true;"), "载入/发送时置位");
+  assert.ok(workspace.includes("if (!force && node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;"));
 });
 
 test("「重新输出」清除上一轮回复后重新生成，而不是回填输入框", async () => {
