@@ -85,7 +85,7 @@ function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder }) {
   }, [canManage, onNotice]);
   useEffect(() => { load(); }, [load]);
   const categories = useMemo(() => ["全部", ...new Set(links.filter((item) => item.status === "active").map((item) => item.category).filter(Boolean))], [links]);
-  const visibleLinks = useMemo(() => links.filter((item) => item.status === "active" && (category === "全部" || item.category === category)), [category, links]);
+  const visibleLinks = useMemo(() => links.filter((item) => item.id !== "tool-directory-piying" && item.status === "active" && (category === "全部" || item.category === category)), [category, links]);
   const openNew = () => { setEditingId(null); setForm(emptyToolForm()); setEditorOpen(true); };
   const edit = (item) => { setEditingId(item.id); setForm({ category: item.category, name: item.name, detail: item.detail, href: item.href, coverImageUrl: item.coverImageUrl || "", iconKey: item.iconKey, launchMode: item.launchMode, featured: item.featured, status: item.status }); setEditorOpen(true); };
   const submit = async (event) => {

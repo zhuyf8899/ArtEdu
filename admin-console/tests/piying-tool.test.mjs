@@ -7,30 +7,25 @@ const exists = async (relative) => {
   try { await access(new URL(relative, import.meta.url)); return true; } catch { return false; }
 };
 
-// 皮影实验室来自工具目录里的数据行，不再单独占一张大卡片；
-// 少了独立组件，就不会再出现“皮影一种规格、其他工具另一种规格”的分叉。
-test("数字皮影实验室与其他工具同属一个工具目录，没有独立大卡片", async () => {
+test("设计工作台恢复独立皮影入口", async () => {
   const portal = await read("../src/Portal.jsx");
-  assert.match(portal, /section === "studio"[^\n]*<WorkflowStudio/);
-  assert.doesNotMatch(portal, /PiyingToolCard/);
-  assert.doesNotMatch(portal, /piying-tool\.css/);
-  assert.equal(await exists("../src/PiyingToolCard.js"), false);
-  assert.equal(await exists("../src/piying-tool.css"), false);
+  assert.match(portal, /section === "studio"[^\n]*<PiyingToolCard\s*\/>[^\n]*<WorkflowStudio/);
+  assert.match(portal, /piying-tool\.css/);
+  assert.equal(await exists("../src/PiyingToolCard.js"), true);
+  assert.equal(await exists("../src/piying-tool.css"), true);
+  const studio = await read("../src/WorkflowStudio.jsx");
+  assert.match(studio, /item\.id !== "tool-directory-piying"/);
 });
 
-test("所有工具卡片走同一个组件与同一套样式", async () => {
+test("其他工具保留上一版目录卡片样式", async () => {
   const studio = await read("../src/WorkflowStudio.jsx");
   assert.equal((studio.match(/function ToolDirectoryCard/g) ?? []).length, 1);
   assert.match(studio, /visibleLinks\.map\(\(tool\) => <ToolDirectoryCard/);
   assert.match(studio, /className="tool-directory__card"/);
   const css = await read("../src/styles.css");
-  // 统一的卡片规格：同一层级、同一封面高度、同一编辑按钮。
-  for (const rule of [
-    ".tool-directory__card { border: 1px solid #e2e0da; border-radius: 16px; }",
-    ".tool-directory__list { gap: 16px !important; }",
-    ".tool-directory__cover { height: 142px; }",
-    ".tool-directory__list--list .tool-directory__card > :is(a, .tool-directory__launch) { min-height: 100px !important;",
-  ]) assert.ok(css.includes(rule), rule);
+  assert.doesNotMatch(css, /\.tool-directory__card \{ border: 1px solid #e2e0da; border-radius: 16px; \}/);
+  const piyingCss = await read("../src/piying-tool.css");
+  assert.match(piyingCss, /\.piying-tool__intro/);
   assert.match(css, /\.tool-directory__edit:hover, \.tool-directory__edit:focus-visible/);
   assert.match(css, /@media \(max-width: 620px\)/);
 });

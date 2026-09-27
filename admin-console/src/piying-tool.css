@@ -1,0 +1,37 @@
+/* 样式仅作用于外部工具卡片，保留原有工作流与管理端布局。 */
+.piying-tool {
+  display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 24px 32px;
+  margin: 0 0 32px; padding: 28px; min-width: 0;
+  background: #fff; color: #242321; border: 1px solid #e6ded8; border-radius: 18px;
+  box-shadow: 0 4px 20px rgb(53 38 27 / 4%);
+}
+.piying-tool__intro { display: flex; align-items: flex-start; gap: 18px; min-width: 0; }
+.piying-tool__icon { display: grid; place-items: center; flex: 0 0 58px; height: 58px; color: #9b482f; background: #fbefe8; border-radius: 15px; }
+.piying-tool__heading { min-width: 0; }
+.piying-tool__eyebrow { margin: 0 0 8px; color: #766153; font-size: 13px; line-height: 1.5; }
+.piying-tool__title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.piying-tool__title-row h2 { margin: 0; font-size: clamp(22px, 2vw, 28px); line-height: 1.4; }
+.piying-tool__badge { padding: 4px 9px; border: 1px solid #e9d6c9; border-radius: 6px; color: #84442d; background: #fcf5ef; font-size: 12px; white-space: nowrap; }
+.piying-tool__description { margin: 12px 0; color: #55524e; font-size: 15px; line-height: 1.8; }
+.piying-tool__tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.piying-tool__tags li { padding: 4px 10px; color: #5d5550; background: #f6f4f1; border-radius: 6px; font-size: 13px; line-height: 1.6; }
+.piying-tool__actions { display: flex; flex-direction: column; align-self: center; gap: 10px; min-width: 0; }
+.piying-tool__link { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 16px; border: 1px solid #d6c4b8; border-radius: 10px; color: #382e28; background: #f5ece5; text-decoration: none; font-size: 15px; font-weight: 600; line-height: 1.5; }
+.piying-tool__link:hover { color: #28201a; background: #ebddd2; border-color: #bda28f; }
+.piying-tool__link:focus-visible, .piying-tool__help summary:focus-visible { outline: 3px solid #9b482f; outline-offset: 4px; }
+.piying-tool__destination { margin: 0; color: #655e58; font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.piying-tool__help { grid-column: 1 / -1; border-top: 1px solid #eee8e2; padding-top: 14px; font-size: 14px; line-height: 1.8; }
+.piying-tool__help summary { min-height: 44px; padding: 8px 4px; cursor: pointer; color: #544135; font-weight: 600; }
+.piying-tool__help summary svg { vertical-align: middle; margin: 0 7px 2px 3px; }
+.piying-tool__help ol { margin: 12px 0; padding-left: 24px; color: #55524e; }
+.piying-tool__help li + li { margin-top: 8px; }
+.piying-tool__help p { margin: 12px 0 0; color: #655e58; }
+@media (max-width: 800px) {
+  .piying-tool { grid-template-columns: minmax(0, 1fr); padding: 22px; gap: 20px; }
+  .piying-tool__actions { align-items: stretch; }
+}
+@media (max-width: 440px) {
+  .piying-tool { padding: 18px; }
+  .piying-tool__intro { flex-direction: column; gap: 12px; }
+  .piying-tool__icon { flex-basis: auto; width: 48px; height: 48px; }
+}
