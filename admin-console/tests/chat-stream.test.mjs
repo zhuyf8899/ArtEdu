@@ -83,5 +83,7 @@ test("创作页用合帧缓冲渲染增量，并把历史消息与 Markdown 渲�
 test("滚动跟随输出，但用户往回翻看时不抢滚动", async () => {
   const source = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
   assert.ok(source.includes("const streamingLength = messages[messages.length - 1]?.content?.length ?? 0;"));
-  assert.ok(source.includes("if (node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;"));
+  // 进入/切换对话与发出新一轮必须无条件到底；只有流式跟随才用"离底部近才跟随"的保守规则。
+  assert.ok(source.includes("const force = jumpToBottomRef.current;"));
+  assert.ok(source.includes("if (!force && node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;"));
 });
