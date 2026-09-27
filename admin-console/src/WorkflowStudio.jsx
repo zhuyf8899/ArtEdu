@@ -9,6 +9,13 @@ const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ Workflo
 const TOOL_ICONS = { design: Palette, image: ImageSquare, idea: Lightbulb, learning: Path, ai: Robot, code: Code, link: LinkSimple };
 const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https://", coverImageUrl: "", iconKey: "link", launchMode: "new_tab", featured: false, status: "active" });
 
+/**
+ * 工作流自己是否带着提示词。带着的话，「创作需求」输入节点只是"可选需求"：
+ * 使用者什么都不填也该能一键出图；整条链路一句提示词都没有时才需要停下来问一句。
+ */
+const PROMPT_NODE_TYPES = ["prompt", "text_encode", "skill"];
+const nodesCarryPrompt = (nodes = []) => nodes.some((node) => PROMPT_NODE_TYPES.includes(node.type) && String(node.data?.value ?? "").trim());
+
 export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice, canPublish = false, canManageToolDirectory = false }) {
   const [workflows, setWorkflows] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -59,9 +66,11 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
     const step = run.steps[run.currentStep];
     const node = run.nodes.find((item) => item.id === step?.id);
     // 一键跑到底：整条链路自己往下走，直到出图，不再让人一个节点一个节点点。
-    // 只有「非现场给不可」的两件事才停下来：没配默认值的创作需求、要上传的参考图片。
-    // 负向提示词直接用节点里配好的默认值继续采样。
-    if (!node || node.type === "load_image" || (node.type === "input" && !String(node.data?.value ?? "").trim())) return;
+    // 正向/负向提示词都直接读节点里配好的默认值。
+    // 只有「非现场给不可」的两种情况才停下来：要上传的参考图片；
+    // 以及整条链路里一句提示词都没有时，创作需求必须问一句（否则没东西可生成）。
+    if (!node || node.type === "load_image") return;
+    if (node.type === "input" && !String(node.data?.value ?? "").trim() && !nodesCarryPrompt(run.nodes)) return;
     const key = `${run.id}:${run.currentStep}`;
     if (advancing.current === key) return;
     advancing.current = key;
@@ -84,7 +93,7 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
     {/* 工具入口之后必须有节点工作流列表：之前这一块被工具目录挤掉了，学生根本点不进工作流。 */}
     <div className="workflow-catalog__list">
       <header className="workflow-catalog__toolbar">
-        <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>点开就是独立画布：点一次运行就一路跑到出图，只有填需求和传参考图会停下来问你。</span></div>
+        <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>点开就是独立画布：正向/负向提示词直接读节点里配好的内容，点一次就一路跑到出图。</span></div>
         <button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button>
       </header>
       {workflows.length ? <section className="workflow-grid">{workflows.map((workflow) => {

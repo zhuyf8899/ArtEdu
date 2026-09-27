@@ -846,9 +846,10 @@ export class StudioService {
     const appendPrompt = (piece: string) => { context.prompt = [context.prompt, piece].filter(Boolean).join("\n").trim(); };
     switch (node.type) {
       case "input":
+        // 输入节点是"可选的用户需求"。工作流自己带着正向提示词时，使用者什么都不填
+        // 也应该能一路跑到出图，不再当成错误拦住（提示词由后面的 prompt 节点补齐）。
         context.prompt ??= value;
-        if (!context.prompt) throw new BadRequestException("输入节点需要在开始运行时填写需求，或设置默认值");
-        return { kind: "input", prompt: context.prompt };
+        return { kind: "input", prompt: context.prompt ?? "" };
       case "load_image":
         if (!context.referenceFileId) throw new BadRequestException("请上传一张已获授权的参考图片");
         return { kind: "reference", source: context.referenceFileId };

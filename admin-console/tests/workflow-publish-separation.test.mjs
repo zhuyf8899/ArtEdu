@@ -39,14 +39,15 @@ test("设计工作台目录带 includeDrafts，草稿只有作者能亲手看到
   assert.ok(studio.includes("草稿试运行"));
 });
 
-test("一键跑到底：负向提示词不再停下来让人一步步点", async () => {
+test("一键跑到底：提示词直接读节点默认值，不再停下来让人一步步填", async () => {
   const studio = await read("WorkflowStudio.jsx");
-  // 运行页自动推进：只有「没配默认值的创作需求」和「要上传的参考图片」允许停下来。
   assert.ok(!studio.includes('node.type === "negative_prompt" ||'), "负向提示词不能再中断自动推进");
-  assert.match(studio, /node\.type === "load_image" \|\| \(node\.type === "input" && !String\(node\.data\?\.value \?\? ""\)\.trim\(\)\)/);
+  assert.ok(studio.includes("const nodesCarryPrompt"), "要先判断工作流自己有没有带提示词");
+  // 工作流自带提示词时，输入节点留空也不再停下来问人。
+  assert.match(studio, /if \(node\.type === "input" && !String\(node\.data\?\.value \?\? ""\)\.trim\(\) && !nodesCarryPrompt\(run\.nodes\)\) return;/);
   // 画布上的试运行同样要自动往下执行，不再要求点「执行当前节点」。
   const admin = await read("WorkflowAdmin.jsx");
   assert.ok(admin.includes("autoAdvanced"), "画布要有一键跑到底的自动推进");
-  assert.match(admin, /if \(node\.type === "load_image" \|\| \(node\.type === "input" && !String\(node\.data\?\.value \?\? ""\)\.trim\(\)\)\) return;/);
+  assert.match(admin, /if \(node\.type === "input" && !String\(node\.data\?\.value \?\? ""\)\.trim\(\) && !nodesCarryPrompt\(editor\.definition\.nodes\)\) return;/);
   assert.ok(admin.includes("void executeCurrentNode()"), "自动推进要真的执行当前节点");
 });
