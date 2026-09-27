@@ -2,11 +2,11 @@ const escapeXml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
 
 export function titleCoverDataUrl(title, width = 640, height = 360) {
   const letters = Array.from(String(title ?? "").trim() || "未命名");
-  const lineLength = width <= 480 ? 9 : 12;
+  const fontSize = Math.min(width <= 480 ? 32 : 42, Math.max(18, Math.floor(width / 8)));
+  const lineLength = Math.max(4, Math.floor((width * 0.8) / fontSize));
   const lines = [];
   while (letters.length && lines.length < 3) lines.push(letters.splice(0, lineLength).join(""));
   if (letters.length) lines[2] = `${Array.from(lines[2]).slice(0, lineLength - 1).join("")}…`;
-  const fontSize = width <= 480 ? 32 : 42;
   const lineHeight = fontSize * 1.4;
   const startY = height / 2 - ((lines.length - 1) * lineHeight) / 2;
   const text = lines.map((line, index) => `<text x="50%" y="${startY + index * lineHeight}" text-anchor="middle" dominant-baseline="middle" fill="#111" font-family="Noto Sans SC, sans-serif" font-size="${fontSize}" font-weight="700">${escapeXml(line)}</text>`).join("");

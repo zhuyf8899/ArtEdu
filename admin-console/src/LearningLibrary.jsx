@@ -102,7 +102,7 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
       <FilterRow label="使用工具" items={["全部工具", ...tools]} value={toolFilter} onChange={setToolFilter} />
     </section>
     {filteredCourses.length ? <section className="course-grid">{filteredCourses.map((course) => <article className="course-card" key={course.id}>
-      <div className="course-cover"><img src={coverImageFor(course)} alt="" /><span>{course.method}</span></div>
+      <div className="course-cover"><img src={coverImageFor(course, 240, 400)} alt="" /><span>{course.method}</span></div>
       <div className="course-card__content">
         <div className="course-card__tags"><b>{course.method}</b><span>{course.category}</span></div>
         <small>{course.lessonCount ?? 0} 个课时 · {difficultyName(course.difficulty)}</small>

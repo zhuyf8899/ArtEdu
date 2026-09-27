@@ -14,3 +14,12 @@ test("未上传封面时按标题生成白底黑字的指定尺寸图片", () =>
   assert.equal(coverImageFor({ title: "课件", coverUrl: "https://example.com/cover.jpg" }), "https://example.com/cover.jpg");
   assert.notEqual(titleCoverDataUrl("课程甲"), titleCoverDataUrl("课程乙"));
 });
+
+test("窄版课程卡片封面保留文字安全区", () => {
+  const svg = decodeURIComponent(titleCoverDataUrl("传统纹样设计基础教程", 240, 400).split(",", 2)[1]);
+  assert.match(svg, /width="240" height="400"/);
+  const fontSize = Number(svg.match(/font-size="(\d+)"/)?.[1]);
+  const lines = [...svg.matchAll(/<text[^>]*>([^<]+)<\/text>/g)].map((match) => match[1]);
+  assert.ok(lines.length > 1);
+  assert.ok(lines.every((line) => Array.from(line).length * fontSize <= 240 * 0.8));
+});
