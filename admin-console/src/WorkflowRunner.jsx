@@ -32,7 +32,12 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previousOverflow; };
+    // 运行工作流时整页都属于画布：给 body 打标记，隐藏站点导航与两侧装饰。
+    document.body.classList.add("workflow-runner-open");
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.classList.remove("workflow-runner-open");
+    };
   }, []);
   const currentNode = versionNodes.find((item) => item.id === activeStep?.id);
   return createPortal(<section className="workflow-player workflow-graph-runner" role="dialog" aria-modal="true" aria-label={`${selected.name}节点画布`}>

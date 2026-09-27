@@ -2098,3 +2098,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .workflow-graph-runner__topbar { position: absolute; z-index: 6; top: 14px; left: 14px; right: 380px; min-height: 0; padding: 8px 14px; background: rgba(255, 255, 255, .93); border: 1px solid #dcdcd6; border-radius: 999px; box-shadow: 0 10px 26px rgba(20, 20, 26, .12); }
 .workflow-graph-runner__sidebar { position: absolute; z-index: 6; top: 14px; right: 14px; bottom: 14px; width: min(352px, 34vw); overflow: auto; padding: 14px; background: rgba(255, 255, 255, .95); border: 1px solid #dcdcd6; border-radius: 16px; box-shadow: 0 18px 44px rgba(20, 20, 26, .16); }
 @media (max-width: 900px) { .workflow-graph-runner__topbar { right: 14px; }.workflow-graph-runner__sidebar { top: auto; left: 14px; right: 14px; bottom: 14px; width: auto; max-height: 46vh; } }
+
+/* 打开节点工作流时，整页就是画布：站点导航、两侧装饰、白色内容壳全部让位。 */
+body.workflow-runner-open .portal-topbar,
+body.workflow-runner-open .portal-art-rails { display: none !important; }
+body.workflow-runner-open .portal-main { width: 100%; margin: 0; padding: 0; }
+body.workflow-runner-open .portal-shell { background: #20242b; }
+body.workflow-runner-open .workflow-graph-runner { background: #20242b; }
+
+/* 运行界面不做白底卡片：顶栏与功能区改成深色浮层，画布透出来当背景。 */
+body.workflow-runner-open .workflow-graph-runner__topbar { background: rgba(18, 21, 26, .72); border-color: rgba(255, 255, 255, .14); backdrop-filter: blur(8px); }
+body.workflow-runner-open .workflow-graph-runner__topbar :is(h1, span) { color: #f3f3f4; }
+body.workflow-runner-open .workflow-graph-runner__back { color: #f3f3f4; background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .18); }
+body.workflow-runner-open .workflow-graph-runner__sidebar { background: rgba(18, 21, 26, .78); border-color: rgba(255, 255, 255, .14); backdrop-filter: blur(8px); }
+body.workflow-runner-open .workflow-graph-runner__sidebar :is(h1, h2, h3, strong, p, span, em, small, label, li) { color: #ececee; }
+body.workflow-runner-open .workflow-graph-runner__sidebar :is(.workflow-graph-runner__summary, .workflow-start, .workflow-step, .workflow-step--node, .workflow-complete, .workflow-node-output, .workflow-result-text) { color: #ececee; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .12); }
+body.workflow-runner-open .workflow-graph-runner__sidebar :is(input, textarea, select) { color: #f4f4f5; background: rgba(0, 0, 0, .34); border-color: rgba(255, 255, 255, .2); }
+body.workflow-runner-open .workflow-graph-runner__sidebar button { border-color: rgba(255, 255, 255, .2); }
