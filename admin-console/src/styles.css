@@ -2010,6 +2010,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .case-review-history summary { cursor: pointer; font-weight: 700; }.case-review-history article { padding: 9px 0; border-top: 1px solid #ececE6; }.case-review-history article strong { margin-right: 8px; }.case-review-history article time { color: #86868a; font-size: 11px; }.case-review-history article p { margin: 5px 0 0; color: #5f6064; line-height: 1.65; }
 
 /* 工作流跑完 → 存成案例草稿。 */
+/* 节点库走 Scratch 的积木观感：整块实色 + 顶部凹口 + 底部凸起，一眼看出可以拖到画布上。 */
+.workflow-node-palette { background: #fffdf7; }
+.workflow-node-list { display: grid; gap: 10px; }
+.workflow-node-list button { position: relative; min-height: 48px; padding: 9px 34px 9px 14px; display: grid !important; grid-template-columns: 22px minmax(0, 1fr); align-items: center; gap: 9px; color: #fff; background: var(--node-color, #4c97ff); border: 0 !important; border-radius: 8px; box-shadow: 0 2px 0 rgba(0, 0, 0, .16); text-align: left; cursor: grab; }
+.workflow-node-list button::before { content: ""; position: absolute; top: -3px; left: 14px; width: 16px; height: 8px; background: inherit; border-radius: 4px 4px 0 0; }
+.workflow-node-list button::after { content: ""; position: absolute; bottom: -4px; left: 14px; width: 22px; height: 9px; background: inherit; border-radius: 0 0 5px 5px; }
+.workflow-node-list button:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.workflow-node-list button:active { cursor: grabbing; transform: translateY(0); }
+.workflow-node-list button i { display: grid; place-items: center; color: #fff; }
+.workflow-node-list button > span { min-width: 0; display: grid; gap: 1px; }
+.workflow-node-list button em { color: rgba(255, 255, 255, .82); font-size: 9px; font-style: normal; letter-spacing: .04em; }
+.workflow-node-list button strong { color: #fff; font-size: 13px; }
+.workflow-node-list button small { overflow: hidden; color: rgba(255, 255, 255, .9); font-size: 10px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.workflow-node-list button > svg:last-child { position: absolute; top: 50%; right: 10px; color: rgba(255, 255, 255, .9); transform: translateY(-50%); }
+.workflow-node-groups button.is-active { color: #fff; background: #575e75; border-color: #575e75; }
+
 .workflow-save-work { margin-top: 12px; padding: 14px 16px; display: grid; gap: 7px; background: #f4f8ea; border: 1px solid #dbe6c4; border-radius: 12px; }
 .workflow-save-work strong { font-size: 13px; }.workflow-save-work p { margin: 0; color: #5f6650; font-size: 12px; line-height: 1.6; }
 .workflow-save-work button { justify-self: start; min-height: 36px; padding: 0 13px; color: #fff; background: #191a1c; border: 0; border-radius: 9px; font-size: 12px; }

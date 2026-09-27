@@ -56,7 +56,9 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
     if (!run || !selected || loading || autoError || run.status !== "in_progress") return;
     const step = run.steps[run.currentStep];
     const node = run.nodes.find((item) => item.id === step?.id);
-    if (!node || node.type === "load_image" || (node.type === "input" && !String(node.data?.value ?? "").trim())) return;
+    // 需要用户参与的两个节点停下来：输入节点（没填默认值时）与负向提示词节点
+    // （让人先看一眼、改掉不想要的内容，再继续采样）。
+    if (!node || node.type === "load_image" || node.type === "negative_prompt" || (node.type === "input" && !String(node.data?.value ?? "").trim())) return;
     const key = `${run.id}:${run.currentStep}`;
     if (advancing.current === key) return;
     advancing.current = key;

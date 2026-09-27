@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, Play, SpinnerGap } from "@phosphor-icons/react";
-import { createWork, uploadTemporaryCreationFile } from "./services/adminApi.js";
+import { uploadTemporaryCreationFile } from "./services/adminApi.js";
 import { ZoomableImage } from "./ImageLightbox.jsx";
 import "@xyflow/react/dist/style.css";
 
@@ -20,41 +20,6 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
   const activeStep = run?.status === "in_progress" ? steps[run.currentStep] : null;
   const activeId = activeStep?.id;
   const [nodePositions, setNodePositions] = useState({});
-  // 跑完工作流后可以直接存成案例草稿，把"工作台动手"和"案例社区展示"接起来。
-  const [savedWork, setSavedWork] = useState(false);
-  const [savingWork, setSavingWork] = useState(false);
-  const saveAsWork = async () => {
-    setSavingWork(true);
-    try {
-      const nodes = selected.nodes ?? run?.nodes ?? [];
-      const tools = [...new Set(nodes.filter((node) => node.type === "model" || node.type === "skill").map((node) => node.data?.label).filter(Boolean))].slice(0, 12);
-      await createWork({
-        title: `${selected.name} · 我的工作流实践`,
-        summary: `通过「${selected.name}」完成的一次工作流实践。可继续编辑案例内容、补充封面与过程素材后提交审核。`,
-        discipline: selected.category || "艺术创作",
-        workflowIds: [selected.id],
-        tagNames: [...new Set([selected.category, ...tools].filter(Boolean))].slice(0, 12),
-        story: {
-          version: 1, origin: "platform", creators: [], tools, methods: selected.category ? [selected.category] : [],
-          authorization: "confirmed", authorizationNote: "平台工作流实践产生的个人作品草稿。",
-          allowDocumentDownload: false, coverAssetId: "", reflection: "",
-          steps: nodes.slice(0, 20).map((node) => ({
-            title: node.data?.label || "工作流步骤",
-            description: node.data?.description || "",
-            instruction: node.data?.value || "",
-            exampleInput: node.data?.exampleInput || "",
-            exampleOutput: node.data?.exampleOutput || "",
-            parameterDescription: node.data?.parameterDescription || "",
-            assetIds: [],
-          })),
-        },
-      });
-      setSavedWork(true);
-      onNotice?.("已保存为案例草稿，可到案例社区补充封面后提交审核");
-    } catch (error) {
-      onNotice?.(error.message || "保存案例草稿失败");
-    } finally { setSavingWork(false); }
-  };
   useEffect(() => { setNodePositions({}); }, [selected.id]);
   // 仅在拖拽结束后写回位置，避免鼠标移动时反复重算所有节点导致画布卡顿。
   const onNodeDragStop = useCallback((_, node) => setNodePositions((current) => ({ ...current, [node.id]: node.position })), []);
@@ -71,24 +36,20 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
   const currentNode = versionNodes.find((item) => item.id === activeStep?.id);
   return createPortal(<section className="workflow-player workflow-graph-runner" role="dialog" aria-modal="true" aria-label={`${selected.name}节点画布`}>
     <header className="workflow-graph-runner__topbar">
-      <button className="workflow-graph-runner__back" onClick={onBack}><ArrowLeft size={18} weight="bold" /> 返回工作台</button>
-      <div className="workflow-graph-runner__title"><span>{selected.category} / 节点画布</span><h1>{selected.name}</h1></div>
+      {/* 运行界面自成一体：只留一个退出按钮，其余位置给工作流本身。 */}
+      <button className="workflow-graph-runner__back" onClick={onBack}><ArrowLeft size={18} weight="bold" /> 退出</button>
+      <div className="workflow-graph-runner__title"><h1>{selected.name}</h1></div>
       <div className="workflow-graph-runner__run-state">{loading ? <SpinnerGap className="spin" size={17} /> : run?.status === "completed" ? <CheckCircle size={18} weight="fill" /> : <FlowArrow size={18} />}<span>{loading ? "正在自动运行" : autoError ? "运行已暂停" : run?.status === "completed" ? "运行完成" : run ? "自动运行已开启" : "等待开始"}</span></div>
     </header>
     <div className="workflow-graph-runner__body">
-      <div className="workflow-run-canvas" aria-label="工作流节点图"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={fitViewOptions} nodesDraggable nodesConnectable={false} elementsSelectable zoomOnDoubleClick={false} onNodeDragStop={onNodeDragStop}><Background color="#384250" gap={18} size={1} /><Controls showInteractive={false} /></ReactFlow><div className="workflow-graph-runner__canvas-hint">拖动画布 · 滚轮缩放 · 拖动节点调整位置</div></div>
+      <div className="workflow-run-canvas" aria-label="工作流节点图"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={fitViewOptions} nodesDraggable nodesConnectable={false} elementsSelectable zoomOnDoubleClick={false} onNodeDragStop={onNodeDragStop}><Background color="#384250" gap={18} size={1} /><Controls showInteractive={false} /></ReactFlow></div>
       <aside className="workflow-graph-runner__sidebar">
-        <div className="workflow-graph-runner__summary"><span>工作流进度</span><strong>{run?.status === "completed" ? "已完成" : `${run?.currentStep ?? 0} / ${run?.totalSteps ?? versionNodes.length} 个节点`}</strong><div className="workflow-player__progress"><i><b style={{ width: `${run?.status === "completed" ? 100 : progress}%` }} /></i><span>{run?.status === "completed" ? 100 : progress}%</span></div><p>{selected.description}</p></div>
+        <div className="workflow-graph-runner__summary"><span>运行进度</span><strong>{run?.status === "completed" ? "已完成" : `${run?.currentStep ?? 0} / ${run?.totalSteps ?? versionNodes.length} 个节点`}</strong><div className="workflow-player__progress"><i><b style={{ width: `${run?.status === "completed" ? 100 : progress}%` }} /></i><span>{run?.status === "completed" ? 100 : progress}%</span></div></div>
         <div className="workflow-graph-runner__sidebar-content">
-          {!run && <div className="workflow-start workflow-start--graph"><FlowArrow size={40} weight="thin" /><strong>{selected.versionId ? "准备启动工作流" : "暂无可运行版本"}</strong><p>{selected.versionId ? "点击开始后，画布会自动运行已有参数的节点。" : "请先发布工作流版本。"}</p>{selected.versionId && <button disabled={loading} onClick={onStart}><Play size={18} weight="fill" /> 开始运行</button>}</div>}
+          {!run && <div className="workflow-start workflow-start--graph"><FlowArrow size={40} weight="thin" /><strong>{selected.versionId ? "准备运行" : "暂无可运行版本"}</strong>{selected.versionId && <button disabled={loading} onClick={onStart}><Play size={18} weight="fill" /> 开始运行</button>}</div>}
           {run?.status === "in_progress" && activeStep && <NodeExecutionPanel key={activeStep.id} step={activeStep} node={currentNode} output={run.context?.nodeResults?.[activeStep.id]} loading={loading} onExecute={onExecute} />}
           {autoError && <div className="workflow-graph-runner__error" role="alert"><strong>自动运行暂停</strong><p>{autoError}</p><button type="button" onClick={onRetry}>重试当前节点</button></div>}
-          {run?.status === "completed" && <div className="workflow-complete"><CheckCircle size={40} weight="fill" /><strong>节点工作流已完成</strong><p>模型生成记录和节点结果已保存，可从“我的学习”继续查看。</p></div>}
-          {run?.status === "completed" && <div className="workflow-save-work">
-            <strong>{savedWork ? "已保存为案例草稿" : "把这次实践存成案例"}</strong>
-            <p>{savedWork ? "到案例社区补充封面与过程素材后即可提交审核。" : "会以当前节点、工具与参数生成一份草稿，不会自动公开。"}</p>
-            <button type="button" disabled={savingWork || savedWork} onClick={() => void saveAsWork()}>{savingWork ? "正在保存…" : savedWork ? "已保存" : "保存为案例草稿"}</button>
-          </div>}
+          {run?.status === "completed" && <div className="workflow-complete"><CheckCircle size={40} weight="fill" /><strong>运行完成</strong></div>}
           {run?.context?.artifact?.downloadUrl && (/\.(png|jpe?g|webp|gif|avif|bmp)$/i.test(String(run.context.artifact.fileName ?? "")) || String(run.context.artifact.mimeType ?? "").startsWith("image/"))
             ? <ZoomableImage src={run.context.artifact.downloadUrl} alt={run.context.artifact.fileName ?? "工作流生成的图片"} fileName={run.context.artifact.fileName ?? ""} />
             : <a className="workflow-result-link" href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看或下载生成图片 <ArrowRight size={16} /></a>}
@@ -118,5 +79,5 @@ function NodeExecutionPanel({ step, node, output, loading, onExecute }) {
     } catch (error) { setUploadError(error instanceof Error ? error.message : "参考图片上传失败"); }
     finally { setUploading(false); }
   };
-  return <article className="workflow-step workflow-step--node"><span>当前节点 · {node?.type || "note"}</span><h3>{step.title}</h3><p>{step.description}</p>{step.instruction && !needsNegativePrompt && <div><small>// 节点参数</small>{step.instruction}</div>}{needsPrompt && <label className="workflow-run-prompt">本次需求<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="输入本次要生成或处理的内容" /></label>}{needsNegativePrompt && <label className="workflow-run-prompt">负向提示词<textarea value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="例如：文字、水印、模糊" maxLength={1500} /></label>}{needsReference && <label className="workflow-reference-upload">参考图片<input type="file" disabled={uploading} accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => { setReferenceFile(event.target.files?.[0] ?? null); setUploadError(""); }} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small>{uploadError && <em>{uploadError}</em>}</label>}{output && <pre className="workflow-node-output">{JSON.stringify(output, null, 2)}</pre>}<footer><em><Clock size={16} /> 约 {step.estimatedMinutes ?? 10} 分钟</em>{needsPrompt || needsReference ? <button disabled={loading || uploading || (needsPrompt && !prompt.trim() && !String(node?.data?.value ?? "").trim()) || (needsReference && !referenceFile)} onClick={execute}>{loading || uploading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} {uploading ? "上传参考图片…" : "提交并自动运行"}</button> : <span className="workflow-step__auto">{loading ? "正在自动执行…" : "节点将自动执行"}</span>}</footer></article>;
+  return <article className="workflow-step workflow-step--node"><span>当前节点 · {node?.type || "note"}</span><h3>{step.title}</h3>{needsPrompt && <label className="workflow-run-prompt">创作需求<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="输入本次要生成的内容" /></label>}{needsNegativePrompt && <label className="workflow-run-prompt">负向提示词<textarea value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="例如：文字、水印、模糊" maxLength={1500} /></label>}{needsReference && <label className="workflow-reference-upload">参考图片<input type="file" disabled={uploading} accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => { setReferenceFile(event.target.files?.[0] ?? null); setUploadError(""); }} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small>{uploadError && <em>{uploadError}</em>}</label>}<footer>{needsPrompt || needsReference ? <button disabled={loading || uploading || (needsPrompt && !prompt.trim() && !String(node?.data?.value ?? "").trim()) || (needsReference && !referenceFile)} onClick={execute}>{loading || uploading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} {uploading ? "上传参考图片…" : needsPrompt ? "开始生成" : "提交并继续"}</button> : needsNegativePrompt ? <button disabled={loading} onClick={execute}>{loading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} 用这组负向词继续</button> : <span className="workflow-step__auto">{loading ? "正在执行…" : "自动执行"}</span>}</footer></article>;
 }
