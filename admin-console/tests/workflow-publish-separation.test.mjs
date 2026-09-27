@@ -51,3 +51,14 @@ test("一键跑到底：提示词直接读节点默认值，不再停下来让�
   assert.match(admin, /if \(node\.type === "input" && !String\(node\.data\?\.value \?\? ""\)\.trim\(\) && !nodesCarryPrompt\(editor\.definition\.nodes\)\) return;/);
   assert.ok(admin.includes("void executeCurrentNode()"), "自动推进要真的执行当前节点");
 });
+
+test("编辑器页不会因为旧守卫把自动推进掐断", async () => {
+  const admin = await read("WorkflowAdmin.jsx");
+  // executeCurrentNode 里那个"输入节点必须有人填"的判断必须和自动推进同一套规则，
+  // 否则自动推进去执行时会被直接 return 掉，运行永远停在 0%（只有 start 事件）。
+  assert.match(
+    admin,
+    /if \(activeNode\.type === "input" && !runPrompt\.trim\(\) && !String\(activeNode\.data\.value \|\| ""\)\.trim\(\) && !nodesCarryPrompt\(editor\.definition\.nodes\)\) \{/,
+  );
+  assert.ok(!/if \(activeNode\.type === "input" && !runPrompt\.trim\(\) && !String\(activeNode\.data\.value \|\| ""\)\.trim\(\)\) \{ onNotice/.test(admin), "不能只按输入节点自身判断");
+});
