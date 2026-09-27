@@ -1892,3 +1892,30 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .course-cover img[src^="data:image/svg+xml"], .course-card:hover .course-cover img[src^="data:image/svg+xml"] { object-fit: contain; background: #fff; filter: none; transform: none; }
 .course-cover:has(img[src^="data:image/svg+xml"])::after { display: none; }
 @media (max-width: 620px) { .course-form-grid { grid-template-columns: 1fr; } }
+
+/* 设计工作台：每个工具都采用皮影工作室式的整行入口。 */
+.workflow-catalog > .tool-directory { margin: 0; padding: 0; background: transparent; border: 0; }
+.tool-directory__view-switch { display: none; }
+.tool-directory__list, .tool-directory__list--list { grid-template-columns: minmax(0, 1fr) !important; gap: 24px !important; }
+.tool-directory__card { min-height: 0; overflow: visible; background: #fff; border: 1px solid #e6ded8; border-radius: 18px; box-shadow: 0 4px 20px rgb(53 38 27 / 4%); }
+.tool-directory__card:hover { transform: none !important; border-color: #d6c4b8; box-shadow: 0 8px 26px rgb(53 38 27 / 9%) !important; }
+.tool-directory__card > :is(a, .tool-directory__launch), .tool-directory__list--list .tool-directory__card > :is(a, .tool-directory__launch) { min-height: 176px !important; padding: 0 !important; display: block !important; color: #242321; border-radius: 18px; }
+.tool-directory__cover, .tool-directory__list--list .tool-directory__cover { display: none; }
+.tool-directory__veil, .tool-directory__list--list .tool-directory__veil { width: 100%; min-height: 176px; padding: 28px; display: grid; grid-template-columns: 58px minmax(0, 1fr) 220px; align-items: center; gap: 18px; background: transparent; border: 0; }
+.tool-directory__icon { width: 58px; height: 58px; color: #9b482f; background: #fbefe8; border: 0; border-radius: 15px; }
+.tool-directory__copy { min-width: 0; gap: 6px; }
+.tool-directory__copy small, .tool-directory__card small { color: #766153; font-size: 13px; line-height: 1.5; }
+.tool-directory__copy b, .tool-directory__list--list .tool-directory__copy b { overflow: visible; color: #242321; font-size: clamp(22px, 2vw, 28px); line-height: 1.4; white-space: normal; }
+.tool-directory__copy em, .tool-directory__list .tool-directory__card em { display: block; overflow: visible; color: #55524e; font-size: 15px; line-height: 1.8; white-space: normal; }
+.tool-directory__play, .tool-directory__list--list .tool-directory__play { width: 220px; height: 48px; display: flex; align-items: center; justify-content: center; gap: 10px; color: #382e28; background: #f5ece5; border: 1px solid #d6c4b8; border-radius: 10px; box-shadow: none; }
+.tool-directory__play::before { content: "进入工具"; font-size: 15px; font-weight: 600; }
+.tool-directory__play span { border-top-width: 5px; border-bottom-width: 5px; border-left-width: 8px; }
+.tool-directory__card > :is(a, .tool-directory__launch):hover .tool-directory__play, .tool-directory__card > :is(a, .tool-directory__launch):focus-visible .tool-directory__play { color: #28201a; background: #ebddd2; border-color: #bda28f; transform: none; }
+.tool-directory__edit, .tool-directory__list--list .tool-directory__edit { top: auto; right: 12px; bottom: 10px; }
+@media (max-width: 800px) {
+  .tool-directory__veil, .tool-directory__list--list .tool-directory__veil { padding: 22px; grid-template-columns: 48px minmax(0, 1fr); gap: 14px; }
+  .tool-directory__icon { width: 48px; height: 48px; }
+  .tool-directory__play, .tool-directory__list--list .tool-directory__play { grid-column: 1 / -1; width: 100%; }
+  .tool-directory__edit, .tool-directory__list--list .tool-directory__edit { top: 10px; right: 10px; bottom: auto; }
+}
+@media (max-width: 440px) { .tool-directory__veil, .tool-directory__list--list .tool-directory__veil { padding: 18px; } }

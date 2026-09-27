@@ -17,13 +17,15 @@ test("设计工作台恢复独立皮影入口", async () => {
   assert.match(studio, /item\.id !== "tool-directory-piying"/);
 });
 
-test("其他工具保留上一版目录卡片样式", async () => {
+test("所有其他工具与皮影工作室一样逐行展示", async () => {
   const studio = await read("../src/WorkflowStudio.jsx");
   assert.equal((studio.match(/function ToolDirectoryCard/g) ?? []).length, 1);
   assert.match(studio, /visibleLinks\.map\(\(tool\) => <ToolDirectoryCard/);
   assert.match(studio, /className="tool-directory__card"/);
   const css = await read("../src/styles.css");
-  assert.doesNotMatch(css, /\.tool-directory__card \{ border: 1px solid #e2e0da; border-radius: 16px; \}/);
+  assert.match(css, /\.tool-directory__list, \.tool-directory__list--list \{ grid-template-columns: minmax\(0, 1fr\) !important/);
+  assert.match(css, /\.tool-directory__view-switch \{ display: none; \}/);
+  assert.match(css, /\.tool-directory__play::before \{ content: "进入工具"/);
   const piyingCss = await read("../src/piying-tool.css");
   assert.match(piyingCss, /\.piying-tool__intro/);
   assert.match(css, /\.tool-directory__edit:hover, \.tool-directory__edit:focus-visible/);
