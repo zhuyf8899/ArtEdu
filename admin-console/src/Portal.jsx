@@ -8,8 +8,6 @@ import { createAgentRun, executeAgentRun, executeAgentRunStream, getApiHealth, g
 import { AiCreationLauncher } from "./AiCreationConsole.jsx";
 import { AiCreationWorkspace } from "./CreationWorkspace.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
-import { PiyingToolCard } from "./PiyingToolCard.js";
-import "./piying-tool.css";
 import { canEnterAdmin } from "./testAccounts.js";
 
 const LearningLibrary = lazy(() => import("./LearningLibrary.jsx").then(({ LearningLibrary: component }) => ({ default: component })));
@@ -226,18 +224,21 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning", creation: "/create" }[nextSection] ?? "/");
   const navigateSearch = (query) => onNavigate(`/search?query=${encodeURIComponent(query)}`);
 
-  return <div className="portal-shell" data-section={section}>
-    <header className="portal-topbar">
+  // 创作对话页独立成屏：不带站点导航与两侧装饰，整屏都留给对话。
+  const standalone = section === "creation";
+
+  return <div className={`portal-shell${standalone ? " portal-shell--standalone" : ""}`} data-section={section} data-standalone={standalone ? "true" : undefined}>
+    {!standalone && <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
       <nav className="portal-nav" aria-label="顶部主导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       <GlobalSearchForm value={searchQuery} onSearch={navigateSearch} />
       {canEnterAdmin(account) && <button className="portal-console-shortcut" onClick={onEnterAdmin}>管理后台 <ArrowRight size={15} weight="bold" /></button>}
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "API 已验证" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
-    </header>
+    </header>}
 
-    <PortalArtRails />
+    {!standalone && <PortalArtRails />}
 
-    <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}`}>
+    <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}`}>
       <div key={`${section}:${searchQuery}`} className="route-transition">
       {section !== "home" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
@@ -256,7 +257,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
         {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary initialCourseId={learningCourseId} onNotice={showToast} /></>}
 
-        {section === "studio" && <><PiyingToolCard /><WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} /></>}
+        {section === "studio" && <WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
         {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} /></>}
 

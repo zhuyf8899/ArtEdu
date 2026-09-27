@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowRight, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
 import { AiMarkdown, safeReplyUrl } from "./AiMarkdown.js";
+import { ZoomableImage } from "./ImageLightbox.jsx";
+import { isImageArtifact } from "./imageSources.js";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";
 import { DocumentOptions } from "./DocumentOptions.jsx";
 import { supportsCreationMethod } from "./creation-capabilities.js";
@@ -516,8 +518,20 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
 function responseText(result, methodDefinition) {
   if (!result) return "创作请求失败，输入已保留。请根据错误提示重试。";
   if (result.local) return `${result.content}\n\n本次为本地演示结果，任务已写入数据库并完成审计；接入正式模型后可沿用同一创作入口。`;
-  if (result.content) return result.localFile?.downloadUrl ? `${result.content}\n\n[打开本次生成的 ${result.localFile.fileName ?? methodDefinition.label}](${result.localFile.downloadUrl})` : result.content;
+  // 图片产物直接在气泡里渲染（附件按钮见下方 artifactImageOf），不再让用户点链接跳走；
+  // 文档类产物仍然给下载入口，因为浏览器无法内联预览 Office 原件。
+  if (result.content) {
+    const file = result.localFile;
+    if (!file?.downloadUrl || isImageArtifact(file)) return result.content;
+    return `${result.content}\n\n[打开本次生成的 ${file.fileName ?? methodDefinition.label}](${file.downloadUrl})`;
+  }
   return `任务 ${String(result.id).slice(0, 8)} 已创建（${methodDefinition.label}）。你可以继续输入下一步。`;
+}
+
+/** 图片产物在气泡内直接展示；不是图片（文档/视频等）返回空，仍走原有链接。 */
+function artifactImageOf(file) {
+  if (!file?.downloadUrl || !isImageArtifact(file)) return null;
+  return <ZoomableImage src={file.downloadUrl} alt={file.fileName ?? "生成图片"} fileName={file.fileName ?? ""} />;
 }
 
 /**
@@ -539,6 +553,7 @@ const ChatMessage = memo(function ChatMessage({ message, index, suggesting, onCo
     <div className="ai-message__body">
       <span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span>
       <AiMarkdown>{message.content || message.placeholder}</AiMarkdown>
+      {artifactImageOf(message.localFile)}
       {(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}
       <div className="ai-message__actions">
         <button type="button" onClick={() => onCopy(message.content)} title="复制回复"><Copy size={14} />复制</button>

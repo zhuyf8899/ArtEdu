@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, Play, SpinnerGap } from "@phosphor-icons/react";
 import { createWork, uploadTemporaryCreationFile } from "./services/adminApi.js";
+import { ZoomableImage } from "./ImageLightbox.jsx";
 import "@xyflow/react/dist/style.css";
 
 const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", negative_prompt: "#a15e8c", text_encode: "#b268ff", skill: "#b268ff", text_generate: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b" };
@@ -88,7 +89,9 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
             <p>{savedWork ? "到案例社区补充封面与过程素材后即可提交审核。" : "会以当前节点、工具与参数生成一份草稿，不会自动公开。"}</p>
             <button type="button" disabled={savingWork || savedWork} onClick={() => void saveAsWork()}>{savingWork ? "正在保存…" : savedWork ? "已保存" : "保存为案例草稿"}</button>
           </div>}
-          {run?.context?.artifact?.downloadUrl && <a className="workflow-result-link" href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看或下载生成图片 <ArrowRight size={16} /></a>}
+          {run?.context?.artifact?.downloadUrl && (/\.(png|jpe?g|webp|gif|avif|bmp)$/i.test(String(run.context.artifact.fileName ?? "")) || String(run.context.artifact.mimeType ?? "").startsWith("image/"))
+            ? <ZoomableImage src={run.context.artifact.downloadUrl} alt={run.context.artifact.fileName ?? "工作流生成的图片"} fileName={run.context.artifact.fileName ?? ""} />
+            : <a className="workflow-result-link" href={run.context.artifact.downloadUrl} target="_blank" rel="noreferrer">查看或下载生成图片 <ArrowRight size={16} /></a>}
           {run?.context?.text && <section className="workflow-result-text"><strong>生成文字</strong><p>{run.context.text}</p></section>}
         </div>
       </aside>

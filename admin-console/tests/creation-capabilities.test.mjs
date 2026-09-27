@@ -127,6 +127,18 @@ test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条
   assert.ok(portal.includes("{ signal, onDelta }"));
 });
 
+test("创作对话页独立成屏：不显示站点导航，也不显示两侧装饰", async () => {
+  const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
+  assert.ok(portal.includes('const standalone = section === "creation"'), "对话页要单独标记");
+  assert.ok(portal.includes('{!standalone && <header className="portal-topbar">'), "对话页不渲染顶部导航");
+  assert.ok(portal.includes("{!standalone && <PortalArtRails />}"), "对话页不渲染两侧装饰");
+  assert.ok(portal.includes("portal-main--standalone"));
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  // 腾出来的空间要让给对话本体：更宽的主区、更高的消息区。
+  assert.ok(css.includes(".portal-main--standalone { width: min(1520px"));
+  assert.ok(css.includes(".portal-shell--standalone .creation-canvas__thread { min-height: 420px; max-height: calc(100vh - 300px); }"));
+});
+
 test("「重新输出」清除上一轮回复后重新生成，而不是回填输入框", async () => {
   const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
   assert.ok(workspace.includes("baseMessages: messages.slice(0, Math.max(0, index - 1))"), "必须截断到该提问之前");

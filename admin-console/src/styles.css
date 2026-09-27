@@ -2014,3 +2014,36 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .workflow-save-work strong { font-size: 13px; }.workflow-save-work p { margin: 0; color: #5f6650; font-size: 12px; line-height: 1.6; }
 .workflow-save-work button { justify-self: start; min-height: 36px; padding: 0 13px; color: #fff; background: #191a1c; border: 0; border-radius: 9px; font-size: 12px; }
 .workflow-save-work button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* 创作对话页独立成屏：不显示站点导航与两侧装饰，宽度与高度都让给对话本身。 */
+.portal-shell--standalone { background: #fbfbf8; }
+.portal-main--standalone { width: min(1520px, calc(100% - 32px)); padding: 18px 0 22px; }
+.portal-shell--standalone .creation-canvas { min-height: calc(100vh - 44px); border-top: 0; }
+.portal-shell--standalone .creation-canvas__main { width: min(100%, 1180px); padding: 22px clamp(16px, 3vw, 44px) 20px; }
+.portal-shell--standalone .creation-canvas__thread { min-height: 420px; max-height: calc(100vh - 300px); }
+.portal-shell--standalone .creation-canvas__thread .ai-markdown { max-width: 900px; }
+
+/* 工具行图标：外链工具优先用目标站点自己的页标（favicon）。 */
+.tool-directory__favicon { width: 20px; height: 20px; display: block; object-fit: contain; border-radius: 5px; }
+
+/* 对话内的图片产物：气泡里直接看，点开是 QQ 式看图浮层。 */
+.chat-image { position: relative; width: fit-content; max-width: 100%; margin: 12px 0 4px; padding: 0; display: block; background: #f3f3ef; border: 1px solid #e3e3dd; border-radius: 12px; overflow: hidden; cursor: zoom-in; }
+.chat-image img { display: block; width: auto; max-width: 100%; max-height: min(46vh, 420px); object-fit: contain; background: #fff; }
+.chat-image__hint { position: absolute; right: 8px; bottom: 8px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 5px; color: #2b2c31; background: rgba(255,255,255,.92); border: 1px solid rgba(17,17,17,.08); border-radius: 999px; font-size: 11px; font-weight: 650; opacity: 0; transition: opacity .16s ease; }
+.chat-image:hover .chat-image__hint, .chat-image:focus-visible .chat-image__hint { opacity: 1; }
+
+/* 看图浮层：滚轮以指针为中心缩放，拖动平移，双击复位。 */
+.image-lightbox { position: fixed; inset: 0; z-index: 90; display: grid; grid-template-rows: 1fr auto; }
+.image-lightbox__scrim { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; background: rgba(8, 8, 10, .9); border: 0; }
+.image-lightbox__stage { position: relative; z-index: 1; display: grid; place-items: center; overflow: hidden; touch-action: none; }
+.image-lightbox__stage img { max-width: 92vw; max-height: calc(100vh - 108px); object-fit: contain; user-select: none; transform-origin: center center; transition: transform .06s linear; }
+.image-lightbox__stage.is-dragging img { transition: none; }
+.image-lightbox__bar { position: relative; z-index: 2; padding: 8px 16px 14px; display: grid; justify-items: center; gap: 6px; color: #f2f2f2; }
+.image-lightbox__name { max-width: min(78vw, 720px); overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.image-lightbox__tools { display: inline-flex; align-items: center; gap: 6px; }
+.image-lightbox__tools button, .image-lightbox__tools a { width: 34px; height: 34px; display: grid; place-items: center; color: #f4f4f4; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .22); border-radius: 9px; cursor: pointer; }
+.image-lightbox__tools button:hover, .image-lightbox__tools a:hover, .image-lightbox__tools button:focus-visible, .image-lightbox__tools a:focus-visible { color: #191a1c; background: var(--lime); border-color: var(--lime); }
+.image-lightbox__tools button:disabled { opacity: .35; cursor: not-allowed; }
+.image-lightbox__tools b { min-width: 54px; font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
+.image-lightbox__hint { color: rgba(255, 255, 255, .62); font-size: 11px; }
+@media (max-width: 720px) { .portal-main--standalone { width: calc(100% - 18px); padding: 10px 0 14px; }.portal-shell--standalone .creation-canvas__thread { max-height: calc(100vh - 260px); }.image-lightbox__stage img { max-height: calc(100vh - 132px); } }
