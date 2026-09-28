@@ -93,8 +93,14 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   </section>{activeImage && <ImageViewer image={activeImage} onClose={() => setActiveImage(null)} />}{reportTarget && <ReportDialog target={reportTarget} onClose={() => setReportTarget(null)} onSubmit={submitReport} />}{editor}</>;
   }
   return <>
-    <div className="community-actions"><div><strong>分享创作，也分享过程</strong><span>一项目一案例 · 保存草稿 → 预览 → 提交审核</span></div><button onClick={() => setEditing(null)}><Plus size={18} /> 新建案例草稿</button></div>
-    {!!myWorks.length && <section className="my-submissions"><span>我的案例与草稿</span>{myWorks.map(work => <button disabled={loading} key={work.id} onClick={() => openWork(work)}><strong>{work.title}</strong><em className={`status-${work.status}`}>{statusName(work.status)}</em></button>)}</section>}
+    <section className="learning-library-intro community-page-intro" aria-labelledby="community-page-title">
+      <div className="learning-library-intro__copy">
+        <p className="learning-library-intro__eyebrow">ARTEDU · COMMUNITY</p>
+        <div className="learning-library-intro__title-row"><h1 id="community-page-title">案例社区</h1><span>{works.length} 个案例</span></div>
+        <p>发现创作灵感，按方向找到可借鉴、可复现的作品。</p>
+      </div>
+      <button type="button" className="community-create-draft" onClick={() => setEditing(null)}><Plus size={18} weight="bold" /> 新建案例草稿</button>
+    </section>
     {!!recommendations.length && <section className="community-recommendations"><header><div><small>// FOR YOU</small><h3>为你推荐</h3><p>{recommendations.personalized ? "根据你已点赞或收藏案例的方向排序" : "先从社区互动较高、较新的案例开始探索"}</p></div></header><div>{recommendations.items.map(work => <button key={work.id} disabled={loading} onClick={() => openWork(work)}>{work.previewUrl ? <img src={work.previewUrl} alt="" /> : <ImageSquare size={23} />}<span><strong>{work.title}</strong><small>{work.discipline} · {work.reason}</small></span><ArrowRight size={16} /></button>)}</div></section>}
     <section className="community-discovery" aria-label="搜索和筛选案例">
       <label className="community-search"><MagnifyingGlass size={19} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索案例名称、创作者、方法或工具" aria-label="搜索案例" />{search && <button onClick={() => setSearch("")} aria-label="清除搜索"><X size={17} /></button>}</label>

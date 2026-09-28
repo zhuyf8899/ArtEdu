@@ -221,7 +221,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}`}>
       <div key={`${section}:${searchQuery}`} className="route-transition">
-      {section !== "home" && section !== "courses" && section !== "studio" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className={`portal-heading${section === "community" ? " portal-heading--community" : ""}`}><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1>{section === "community" && <p className="portal-heading__description">发现创作灵感，按方向找到可借鉴、可复现的作品。</p>}</div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
+      {section !== "home" && section !== "courses" && section !== "studio" && section !== "community" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
         <AiCreationLauncher account={account} creation={data.creation} onNotice={showToast} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />

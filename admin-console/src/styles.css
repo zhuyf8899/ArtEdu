@@ -1963,6 +1963,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .work-card__footer > button { color: #222; }
 .community-empty button { color: #fff; background: #222; }
 
+/* 案例社区页头沿用 AI 讲堂的紧凑卡片布局，主操作与页面标题同一行。 */
+.community-page-intro { grid-template-columns: minmax(0, 1fr) auto; }
+.community-create-draft { min-height: 40px; padding: 0 15px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: #fff; background: #222; border: 1px solid #222; border-radius: 9px; font-size: 12px; font-weight: 700; white-space: nowrap; transition: background-color .16s ease, transform .16s ease; }
+.community-create-draft:hover { background: #414141; transform: translateY(-1px); }
+@media (max-width: 780px) {
+  .community-page-intro { grid-template-columns: 1fr auto; }
+  .community-create-draft { align-self: center; }
+}
+@media (max-width: 560px) {
+  .community-page-intro { grid-template-columns: minmax(0, 1fr); }
+  .community-create-draft { justify-self: start; }
+}
+
 .tool-directory__header { margin-bottom: 12px; padding: 17px 20px; align-items: center; background: #fff; border: 1px solid #e3e3e0; border-radius: 15px; }
 .tool-directory__page-copy { min-width: 0; }
 .tool-directory__page-copy > p { margin: 0 0 5px; color: var(--art-accent); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
