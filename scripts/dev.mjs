@@ -10,6 +10,7 @@ try {
   execFileSync(process.execPath, [path.join(repositoryRoot, "scripts/database.mjs"), "up"], { cwd: repositoryRoot, stdio: "inherit", windowsHide: true });
   if (!npmCli) throw new Error("请通过 npm run dev 启动项目");
   execFileSync(process.execPath, [npmCli, "run", "db:migrate"], { cwd: repositoryRoot, stdio: "inherit", windowsHide: true });
+  execFileSync(process.execPath, [npmCli, "run", "showcase:install"], { cwd: path.join(repositoryRoot, "apps/api"), stdio: "inherit", windowsHide: true });
 } catch {
   console.error("[dev] 数据库预检查失败；修复上方错误后重新执行 npm run dev。");
   process.exit(1);

@@ -176,6 +176,10 @@ if ($SeedDemo) {
   Ok '已按 -SeedDemo 显式要求初始化演示数据'
 } else { Ok '保留现有数据；首次空环境可显式传入 -SeedDemo' }
 
+# 公开展示包独立于演示 seed：只补齐九个已发布案例及对应图片，重复执行安全。
+Invoke-Npm -WorkingDir (Join-Path $root 'apps/api') -NpmArgs @('run', 'showcase:install')
+Ok '九个案例及展示图片已核对/补齐'
+
 # ------------------------------------------------------------------ 5. 演示账号
 Step 6 '确保 4 个演示账号可以登录'
 $identityCount = 0

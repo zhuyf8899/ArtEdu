@@ -1,0 +1,1586 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "work-442627ce-0bc5-47c6-96ed-c80cd0015f4b",
+      "authorId": "user-student-demo",
+      "title": "MIST HILL COFFEE 咖啡品牌设计",
+      "summary": "面向年轻消费群体的咖啡品牌视觉与产品设计。以山、雾、咖啡豆与活力感为视觉来源，通过亮蓝、荧光绿、亮粉及黑白建立撞色体系，以粗体字标与拟人化咖啡豆 IP 形成品牌识别，并延展至包装、外带杯、手提袋、贴纸及毛绒 IP 周边。\n本案例根据作者提供的说明和效果图整理；图片为设计展示，不作为已量产或商业落地的证明。",
+      "discipline": "视觉传达",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-09-15T05:05:16.916Z",
+      "createdAt": "2026-09-14T05:08:26.885Z",
+      "story": {
+        "steps": [
+          {
+            "tool": "",
+            "title": "品牌定位与视觉语言",
+            "prompt": "我需要设计一个现代年轻化的精品咖啡品牌，请帮我建立品牌 Logo 与包装视觉系统。品牌需要具有较强的视觉冲击力和电商传播属性，避免传统、复古和低饱和的精品咖啡视觉。",
+            "outcome": "原文输出提出 MIST HILL COFFEE 品牌、粗体无衬线字标、拟人化咖啡豆 IP，以及亮蓝、荧光绿、亮粉、黑白配色。图1作为整体视觉展示。",
+            "assetIds": [
+              "work-asset-931a7b27-58b0-4aaa-85c6-8a25bf58d3ec"
+            ],
+            "parameters": "",
+            "description": "围绕年轻化精品咖啡定位，建立品牌名称、字标、色彩和核心 IP 的统一方向。"
+          },
+          {
+            "tool": "",
+            "title": "包装与品牌周边系统",
+            "prompt": "基于上述品牌方向，生成一套完整的咖啡包装及品牌周边系统。\n产品包括：咖啡豆包装袋、挂耳咖啡盒、独立挂耳包、外带咖啡杯、手提袋、杯套、贴纸和餐具包装。\n要求所有产品保持统一 Logo、IP、配色和图形语言，整体具有现代潮流品牌感。不同的产品在品牌色的限定下保持多种配色方案",
+            "outcome": "图2展示包装、杯具、纸袋、贴纸和餐具包装的系列化效果。",
+            "assetIds": [
+              "work-asset-fc63eaba-e91d-4f43-b298-5045c5c0990d"
+            ],
+            "parameters": "",
+            "description": "将统一的 Logo、IP、配色与辅助图形延伸到不同产品载体。"
+          },
+          {
+            "tool": "",
+            "title": "咖啡豆 IP 周边探索",
+            "prompt": "基于已经确定的 MIST HILL COFFEE 品牌系统，进一步设计实体品牌 IP 周边。\n将二维咖啡豆角色转化为可以真实生产的毛绒玩偶，同时保持角色原有的咖啡豆轮廓、山峰图形、云雾元素以及活力姿态。\n同时设计小尺寸毛绒挂件和配套包装盒。",
+            "outcome": "图3展示毛绒 IP、挂件及包装效果；可生产性仍需另行验证。",
+            "assetIds": [
+              "work-asset-f9afecc3-8d3a-4c76-9b05-d2dd6f5770a8"
+            ],
+            "parameters": "",
+            "description": "将二维角色延展为毛绒玩偶、挂件与配套包装的设计方案。"
+          },
+          {
+            "tool": "",
+            "title": "电商主视觉场景",
+            "prompt": "为 MIST HILL COFFEE 生成具有强视觉冲击力的品牌电商展示场景。\n要求整体采用现代高饱和商业视觉，突出咖啡包装、高亮棚拍光线、大面积蓝绿撞色和夸张产品尺度，形成适合社交媒体、电商首页和品牌广告使用的主视觉。咖啡包装、外带杯和 IP 产品采用不同尺度进行前后叠放，部分产品进行悬浮、倾斜和放大处理，增强空间节奏和广告冲击力。\n品牌 Logo 使用大字号粗体排版，配合手写式粉色 slogan 和辅助山形图形，使产品摄影、平面设计与品牌 IP 形成统一的商业主视觉。",
+            "outcome": "图4展示以咖啡包装为主体的广告视觉，结合山形、圆形与毛绒 IP 元素。",
+            "assetIds": [
+              "work-asset-5a9a1d68-fea8-4888-b24b-a21fb4fbee88"
+            ],
+            "parameters": "",
+            "description": "以品牌色和产品尺度对比组织适用于广告展示的主视觉。"
+          }
+        ],
+        "tools": [
+          "即梦",
+          "ChatGPT"
+        ],
+        "origin": "collected",
+        "methods": [
+          "概念探索",
+          "品牌设计",
+          "图像生成"
+        ],
+        "version": 1,
+        "creators": [
+          "匿名作者"
+        ],
+        "reflection": "",
+        "coverAssetId": "work-asset-931a7b27-58b0-4aaa-85c6-8a25bf58d3ec",
+        "authorization": "confirmed",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        {
+          "id": "tag-ec9ef5a8-a144-4909-914f-56cd098dc6d9",
+          "name": "IP设计",
+          "slug": "ip设计-3fc6ee0b"
+        },
+        {
+          "id": "tag-918751f3-3d20-4c08-b92a-f23be32d870d",
+          "name": "周边设计",
+          "slug": "周边设计-325b4b9c"
+        },
+        {
+          "id": "tag-4f5ef9b4-6341-415d-b35d-0b2c07787b83",
+          "name": "咖啡包装",
+          "slug": "咖啡包装-688d9ea9"
+        },
+        {
+          "id": "tag-05193569-4f16-4abc-be9f-935e30e79c80",
+          "name": "品牌设计",
+          "slug": "品牌设计-27b85d01"
+        }
+      ],
+      "assets": [
+        {
+          "id": "work-asset-931a7b27-58b0-4aaa-85c6-8a25bf58d3ec",
+          "fileName": "figure-1.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-442627ce-0bc5-47c6-96ed-c80cd0015f4b/8e4f527c-6317-4600-aa26-7e536db548a7-83e63d65-99b5-4b2d-a3f0-9abe0250f741",
+          "fileSize": 1406212,
+          "sha256": "74898d8c6fa8812b1461c293be7ed68a32fa23520babc2304a3fe77bffafd994",
+          "altText": "MIST HILL COFFEE 咖啡品牌设计",
+          "sortOrder": 0,
+          "createdAt": "2026-09-14T05:08:26.954Z"
+        },
+        {
+          "id": "work-asset-fc63eaba-e91d-4f43-b298-5045c5c0990d",
+          "fileName": "figure-2.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-442627ce-0bc5-47c6-96ed-c80cd0015f4b/25c0cfb1-b58c-488b-a672-330d127025ae-22775d9d-c423-4f9c-8c5b-1dfe72bea832",
+          "fileSize": 1967851,
+          "sha256": "77735b00f4707e46e50816caf4b949591ed8ad555668dab73c6e9485896f0ecb",
+          "altText": "MIST HILL COFFEE 咖啡品牌设计",
+          "sortOrder": 1,
+          "createdAt": "2026-09-14T05:08:26.982Z"
+        },
+        {
+          "id": "work-asset-f9afecc3-8d3a-4c76-9b05-d2dd6f5770a8",
+          "fileName": "figure-3.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-442627ce-0bc5-47c6-96ed-c80cd0015f4b/caebdb1d-c08a-468e-bdc7-e1e461ec5b43-2abac214-397b-4fe9-8a0d-e66fee638acc",
+          "fileSize": 2042289,
+          "sha256": "2689d2b337f1d3d438ee9fba9be550cf85e8dd88cbf2ca8edac37d358cd58c83",
+          "altText": "MIST HILL COFFEE 咖啡品牌设计",
+          "sortOrder": 2,
+          "createdAt": "2026-09-14T05:08:27.007Z"
+        },
+        {
+          "id": "work-asset-5a9a1d68-fea8-4888-b24b-a21fb4fbee88",
+          "fileName": "figure-4.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-442627ce-0bc5-47c6-96ed-c80cd0015f4b/c2ef4fa5-5355-4686-9c1b-27e699486c86-c178eea6-993b-4e15-941b-01769f2aa827",
+          "fileSize": 1707089,
+          "sha256": "ed5d86ac9d601f52116dc3ccedea29c7582a3af32c8428fa27f732ec552b87fd",
+          "altText": "MIST HILL COFFEE 咖啡品牌设计",
+          "sortOrder": 3,
+          "createdAt": "2026-09-14T05:08:27.030Z"
+        }
+      ]
+    },
+    {
+      "id": "work-91a7a847-3c8f-46cf-bf1c-56e095bc708a",
+      "authorId": "user-student-demo",
+      "title": "大象的回忆：人生影像回放场",
+      "summary": "“大象的回忆”是临终关怀空间中的一处人生记忆回放场，通过照片、影像、声音与文字，让使用者重新观看自己经历过的人生片段。\n设计并不希望将空间塑造成传统意义上的医疗或纪念场所，而是将“回忆”转化为一种可以被进入、观看和互动的空间体验。空间中设置多块不同尺度的数字屏幕，呈现使用者的人生照片、家庭影像、自然风景与个人文字，同时结合植物、柔和光线和半透明材质，形成介于现实与记忆之间的沉浸式环境。\n在设计过程中，AI主要参与了情境构建、故事板生成、人物行为推演和空间场景可视化。首先将“回望人生”这一抽象体验拆解为人物进入、观看、回忆、互动、分享等连续行为，再通过AI生成故事板建立完整的叙事逻辑；随后以故事板中的关键画面作为视觉参考，进一步生成空间效果图，使人物、屏幕内容、空间尺度和情绪氛围能够对应到具体场景中。",
+      "discipline": "环境艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-09-15T05:05:02.629Z",
+      "createdAt": "2026-09-15T04:51:27.215Z",
+      "story": {
+        "steps": [
+          {
+            "tool": "",
+            "title": "从设计概念生成故事情境",
+            "prompt": "我正在设计一个面向临终患者及家属的“人生回望空间”。\n这个空间不是传统的医疗空间，也不是单纯的展览空间，而是一个让人重新观看自己人生经历的沉浸式场所。\n请以“回望”为核心，设计一个完整的空间体验故事。\n人物可以是一位老年人，在空间中通过照片、家庭影像、声音和文字回忆自己的人生。\n请将体验拆分为连续的行为节点",
+            "outcome": "AI将抽象的“回望”拆解成一条连续的体验叙事：\n进入 → 发现 → 观看 → 回忆 → 分享 → 留存",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "生成空间故事板",
+            "prompt": "请将“人生回望空间”的体验流程转化为一组连续的空间故事板。\n故事主角是一位老年人，在一个安静、温柔、非医疗化的记忆空间中回望自己的人生。\n请设计6—8个连续镜头：\n01 人物进入回望空间；\n02 看到第一块播放个人记忆的屏幕；\n03 观看童年、青年时期的生活照片；\n04 观看与家人共同生活的影像；\n05 坐在空间中继续观看和聆听自己的声音记录；\n06 家人进入，与人物共同观看记忆；\n07 人物通过设备整理、保存自己的照片与声音；\n08 最后留下一个安静的背影，空间中的影像继续播放。\n使用建筑空间叙事的方式表现，保持人物、空间、屏幕和镜头语言的一致性。\n整体采用简洁的线稿故事板风格，突出人物动作、空间关系和交互行为，不需要复杂材质。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-d2972b97-fbaf-4935-822a-19b5c492a576",
+              "work-asset-8a3cb879-70e9-429c-9700-71ca748dddfd",
+              "work-asset-89b0f04d-9502-43c5-b51c-979dd806018b"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "故事板深化：统一人物与空间关系",
+            "prompt": "基于已有的人生回望空间故事板，对故事板进行视觉一致性优化。\n保持同一空间的建筑语言、屏幕布局和人物身份，不改变原有故事情节。\n重点强化人物与空间的关系：人物进入空间后逐渐靠近屏幕，从站立观看转变为停留观看，再到与家人共同参与。\n不同镜头需要表现明显的空间尺度关系，包括远景、中景和近景。\n保持空间整体安静、柔和、具有自然光和记忆感，避免医院、医疗设备、病房等视觉符号。\n输出一组具有连续叙事关系的空间故事板",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-d2972b97-fbaf-4935-822a-19b5c492a576"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "从故事板生成空间效果图",
+            "prompt": "根据已有的人生回望空间故事板，将其中的核心场景转化为真实的室内空间效果图。\n场景为一个非医疗化的临终关怀记忆空间。空间整体安静、温柔、具有沉浸式体验感。\n室内设置大量不同尺度的数字显示屏，屏幕以自然、松散的方式分布在墙面和空间中，播放人物不同人生阶段的照片、家庭影像、自然风景、文字和声音记录。\n一位老年人物站在空间中央，背对镜头观看自己的生命影像。\n空间中加入少量植物和自然元素，屏幕之间存在前后层叠关系，部分屏幕悬浮或嵌入墙面，形成具有纵深感的记忆场景。\n材质采用半透明玻璃、细腻墙面、浅色地面和柔和织物，避免传统医院空间的白色医疗感。\n大面积自然光从侧面进入空间，形成柔和的光影和轻微雾化效果。整体以低饱和蓝白色调为主，营造安静、克制、具有回忆感的空间氛围。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-7e4dbc7a-8d55-40a4-8c63-be54c0972a1d",
+              "work-asset-b59b6bf1-74eb-49c3-b93d-34eadeb01830",
+              "work-asset-78bc3dda-e64f-4bd3-b964-00e09d275c5e"
+            ],
+            "parameters": "",
+            "description": ""
+          }
+        ],
+        "tools": [
+          "ChatGPT",
+          "Lovart"
+        ],
+        "origin": "collected",
+        "methods": [
+          "空间设计",
+          "故事板设计",
+          "图像生成"
+        ],
+        "version": 1,
+        "creators": [
+          "王小月"
+        ],
+        "reflection": "资料整理说明：工具列表按作者资料记录；未说明各步骤所用模型版本和参数，不作推断。效果图不作为量产或现场落地的证明。",
+        "coverAssetId": "work-asset-d2972b97-fbaf-4935-822a-19b5c492a576",
+        "authorization": "confirmed",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        {
+          "id": "tag-86e513b7-04ad-4441-9811-97f4a0a4ce0f",
+          "name": "临终关怀",
+          "slug": "临终关怀-b1183497"
+        },
+        {
+          "id": "tag-0b619631-0acc-4069-ab28-0de8a84bf50c",
+          "name": "空间叙事",
+          "slug": "空间叙事-93ff4c16"
+        },
+        {
+          "id": "tag-9cf40695-9b2d-484d-b35d-4b5cb0606796",
+          "name": "记忆",
+          "slug": "记忆-04a4bb8e"
+        }
+      ],
+      "assets": [
+        {
+          "id": "work-asset-d2972b97-fbaf-4935-822a-19b5c492a576",
+          "fileName": "case-elephant-01.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-91a7a847-3c8f-46cf-bf1c-56e095bc708a/47af20fc-2ed3-4f8f-b146-62eedada1fcd-e7f1a58f-0979-4398-a3f5-3da90bb16db2",
+          "fileSize": 7236784,
+          "sha256": "1c5b6eb70c2ef5a740b852227914673fa10b3f16d380489eab53236821d0e4fb",
+          "altText": "大象的回忆：人生影像回放场",
+          "sortOrder": 0,
+          "createdAt": "2026-09-15T04:51:27.287Z"
+        },
+        {
+          "id": "work-asset-8a3cb879-70e9-429c-9700-71ca748dddfd",
+          "fileName": "case-elephant-02.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-91a7a847-3c8f-46cf-bf1c-56e095bc708a/88cba357-98eb-4d84-9e90-0554a1fe6122-bbcbac5d-fec5-4286-8819-99f91f7fba25",
+          "fileSize": 825637,
+          "sha256": "5c8675690fc95f10d9bad258764a1e6bfdbc42e5e8a483cd9b33d22515e7148b",
+          "altText": "大象的回忆：人生影像回放场",
+          "sortOrder": 1,
+          "createdAt": "2026-09-15T04:51:27.311Z"
+        },
+        {
+          "id": "work-asset-89b0f04d-9502-43c5-b51c-979dd806018b",
+          "fileName": "case-elephant-03.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-91a7a847-3c8f-46cf-bf1c-56e095bc708a/35eaa449-246b-4b28-8431-e44f5159ae27-fd71daf6-748a-47b2-bf4a-e6d08b57f8d8",
+          "fileSize": 4101754,
+          "sha256": "351f67802c33398cc8511622104fc29f64515a23cec0b837841ded2f169f26ec",
+          "altText": "大象的回忆：人生影像回放场",
+          "sortOrder": 2,
+          "createdAt": "2026-09-15T04:51:27.348Z"
+        },
+        {
+          "id": "work-asset-7e4dbc7a-8d55-40a4-8c63-be54c0972a1d",
+          "fileName": "case-elephant-04.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-91a7a847-3c8f-46cf-bf1c-56e095bc708a/6ddea304-65b8-4f1f-abfa-45235d63568e-2bd78e1d-3481-4118-819e-829405e93a2c",
+          "fileSize": 1171987,
+          "sha256": "6880ed58996f553eb1a6f2cda8b9e767dd91c9e711c210926cb971be81ca96ba",
+          "altText": "大象的回忆：人生影像回放场",
+          "sortOrder": 3,
+          "createdAt": "2026-09-15T04:51:27.377Z"
+        },
+        {
+          "id": "work-asset-b59b6bf1-74eb-49c3-b93d-34eadeb01830",
+          "fileName": "case-elephant-05.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-91a7a847-3c8f-46cf-bf1c-56e095bc708a/26cfc7ef-ec6f-4f37-a86d-cff69e78e4f3-59b0c51a-4b98-4865-8afc-d4a8f8566a61",
+          "fileSize": 731746,
+          "sha256": "20dc58292f73fb6ce4de913c404b2decc738ed0b2179001ef1b964a174bc3457",
+          "altText": "大象的回忆：人生影像回放场",
+          "sortOrder": 4,
+          "createdAt": "2026-09-15T04:51:27.398Z"
+        },
+        {
+          "id": "work-asset-78bc3dda-e64f-4bd3-b964-00e09d275c5e",
+          "fileName": "case-elephant-06.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-91a7a847-3c8f-46cf-bf1c-56e095bc708a/1c4a4289-c560-47fe-b9f1-8dc9df15eb6e-d0f77714-6a68-4b6e-8902-7e26c58917b3",
+          "fileSize": 1817352,
+          "sha256": "f856d49b86f7942a67e8d1a23f3755a25c9dde4af96781b7878a34db811a0597",
+          "altText": "大象的回忆：人生影像回放场",
+          "sortOrder": 5,
+          "createdAt": "2026-09-15T04:51:27.425Z"
+        }
+      ]
+    },
+    {
+      "id": "work-77d4e707-c163-4aab-9c71-056dc31f24b1",
+      "authorId": "user-student-demo",
+      "title": "寻意 · ESSENZA",
+      "summary": "《寻意 · ESSENZA》围绕五个地域文化与 Acqua di Parma 蓝色地中海系列香材，探索空间叙事与 MR 体验。团队主导创意、空间概念和交互逻辑，AI 用于资料辅助、视觉推演及动态呈现。",
+      "discipline": "环境艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-09-15T05:04:20.356Z",
+      "createdAt": "2026-09-15T04:52:28.025Z",
+      "story": {
+        "steps": [
+          {
+            "tool": "",
+            "title": "信息检索",
+            "prompt": "",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-a23a623b-fd1a-44cb-86d5-9e99755f24c6",
+              "work-asset-e9d48b8a-2b91-43ba-a852-c29850a302f2",
+              "work-asset-b6eb47f2-d361-4f7b-9ac6-f85034db2b24"
+            ],
+            "parameters": "",
+            "description": "项目初期，我们使用 AI 辅助进行前期信息检索与辅助，主要分为两个部分：\n围绕项目涉及的五个地域，对其历史、文化、人文特征以及自然环境进行系统梳理\n对 Acqua di Parma 蓝色地中海系列中的43种香材进行逐一整理，包括香材来源、植物特征、气味特点及相关信息。\nAI工具在这一阶段主要帮助我们快速获取和理解陌生领域的信息，为后续创作与设计提供基础素材。资料的筛选、比较、判断、归纳，以及最终历史文化、香材信息与项目主题的关联，则由团队自主完成。"
+          },
+          {
+            "tool": "",
+            "title": "视觉呈现",
+            "prompt": "",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-b00b8f1c-ee98-4678-8b27-18a5db0fe695"
+            ],
+            "parameters": "",
+            "description": "在完成前期资料梳理后，项目的核心创意并非由 AI 生成，而是由团队根据资料进行讨论、筛选和构思。我们针对每个地域，从43种香材中为每个地域选择具有代表性的3-4种香材，并结合当地文化选择1–2项具有代表性的文化历史内容，进一步思考如何将“地域文化”和“香材记忆”共同转化为可视化的空间体验。\n例如，我们希望将 Capri 的蓝洞、海洋环境与香气记忆结合，搭建一个具有神秘感和沉浸感的蓝洞空间，呈现一个会呼吸、会魔法的海洋；又希望将 Sicilia 的火山文化与植物意象结合，通过火山装置与地面柑橘切片的元素表现“自然孕育香气”的关系。\n这些空间概念、视觉方向及叙事逻辑均由团队自主提出和确定。\n在确定创意方向后，我们使用 AI 图像生成工具，将团队已有的空间构想转化为可视化效果图。\n过程中进行了大量版本的生成、比较、修改和迭代，并针对空间结构、装置形态、材质、灯光等效果不断调整，最终形成各展厅的视觉方案。\n因此，在这一阶段，AI主要承担的是将设计构想快速视觉化并辅助方案推演的作用，而不是替代团队进行概念设计。"
+          },
+          {
+            "tool": "",
+            "title": "动态呈现",
+            "prompt": "",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-73608b39-271d-4929-aa1d-a6b0fcf4ac3a",
+              "work-asset-d0d35c7c-7889-4e29-abe5-1bd94a866aa4",
+              "work-asset-14e1d6cb-092f-4906-a08a-182332b98501",
+              "work-asset-cc8afcf1-344d-4e79-b468-1880c8606be8"
+            ],
+            "parameters": "",
+            "description": "为了让评委能够更加直观地理解我们的 MR 设计，我们进一步将静态展厅方案转化为动态的视频体验。\n在视频制作之前，我们首先根据已经确定的空间设计、参观动线和 MR 体验逻辑，由团队完成视频脚本与分镜规划。我们按照观众实际进入展厅、探索空间、触发交互并获得反馈的过程，对完整体验进行拆解，并进一步明确每一段视频需要传达的信息。在脚本中，我们对每个镜头的场景内容、人物行为、镜头运动、MR 效果、界面反馈以及前后镜头之间的衔接关系进行了逐一设计。对于需要说明项目概念的部分，我们也同步规划旁白内容，使视觉画面、交互过程与叙事信息能够保持一致。\n团队先确定“观众在什么位置、进行什么行为、看到什么变化，以及镜头如何呈现这一过程”，将原本静态的空间设计进一步整理为具有时间顺序和体验逻辑的动态叙事。确定后，我们再根据每一个关键镜头制作视频所需的关键帧，并使用 AI 图像生成工具辅助完成画面。过程中通过多轮修改，使不同关键帧之间在空间结构、装置形态、人物位置、镜头视角和整体视觉语言上保持一致。\n在关键帧确定后，我们进一步使用 AI 进行视频生成，将静态画面转化为连续的动态MR体验。\n这一过程使原本需要依靠文字和效果图进行想象的设计概念，能够以更加直观的方式呈现在评委面前。"
+          },
+          {
+            "tool": "",
+            "title": "AI与团队创作的关系",
+            "prompt": "",
+            "outcome": "",
+            "assetIds": [],
+            "parameters": "",
+            "description": "在整个项目中，AI主要作为研究与创作辅助工具参与了设计的流程。\nAI承担了前期资料的查询与整理、展厅视觉效果的生成与推演，以及MR视频的关键帧和动态画面生成；而项目的总体创作理念、地域与香材选择、空间概念、文化叙事、MR体验逻辑以及最终设计判断均由团队自主完成。\n所有 AI 生成内容也并非直接作为最终成果使用，而是经过团队持续的筛选、修改、比较与整合。\n我们希望通过 AI 提高设计研究和视觉推演的效率，同时始终保持设计者对内容、文化、空间与最终视觉表达的主导权。"
+          }
+        ],
+        "tools": [],
+        "origin": "collected",
+        "methods": [
+          "信息检索",
+          "空间设计",
+          "MR体验设计",
+          "视频生成"
+        ],
+        "version": 1,
+        "creators": [
+          "刘樾（其余团队成员署名待补充）"
+        ],
+        "reflection": "资料整理说明：原说明未提供具体工具名称、模型版本和原始提示词，相关字段留空。图片按研究、空间和视频阶段精选；MP4 为原 MOV 的完整时长压缩浏览副本，原始 MOV 保留在本地资料包。",
+        "coverAssetId": "work-asset-b8133d43-3b0d-4eb7-a705-2f993978c747",
+        "authorization": "confirmed",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        {
+          "id": "tag-2ee692df-440b-4c02-9a32-0983fb727045",
+          "name": "地域文化",
+          "slug": "地域文化-ceca0912"
+        },
+        {
+          "id": "tag-0760b82d-6952-41cc-99bf-1614ea7db729",
+          "name": "混合现实",
+          "slug": "混合现实-3fc81a2e"
+        },
+        {
+          "id": "tag-2a34674f-3e91-4105-acc2-f91108b33755",
+          "name": "香材",
+          "slug": "香材-958882e8"
+        }
+      ],
+      "assets": [
+        {
+          "id": "work-asset-b8133d43-3b0d-4eb7-a705-2f993978c747",
+          "fileName": "case-essenza-01.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-77d4e707-c163-4aab-9c71-056dc31f24b1/901ac05c-d74c-4cbb-8b29-c7d3f6c7b26a-15ced59b-22fc-4511-af86-ad3d155c2c2c",
+          "fileSize": 2825396,
+          "sha256": "8646d0aa86c292da2942e5d6b0711c8804934defe624e249c7f329a3a8f08fbd",
+          "altText": "寻意 · ESSENZA",
+          "sortOrder": 0,
+          "createdAt": "2026-09-15T04:52:28.087Z"
+        },
+        {
+          "id": "work-asset-a23a623b-fd1a-44cb-86d5-9e99755f24c6",
+          "fileName": "case-essenza-02.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-77d4e707-c163-4aab-9c71-056dc31f24b1/d872d285-7949-4305-9471-1c4d606199c0-571540a6-b99d-4972-a853-3894baa65519",
+          "fileSize": 222299,
+          "sha256": "89a53a0b022335a0f7f91a6ba2020341a8fd02c8d2c5e838272bc31f5d8ea7bc",
+          "altText": "寻意 · ESSENZA",
+          "sortOrder": 1,
+          "createdAt": "2026-09-15T04:52:28.109Z"
+        },
+        {
+          "id": "work-asset-e9d48b8a-2b91-43ba-a852-c29850a302f2",
+          "fileName": "case-essenza-03.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-77d4e707-c163-4aab-9c71-056dc31f24b1/26009c77-4598-440a-a751-1210db64c929-4465183f-171b-4488-9271-0d2d98dbafee",
+          "fileSize": 245750,
+          "sha256": "0687ad9280fc25cf3e48b7c0dec56ef96393b12854b3a905e68e969a3e768b24",
+          "altText": "寻意 · ESSENZA",
+          "sortOrder": 2,
+          "createdAt": "2026-09-15T04:52:28.133Z"
+        },
+        {
+          "id": "work-asset-b6eb47f2-d361-4f7b-9ac6-f85034db2b24",
+          "fileName": "case-essenza-04.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-77d4e707-c163-4aab-9c71-056dc31f24b1/fbdf1c11-7aa3-4669-aaa9-259e69af699c-5ed805c3-ecda-41c5-bb07-65885a886c33",
+          "fileSize": 332529,
+          "sha256": "7d6679dd9327c42de1957407c1099d4e35dfa3608f5a7a6ba3709867dc304140",
+          "altText": "寻意 · ESSENZA",
+          "sortOrder": 3,
+          "createdAt": "2026-09-15T04:52:28.159Z"
+        },
+        {
+          "id": "work-asset-b00b8f1c-ee98-4678-8b27-18a5db0fe695",
+          "fileName": "case-essenza-05.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-77d4e707-c163-4aab-9c71-056dc31f24b1/e594b20b-bc7a-4d99-941e-509e8aad45a6-e46ef17d-675a-4996-b7cc-7e848a96288e",
+          "fileSize": 597245,
+          "sha256": "c2fcf449dd8086df68310e97e3404e326c9777c052fdb3ca19d054b970e86db7",
+          "altText": "寻意 · ESSENZA",
+          "sortOrder": 4,
+          "createdAt": "2026-09-15T04:52:28.185Z"
+        },
+        {
+          "id": "work-asset-73608b39-271d-4929-aa1d-a6b0fcf4ac3a",
+          "fileName": "case-essenza-06.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-77d4e707-c163-4aab-9c71-056dc31f24b1/cdd78968-017b-4fa2-978f-fc7b64796eae-f8a86eb4-8df9-4750-8510-e6283ef57533",
+          "fileSize": 1963432,
+          "sha256": "a69c90d3c11d26aa4e9fcf56f6c05c46ef3d168e7973327f9f97638f487f5d02",
+          "altText": "寻意 · ESSENZA",
+          "sortOrder": 5,
+          "createdAt": "2026-09-15T04:52:28.226Z"
+        },
+        {
+          "id": "work-asset-d0d35c7c-7889-4e29-abe5-1bd94a866aa4",
+          "fileName": "case-essenza-07.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-77d4e707-c163-4aab-9c71-056dc31f24b1/83ea247a-2b5e-4a38-8b11-f64d363278ae-83bef70f-75d0-4fff-91d6-5ec1b67696e1",
+          "fileSize": 1346446,
+          "sha256": "2254c0b70e232d6311878628a771471d4016e1c3b2b3fe53de90b1f746380c9d",
+          "altText": "寻意 · ESSENZA",
+          "sortOrder": 6,
+          "createdAt": "2026-09-15T04:52:28.258Z"
+        },
+        {
+          "id": "work-asset-14e1d6cb-092f-4906-a08a-182332b98501",
+          "fileName": "case-essenza-08.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-77d4e707-c163-4aab-9c71-056dc31f24b1/8a3c66f7-44a7-4b01-9b57-433a1874540b-5f2d6535-3156-4072-9d60-f04cd74cbd4a",
+          "fileSize": 468098,
+          "sha256": "50194f501ecde1357e573feef227c132f64e3b665c98e14e3c699cbd0829aa02",
+          "altText": "寻意 · ESSENZA",
+          "sortOrder": 7,
+          "createdAt": "2026-09-15T04:52:28.281Z"
+        },
+        {
+          "id": "work-asset-cc8afcf1-344d-4e79-b468-1880c8606be8",
+          "fileName": "case-essenza-09.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-77d4e707-c163-4aab-9c71-056dc31f24b1/ea0a5718-a203-4fbf-8453-f346fb4861fe-fc93eb75-31ad-427b-b4d6-9fb4341c056b",
+          "fileSize": 643248,
+          "sha256": "783a7312b390930993115004bf6d6e14528116a10e82786849034f7e6250e994",
+          "altText": "寻意 · ESSENZA",
+          "sortOrder": 8,
+          "createdAt": "2026-09-15T04:56:14.839Z"
+        }
+      ]
+    },
+    {
+      "id": "work-1573e353-3626-4fe9-9137-ed9cde87f047",
+      "authorId": "user-student-demo",
+      "title": "烛龙：昼夜呼吸",
+      "summary": "本装置以《山海经》中“烛龙”的神话意象为设计原型，将“其瞑乃晦，其视乃明”转译为空间中的昼夜变化机制。\n设计没有直接再现传统龙的具象形态，而是提取烛龙的龙目、脊骨、鳞片三个视觉特征，并将其分别转化为装置中的环形灯光、悬挂环体与放射状鳞片结构。装置整体由顶部环形光源、中央多层悬挂结构和中心火焰灯组成，通过不同结构的旋转、开合与灯光变化，形成“闭眼—半睁—全睁”三个动态状态。\n装置与邮轮中庭的航程体验结合，将一天的时间变化转化为空间可感知的视觉事件：夜间闭眼、黎明苏醒、白昼睁眼。顶部灯光按照时间方向依次点亮，中央环体随状态发生角度与层次变化，使装置成为中庭空间中可被持续感知的“时间之眼”。",
+      "discipline": "环境艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-09-15T05:05:07.650Z",
+      "createdAt": "2026-09-15T04:51:26.891Z",
+      "story": {
+        "steps": [
+          {
+            "tool": "",
+            "title": "从神话文本提取装置设计原型",
+            "prompt": "我正在为一艘大型邮轮中庭设计一件具有中国文化意象的动态艺术装置。\n请从《山海经》中的“烛龙”形象出发，不直接设计具象的龙，而是分析其最适合转化为空间装置的视觉特征与文化含义。\n重点提取“其瞑乃晦，其视乃明”所表达的昼夜变化、时间循环、光明与黑暗等概念，并从龙目、脊骨、鳞片等特征中寻找可以转化为灯光、机械结构和悬挂构件的设计语言。\n输出适合大型公共空间装置设计的3—5种形态转译方向，强调现代、抽象、克制、具有东方文化气质，不要出现传统龙雕塑的具象形态。",
+            "outcome": "得到“烛龙不是一条龙，而是一套时间与光的机制”这一核心设计方向。\n最终提取：\n龙目 → 环形光源 / 时间之眼\n脊骨 → 多层悬挂环体\n鳞片 → 放射状光片结构\n烛火 → 中央核心光源\n睁闭眼 → 装置昼夜状态变化",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "从具象神话形象转化为装置形态",
+            "prompt": "请将中国神话“烛龙”的视觉特征转译为一件现代大型室内艺术装置。\n不要出现完整的龙形或具象动物造型，只提取龙目、脊骨、鳞片三个局部特征。\n龙目转化为顶部大型环形灯光系统；脊骨转化为多层悬挂的环形结构；鳞片转化为环体上的放射状片状构件；中心设置一个小型火焰状核心光源。\n整体采用金属、细薄环形构件和放射状构件，强调轻盈、悬浮、机械感与东方神话意象。\n装置应适合大型邮轮中庭，高度约6米，直径约5米，具有明确的中心轴线和垂直层级关系。\n造型简洁、理性、现代，不要传统宫灯、龙雕塑、复杂纹样或过度装饰。",
+            "outcome": "形成装置的基本结构：\n顶部环形灯光 → 中部悬挂环体 → 下部放射状鳞片 → 中心火焰灯\n这一阶段完成从“神话形象”到“空间装置形态”的第一次转换。",
+            "assetIds": [
+              "work-asset-65038bb1-b08c-4661-8255-93825109b376"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "生成装置结构与不同状态",
+            "prompt": "基于已有的烛龙动态装置概念，进一步生成具有工程逻辑的装置结构方案。\n装置总高度约6米，最大直径约5米，由四个主要部分组成：\n01 顶部环形光源系统：位于中庭顶部，形成大型圆环，通过环形排列的小型灯具模拟烛龙之眼，并按照时间方向依次点亮。\n02 龙骨结构：由多层金属环体组成，通过中心轴和悬挂系统连接，可以发生不同角度的旋转和开合变化。\n03 鳞片放射结构：位于下层环体，由大量细长金属片向外放射排列，形成类似鳞片展开的视觉效果。\n04 中央火焰灯：位于装置中心，以暖色光作为烛龙的核心光源。\n请生成装置的工业设计结构图和侧视图，突出结构关系、比例关系、悬挂方式和三个动态状态：闭眼、半睁、全睁。\n整体风格简洁、理性、可制造，不要增加无关装饰。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-30e41586-b0bd-4cc1-bd69-d571e32a232e"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "建立“昼夜呼吸”动态状态",
+            "prompt": "请基于同一件烛龙悬挂式灯光装置，生成连续的昼夜状态变化。\n装置需要像眼睛一样进行“闭合—半睁—睁开”的动态变化，对应夜晚、黎明和白昼。\n状态一：黑夜 / 闭眼。环体整体较为水平，多个环形构件彼此靠近，结构收拢，顶部灯光大部分熄灭，仅保留中心微弱暖色光，空间保持低亮度但不能完全漆黑。\n状态二：黎明 / 半睁。环体开始旋转和错开，部分环形结构抬升，鳞片逐渐展开，顶部环形灯光按照顺时针方向逐步亮起，中心火焰灯增强。\n状态三：白昼 / 全睁。多个环体完全展开并产生明显的空间层次，放射状鳞片结构充分展开，顶部环形灯全部点亮，中心光源达到最高亮度。\n三个状态必须保持同一装置结构，只改变构件角度、展开程度和灯光状态，形成连续的时间变化。",
+            "outcome": "形成四个主要时间状态：\n黑夜 / 闭眼 → 黎明 / 微睁 → 早晨 / 半睁 → 白昼 / 全睁",
+            "assetIds": [
+              "work-asset-0f8974e3-140e-406e-a29d-c8b8342eda9a"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "生成邮轮中庭空间效果图",
+            "prompt": "将已有的烛龙动态灯光装置置于大型豪华邮轮中庭。\n中庭具有多层环形公共空间，两侧为连续的客舱和观景廊道，中部形成挑高约15—20米的开放大厅，尽端为大型落地玻璃，可以看到海面与日落。\n烛龙装置悬挂于中庭中央，高度约6米，直径约5米。顶部环形灯光贴近中庭天花，中央多个金属环体向下悬挂，形成具有垂直层次的动态装置。\n装置采用金色或暖金色金属细环结构，搭配放射状细长鳞片构件，中心设置小型暖色火焰灯。\n保持装置的原有结构比例和造型，不重新设计装置。\n场景具有高端邮轮公共空间的尺度感、真实建筑摄影质感和沉浸式灯光氛围。\n生成白昼、黄昏和夜间三个场景状态。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-ab3befbc-01c3-427a-8633-4ce128077c6f"
+            ],
+            "parameters": "",
+            "description": ""
+          }
+        ],
+        "tools": [
+          "ChatGPT",
+          "Lovart"
+        ],
+        "origin": "collected",
+        "methods": [
+          "装置设计",
+          "灯光设计",
+          "图像生成"
+        ],
+        "version": 1,
+        "creators": [
+          "王小月"
+        ],
+        "reflection": "资料整理说明：工具列表按作者资料记录；未说明各步骤所用模型版本和参数，不作推断。效果图不作为量产或现场落地的证明。",
+        "coverAssetId": "work-asset-ab3befbc-01c3-427a-8633-4ce128077c6f",
+        "authorization": "confirmed",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        {
+          "id": "tag-cf9a36c2-461b-4f9a-9256-8f4402b7e35c",
+          "name": "东方神话",
+          "slug": "东方神话-92903ad9"
+        },
+        {
+          "id": "tag-99a6f152-bbb3-4d00-af48-3b757d14ceaa",
+          "name": "动态灯光",
+          "slug": "动态灯光-f7532dae"
+        },
+        {
+          "id": "tag-d59fdd6a-55e9-4d4c-a644-552ba3a21221",
+          "name": "邮轮中庭",
+          "slug": "邮轮中庭-f8c09a6c"
+        }
+      ],
+      "assets": [
+        {
+          "id": "work-asset-ab3befbc-01c3-427a-8633-4ce128077c6f",
+          "fileName": "case-zhulong-01.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-1573e353-3626-4fe9-9137-ed9cde87f047/a0491981-4160-4477-946c-08e899bf8236-dfa267e7-ce0f-4d09-ada8-d726b05f4bb7",
+          "fileSize": 1102337,
+          "sha256": "2a845b9a13eb793548166a9d5c0ad4ed0e1b70f5dfd51eb7d80fef618cf10c54",
+          "altText": "烛龙：昼夜呼吸",
+          "sortOrder": 0,
+          "createdAt": "2026-09-15T04:51:26.936Z"
+        },
+        {
+          "id": "work-asset-65038bb1-b08c-4661-8255-93825109b376",
+          "fileName": "case-zhulong-02.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-1573e353-3626-4fe9-9137-ed9cde87f047/946adeac-4c5e-4b9a-9e0e-447eb4013dd7-cca2a8d7-c938-4a10-beef-14215851c018",
+          "fileSize": 1042657,
+          "sha256": "757a6e92c0eb24636a67a609e75da639586c2adb6350f9e275dee8a95d0007ab",
+          "altText": "烛龙：昼夜呼吸",
+          "sortOrder": 1,
+          "createdAt": "2026-09-15T04:51:26.959Z"
+        },
+        {
+          "id": "work-asset-30e41586-b0bd-4cc1-bd69-d571e32a232e",
+          "fileName": "case-zhulong-03.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-1573e353-3626-4fe9-9137-ed9cde87f047/c703b62e-07b0-4814-a096-bcc01304aa20-82b36a85-d6b2-4d0f-9a23-af6298400a68",
+          "fileSize": 8726830,
+          "sha256": "42ecc10440bee8ed8cda3c8de8630b3f6ac2720f029aea48534ba075324509a5",
+          "altText": "烛龙：昼夜呼吸",
+          "sortOrder": 2,
+          "createdAt": "2026-09-15T04:51:27.022Z"
+        },
+        {
+          "id": "work-asset-0f8974e3-140e-406e-a29d-c8b8342eda9a",
+          "fileName": "case-zhulong-04.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-1573e353-3626-4fe9-9137-ed9cde87f047/57dbf5f5-bbce-4621-8361-c694e44b786e-f5e0ad17-a0ee-4819-bdc7-7267f9e6e83d",
+          "fileSize": 1055998,
+          "sha256": "7d66f687bc2c1c08a5d1d048aa20e8e702f68c64fc2a28d213652d7fccf0be0e",
+          "altText": "烛龙：昼夜呼吸",
+          "sortOrder": 3,
+          "createdAt": "2026-09-15T04:51:27.049Z"
+        }
+      ]
+    },
+    {
+      "id": "work-6279eb9b-4eb5-41a3-b75b-92dd2bb0e042",
+      "authorId": "user-student-demo",
+      "title": "琮变",
+      "summary": "《琮变》是一组以藤编为媒介的落地组雕，由四件高低错落的异形柱体构成。设计取意玉琮“外方内圆”的通贯关系，但不直接复制传统器形，而是将柱体截面演化为三角形、椭圆、五边形与不规则多边体，使传统器物的秩序被转译为更具当代感的空间形态。\n四件作品均以细藤条沿轮廓筑造，棱角处采用柔和弧转。表面以菱形透空编织建立统一底网，再在不同面上加入偏置的旋涡、同心环、之字形光脊与凸棱纹理；孔洞随形体与织纹偏移分布，内部保留贯通圆孔，使视线穿透作品时产生偏斜、流动的空间感。统一的蜜金色藤材与几何网眼形成整体秩序，形体、孔洞和纹样的差异则构成组雕内部的节奏变化。",
+      "discipline": "工艺美术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-09-15T05:04:37.328Z",
+      "createdAt": "2026-09-15T04:56:27.468Z",
+      "story": {
+        "steps": [
+          {
+            "tool": "",
+            "title": "形态探索",
+            "prompt": "工作流一｜生成图库元素：形态探索\n藤编落地组雕，由四件高低错落的异形柱体构成（高55至80厘米），取意玉琮“外方内圆”的通贯之气，却挣脱方形约束，将柱体截面演化为三角形、椭圆、五边形与不规则多边体——每一件都以细藤条（直径六毫米）沿各自轮廓筑造，棱角处柔和弧转，保留玉器被岁月摩挲的温润感。表面满铺菱形透空编为底，但在每件形体的不同面上植入偏置的几何织纹：三角柱的纹样旋涡挤压于锐角一侧，椭圆柱的同心环纹偏沉于底部，五边形体的之字形光脊斜贯两个面，不规则体的凸棱纹在凹凸处疏密骤变。孔洞同样随形态与纹样偏移分布，不再居中对仗——有的密集于形体膨胀处，有的偏聚于转角裂隙间。四件内部均保留贯通的圆孔通道，但孔道随柱体中心偏移，让贯穿视线也带上偏斜的动势。每件独立置于纯白色薄展台（高约15厘米）上，纯白平面将藤材蜜金色泽与细密网眼完全托出。统一的金色细藤与菱形底网保证整体的材质秩序，而三角、椭圆、五边、不规则的形体变化，配合偏移的织纹与偏置的孔洞。",
+            "outcome": "模型：即梦 Seedream 5.0。第一轮主要观察整体比例、异形柱体家族感、贯通孔洞与藤编网眼的组合可能性。",
+            "assetIds": [
+              "work-asset-4a7189c1-70cc-4d18-9d9d-177608455159"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "纹样与结构筛选",
+            "prompt": "工作流一｜生成图库元素：纹样与结构筛选\n输入图片/参考图：选择可被真实藤编工艺转译的几何密编、菱形透空与斜向交叉纹样作为肌理参考。\nPrompt 文字\n在上一轮异形藤编组雕的基础上继续深化。保留四件高低错落的独立体量，以及三角形、椭圆、五边形和不规则多边体之间的家族关系；统一使用蜜金色细藤与菱形透空底网。参考输入的藤编肌理，将局部几何织纹控制在可手工实现的尺度，不生成过度细密或无法编织的结构。孔洞保持偏置分布并与纹样方向发生关系，避免完全对称。弱化装饰性堆叠，突出“形体—孔洞—编织纹样—内部贯通空间”四者之间的结构联系。纯白背景，产品设计展示图，完整呈现四件作品，真实藤材质感，柔和影棚光。",
+            "outcome": "从多轮生成结果中筛选形体秩序较清晰、编织逻辑较可实施的方案，作为后续实物制作的视觉依据。",
+            "assetIds": [
+              "work-asset-ac3d7812-8951-4ef8-842a-7d28ef4f11a0",
+              "work-asset-84fbfbd3-a9e9-4632-89f0-a7bff6cdfe1f"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "骨架转译",
+            "prompt": "",
+            "outcome": "将图像中的形态关系转译为符合藤编材料特性的骨架结构。",
+            "assetIds": [
+              "work-asset-5759ac94-350b-403b-8d5e-66ce389d6dcf"
+            ],
+            "parameters": "",
+            "description": "依据 AI 定稿的体块关系，以藤材建立基础骨架，校正比例、转角与孔洞位置。"
+          },
+          {
+            "tool": "",
+            "title": "编织成型",
+            "prompt": "",
+            "outcome": "实物成品：四件作品形成统一的藤材与网眼秩序，同时保留不同体块、偏置孔洞和局部织纹的差异。",
+            "assetIds": [
+              "work-asset-ae831414-7609-4b87-8266-639f179256b0",
+              "work-asset-4fcbdae8-edca-4beb-baf5-ade977ece61a"
+            ],
+            "parameters": "",
+            "description": "工作流二｜实物创作：从AI图像到真实藤编\n将AI方案拆解为可制作的骨架、转角、孔洞与编织面。先以藤材建立异形体块的主要轮廓和贯通孔道，再依据实物受力与弯折特性调整局部曲率；随后在骨架上铺设菱形透空底网，并以局部加密、叠压和方向变化形成几何纹样。该阶段不追求对AI图像逐像素复刻，而是将AI提供的形态关系转译为符合藤编材料特性的真实结构。"
+          },
+          {
+            "tool": "",
+            "title": "展陈预演",
+            "prompt": "工作流三｜生成展厅效果\n输入图片：实物成品正面组合照片。模型：即梦 Seedream 5.0。\nPrompt 文字\n请基于输入的四件藤编落地组雕生成艺术展厅展示效果图。严格保持四件作品的造型、比例、孔洞位置与编织肌理，不新增、删减或重新设计作品。四件分别置于约15厘米高的纯白色薄展台上，高低错落、前后形成适度距离。场景为当代艺术馆白盒子展厅：纯白墙面、浅灰色微水泥地面、顶部简洁轨道射灯，空间干净克制，不加入多余陈设。灯光从左上方约45度形成柔和聚光，突出蜜金色藤材、菱形透空网眼与内部贯通孔道的阴影层次。视角采用略低于平视的三分之四广角，横向构图，完整呈现四件作品和展台之间的尺度关系。museum exhibition photography, contemporary craft exhibition, architectural visualization, realistic rattan texture, soft shadows, neutral color palette, high-end gallery atmosphere。限制：不添加文字、植物、装饰品或其他展品，不出现夸张舞台光效，不改变藤材色泽。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-68ce6472-78e6-43d6-a082-fc23c92a3110"
+            ],
+            "parameters": "",
+            "description": ""
+          }
+        ],
+        "tools": [
+          "即梦 Seedream 5.0"
+        ],
+        "origin": "collected",
+        "methods": [
+          "藤编设计",
+          "装置设计",
+          "实物制作",
+          "图像生成"
+        ],
+        "version": 1,
+        "creators": [
+          "匿名作者"
+        ],
+        "reflection": "资料整理说明：图集涵盖形态探索、参考肌理、制作过程和展示效果；其余重复或补充图库保留在原始资料包。",
+        "coverAssetId": "work-asset-4fcbdae8-edca-4beb-baf5-ade977ece61a",
+        "authorization": "confirmed",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        {
+          "id": "tag-9fba3ce4-ac54-4ab1-a0a2-1df28577a8f6",
+          "name": "工艺转译",
+          "slug": "工艺转译-0503aac2"
+        },
+        {
+          "id": "tag-58389add-27fe-4742-b4c2-f7a0052626fd",
+          "name": "玉琮",
+          "slug": "玉琮-f3209833"
+        },
+        {
+          "id": "tag-156f237b-00f4-41e6-b6f4-0811caaea145",
+          "name": "纤维艺术",
+          "slug": "纤维艺术-bc07f7c5"
+        }
+      ],
+      "assets": [
+        {
+          "id": "work-asset-4fcbdae8-edca-4beb-baf5-ade977ece61a",
+          "fileName": "case-cong-01.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-6279eb9b-4eb5-41a3-b75b-92dd2bb0e042/ecd31fad-801d-4cec-9790-fdec7cea90bd-ef1668c8-d3f1-4fd4-974a-7eb066ff8bfa",
+          "fileSize": 3335276,
+          "sha256": "f67e11fa3dea97cb56c1269eb401e0bea40b4c4f8d2e49d7e78ca65ea6af219f",
+          "altText": "琮变",
+          "sortOrder": 0,
+          "createdAt": "2026-09-15T04:56:29.601Z"
+        },
+        {
+          "id": "work-asset-4a7189c1-70cc-4d18-9d9d-177608455159",
+          "fileName": "case-cong-02.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-6279eb9b-4eb5-41a3-b75b-92dd2bb0e042/2dab7a32-d346-4802-8f4a-576fafe07119-4ab27ead-c936-4508-89fe-79e0fc98d734",
+          "fileSize": 237305,
+          "sha256": "bbd95f6828b8f9d59dcc667517bea298975756c09dc61f7f89321d1a0daaa651",
+          "altText": "琮变",
+          "sortOrder": 1,
+          "createdAt": "2026-09-15T04:56:31.694Z"
+        },
+        {
+          "id": "work-asset-ac3d7812-8951-4ef8-842a-7d28ef4f11a0",
+          "fileName": "case-cong-03.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-6279eb9b-4eb5-41a3-b75b-92dd2bb0e042/f1ea40f6-542b-4006-ac1d-111728707e7b-00614f2e-5ae1-43b1-931f-4d29bf9ebecf",
+          "fileSize": 264032,
+          "sha256": "a42c8d7b3ce9f9b20b15cefe3c2713c7bde4e76d57693d9a5edb49168bc045ac",
+          "altText": "琮变",
+          "sortOrder": 2,
+          "createdAt": "2026-09-15T04:56:33.805Z"
+        },
+        {
+          "id": "work-asset-84fbfbd3-a9e9-4632-89f0-a7bff6cdfe1f",
+          "fileName": "case-cong-04.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-6279eb9b-4eb5-41a3-b75b-92dd2bb0e042/366fb97c-c64d-4a51-ab3d-dd1431e61f11-e356a9d2-9aae-4c58-801f-59ffbeb2c395",
+          "fileSize": 492631,
+          "sha256": "962acdfa3ffdf616ebee28640a51c52e501c3ced6f8d7d09b458f9713176b5ad",
+          "altText": "琮变",
+          "sortOrder": 3,
+          "createdAt": "2026-09-15T04:56:35.915Z"
+        },
+        {
+          "id": "work-asset-ae831414-7609-4b87-8266-639f179256b0",
+          "fileName": "case-cong-05.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-6279eb9b-4eb5-41a3-b75b-92dd2bb0e042/4864a2c4-8df4-4199-8b6c-cafb48e6c6ff-e6ce505e-a477-4267-b5ad-b17e08a75bf5",
+          "fileSize": 172023,
+          "sha256": "e8d6cb91184636c00969d9fe0f61587a9f3c3422e0c3e35f5667799e3fa6fe83",
+          "altText": "琮变",
+          "sortOrder": 4,
+          "createdAt": "2026-09-15T04:56:38.018Z"
+        },
+        {
+          "id": "work-asset-68ce6472-78e6-43d6-a082-fc23c92a3110",
+          "fileName": "case-cong-06.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-6279eb9b-4eb5-41a3-b75b-92dd2bb0e042/3909bd0f-952c-4fd1-85a5-2f4b5f1a15c1-2f8d2703-0cc3-4296-8d4f-1baf09b7bffe",
+          "fileSize": 3986626,
+          "sha256": "94b20bcf669d0eb6adc94c0c316a8f1bd4178767215c03c0617f62a80793fd8e",
+          "altText": "琮变",
+          "sortOrder": 5,
+          "createdAt": "2026-09-15T04:56:40.144Z"
+        },
+        {
+          "id": "work-asset-5759ac94-350b-403b-8d5e-66ce389d6dcf",
+          "fileName": "case-cong-07.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-6279eb9b-4eb5-41a3-b75b-92dd2bb0e042/c4788774-9fc7-45d6-9ed5-9b8b4f0716e4-9e0471d2-2cd3-4b34-a51e-576cf7b7a725",
+          "fileSize": 843527,
+          "sha256": "f5b5269d3cab042041e2679d45412ac2e416ef5381f512684332586e26b6de72",
+          "altText": "琮变",
+          "sortOrder": 6,
+          "createdAt": "2026-09-15T04:56:42.240Z"
+        },
+        {
+          "id": "work-asset-af895d52-9495-482a-9ba1-fe8fc8c5a78f",
+          "fileName": "case-cong-08.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-6279eb9b-4eb5-41a3-b75b-92dd2bb0e042/bff6457e-23aa-4e95-98dc-781d38e37a42-27cccd59-da4b-45f2-a349-6e95ae3491e9",
+          "fileSize": 4649553,
+          "sha256": "fb016b44d117b4ae93488319eba25b16c74680adb567498674bfc1a1978aebf8",
+          "altText": "琮变",
+          "sortOrder": 7,
+          "createdAt": "2026-09-15T04:56:44.360Z"
+        }
+      ]
+    },
+    {
+      "id": "work-763623bc-75e4-4e55-8920-94f00e1f7dd8",
+      "authorId": "user-student-demo",
+      "title": "盈缺",
+      "summary": "这组茶具以“圆缺相生，器以合一”为核心概念。设计从中国传统审美中“圆满”与“留白”的关系出发，将完整的圆与局部缺口转化为器物的结构语言。茶壶的壶身、把手与中央圆形负空间融为一体，使“把”不再是附着在壶体上的独立构件，而成为整体轮廓的一部分；公道杯与茶杯延续相同的弧形切口和柔和曲面，使整套茶具形成统一的家族化特征。\n造型整体采用低重心、圆润而克制的几何形态，在现代极简语言中保留东方器物的含蓄感。材料采用暖白色粗陶或哑光陶瓷，保留轻微颗粒与手工质感，弱化装饰，通过比例、曲面、开孔和光影体现设计特征。\n视觉场景则以暖色自然光、石材台面、枝叶投影和木质格栅营造安静的东方生活氛围，使器物与自然环境形成呼应。",
+      "discipline": "工艺美术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-09-15T05:04:51.568Z",
+      "createdAt": "2026-09-15T04:52:26.977Z",
+      "story": {
+        "steps": [
+          {
+            "tool": "",
+            "title": "提示词结构与概念",
+            "prompt": "我现在需要设计一组东方风格的茶具，请帮我一共Prompt的文本结构案例，以帮助我能够更好的控制生成。",
+            "outcome": "*产品：**一组当代东方极简陶瓷茶具，包括一个主茶壶、一个公道杯、四个茶杯和一个圆形茶盘。\n**设计风格：**Contemporary Oriental minimalism，当代东方极简主义，融合宋代器物的含蓄比例与现代工业设计的简洁造型，整体安静、克制、精致，不采用直接的传统纹样或符号。\n**设计理念：“圆缺相生，虚实成器”。通过完整圆形与局部缺口之间的关系形成产品的核心视觉语言，以圆形负空间表现东方美学中的虚实、盈缺与留白。\n**统一形态语言：**整套茶具采用低重心、圆润、连续的有机几何形态，以柔和曲线和圆弧作为主要轮廓。不同器物均出现局部圆形缺口、拱形留白或环状结构，使茶壶、公道杯、茶杯和茶盘形成明显统一的产品家族语言。整体避免尖锐转折，曲面过渡自然流畅。\n**主茶壶：**低矮饱满的椭圆壶身，大型环形把手与壶身融为连续整体，在壶身侧面形成清晰的圆形负空间。壶嘴短而克制，从壶体自然延伸；壶盖嵌入整体轮廓，顶部设置自然鹅卵石形盖钮。\n**公道杯：**延续茶壶的圆润流线造型，以局部开放的环形结构形成把手和缺口，使视觉语言与主茶壶呼应。\n**茶杯：**四个小型圆润茶杯，杯壁略厚，比例低矮，杯底设置小型拱形镂空或内凹留白，与茶壶的大型圆形负空间形成尺度上的呼应。\n**茶盘：**简洁圆形茶盘，边缘略微上扬，中部采用极浅的同心圆凹槽，将“圆”的视觉主题进一步强化。\n**材质：**材质为高级暖象牙白陶瓷，哑光釉面，细腻微颗粒粗陶质感，无图案、无文字、无复杂装饰。\n**色彩：**warm ivory white，统一单色体系，通过光影、材质和曲面表现层次，不使用复杂装饰色。\n**视觉表现：**high-end industrial design product rendering, museum-quality ceramic design, soft diffused studio lighting, subtle shadows, three-quarter view, isolated product set, clean neutral background, refined proportions, realistic ceramic texture, premium contemporary Asian product design.\n**限制：**no Chinese characters, no calligraphy, no traditional floral patterns, no dragon motifs, no excessive decoration, no gold ornament, no tea leaves, no people, no interior environment, no unrelated props.",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "茶具形态深化",
+            "prompt": "产品类型：一组当代东方极简陶瓷茶具产品设计，包括一个主茶壶、一个公道杯、四个茶杯和一个圆形茶盘。\n设计风格：造型具有高级工业设计感、雕塑感、东方禅意、现代极简主义，比例合理，可以真实生产制造。\n设计理念：设计理念为“圆缺相生、器以合一”，整体采用连续柔和的有机曲线和圆形负空间。\n统一形态语言：整套茶具采用低重心、圆润、连续的有机几何形态，以柔和曲线和圆弧作为主要轮廓。不同器物均出现局部圆形缺口、拱形留白或环状结构，使茶壶、公道杯、茶杯和茶盘形成明显统一的产品家族语言。整体避免尖锐转折，曲面过渡自然流畅。\n主茶壶：主茶壶为低重心圆润造型，壶身与大型环形把手融为一个连续整体，在壶体右侧形成清晰圆形镂空，壶嘴短而克制，壶盖简洁，顶部有一枚自然鹅卵石形盖钮。\n公道杯：公道杯延续相同的流动曲线与局部缺口结构，\n茶杯：四个茶杯采用简洁圆润杯体，底部具有小型拱形留白，形成统一的产品家族设计语言。\n材质：材质为高级暖象牙白陶瓷，哑光釉面，细腻微颗粒粗陶质感，无图案、无文字、无复杂装饰。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-a269f683-32d0-4970-b68d-4af421f918b6"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "产品三视图",
+            "prompt": "生成这组茶具的三视图",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-eeda9113-cdb9-4656-a26a-3de2ab17d71c"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "生活场景展示",
+            "prompt": "请为这组茶具生成产品展示场景的效果图。\n场景：场景为高端陶瓷产品摄影，暖色下午阳光从左侧照射，米灰色墙面，浅暖色天然石材桌面，背景右侧有竖向深木格栅，左上方少量自然绿叶枝条进入画面，枝叶在墙面形成柔和阴影。\n排布：茶具整齐但自然地摆放在桌面上，主茶壶位于视觉中心，公道杯和茶杯分布于两侧，圆形茶盘位于中央下方。\n柔和自然光，温暖米白色调，高级建筑摄影氛围，",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-4f601b2b-ecad-4001-b613-19254a426a0a"
+            ],
+            "parameters": "",
+            "description": ""
+          }
+        ],
+        "tools": [
+          "ChatGPT"
+        ],
+        "origin": "collected",
+        "methods": [
+          "陶瓷设计",
+          "产品设计",
+          "图像生成"
+        ],
+        "version": 1,
+        "creators": [
+          "王婧"
+        ],
+        "reflection": "资料整理说明：工具列表按作者资料记录；未说明各步骤所用模型版本和参数，不作推断。效果图不作为量产或现场落地的证明。",
+        "coverAssetId": "work-asset-a269f683-32d0-4970-b68d-4af421f918b6",
+        "authorization": "confirmed",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        {
+          "id": "tag-02558ae5-11ce-4b0d-8f64-1acac240e625",
+          "name": "东方美学",
+          "slug": "东方美学-1cb11ca6"
+        },
+        {
+          "id": "tag-4148e3f1-2d3f-4432-9e5c-205c840d6b3e",
+          "name": "极简设计",
+          "slug": "极简设计-ca7de17c"
+        },
+        {
+          "id": "tag-1c351d3c-b17e-4430-8a6b-74af0ee1a559",
+          "name": "茶具",
+          "slug": "茶具-148dc337"
+        }
+      ],
+      "assets": [
+        {
+          "id": "work-asset-a269f683-32d0-4970-b68d-4af421f918b6",
+          "fileName": "case-yingque-01.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-763623bc-75e4-4e55-8920-94f00e1f7dd8/e42149c8-db33-44f6-bf9e-c223527b4508-0b025da9-94d4-4fb6-8001-49ae10125478",
+          "fileSize": 1026922,
+          "sha256": "a0b3d59a547965226bfe1d4f8301a5fb313667b2e0974073445d047bdc02a79d",
+          "altText": "盈缺",
+          "sortOrder": 0,
+          "createdAt": "2026-09-15T04:52:27.026Z"
+        },
+        {
+          "id": "work-asset-eeda9113-cdb9-4656-a26a-3de2ab17d71c",
+          "fileName": "case-yingque-02.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-763623bc-75e4-4e55-8920-94f00e1f7dd8/41c2278e-ce1d-4c71-a60c-4795a5e68c90-cbdafff2-5960-41b5-9378-1b9d9209d32e",
+          "fileSize": 1587179,
+          "sha256": "69241f51d3acfe264ddc6469de0227544f3feb92d9df373f528749bea3184d51",
+          "altText": "盈缺",
+          "sortOrder": 1,
+          "createdAt": "2026-09-15T04:52:27.070Z"
+        },
+        {
+          "id": "work-asset-4f601b2b-ecad-4001-b613-19254a426a0a",
+          "fileName": "case-yingque-03.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-763623bc-75e4-4e55-8920-94f00e1f7dd8/9333abec-a51a-4616-89c8-6d268b3544bf-047117f8-9fc8-492d-be20-33b11c7b4ffd",
+          "fileSize": 2638948,
+          "sha256": "7830c1aa7fee7a46c03a0f907c5186c83ead71ddc364a21a34906247641fdc69",
+          "altText": "盈缺",
+          "sortOrder": 2,
+          "createdAt": "2026-09-15T04:52:27.103Z"
+        }
+      ]
+    },
+    {
+      "id": "work-52815e54-8eb4-4f63-8d1d-9f57c6aee132",
+      "authorId": "user-student-demo",
+      "title": "连年有余",
+      "summary": "本作品为基于杨柳青木板年画的视觉再创作延展设计，挖掘杨柳青年画里吉祥娃娃传统题材内核，将传统木版年画的造型语言进行现代化转译。设计摒弃年画复杂的手绘肌理，采用扁平化矢量插画风格，提取年画经典饱满圆润的人物造型、喜庆柔和的人物神态，保留民俗形象憨拙生动的气质；对传统五行正色与年画色彩进行数字化转译，建立适配现代审美的国风配色体系。作品将传统民俗符号几何化、简约化，弱化陈旧感，探索杨柳青年画在当代文创与平面设计中的表达形式，实现传统民间艺术的当代延续与创新传播。",
+      "discipline": "视觉传达",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-09-15T05:04:56.418Z",
+      "createdAt": "2026-09-15T04:51:27.664Z",
+      "story": {
+        "steps": [
+          {
+            "tool": "",
+            "title": "传统题材图形转译",
+            "prompt": "我现在需要设计一组杨柳青木板年画的《连年有余》创新形象：扁平化矢量插画，文创图形设计，灵感源自杨柳青木板年画胖娃娃与连年有余传统题材，纯白色背景，画面左右两组独立插画，左上角附带 8 色配色色卡；左侧画面：梳双黑圆发髻配红绳的国风胖娃娃，脸颊带有圆形淡粉色腮红，身穿红棕色肚兜，坐在一条大鱼背上，手持一片荷叶，大鱼嘴部吐出圆珠，周围环绕荷花、花苞与莲蓬；右侧画面：同款胖娃娃，斜坐在大鱼身上，手握长钓竿，钓竿末端悬挂荷花花苞与金色圆珠，大鱼卧于舒展的荷花花瓣之上；全部采用平涂柔和国风配色，色块干净利落，无强烈阴影、无复杂肌理，圆润几何造型，保留传统年画娃娃憨态饱满的气质，简约国风，线条干净，适合文创产品，高清。参考原型如左图所示。输出风格参考如右图所示，仅参考风格，输出要求严格按照提示词。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-d2f216e7-b8d8-49c4-834c-0ce24b2dd7ca",
+              "work-asset-15ac8488-5cf0-4e10-b1e2-e35b3241df7f",
+              "work-asset-ca0ef16b-7196-4785-b680-8c40f823ec75"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "正反书签形象",
+            "prompt": "这是一张扁平化矢量插画，题材借鉴中国杨柳青木板年画经典的胖娃娃形象，整体由左右两个竖向长条形卡通人物单元并列组成，背景为纯白色，画面干净简洁。\n整体构图与结构\n左右两个主体造型轮廓完全一致，都是竖向长方形，顶部带有一个简化的中式古建筑构件，像一座迷你的传统殿宇，人物嵌在建筑下方，仿佛是 “书签式” 的娃娃形象。两个图形左右对称排布，左侧是娃娃正面，右侧是娃娃背面，一套正反两面的完整形象。\n顶部建筑（左右一致）\n建筑做扁平化概括，无渐变、无阴影，只用纯色块拼合：\n底部是浅橙黄色长方形底座；\n向上有两根深蓝色竖条立柱，托住上方的木构；\n主体木构部分是暖橙底色，搭配数条竖向深橙 / 橘红色条纹；\n四角有暗红色方块，顶端竖立两个正红色小方墩；\n正面（左侧建筑）木构中间有一个小小的半圆形红色装饰，背面（右侧建筑）没有这个小红半圆。\n左侧：娃娃正面形象\n头部：圆润浅米白脸蛋，两团圆形淡粉色腮红；小小的黑色点状眼睛，短红色小嘴；两侧是两组黑色圆发髻，每一组发髻由上下两个黑圆球组成，发髻根部系着一圈红色发绳。\n身体服饰：身穿深红褐色的中式肚兜，肚兜有向上的挂脖带子，左右还有横向系带，肚兜轮廓是上宽下尖的五边形。\n外轮廓：人物整体是圆角长条形，底色为淡淡的肉粉色。\n右侧：娃娃背面形象\n头部：后脑勺，肤色和发髻样式、红绳和左侧完全相同；看不到五官，头顶有一道浅浅的弧形凹陷表示后脑勺轮廓，脖子处有一道深红褐色的弧线，代表后颈。\n身体：背部光滑，腰部有一条横向深红褐色腰带；下方是臀部造型，浅粉色，上面有两处小小的白色圆点，模拟屁股上的印记。\n外轮廓：圆角长条形，和左侧人物大小形状完全匹配。\n色彩、画风与风格特点\n色彩：配色取自传统年画，主色：米白、肉粉、暖橙、暗红、藏蓝、黑色；全部是平涂纯色，没有渐变、投影、肌理，色块边界清晰，属于典型扁平化矢量风格。\n造型：高度简化、卡通化，保留杨柳青年画胖娃娃饱满圆润、憨态可掬的气质，去掉复杂纹样，用几何圆形、矩形拼接形象。\n创意构思：把传统年画娃娃做成正反面的书签形态，上方搭配极简斗拱建筑，将传统民俗符号现代化、图形化，适合文创产品设计。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-a2ba1309-268a-47e9-aa45-97a98427e30e"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "统一风格深化",
+            "prompt": "风格和输出水平和之前保持高度一致，扁平化矢量插画，文创图形设计，灵感源自杨柳青木板年画 “连年有余” 传统题材，纯白色背景，画面主体为一个可爱的国风胖娃娃，梳着两条黑色小麻花辫，脸颊带有圆形淡粉色腮红，简约小黑点状眼睛，小巧嘴巴，娃娃环抱荷花与莲蓬，被一条圆润巨大的鲤鱼包裹；大鱼造型几何简化，大大的圆眼睛，鱼身使用红褐、灰绿、米灰低饱和国风配色，荷叶与荷花花瓣柔和舒展；全部采用平涂纯色，干净色块，无强烈阴影、无复杂肌理，圆润几何造型，保留传统年画娃娃憨态饱满的气质，简约国风，线条干净，适合文创产品，高清。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-8420db91-a5da-4384-a6d2-02c4d4609864"
+            ],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "文创封面排版",
+            "prompt": "扁平化矢量插画，书籍封面文创版式设计，灵感源自杨柳青木板年画“连年有余”传统题材，画面左右分栏布局，左侧浅卡其底色，竖向排布黑色英文文字“YANGLIUQING”与多条黑色水平装饰线条，侧边配有上下连续的黑白对叶纹样；右侧深灰底色，中心主体上一步生成的娃娃角色；画面右侧竖排仿古字体文字“杨柳青木版年画 连年有余”，右下角配有红色篆刻印章，画面底部放置粗体英文“YANGLIUQING”；整体为平涂纯色块，无阴影、无复杂肌理，圆润几何造型，简约国风，干净线条，传统民俗现代化再创作，适合文创封面，高清。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-80b0b8af-85f4-4fd2-8c76-a077f28d1faf"
+            ],
+            "parameters": "",
+            "description": ""
+          }
+        ],
+        "tools": [
+          "ChatGPT",
+          "豆包",
+          "即梦",
+          "Photoshop",
+          "Adobe Illustrator"
+        ],
+        "origin": "collected",
+        "methods": [
+          "图案生成",
+          "文创设计"
+        ],
+        "version": 1,
+        "creators": [
+          "孙执政"
+        ],
+        "reflection": "在ai创作的基础上，依旧需要用到Photoshop、Adobe Illustrator等进行修改和调整，保证出图的规范和准确。风格一致也需要很多时间去和ai调整对话逻辑。\n\n资料整理说明：工具列表按作者资料记录；未说明各步骤所用模型版本和参数，不作推断。效果图不作为量产或现场落地的证明。",
+        "coverAssetId": "work-asset-8420db91-a5da-4384-a6d2-02c4d4609864",
+        "authorization": "confirmed",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        {
+          "id": "tag-b778d81d-5366-4537-a407-5b5757993b41",
+          "name": "传统文化",
+          "slug": "传统文化-9db80743"
+        },
+        {
+          "id": "tag-a16aaeca-1f7f-45c7-9c5c-ce0a82659ca9",
+          "name": "扁平插画",
+          "slug": "扁平插画-96e7a091"
+        },
+        {
+          "id": "tag-03695328-4f0c-4484-a9ae-6634f258048f",
+          "name": "杨柳青年画",
+          "slug": "杨柳青年画-45dac4ba"
+        }
+      ],
+      "assets": [
+        {
+          "id": "work-asset-8420db91-a5da-4384-a6d2-02c4d4609864",
+          "fileName": "case-abundance-01.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-52815e54-8eb4-4f63-8d1d-9f57c6aee132/f57cc5f1-259e-43f8-929a-562a9f636505-bc00bcd7-a997-4275-90de-9b2785a35c93",
+          "fileSize": 75195,
+          "sha256": "0ce610eccc9818c66e3a035998848e0d053d2b95e3b0deba7e33d0221a2fc788",
+          "altText": "连年有余",
+          "sortOrder": 0,
+          "createdAt": "2026-09-15T04:51:27.703Z"
+        },
+        {
+          "id": "work-asset-d2f216e7-b8d8-49c4-834c-0ce24b2dd7ca",
+          "fileName": "case-abundance-02.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-52815e54-8eb4-4f63-8d1d-9f57c6aee132/84ad7d76-96c9-43af-bc9b-02794dcd12b5-8e43f6fa-2021-403e-9043-e75c214112b5",
+          "fileSize": 51037,
+          "sha256": "5b6ade4ea83f5f883ffd15e5eefcb7c54267886fcb1e6cf66545f323d8c6900f",
+          "altText": "连年有余",
+          "sortOrder": 1,
+          "createdAt": "2026-09-15T04:51:27.723Z"
+        },
+        {
+          "id": "work-asset-15ac8488-5cf0-4e10-b1e2-e35b3241df7f",
+          "fileName": "case-abundance-03.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-52815e54-8eb4-4f63-8d1d-9f57c6aee132/f96ef6a5-45b4-4eb5-9da9-390334ff7f53-0e824277-b5da-4f77-aa40-62a13d4228aa",
+          "fileSize": 325053,
+          "sha256": "bde568a5450a3aa54f9de38f9c7e1ce2a9fd061b052725e632dc529551870fb9",
+          "altText": "连年有余",
+          "sortOrder": 2,
+          "createdAt": "2026-09-15T04:51:27.742Z"
+        },
+        {
+          "id": "work-asset-ca0ef16b-7196-4785-b680-8c40f823ec75",
+          "fileName": "case-abundance-04.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-52815e54-8eb4-4f63-8d1d-9f57c6aee132/899bd492-7d2f-4de2-a8b0-e1d32e5a9dfd-8e803bc1-d50e-402f-b336-23031a88df48",
+          "fileSize": 104229,
+          "sha256": "637a305ceb89d1379a3e0be057fef6adc95c0f660eb363ff7a9d11d6b7a373f9",
+          "altText": "连年有余",
+          "sortOrder": 3,
+          "createdAt": "2026-09-15T04:51:27.759Z"
+        },
+        {
+          "id": "work-asset-a2ba1309-268a-47e9-aa45-97a98427e30e",
+          "fileName": "case-abundance-05.jpg",
+          "mimeType": "image/jpeg",
+          "storageKey": "users/user-student-demo/works/work-52815e54-8eb4-4f63-8d1d-9f57c6aee132/96648862-37f6-4067-bc5c-4f6f9463b2a7-d02e9f48-8906-4a77-be2a-5c797edb686d",
+          "fileSize": 24415,
+          "sha256": "c7cb618ca7aa41c846455b91886ff1d822b672fc9c88ab7599ecf7617a4638e8",
+          "altText": "连年有余",
+          "sortOrder": 4,
+          "createdAt": "2026-09-15T04:51:27.774Z"
+        },
+        {
+          "id": "work-asset-80b0b8af-85f4-4fd2-8c76-a077f28d1faf",
+          "fileName": "case-abundance-06.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-52815e54-8eb4-4f63-8d1d-9f57c6aee132/6569d655-c30b-433f-aae3-d3314ee66451-9068febe-9b89-4cfc-8d85-68aa4c633d61",
+          "fileSize": 187957,
+          "sha256": "bb2eabb24794dcc791801c9e523e24fe50482419014503d3dfb8055a6c104cfe",
+          "altText": "连年有余",
+          "sortOrder": 5,
+          "createdAt": "2026-09-15T04:51:27.790Z"
+        }
+      ]
+    },
+    {
+      "id": "work-83a2ce9f-043d-4f7e-9372-c3685f6c923d",
+      "authorId": "user-student-demo",
+      "title": "追光之翼",
+      "summary": "《追光之翼》并不试图复制太阳翼的工程外形，而是提取其中最具有感染力的动作逻辑——向光、转动、校准、保持方向。作品邀请观众站入指定位置，伸展手臂指向中央光源，以身体动作激活太阳翼模块的转动。人的手臂与太阳翼的机械臂形成对应关系，使观众能够直观理解：太阳翼的“追日”不是装饰性的运动，而是航天器维持生命系统与长期运行的关键动作。\n因此，这件作品希望把原本隐藏在航天器结构中的技术机制，转化为一种可被身体感知的空间经验。光在这里既代表太阳这一真实能源来源，也象征持续探索、面向远方的精神方向。观众在“向光而立”的过程中，不只是观看一件装置，而是在身体层面参与一次关于航天能源、机械姿态与探索精神的共同表达。",
+      "discipline": "环境艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-09-15T05:05:12.292Z",
+      "createdAt": "2026-09-15T04:51:26.568Z",
+      "story": {
+        "steps": [
+          {
+            "tool": "",
+            "title": "概念提炼",
+            "prompt": "我想做一个以太阳翼“追光”逻辑为核心的互动装置。这个作品不直接复制真实航天器的工程外形，而是提取太阳翼最重要的动作机制：向光、转动、校准、保持方向。请先帮我整理出这个作品的核心概念。",
+            "outcome": "核心概念：这件作品不复制太阳翼的工程外形，而是提取太阳翼最重要的动作逻辑：向光、转动、校准、保持方向。\n概念方向：通过观众的身体动作模拟太阳翼对太阳的追踪机制，把原本隐藏在航天器结构内部的技术逻辑，转化为一种可以被观看、被进入、被身体理解的空间经验。\n作品意义：作品强调，太阳翼的“追日”并非装饰性的运动，而是航天器维持能源系统与长期运行的关键动作。观众的参与使抽象的航天技术转化为直观的感知过程。",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "关键词整理",
+            "prompt": "请根据这个核心概念，整理出后续AI生成需要用到的关键词，包括概念关键词、视觉关键词和交互关键词。",
+            "outcome": "概念关键词：太阳翼；追光；转动；校准；姿态保持；航天能源；身体交互；探索精神\n视觉关键词：环形装置；太阳翼模块；机械臂；中央光源；暖色灯光；金属结构；展览空间；科技感；简洁未来感；非纯工程复制\n交互关键词：观众站位；举手指向；动作识别；装置转动；光效反馈；人与机械对应；姿态联动；沉浸体验",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "装置主体结构",
+            "prompt": "请先生成装置主体效果图，重点表现主体结构。需要看清环形结构、太阳翼模块、机械支撑、中央光源和底座，整体具有航天科技感和艺术装置感。",
+            "outcome": "主体结构设定：装置由一个大型环形框架、中央可转动的太阳翼模块、机械支撑系统、底座和中央光源构成。整体语言偏简洁、克制、未来感，避免过度工程化细节堆砌。\n图像目标：清楚展示结构层级，包括环体、太阳翼面板、转轴、支撑杆件与底部平台，为后续互动场景和图解说明打基础。",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "观众互动场景",
+            "prompt": "请在主体结构基础上加入观众互动场景。观众站在指定位置，伸手指向中央光源，装置中的太阳翼模块随动作转动，从而表现“人—机械—光源”之间的联动关系。",
+            "outcome": "互动场景设定：观众站入感应区域，身体面向中央光源，伸展手臂指向光源方向。装置中的太阳翼模块随之调整角度并进行转动，形成“人的手臂”与“机械臂”之间的对应关系。\n图像重点：突出观众动作、太阳翼模块的转动趋势、人与装置的尺度关系，以及装置对身体姿态的响应感。",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "空间展示效果",
+            "prompt": "请把装置放入展览空间或夜间公共空间，强化作品的尺度感、光感和空间氛围，体现其作为公共艺术装置的展示效果。",
+            "outcome": "空间场景设定：装置位于现代展厅、中庭或夜间公共空间中，环境整体简洁、安静，具有一定未来感和公共展示属性。中央光源与环形装置共同形成视觉焦点。\n图像重点：强化灯光氛围、观众与装置之间的观看关系，以及作品在空间中的可达性、可观看性和雕塑感。",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "图解说明板",
+            "prompt": "请根据前面的概念和图像，整理一张图解说明板的文字结构，内容包括核心概念、互动逻辑、结构说明、观众体验、材料与尺寸等信息。",
+            "outcome": "图解板文字结构：\n核心概念提取太阳翼“向光、转动、校准、保持方向”的动作逻辑，并将其转化为可感知的空间装置。\n互动方式观众通过站入指定区域并伸手指向光源，激活太阳翼模块的转动与方向校准。\n技术转译人的手臂对应机械臂，身体动作对应航天器姿态调整，使技术机制以空间体验的方式被理解。\n作品含义太阳翼的“追日”不是装饰性的运动，而是航天器维持能源与长期运行的关键动作；作品借由观众参与，把这一逻辑从工程系统转化为身体感知。\n结构说明装置包含环形框架、太阳翼模块、转动轴、机械支撑、中央光源与底座。\n观众体验观众在“向光而立”的过程中，不只是观看装置，而是在身体层面参与一次关于光、机械与探索精神的共同表达。\n材料与尺寸金属结构；发光模块；机械转动组件；可根据展示需求配置为室内展览尺度或夜间公共艺术尺度。",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "交互逻辑",
+            "prompt": "请把这个作品的交互逻辑整理成清晰的步骤，用于后续图解板和汇报文本。",
+            "outcome": "交互逻辑：\n观众进入感应区\n观众伸手指向中央光源\n系统识别身体姿态\n太阳翼模块开始转动\n模块对准光源并保持方向\n光效增强，形成视觉反馈\n观众离开后装置回到初始状态",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          },
+          {
+            "tool": "",
+            "title": "整合生成提示词",
+            "prompt": "请整合前面的内容，写出一段可直接用于图像生成的AI提示词，用于生成《追光之翼》的互动装置效果图。",
+            "outcome": "可直接使用的AI提示词：生成一个互动装置效果图：装置以太阳翼的追光机制为灵感，由大型环形结构、太阳翼模块、机械臂、中央光源和金属底座组成。观众站在指定位置，伸展手臂指向光源，装置中的太阳翼模块随之转动并校准方向。整体位于现代展览空间中，灯光温暖，结构清晰，具有航天科技感和艺术装置感。装置造型简洁克制，不直接复制真实航天器外形，而是强调“向光、转动、校准、保持方向”的动作逻辑。突出人与机械之间的对应关系，强调空间尺度、互动感与公共展示效果。",
+            "assetIds": [],
+            "parameters": "",
+            "description": ""
+          }
+        ],
+        "tools": [],
+        "origin": "collected",
+        "methods": [
+          "装置设计",
+          "交互设计",
+          "空间设计"
+        ],
+        "version": 1,
+        "creators": [
+          "章子玉",
+          "高璇",
+          "梁煜昕"
+        ],
+        "reflection": "资料整理说明：原文未提供具体 AI 工具和参数，相关字段留空；图片为方案展示，不代表装置已经制作或部署。",
+        "coverAssetId": "work-asset-610eb286-8928-4008-9baa-59d8e4fa0eb4",
+        "authorization": "confirmed",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        {
+          "id": "tag-7cd94266-3e0b-4b05-9a67-05dced717021",
+          "name": "交互装置",
+          "slug": "交互装置-b0ee0fa4"
+        },
+        {
+          "id": "tag-d4e46ac9-8a30-4e5c-a5cb-7ba00249c003",
+          "name": "太阳翼",
+          "slug": "太阳翼-69d113b6"
+        },
+        {
+          "id": "tag-3876c2b8-46a9-44e9-a29a-f07746157bb9",
+          "name": "航天",
+          "slug": "航天-beb6c8b6"
+        }
+      ],
+      "assets": [
+        {
+          "id": "work-asset-610eb286-8928-4008-9baa-59d8e4fa0eb4",
+          "fileName": "case-wings-01.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-83a2ce9f-043d-4f7e-9372-c3685f6c923d/c7db2e8f-1e0d-4f5a-817e-6601e7335b39-24a22ff5-3eae-48a4-ab41-1c970da05cd8",
+          "fileSize": 1458677,
+          "sha256": "3f2c40c6d2fb5527d53b05c0981e498dc9795442ab91260643e94943da19f03a",
+          "altText": "追光之翼",
+          "sortOrder": 0,
+          "createdAt": "2026-09-15T04:51:26.662Z"
+        },
+        {
+          "id": "work-asset-488586ec-4eb0-4242-9c19-ce1858a1ba2f",
+          "fileName": "case-wings-02.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-83a2ce9f-043d-4f7e-9372-c3685f6c923d/a582acdd-4832-409f-9012-cc2f30236b3c-250ab783-e541-451f-a277-8854459c3dfb",
+          "fileSize": 1499683,
+          "sha256": "002f0a08975bfb47093e883277a1aa1835aa849a1591f67548837f7a448b9f81",
+          "altText": "追光之翼",
+          "sortOrder": 1,
+          "createdAt": "2026-09-15T04:51:26.692Z"
+        },
+        {
+          "id": "work-asset-ca0f1416-b485-4ea5-9c2d-90496ed1e4f9",
+          "fileName": "case-wings-03.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-83a2ce9f-043d-4f7e-9372-c3685f6c923d/8ae8d4ce-a9a5-42a7-80a4-9b318cb98553-b1d78afd-f456-4727-9a38-eaf27e5de5c2",
+          "fileSize": 4735853,
+          "sha256": "0e9209d2ac028e5e0839a416ba9ad124e655f2ac2db6f771e5e2e93ef0cfee74",
+          "altText": "追光之翼",
+          "sortOrder": 2,
+          "createdAt": "2026-09-15T04:51:26.738Z"
+        }
+      ]
+    },
+    {
+      "id": "work-e922c1f0-a526-45ab-8a54-7fe48b43801f",
+      "authorId": "user-student-demo",
+      "title": "镜中人：生成式 AI 偏见可视化",
+      "summary": "「镜中人」是一项以AI偏见可视化为核心的设计探索项目。AI就像一面特殊的镜子，它折射的不仅仅是训练数据中沉淀的历史偏见，更会通过算法把这些偏见放大、固化成看似客观的规律。\n本项目基于31,500+样本数据，通过多层交互式网页设计，将抽象的AI偏见问题转化为可观察、可对比的视觉化结果。",
+      "discipline": "信息艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-09-15T05:04:46.604Z",
+      "createdAt": "2026-09-15T04:52:27.229Z",
+      "story": {
+        "steps": [
+          {
+            "tool": "Claude 3.5 Sonnet、Google AI Studio",
+            "title": "数据收集与研究分析",
+            "prompt": "帮我分析这篇AI偏见研究论文的核心数据结构，提取关键的统计指标和实验方法，特别关注词语关联度（lift）、前置-后置词关系的计算逻辑。",
+            "outcome": "明确了实验数据来源、核心指标定义、数据处理流程框架",
+            "assetIds": [
+              "work-asset-562a3919-b03e-4d2b-994b-b1517084e892"
+            ],
+            "parameters": "",
+            "description": "输入内容：权威AI偏见研究论文、包含31,500+样本的数据集\n图1：数据研究分析 - 31,469+样本数据集"
+          },
+          {
+            "tool": "Midjourney、Figma",
+            "title": "项目概念与视觉定位",
+            "prompt": "为AI偏见可视化项目设计主视觉，主题是镜中人，需要体现镜子的隐喻、偏见的扭曲感，以及数据可视化的科技感。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-d7b29a5f-5010-4e46-b5df-76e7ccffae48"
+            ],
+            "parameters": "",
+            "description": "图2：项目标题页 - 镜中人：生成式AI偏见"
+          },
+          {
+            "tool": "Gemini Pro、Python Pandas",
+            "title": "数据处理与结构化",
+            "prompt": "将原始CSV数据按照可视化需求进行结构化处理，生成JSON格式，包含词语坐标、关联度数值、分类标签。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-7059954b-81a6-4d35-994e-86643e39bfab"
+            ],
+            "parameters": "",
+            "description": "图3：数据背景说明 - 基于12.5万+3.15万标注数据"
+          },
+          {
+            "tool": "Claude、D3.js v7",
+            "title": "词向量空间可视化设计",
+            "prompt": "创建交互式词向量可视化，使用力导向图布局。节点代表词语，大小反映频率，连线表示关联强度。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-3cc48f96-8af2-40f1-aed2-292f208a242f"
+            ],
+            "parameters": "",
+            "description": "图4：词向量可视化 - woman节点关联展示"
+          },
+          {
+            "tool": "豆包、Chart.js",
+            "title": "Lift偏差倍数计算与展示",
+            "prompt": "设计Lift值的可视化展示，解释公式，通过滑块展示不同lift值的含义，用案例说明偏见放大效应。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-22ca1fa1-5931-498a-b2a9-58e4878f53e3"
+            ],
+            "parameters": "",
+            "description": "图5：Lift偏差放大倍数 - 6.21倍关联强度"
+          },
+          {
+            "tool": "Claude、Cursor IDE",
+            "title": "整体界面集成",
+            "prompt": "将数据背景、标签云视图、镜中性别、镜中何为四个模块整合为单页应用。统一视觉风格。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-0e651cbb-7202-427b-a49a-d3acf3c5edb9"
+            ],
+            "parameters": "",
+            "description": "图6：整体效果图 - 机器生成AI主页面"
+          },
+          {
+            "tool": "Gemini、Three.js",
+            "title": "Neural Universe交互探索",
+            "prompt": "创建神经宇宙可视化视图，将所有偏见概念节点以星系的方式呈现。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-57947e01-432d-4ed2-8eb6-dff04ab46e85"
+            ],
+            "parameters": "",
+            "description": "图7：Neural Universe - 神经宇宙交互视图"
+          },
+          {
+            "tool": "DALL-E 3、Claude",
+            "title": "偏见案例深度分析",
+            "prompt": "设计偏见案例的叙事页面。用谁更有可能在微笑作为引子，揭示性别偏见。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-40435afe-4848-4b13-b4d2-56129b9a29e7",
+              "work-asset-c2ed2492-a62b-4669-be71-effbf087e72b"
+            ],
+            "parameters": "",
+            "description": "图8：偏见案例 - 谁更有可能在微笑？\n图9：微笑的影响 - Lift提升倍数6.2108"
+          },
+          {
+            "tool": "Claude、Grid.js",
+            "title": "数据表格与详细分析",
+            "prompt": "创建可交互的数据表格，展示各个偏见维度的详细数据。支持排序、筛选、对比功能。",
+            "outcome": "",
+            "assetIds": [
+              "work-asset-d9d0de68-4dfd-46ae-988f-5623dc7d499e"
+            ],
+            "parameters": "",
+            "description": "图10：数据表格展示 - 详细的偏见数据分析"
+          },
+          {
+            "tool": "",
+            "title": "最终优化与反思",
+            "prompt": "",
+            "outcome": "",
+            "assetIds": [],
+            "parameters": "",
+            "description": "进行用户测试、性能优化、bug修复，并完成项目总结。最终在2025年12月29日成功交付！"
+          }
+        ],
+        "tools": [
+          "Claude 3.5 Sonnet",
+          "Gemini Pro / Flash",
+          "豆包",
+          "Midjourney",
+          "DALL-E 3",
+          "Cursor IDE",
+          "Google AI Studio",
+          "D3.js v7",
+          "ECharts",
+          "Python Pandas",
+          "GitHub Copilot / Codex"
+        ],
+        "origin": "collected",
+        "methods": [
+          "UI创作",
+          "vibe coding",
+          "数据可视化"
+        ],
+        "version": 1,
+        "creators": [
+          "张瑞雯",
+          "傅宬博",
+          "白昊灵"
+        ],
+        "reflection": "通过镜中人项目，我们深刻体会到AI不仅是创作工具，更是设计过程的协作伙伴。在数据理解阶段，Claude帮助我们快速解析复杂的学术论文，Gemini在数据清洗方面表现出色。\n最重要的收获是：好的设计仍然依赖设计师对问题的深度理解。AI是放大器，而非替代者。\n这个项目本身就是一个悖论：我们使用AI工具来揭露AI的偏见。这提醒我们，技术永远不是中性的。\n镜非真，真在镜外。\n张瑞雯、傅宬博、白昊灵\n2026年9月\n\n资料整理说明：原包中的演示视频仅为 webloc 链接，并非视频文件；本次展示已有图片与步骤，视频待作者补充。文中数据规模及交付时间按作者说明保留，未在本次导入中独立复核。",
+        "coverAssetId": "work-asset-562a3919-b03e-4d2b-994b-b1517084e892",
+        "authorization": "confirmed",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        {
+          "id": "tag-f2608890-0835-4f4e-811f-0d86d2dcdf7f",
+          "name": "AI偏见",
+          "slug": "ai偏见-f73ed556"
+        },
+        {
+          "id": "tag-af09f247-5d69-4071-ad86-c9a648130d81",
+          "name": "交互网页",
+          "slug": "交互网页-e8ace7e3"
+        },
+        {
+          "id": "tag-78274911-55e8-43a5-b8c9-f56d9864231e",
+          "name": "信息设计",
+          "slug": "信息设计-abac1730"
+        }
+      ],
+      "assets": [
+        {
+          "id": "work-asset-562a3919-b03e-4d2b-994b-b1517084e892",
+          "fileName": "case-mirror-01.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/42e92daf-7d9a-4777-ae06-cbd922b13cfc-10ebfe39-bfde-4945-986a-3d1bd7b9d296",
+          "fileSize": 2627727,
+          "sha256": "f3c9313495328b3ff20f8e376a2dea97ef14761116f1be8e781fc194f82e7fc0",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 0,
+          "createdAt": "2026-09-15T04:52:27.286Z"
+        },
+        {
+          "id": "work-asset-d7b29a5f-5010-4e46-b5df-76e7ccffae48",
+          "fileName": "case-mirror-02.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/7e2aa14b-e627-4aaa-9e8a-34dbb4e99aaf-fa447903-889a-4069-9435-ca6f9ff9e0b6",
+          "fileSize": 2439212,
+          "sha256": "cdc70162e1314fa528b31821117a246769cfed9445a384d532b2eb7a9818aa3f",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 1,
+          "createdAt": "2026-09-15T04:52:27.320Z"
+        },
+        {
+          "id": "work-asset-7059954b-81a6-4d35-994e-86643e39bfab",
+          "fileName": "case-mirror-03.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/9eebbc91-7141-4837-a1e7-06215f790c40-3eeb5a89-0a90-49b0-9eef-0772f722c2a1",
+          "fileSize": 2439212,
+          "sha256": "c6ed49dc3aed2ce25c8aafac7d67b68297da13564ba3d4fa3349db755e7bbb37",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 2,
+          "createdAt": "2026-09-15T04:52:27.352Z"
+        },
+        {
+          "id": "work-asset-3cc48f96-8af2-40f1-aed2-292f208a242f",
+          "fileName": "case-mirror-04.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/a884d6bd-0252-4f38-966e-9c3cf674942c-3d01f19f-7280-433c-91a2-9021cdca5838",
+          "fileSize": 2439212,
+          "sha256": "740aa5939a60b67124755896cfff81741132e3261148e283957e13012788f40a",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 3,
+          "createdAt": "2026-09-15T04:52:27.385Z"
+        },
+        {
+          "id": "work-asset-22ca1fa1-5931-498a-b2a9-58e4878f53e3",
+          "fileName": "case-mirror-05.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/a70777b3-6e75-4ee9-9f46-d6c515db917f-c2dabcd1-60ff-492b-96cb-7f65b3dfd5eb",
+          "fileSize": 2439212,
+          "sha256": "ca07d7fa4e8908fdbfe8eee102d258569fc633112d699970d7c3b7e40f3191ba",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 4,
+          "createdAt": "2026-09-15T04:52:27.419Z"
+        },
+        {
+          "id": "work-asset-0e651cbb-7202-427b-a49a-d3acf3c5edb9",
+          "fileName": "case-mirror-06.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/1fb4dff8-9d41-482a-8c0a-dd9639e342a4-489a97ea-1070-476f-91ed-2bfd405cf3f1",
+          "fileSize": 2439212,
+          "sha256": "a2e19f4f50c6b10c9b71024c5603937afc6cf1baec7114514c23160f89c53ea5",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 5,
+          "createdAt": "2026-09-15T04:52:27.451Z"
+        },
+        {
+          "id": "work-asset-57947e01-432d-4ed2-8eb6-dff04ab46e85",
+          "fileName": "case-mirror-07.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/ffd0b7b3-698b-42b8-b2ed-2eded17336a6-e90c08a4-dff2-49e2-bdcb-f6bd2473a2cf",
+          "fileSize": 2439212,
+          "sha256": "1c873b5cf16c5deca654a6d966c55c757c964cdd0dc61e6b9aafc82e6d361e10",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 6,
+          "createdAt": "2026-09-15T04:52:27.497Z"
+        },
+        {
+          "id": "work-asset-40435afe-4848-4b13-b4d2-56129b9a29e7",
+          "fileName": "case-mirror-08.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/5d16a772-d8b4-44cc-adcf-d60bb9dd8f55-a5b4f3d5-0c48-400c-8032-2bf278953a38",
+          "fileSize": 2439212,
+          "sha256": "c27c3dbcfee87d0531b0a3483a787743fc82cd4a50ab7a39ffe7237446669012",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 7,
+          "createdAt": "2026-09-15T04:52:27.529Z"
+        },
+        {
+          "id": "work-asset-c2ed2492-a62b-4669-be71-effbf087e72b",
+          "fileName": "case-mirror-09.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/282d990b-5c7a-4472-9bf4-01f9ad187757-33a64730-e9f9-4bdd-97a4-0b13d628a52e",
+          "fileSize": 2439212,
+          "sha256": "c3ee4940def9286d7ac5c797b6a336dfcf600c14d5698881d273fb3253030e19",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 8,
+          "createdAt": "2026-09-15T04:52:27.565Z"
+        },
+        {
+          "id": "work-asset-d9d0de68-4dfd-46ae-988f-5623dc7d499e",
+          "fileName": "case-mirror-10.png",
+          "mimeType": "image/png",
+          "storageKey": "users/user-student-demo/works/work-e922c1f0-a526-45ab-8a54-7fe48b43801f/6bf67ee5-8237-4249-897b-c94ea5c8ba75-3e850a99-2878-4207-a0b5-16b41cea66c3",
+          "fileSize": 2439212,
+          "sha256": "97d21a7caad2b7b788d6f555b29857f6efcec76e64063f632805f18ce47626c5",
+          "altText": "镜中人：生成式 AI 偏见可视化",
+          "sortOrder": 9,
+          "createdAt": "2026-09-15T04:52:27.608Z"
+        }
+      ]
+    }
+  ]
+}

@@ -9,6 +9,8 @@
     "worker": "npm run build && node dist/worker.js",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed.ts",
+    "showcase:verify": "node scripts/install-community-showcase.mjs --verify",
+    "showcase:install": "node scripts/install-community-showcase.mjs --install",
     "auth:provision-local": "tsx src/scripts/provision-local-user.ts",
     "auth:generate-test-accounts": "tsx src/scripts/generate-test-accounts.ts",
     "import:course-library": "tsx src/scripts/import-course-library.ts",
