@@ -23,8 +23,8 @@ const emptyPortalData = {
 
 const navItems = [
   ["home", "首页", GridFour],
-  ["courses", "教学资源", GraduationCap],
-  ["studio", "设计工作台", Palette],
+  ["courses", "AI讲堂", GraduationCap],
+  ["studio", "设计工具", Palette],
   ["community", "案例社区", UsersThree],
   ["myLearning", "我的学习", BookOpenText],
 ];
@@ -36,23 +36,6 @@ function RolePill({ account }) {
 function WorkflowGlyph({ entryType }) {
   const Icon = entryType === "workbench" ? CirclesThreePlus : entryType === "external_tool" ? RocketLaunch : Brain;
   return <span className="workflow-glyph"><Icon size={21} weight="bold" /></span>;
-}
-
-function PortalArtRails() {
-  return <div className="portal-art-rails" aria-hidden="true">
-    <div className="portal-art-rail portal-art-rail--left">
-      <span className="art-rail__index">ART / 01</span>
-      <figure className="art-rail__tile art-rail__tile--pattern"><img src="/assets/learning/traditional-patterns.jpg" alt="" /><figcaption>传统纹样</figcaption></figure>
-      <i className="art-rail__shape art-rail__shape--ring" />
-      <figure className="art-rail__tile art-rail__tile--code"><img src="/assets/learning/vibe-coding.jpg" alt="" /><figcaption>数字实验</figcaption></figure>
-    </div>
-    <div className="portal-art-rail portal-art-rail--right">
-      <figure className="art-rail__tile art-rail__tile--visual"><img src="/assets/learning/ai-design-foundations.jpg" alt="" /><figcaption>视觉叙事</figcaption></figure>
-      <i className="art-rail__shape art-rail__shape--spark" />
-      <span className="art-rail__index">02 / EDU</span>
-      <figure className="art-rail__tile art-rail__tile--detail"><img src="/assets/learning/traditional-patterns.jpg" alt="" /><figcaption>观察 · 重组</figcaption></figure>
-    </div>
-  </div>;
 }
 
 export function LocalLogin({ onLogin }) {
@@ -220,7 +203,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   };
   const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal, onDelta) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal, onDelta);
 
-  const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
+  const pageTitle = { home: "学习与创作总览", courses: "AI讲堂", studio: "设计工具", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning", creation: "/create" }[nextSection] ?? "/");
   const navigateSearch = (query) => onNavigate(`/search?query=${encodeURIComponent(query)}`);
 
@@ -236,11 +219,9 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "API 已验证" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
     </header>}
 
-    {!standalone && <PortalArtRails />}
-
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}`}>
       <div key={`${section}:${searchQuery}`} className="route-transition">
-      {section !== "home" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
+      {section !== "home" && section !== "courses" && section !== "studio" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className={`portal-heading${section === "community" ? " portal-heading--community" : ""}`}><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1>{section === "community" && <p className="portal-heading__description">发现创作灵感，按方向找到可借鉴、可复现的作品。</p>}</div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
         <AiCreationLauncher account={account} creation={data.creation} onNotice={showToast} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />
@@ -255,11 +236,11 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
-        {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary initialCourseId={learningCourseId} onNotice={showToast} /></>}
+        {section === "courses" && <LearningLibrary initialCourseId={learningCourseId} onNotice={showToast} />}
 
         {section === "studio" && <WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
-        {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} /></>}
+        {section === "community" && <CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
 
         {section === "myLearning" && <MyLearning account={account} onNavigate={onNavigate} onNotice={showToast} />}
 

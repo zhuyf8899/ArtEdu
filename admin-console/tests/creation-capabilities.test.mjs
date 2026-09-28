@@ -131,15 +131,28 @@ test("创作对话页独立成屏：不显示站点导航，也不显示两侧�
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   assert.ok(portal.includes('const standalone = section === "creation"'), "对话页要单独标记");
   assert.ok(portal.includes('{!standalone && <header className="portal-topbar">'), "对话页不渲染顶部导航");
-  assert.ok(portal.includes("{!standalone && <PortalArtRails />}"), "对话页不渲染两侧装饰");
+  assert.ok(!portal.includes("PortalArtRails"), "全站不再渲染两侧装饰");
+  assert.ok(portal.includes('["courses", "AI讲堂", GraduationCap]'), "课程入口命名为 AI 讲堂");
+  assert.ok(portal.includes('["studio", "设计工具", Palette]'), "工作台入口命名为设计工具");
   assert.ok(portal.includes("portal-main--standalone"));
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  assert.ok(!css.includes("portal-art-rails"), "样式表不再保留两侧装饰栏");
   // 腾出来的空间要让给对话本体：更宽的主区、更高的消息区。
   assert.ok(css.includes(".portal-main--standalone { width: min(1520px"));
   // 整屏固定、页面不滚动：消息区自己滚，输入区钉在底部（不会被移动/滚动遮住）。
   assert.ok(css.includes(".portal-shell--standalone { height: 100vh; overflow: hidden;"));
   assert.ok(css.includes(".portal-shell--standalone .creation-canvas__thread { flex: 1 1 auto; min-height: 0; max-height: none; }"));
   assert.ok(css.includes(".portal-shell--standalone .creation-canvas__composer { flex: 0 0 auto;"));
+});
+
+test("AI 讲堂与设计工具移除重复标题，同时保留课程和工具内容", async () => {
+  const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
+  const studio = await readFile(new URL("../src/WorkflowStudio.jsx", import.meta.url), "utf8");
+  assert.ok(portal.includes('section !== "courses" && section !== "studio"'), "两页跳过重复的大标题区");
+  assert.ok(portal.includes('{section === "courses" && <LearningLibrary'), "AI 讲堂仍加载课程目录");
+  assert.ok(!portal.includes('<SectionHeading eyebrow="// RESOURCE LIBRARY"'), "AI 讲堂不再显示重复入口标题");
+  assert.ok(!studio.includes("// DESIGN TOOLBOX") && !studio.includes("设计工具入口"), "设计工具区不再显示重复入口标题");
+  assert.ok(studio.includes("tool-directory__actions") && studio.includes("tool-directory__list"), "保留工具浏览控制和工具卡片");
 });
 
 test("历次会话是常驻左侧栏，收起后按钮仍在", async () => {

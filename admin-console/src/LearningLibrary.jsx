@@ -130,9 +130,21 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
   if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>教学资源暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
 
   return <>
+    <section className="learning-library-intro" aria-labelledby="learning-library-title">
+      <div className="learning-library-intro__copy">
+        <p className="learning-library-intro__eyebrow">ARTEDU · AI LEARNING</p>
+        <div className="learning-library-intro__title-row"><h1 id="learning-library-title">AI 讲堂</h1><span>{decoratedCourses.length} 门课程</span></div>
+        <p>从 UI 创作、图案生成到 Vibe Coding，跟着课程把灵感一步步变成作品。</p>
+      </div>
+      <div className="learning-method-picker" aria-label="按创作方法筛选">
+        <div><strong>从哪种方法开始？</strong><span>选择创作路径，快速找到课程</span></div>
+        <div className="learning-method-picker__options">
+          {METHOD_FILTERS.map((method) => <button key={method} className={methodFilter === method ? "is-active" : ""} aria-pressed={methodFilter === method} onClick={() => setMethodFilter(method)}>{method}</button>)}
+        </div>
+      </div>
+    </section>
     <section className="resource-filters" aria-label="课程资源筛选">
-      <div className="resource-filters__title"><Funnel size={19} weight="bold" /><div><strong>按标签筛选课程</strong><span>{filteredCourses.length} / {decoratedCourses.length} 项资源</span></div></div>
-      <FilterRow label="使用方法" items={METHOD_FILTERS} value={methodFilter} onChange={setMethodFilter} />
+      <div className="resource-filters__title"><Funnel size={19} weight="bold" /><div><strong>按作者或工具筛选</strong><span>当前显示 {filteredCourses.length} / {decoratedCourses.length} 门课程</span></div>{(authorFilter !== "全部作者" || toolFilter !== "全部工具" || methodFilter !== "全部") && <button type="button" className="resource-filters__reset" onClick={resetFilters}>清除筛选</button>}</div>
       <FilterRow label="作者" items={["全部作者", ...authors]} value={authorFilter} onChange={setAuthorFilter} />
       <FilterRow label="使用工具" items={["全部工具", ...tools]} value={toolFilter} onChange={setToolFilter} />
     </section>
