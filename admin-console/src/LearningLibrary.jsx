@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowsOutSimple, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, Wrench, X } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowsOutSimple, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, UserCircle, Wrench, X } from "@phosphor-icons/react";
 import { enrollCourse, getCourse, getCourses, getMyWorks, submitLessonWork, updateLessonProgress } from "./services/adminApi.js";
 import { coverImageFor } from "./coverImages.js";
 
@@ -152,10 +152,13 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
       <div className="course-cover"><img src={coverImageFor(course, 240, 400)} alt="" /><span>{course.method}</span></div>
       <div className="course-card__content">
         <div className="course-card__tags"><b>{course.method}</b><span>{course.category}</span></div>
-        <small>{course.lessonCount ?? 0} 个课时 · {difficultyName(course.difficulty)}</small>
-        <h3>{course.title}</h3><p>{course.summary}</p>
-        <div className="course-card__meta"><span>作者</span><strong>{course.author}</strong><span>工具</span><strong>{course.tools.join(" · ")}</strong></div>
-        <div className="course-card__footer"><div><i><b style={{ width: `${course.progressPercent ?? 0}%` }} /></i><span>{course.progressPercent ?? 0}%</span></div><button disabled={loading} onClick={() => openCourse(course.id)} aria-label={`打开${course.title}`}><ArrowRight size={18} weight="bold" /></button></div>
+        <small className="course-card__level"><Clock size={14} /> {course.lessonCount ?? 0} 个课时 <span aria-hidden="true">·</span> {difficultyName(course.difficulty)}</small>
+        <h3>{course.title}</h3><p className="course-card__summary">{course.summary}</p>
+        <div className="course-card__meta" aria-label="课程作者与使用工具">
+          <div className="course-card__meta-row"><UserCircle size={17} weight="bold" /><span>授课作者</span><strong>{course.author}</strong></div>
+          <div className="course-card__meta-row"><Wrench size={17} weight="bold" /><span>创作工具</span><div className="course-card__tools">{course.tools.map((tool, index) => <strong key={`${tool}-${index}`}>{tool}</strong>)}</div></div>
+        </div>
+        <div className="course-card__footer"><div className="course-card__progress"><span>学习进度</span><i><b style={{ width: `${course.progressPercent ?? 0}%` }} /></i><strong>{course.progressPercent ?? 0}%</strong></div><button disabled={loading} onClick={() => openCourse(course.id)} aria-label={`打开${course.title}`}><ArrowRight size={18} weight="bold" /></button></div>
       </div>
     </article>)}</section> : <section className="resource-empty"><strong>没有符合当前标签的课程</strong><p>可以减少一个筛选条件，或返回查看全部资源。</p><button onClick={resetFilters}>清除筛选</button></section>}
   </>;

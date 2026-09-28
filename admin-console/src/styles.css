@@ -1939,6 +1939,34 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .learning-method-picker > div:first-child { align-items: flex-start; flex-direction: column; gap: 3px; }
 }
 
+/* 课程卡片：放大正文与作者/工具信息，让课程内容可以直接扫读。 */
+.course-card { min-width: 0; min-height: 318px; border-color: #e3e3e0; }
+.course-card__content { min-width: 0; padding: 20px; }
+.course-card__tags { gap: 7px; margin-bottom: 12px; }
+.course-card__tags :is(b, span) { padding: 6px 9px; border-radius: 7px; font-size: 11px; font-weight: 700; line-height: 1.1; }
+.course-card .course-card__level { display: inline-flex; align-items: center; gap: 5px; color: #62666a; font-size: 12px; line-height: 1.4; }
+.course-card__level svg { flex: none; color: var(--art-accent); }
+.course-card h3 { margin: 8px 0 0; color: #17191b; font-size: clamp(19px, 1.8vw, 22px); line-height: 1.28; letter-spacing: -.035em; }
+.course-card .course-card__summary { margin: 9px 0 14px; color: #596067; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.course-card__meta { margin: 0 0 16px; padding: 11px 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; background: #f7f8f7; border: 1px solid #eceeed; border-radius: 10px; }
+.course-card__meta-row { min-width: 0; display: grid; grid-template-columns: 17px 62px minmax(0, 1fr); align-items: start; gap: 7px; }
+.course-card__meta-row > svg { margin-top: 1px; color: var(--art-accent); }
+.course-card__meta-row > span { color: #697079; font-size: 12px; line-height: 1.5; white-space: nowrap; }
+.course-card__meta-row > strong { min-width: 0; overflow: visible; color: #25292d; font-size: 13px; line-height: 1.5; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
+.course-card__tools { min-width: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.course-card__tools strong { padding: 3px 7px; color: #34443a; background: #e8f1ea; border-radius: 5px; font-size: 12px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+.course-card__footer { padding-top: 12px; border-top: 1px solid #eceeed; }
+.course-card__footer .course-card__progress { min-width: 0; display: grid; grid-template-columns: auto minmax(30px, 1fr) auto; align-items: center; gap: 8px; }
+.course-card__progress > span, .course-card__progress > strong { color: #515962; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.course-card__progress i { height: 7px; overflow: hidden; background: #e5e9e6; border: 0; border-radius: 999px; }
+.course-card__progress i b { background: var(--art-accent); border-radius: inherit; }
+.course-card__footer button { flex: none; border-radius: 10px; }
+@media (max-width: 560px) {
+  .course-card { grid-template-columns: minmax(0, 1fr); }
+  .course-cover { min-height: 180px; border-right: 0; border-bottom: 1px solid #e3e3e0; }
+  .course-card__content { padding: 18px; }
+}
+
 /* 设计工具与案例社区：延续 AI 讲堂的紧凑页头、白底卡片和黑色选中态。 */
 .portal-heading--community { margin-bottom: 17px; align-items: center; }
 .portal-heading--community h1 { font-size: clamp(28px, 3vw, 36px); line-height: 1.12; letter-spacing: -.06em; }
