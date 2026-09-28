@@ -1591,7 +1591,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .ai-launcher__method strong, .ai-launcher__method span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-launcher__method strong { font-size: 12px; }
 .ai-launcher__method span { color: #777; font-size: 10px; }
-.ai-method-menu { position: absolute; z-index: 8; bottom: calc(100% + 12px); left: 0; width: min(320px, calc(100vw - 48px)); padding: 7px; background: #fff; border: 1px solid #dedede; border-radius: 14px; box-shadow: 0 18px 48px rgba(0,0,0,.14); }
+.ai-method-menu { position: fixed; z-index: 100; padding: 7px; overflow-y: auto; overscroll-behavior: contain; background: #fff; border: 1px solid #dedede; border-radius: 14px; box-shadow: 0 18px 48px rgba(0,0,0,.14); }
 .ai-method-menu button { width: 100%; min-height: 54px; padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #555; background: transparent; border: 0; border-radius: 9px; text-align: left; }
 .ai-method-menu button:hover, .ai-method-menu button.is-active { color: #111; background: #f3f3f3; }
 .ai-method-menu button > span { display: grid; gap: 3px; }
@@ -1617,7 +1617,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 /* Creation launcher + reading workspace: capability popover, history strip, scrollable reply pane. */
 .ai-method-picker { position: relative; display: inline-flex; flex: 0 0 auto; }
-.ai-method-picker--end .ai-method-menu { left: auto; right: 0; }
 .ai-launcher__status { min-height: 34px; padding: 9px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; color: #777; border-top: 1px solid #f0f0f0; font-size: 10px; }
 .ai-launcher__status > span, .ai-launcher__status > em, .ai-launcher__status > button { display: inline-flex; align-items: center; gap: 5px; }
 .ai-launcher__status > em { margin-left: auto; color: #8b8b8b; font-style: normal; }
@@ -1724,6 +1723,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .creation-canvas__followups { max-width: 780px; margin-top: 18px; padding-top: 15px; border-top: 1px solid #ecece6; }.creation-canvas__followups > div { display: grid; gap: 7px; }.creation-canvas__followups button { width: 100%; min-height: 39px; padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #4c5053; background: #f4f5ee; border: 1px solid #e5e8da; border-radius: 9px; font: inherit; font-size: 12px; line-height: 1.5; text-align: left; cursor: pointer; }.creation-canvas__followups button:hover { color: #222; background: #eaf1d8; border-color: #c5d79e; }.creation-canvas__followups button svg { flex: 0 0 auto; }.creation-canvas__followups p { margin: 0; color: #8b8d86; font-size: 12px; }
 @media (max-width: 720px) { .ai-launcher__suggestions > div, .creation-canvas__starter-suggestions { grid-template-columns: 1fr; }.ai-launcher__suggestions button, .creation-canvas__starter-suggestions button { min-height: 48px; } }
 .creation-canvas__empty { justify-items: stretch; }.creation-canvas__starter-suggestions { width: min(100%, 900px); margin-top: 12px; }
+/* 会话侧栏占宽时，三列建议会把中文挤成竖排；中等屏幕改为单列。 */
+@media (max-width: 900px) { .portal-shell--standalone .creation-canvas__starter-suggestions { grid-template-columns: 1fr; } }
 /* Conversation actions are intentionally attached to the message they affect. */
 .ai-message__actions { margin-top: 9px; display: flex; align-items: center; gap: 4px; }.ai-message__actions button, .ai-message--user .ai-message__action { min-height: 28px; padding: 0 7px; display: inline-flex; align-items: center; gap: 4px; color: #777981; background: transparent; border: 0; border-radius: 6px; font-size: 11px; }.ai-message__actions button:hover, .ai-message--user .ai-message__action:hover { color: #2d2f36; background: #efefea; }.ai-message--user .ai-message__action { margin-top: 5px; margin-left: auto; }
 
@@ -2187,7 +2188,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (max-width: 720px) { .portal-main--standalone { width: calc(100% - 18px); padding: 8px 0 10px; }.portal-shell--standalone .creation-canvas__history { width: 214px; padding: 10px 8px; }.creation-canvas__history-toggle span { display: none; }.image-lightbox__stage img { max-height: calc(100vh - 132px); } }
 
 /* 节点工作流运行页：整页就是画布，功能区收成浮层压在上面。 */
-.workflow-graph-runner { position: relative; height: 100vh; overflow: hidden; }
+/* Portal 在 body 末尾渲染，必须固定到视口；relative 会把画布放到长页面底部，锁滚动后只剩空背景。 */
+.workflow-graph-runner { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; }
 .workflow-graph-runner__body { position: absolute; inset: 0; display: block; }
 .workflow-run-canvas { position: absolute; inset: 0; }
 .workflow-graph-runner__canvas-hint { display: none; }

@@ -16,6 +16,7 @@ export const adminRoutes = {
   courses: "/admin/courses",
   workflows: "/admin/workflows",
   reviews: "/admin/reviews",
+  reports: "/admin/reports",
   bridges: "/admin/bridges",
 };
 
