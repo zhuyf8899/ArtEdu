@@ -154,6 +154,28 @@ function UsersPage({ users, onEditQuota, onToggleStatus, selectedIds, onSelectio
     <section className="table-panel">
       <div className="table-tools"><label><MagnifyingGlass size={18} weight="bold" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索姓名、编号或院系" /></label><div className="segmented" aria-label="用户状态筛选">{[["all", "全部"], ["active", "正常"], ["limited", "额度用尽"], ["suspended", "已停用"]].map(([value, label]) => <button key={value} className={status === value ? "is-active" : ""} onClick={() => setStatus(value)}>{label}</button>)}</div><label className="select-tool"><span>身份</span><select value={identity} onChange={(event) => setIdentity(event.target.value)}><option value="all">全部身份</option><option value="学生">学生</option><option value="教师">教师</option><option value="运营">运营</option><option value="管理员">管理员</option></select></label><label className="select-tool"><span>院系</span><select value={department} onChange={(event) => setDepartment(event.target.value)}><option value="all">全部院系</option>{departments.map((item) => <option key={item} value={item}>{item}</option>)}</select></label></div>
       <div className="user-table-wrap"><table className="user-table"><thead><tr>{canManageQuota && <th><input type="checkbox" aria-label="选择本页全部用户" checked={pageFullySelected} onChange={togglePageSelection} /></th>}<th>用户</th><th>身份</th><th>API 额度</th><th>本月使用</th><th>状态</th><th>最近活跃</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>{pageUsers.map((user) => { const ratio = user.monthlyLimit ? Math.min(100, Math.round(user.monthlyUsed / user.monthlyLimit * 100)) : 0; return <tr key={user.id}>{canManageQuota && <td><input type="checkbox" aria-label={`选择${user.name}`} checked={selectedIds.has(user.id)} onChange={() => toggleSelection(user.id)} /></td>}<td><div className="user-cell"><div className="avatar avatar--outline">{user.initials}</div><div><strong>{user.name}</strong><span>{user.id} · {user.department}</span></div></div></td><td><span className="identity-chip">{user.identity}</span></td><td><strong>{formatQuotaLimit(user.dailyLimit, "日")}</strong><span className="sub-value">{formatQuotaLimit(user.monthlyLimit, "月")} · 并发 {user.concurrentLimit ?? "不限制"}</span></td><td><div className="table-meter"><div><i style={{ width: `${ratio}%` }} /></div><span>{user.monthlyLimit === null ? "—" : `${ratio}%`}</span></div></td><td><span className={`status-chip status-chip--${user.status}`}><i />{statusLabel[user.status]}</span></td><td title={user.lastActive}>{formatLastActive(user.lastActive)}</td><td><div className="row-actions">{canManageQuota ? <><button onClick={() => onEditQuota(user)}>额度</button><button onClick={() => onToggleStatus(user)}>{user.status === "suspended" ? "启用" : "停用"}</button></> : <span className="sub-value">仅管理员可调整</span>}</div></td></tr>; })}</tbody></table></div>
+      {/* 窄屏保留相同的额度和管理操作，但改用可纵向阅读的用户卡片。 */}
+      <div className="user-mobile-list">
+        {canManageQuota && pageUsers.length > 0 && <label className="user-mobile-list__select-all"><input type="checkbox" checked={pageFullySelected} onChange={togglePageSelection} /> 选择本页全部用户</label>}
+        {pageUsers.map((user) => {
+          const ratio = user.monthlyLimit ? Math.min(100, Math.round(user.monthlyUsed / user.monthlyLimit * 100)) : 0;
+          return <article className="user-mobile-card" key={user.id}>
+            <div className="user-mobile-card__head">
+              {canManageQuota && <input type="checkbox" aria-label={`选择${user.name}`} checked={selectedIds.has(user.id)} onChange={() => toggleSelection(user.id)} />}
+              <div className="avatar avatar--outline">{user.initials}</div>
+              <div className="user-mobile-card__identity"><strong>{user.name}</strong><span>{user.id} · {user.department}</span></div>
+              <span className={`status-chip status-chip--${user.status}`}><i />{statusLabel[user.status]}</span>
+            </div>
+            <div className="user-mobile-card__details">
+              <div><span>身份</span><strong>{user.identity}</strong></div>
+              <div><span>API 额度</span><strong>{formatQuotaLimit(user.dailyLimit, "日")}</strong><small>{formatQuotaLimit(user.monthlyLimit, "月")} · 并发 {user.concurrentLimit ?? "不限制"}</small></div>
+              <div><span>本月使用</span><strong>{user.monthlyLimit === null ? "不限制" : `${ratio}%`}</strong><div className="user-mobile-card__meter"><i style={{ width: `${ratio}%` }} /></div></div>
+              <div><span>最近活跃</span><strong title={user.lastActive}>{formatLastActive(user.lastActive)}</strong></div>
+            </div>
+            {canManageQuota && <div className="user-mobile-card__actions"><button onClick={() => onEditQuota(user)}>设置额度</button><button onClick={() => onToggleStatus(user)}>{user.status === "suspended" ? "启用账户" : "停用账户"}</button></div>}
+          </article>;
+        })}
+      </div>
       {filteredUsers.length === 0 && <div className="empty-state"><Users size={34} /><strong>没有匹配的用户</strong><span>尝试调整搜索关键词或筛选条件。</span></div>}
       <div className="table-footer"><span>显示 {pageUsers.length} / {filteredUsers.length} 个账户 · 第 {page} / {totalPages} 页</span><div><button disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>上一页</button><button className="is-active">{page}</button><button disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>下一页</button></div></div>
     </section>

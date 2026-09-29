@@ -87,6 +87,11 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
   const activeFilters = Boolean(type !== "all" || tag || author || method || tool);
   const clearFilters = () => { setType("all"); setTag(""); setAuthor(""); setMethod(""); setTool(""); };
   const groupedItems = type === "all" ? ["course", "workflow", "work"].map(group => ({ type: group, items: visibleItems.filter(item => item.type === group) })).filter(group => group.items.length) : [{ type, items: visibleItems }];
+  // 首屏只显示常用标签；若当前标签原本藏在“更多”里，仍把它置于可见区域。
+  const primaryTags = payload.availableTags.slice(0, 6);
+  if (tag && primaryTags.length && payload.availableTags.includes(tag) && !primaryTags.includes(tag)) primaryTags[primaryTags.length - 1] = tag;
+  const extraTags = payload.availableTags.filter((item) => !primaryTags.includes(item));
+  const tagButton = (item) => <button type="button" key={item} className={tag === item ? "is-active" : ""} aria-pressed={tag === item} onClick={() => setTag(tag === item ? "" : item)}>{item}</button>;
 
   const submit = (event) => {
     event.preventDefault();
@@ -111,7 +116,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
       <aside className="search-filters">
         <header><Funnel size={18} weight="bold" /><div><strong>筛选结果</strong><span>按内容类型与标签</span></div></header>
         <div className="search-filter-group"><span>内容类型</span>{TYPE_FILTERS.map(([value, label]) => <button key={value} className={type === value ? "is-active" : ""} onClick={() => setType(value)}><i />{label}<b>{value === "all" ? filteredItems.length : filteredItems.filter(item => item.type === value).length}</b></button>)}</div>
-        <div className="search-filter-group search-filter-group--tags"><span>相关标签</span><div>{payload.availableTags.map((item) => <button key={item} className={tag === item ? "is-active" : ""} onClick={() => setTag(tag === item ? "" : item)}>{item}</button>)}</div></div>
+        <div className="search-filter-group search-filter-group--tags"><span>相关标签</span><div>{primaryTags.map(tagButton)}</div>{extraTags.length > 0 && <details className="search-tag-more"><summary>更多标签（{extraTags.length}）</summary><div>{extraTags.map(tagButton)}</div></details>}</div>
         <FacetSelect label="作者" value={author} options={facets.authors} onChange={setAuthor} />
         <FacetSelect label="使用方法" value={method} options={facets.methods} onChange={setMethod} />
         <FacetSelect label="使用工具" value={tool} options={facets.tools} onChange={setTool} />

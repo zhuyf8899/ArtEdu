@@ -2235,3 +2235,88 @@ body.workflow-runner-open .workflow-graph-runner__sidebar button { border-color:
   .workflow-catalog > .tool-directory .tool-directory__play,
   .workflow-catalog > .tool-directory .tool-directory__list--list .tool-directory__play { grid-column: 1 / -1; justify-self: stretch; }
 }
+
+/* 2026-09-29 响应式收尾：管理页在窄内容区采用卡片，避免表格和筛选项挤成竖字。 */
+.user-mobile-list { display: none; }
+@media (max-width: 1100px) {
+  .table-panel .table-tools { padding: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .table-panel .table-tools > label { width: auto; min-width: 0; height: 42px; }
+  .table-panel .table-tools > label:not(.select-tool) { grid-column: 1 / -1; }
+  .table-panel .table-tools input { min-width: 0; font-size: 13px; }
+  .table-panel .table-tools > .segmented { grid-column: 1 / -1; width: 100%; margin: 0; border-color: #dededb; border-radius: 9px; overflow: hidden; }
+  .table-panel .segmented button { min-width: 0; min-height: 40px; height: auto; flex: 1; padding: 7px 5px; white-space: nowrap; font-size: 12px; border-color: #dededb; }
+  .table-panel .segmented button.is-active { color: #fff; background: #242426; }
+  .table-panel .select-tool { justify-content: space-between; color: #62646b; font-size: 12px; border-color: #dededb; border-radius: 8px; }
+  .table-panel .select-tool select { width: min(65%, 180px); min-width: 0; font-size: 12px; }
+  .user-table-wrap { display: none; }
+  .user-mobile-list { padding: 16px; display: grid; gap: 12px; }
+  .user-mobile-list__select-all { display: inline-flex; align-items: center; gap: 8px; color: #5d6065; font-size: 12px; }
+  .user-mobile-card { min-width: 0; padding: 16px; background: #fff; border: 1px solid #e2e3e1; border-radius: 12px; box-shadow: 0 2px 9px rgba(18, 20, 24, .03); }
+  .user-mobile-card__head { min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .user-mobile-card__identity { min-width: 0; flex: 1; }
+  .user-mobile-card__identity strong, .user-mobile-card__identity span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-mobile-card__identity strong { font-size: 14px; }
+  .user-mobile-card__identity span { margin-top: 4px; color: #6b6d70; font-size: 11px; }
+  .user-mobile-card .status-chip { flex: 0 0 auto; font-size: 10px; border-radius: 5px; }
+  .user-mobile-card__details { margin-top: 15px; padding-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; border-top: 1px solid #ececea; }
+  .user-mobile-card__details > div { min-width: 0; }
+  .user-mobile-card__details span, .user-mobile-card__details strong, .user-mobile-card__details small { display: block; }
+  .user-mobile-card__details span { color: #74767b; font-size: 11px; }
+  .user-mobile-card__details strong { margin-top: 4px; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+  .user-mobile-card__details small { margin-top: 3px; color: #74767b; font-size: 10px; }
+  .user-mobile-card__meter { height: 5px; margin-top: 7px; overflow: hidden; background: #ededeb; border-radius: 6px; }
+  .user-mobile-card__meter i { height: 100%; display: block; background: #80949b; border-radius: inherit; }
+  .user-mobile-card__actions { margin-top: 16px; display: flex; gap: 9px; }
+  .user-mobile-card__actions button { min-height: 38px; padding: 0 13px; color: #27282a; background: #f6f6f4; border: 1px solid #dfe0dd; border-radius: 8px; font-size: 12px; font-weight: 700; }
+  .user-mobile-card__actions button:first-child { color: #fff; background: #262729; border-color: #262729; }
+  .table-panel .table-footer { gap: 12px; flex-wrap: wrap; font-size: 11px; }
+}
+@media (max-width: 470px) {
+  .table-panel .table-tools { grid-template-columns: 1fr; }
+  .table-panel .table-tools > label:not(.select-tool), .table-panel .table-tools > .segmented { grid-column: 1; }
+  .user-mobile-list { padding: 10px; }
+  .user-mobile-card { padding: 13px; }
+}
+
+/* 工作流画布给右侧/底部操作面板留出独立空间，节点文字和视图控制更易读。 */
+.workflow-graph-runner .workflow-run-canvas { position: absolute; top: 0; left: 0; right: 380px; bottom: 0; width: auto; height: auto; }
+.workflow-graph-runner .workflow-run-node { width: 205px; border-radius: 8px; box-shadow: 0 8px 18px rgba(0, 0, 0, .2); }
+.workflow-graph-runner .workflow-run-node > div { padding: 8px 10px; font-size: 10px; letter-spacing: .03em; }
+.workflow-graph-runner .workflow-run-node strong { padding: 10px 11px 4px; font-size: 13px; line-height: 1.35; }
+.workflow-graph-runner .workflow-run-node small { padding: 0 11px 11px; font-size: 10px; line-height: 1.5; }
+.workflow-run-canvas__actions { position: absolute; z-index: 5; top: 78px; left: 14px; display: flex; gap: 8px; }
+.workflow-run-canvas__actions button { min-height: 36px; padding: 0 11px; color: #f1f3f3; background: rgba(29, 34, 40, .9); border: 1px solid #596068; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.workflow-run-canvas__actions button:hover, .workflow-run-canvas__actions button:focus-visible { background: #404a54; }
+@media (max-width: 900px) {
+  .workflow-graph-runner .workflow-run-canvas { right: 0; bottom: calc(46vh + 14px); }
+  .workflow-run-canvas__actions { top: 76px; }
+}
+@media (max-width: 470px) {
+  .workflow-graph-runner .workflow-run-canvas { bottom: 48vh; }
+  .workflow-graph-runner > header.workflow-graph-runner__topbar { top: 10px; left: 10px; right: 10px; width: auto; height: 54px; min-height: 54px; padding: 6px 7px; display: grid; grid-template-columns: 42px minmax(0, 1fr) 32px; align-items: center; gap: 6px; }
+  .workflow-graph-runner__topbar .workflow-graph-runner__back { width: 42px; min-height: 36px; padding: 0; justify-content: center; }
+  .workflow-graph-runner__topbar .workflow-graph-runner__title h1 { font-size: 13px; text-align: center; }
+  .workflow-graph-runner__topbar .workflow-graph-runner__run-state { margin: 0; }
+  .workflow-run-canvas__actions { top: 73px; left: 10px; }
+  .workflow-run-canvas__actions button { min-height: 34px; padding: 0 9px; font-size: 10px; }
+}
+
+/* 搜索筛选只突出首批标签，其余按需展开；控件尺寸满足触控与阅读。 */
+.search-filter-group > span { font-size: 11px; letter-spacing: .02em; }
+.search-filter-group:not(.search-filter-group--tags) > button { min-height: 40px; font-size: 11px; }
+.search-filter-group:not(.search-filter-group--tags) > button b { font-size: 10px; }
+.search-filter-group--tags > div, .search-tag-more > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.search-filter-group--tags button { min-height: 34px; padding: 6px 10px; color: #45484b; background: #f5f5f3; border-color: #dedfdd; border-radius: 999px; font-size: 11px; line-height: 1.2; white-space: nowrap; }
+.search-filter-group--tags button.is-active { color: #fff; background: #292b2d; border-color: #292b2d; }
+.search-tag-more { margin-top: 10px; }
+.search-tag-more summary { min-height: 34px; width: fit-content; padding: 7px 9px; color: #4f5357; border-radius: 7px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.search-tag-more summary:hover { background: #f0f1ef; }
+.search-tag-more > div { padding-top: 8px; }
+.search-summary span, .search-summary strong small { font-size: 10px; }
+@media (max-width: 600px) {
+  .search-summary { padding: 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; overflow: visible; }
+  .search-summary > div { min-width: 0; margin: 0; padding: 0 8px; }
+  .search-summary > div:nth-child(3) { border-right: 0; }
+  .search-summary strong { font-size: 13px; }
+  .search-summary .search-offline { grid-column: 1 / -1; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e9e9e6; }
+}
