@@ -158,15 +158,15 @@ function Overview({ data, recentResources, displayName, onView, onToggleTask, on
   return <>
     <div className="learning-welcome"><div><span>// YOUR NEXT STEP</span><h2>{displayName}，接下来做什么？</h2><p>先完成一件事，再继续探索。</p></div></div>
     <section className="learning-next-step">
-      <div><small>{nextCourse ? "继续课程" : "开始学习"}</small><h3>{nextCourse?.title ?? "选择第一门课程"}</h3><p>{nextCourse ? `还剩 ${remainingLessons} 节课时 · 整门课程预计 ${nextCourse.estimatedMinutes} 分钟` : "从教学资源库选择感兴趣的课程。"}</p>
+      <div><small>{nextCourse ? "继续课程" : "开始学习"}</small><h3>{nextCourse?.title ?? "选择第一门课程"}</h3><p>{nextCourse ? `还剩 ${remainingLessons} 节课时 · 整门课程预计 ${nextCourse.estimatedMinutes} 分钟` : "从 AI 讲堂选择感兴趣的课程。"}</p>
         {nextCourse && <span>已完成 {nextCourse.completedLessons} / {nextCourse.lessonCount} 节课时</span>}</div>
       <button onClick={() => onNavigate(nextCourse ? `/learning?course=${encodeURIComponent(nextCourse.id)}` : "/learning")}>{nextCourse ? "继续学习" : "浏览课程"} <ArrowRight size={17} weight="bold" /></button>
     </section>
     <div className="learning-focus-grid">
       <section className="learning-focus-panel"><SectionHeader eyebrow="// TO DO" title="待完成" action="全部计划" onAction={() => onView("plan")} />
         {nextTask ? <TaskRow task={nextTask} onToggle={onToggleTask} /> : <button className="learning-suggestion" onClick={() => onView("plan")}>还没有待办。添加一项今天要完成的练习 <ArrowRight size={15} /></button>}</section>
-      <section className="learning-focus-panel"><SectionHeader eyebrow="// CREATE" title="创作进度" action="工作台" onAction={() => onNavigate("/studio")} />
-        {nextRun ? <button className="learning-suggestion" onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(nextRun.workflowId)}&run=${encodeURIComponent(nextRun.id)}`)}><strong>{nextRun.workflowName}</strong><span>已执行 {nextRun.currentStep} / {nextRun.totalSteps} 个节点 · 继续运行</span><ArrowRight size={15} /></button> : <button className="learning-suggestion" onClick={() => onNavigate("/studio")}>从设计工作台开始一次创作 <ArrowRight size={15} /></button>}</section>
+      <section className="learning-focus-panel"><SectionHeader eyebrow="// CREATE" title="创作进度" action="设计工具" onAction={() => onNavigate("/studio")} />
+        {nextRun ? <button className="learning-suggestion" onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(nextRun.workflowId)}&run=${encodeURIComponent(nextRun.id)}`)}><strong>{nextRun.workflowName}</strong><span>已执行 {nextRun.currentStep} / {nextRun.totalSteps} 个节点 · 继续运行</span><ArrowRight size={15} /></button> : <button className="learning-suggestion" onClick={() => onNavigate("/studio")}>从设计工具开始一次创作 <ArrowRight size={15} /></button>}</section>
     </div>
     {(recentResources.length > 0 || data.favorites.length > 0 || data.workflowRuns.some((run) => run.status === "completed")) && <section className="learning-recent-compact"><SectionHeader eyebrow="// RECENT" title="最近资源与成果" />
       {recentResources.slice(0, 2).map((resource) => <button key={resource.resourceId} onClick={() => onNavigate(`/learning?course=${encodeURIComponent(resource.courseId)}`)}><FileText size={16} /><span>{resource.title}</span><ArrowRight size={15} /></button>)}
