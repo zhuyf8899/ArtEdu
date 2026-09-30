@@ -23,7 +23,7 @@ const emptyPortalData = {
 
 const navItems = [
   ["home", "首页", GridFour],
-  ["courses", "AI讲堂", GraduationCap],
+  ["courses", "AI 讲堂", GraduationCap],
   ["studio", "设计工具", Palette],
   ["community", "案例社区", UsersThree],
   ["myLearning", "我的学习", BookOpenText],
@@ -227,12 +227,12 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         <AiCreationLauncher account={account} creation={data.creation} onNotice={showToast} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />
         {portalLoading && <HomeDataState loading />}
         {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
-        {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从教学资源库选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}
+        {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从 AI 讲堂选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}
         {!portalLoading && !portalError && <CourseDiscovery courses={data.courses} onSearch={navigateSearch} onBrowse={() => navigateSection("courses")} onCoach={() => setCoachOpen(true)} />}
         <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => navigateSection("studio")} />
         <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课程与工作流生成下一步学习建议。" onClick={() => setCoachOpen(true)} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
         <SectionHeading eyebrow="// FEATURED WORKFLOWS" title="精选工作流" />
-        {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入工作台" onRetry={() => navigateSection("studio")} />}
+        {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入设计工具" onRetry={() => navigateSection("studio")} />}
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
@@ -292,7 +292,7 @@ function GlobalSearchForm({ value, onSearch }) {
     event.preventDefault();
     if (query.trim()) onSearch(query.trim());
   };
-  return <form className="portal-search" onSubmit={submit}><MagnifyingGlass size={16} weight="bold" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="搜索教学资源、工作流和案例" placeholder="搜索课程、工作流、案例…" /><button aria-label="提交搜索" disabled={!query.trim()}><ArrowRight size={15} weight="bold" /></button></form>;
+  return <form className="portal-search" onSubmit={submit}><MagnifyingGlass size={16} weight="bold" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="搜索 AI 讲堂、设计工具和案例" placeholder="搜索课程、设计工具、案例…" /><button aria-label="提交搜索" disabled={!query.trim()}><ArrowRight size={15} weight="bold" /></button></form>;
 }
 
 function SectionHeading({ eyebrow, title, action, onAction }) {

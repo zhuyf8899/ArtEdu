@@ -3,30 +3,9 @@ import { createPortal } from "react-dom";
 import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowsOutSimple, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, UserCircle, Wrench, X } from "@phosphor-icons/react";
 import { enrollCourse, getCourse, getCourses, getMyWorks, submitLessonWork, updateLessonProgress } from "./services/adminApi.js";
 import { coverImageFor } from "./coverImages.js";
-
-const COURSE_PROFILES = {
-  "course-ai-design-foundation": { method: "UI 创作", author: "周可老师", tools: ["GPT-4o", "Figma"] },
-  "course-traditional-pattern": { method: "图案生成", author: "林知夏老师", tools: ["FLUX.1", "Midjourney"] },
-  "course-vibe-gallery": { method: "Vibe Coding", author: "陈明远老师", tools: ["Claude 4", "VS Code"] },
-};
+import { decorateCourse, difficultyName } from "./coursePresentation.js";
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
-
-function decorateCourse(course) {
-  const profile = COURSE_PROFILES[course.id] ?? {};
-  const title = course.title ?? "";
-  const inferredMethod = title.toLowerCase().includes("coding") || title.includes("网页")
-    ? "Vibe Coding"
-    : title.includes("纹样") || title.includes("图案")
-      ? "图案生成"
-      : "UI 创作";
-  return {
-    ...course,
-    method: course.method ?? profile.method ?? inferredMethod,
-    author: course.author ?? course.creatorName ?? profile.author ?? "ArtEdu 教学团队",
-    tools: course.tools?.length ? course.tools : profile.tools ?? ["GPT-4o"],
-  };
-}
 
 export function LearningLibrary({ onNotice, initialCourseId = "" }) {
   const [courses, setCourses] = useState([]);
@@ -126,8 +105,8 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
     {selected.resources?.length > 0 && <CourseMaterials resources={selected.resources} />}
   </section>;
 
-  if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载教学资源</strong><p>正在同步课程、作者和工具标签。</p></section>;
-  if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>教学资源暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
+  if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载 AI 讲堂</strong><p>正在同步课程、作者和工具标签。</p></section>;
+  if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>AI 讲堂暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
 
   return <>
     <section className="learning-library-intro" aria-labelledby="learning-library-title">
@@ -166,10 +145,6 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
 
 function FilterRow({ label, items, value, onChange }) {
   return <div className="filter-row"><span>{label}</span><div>{items.map((item) => <button key={item} className={value === item ? "is-active" : ""} onClick={() => onChange(item)}>{item}</button>)}</div></div>;
-}
-
-function difficultyName(value) {
-  return { beginner: "入门", intermediate: "进阶", advanced: "高级" }[value] ?? "入门";
 }
 
 const MATERIAL_KINDS = {

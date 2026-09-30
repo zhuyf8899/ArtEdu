@@ -132,7 +132,7 @@ test("创作对话页独立成屏：不显示站点导航，也不显示两侧�
   assert.ok(portal.includes('const standalone = section === "creation"'), "对话页要单独标记");
   assert.ok(portal.includes('{!standalone && <header className="portal-topbar">'), "对话页不渲染顶部导航");
   assert.ok(!portal.includes("PortalArtRails"), "全站不再渲染两侧装饰");
-  assert.ok(portal.includes('["courses", "AI讲堂", GraduationCap]'), "课程入口命名为 AI 讲堂");
+  assert.ok(portal.includes('["courses", "AI 讲堂", GraduationCap]'), "课程入口与 AI 讲堂页面标题一致");
   assert.ok(portal.includes('["studio", "设计工具", Palette]'), "工作台入口命名为设计工具");
   assert.ok(portal.includes("portal-main--standalone"));
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");

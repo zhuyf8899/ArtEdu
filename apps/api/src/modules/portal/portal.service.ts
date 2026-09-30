@@ -59,6 +59,11 @@ interface SearchRow {
   tools?: string[] | null;
   updated_at: Date;
   match_count: number;
+  cover_url?: string | null;
+  cover_asset_key?: string | null;
+  cover_mime_type?: string | null;
+  preview_url?: string | null;
+  lesson_count?: number | null;
 }
 
 @Injectable()
@@ -194,6 +199,8 @@ export class PortalService {
       include("course") ? this.database.query<SearchRow>(`
         SELECT c.id, c.title, c.summary, c.category, creator.display_name AS author,
           c.difficulty AS metadata,
+          c.cover_url, c.cover_asset_key, c.cover_mime_type,
+          (SELECT COUNT(*)::int FROM course_lessons lesson WHERE lesson.course_id = c.id AND lesson.status = 'published') AS lesson_count,
           COUNT(*) OVER()::int AS match_count,
           ARRAY_REMOVE(ARRAY_AGG(DISTINCT tag.name), NULL) AS tags,
           ARRAY_REMOVE(ARRAY(SELECT DISTINCT model.display_name FROM course_lessons lesson
@@ -260,7 +267,15 @@ export class PortalService {
           ARRAY_REMOVE(ARRAY_AGG(DISTINCT tag.name), NULL) AS tags,
           ARRAY(SELECT jsonb_array_elements_text(COALESCE(work.story_json->'methods', '[]'::jsonb))) AS methods,
           ARRAY(SELECT jsonb_array_elements_text(COALESCE(work.story_json->'tools', '[]'::jsonb))) AS tools,
-          work.updated_at
+          work.updated_at,
+          COALESCE(
+            (SELECT '/api/works/' || work.id || '/assets/' || cover.id || '/download'
+             FROM work_assets cover WHERE cover.work_id = work.id AND cover.asset_type = 'image' AND cover.storage_key IS NOT NULL
+             ORDER BY cover.sort_order, cover.id LIMIT 1),
+            (SELECT cover.external_url FROM work_assets cover
+             WHERE cover.work_id = work.id AND cover.asset_type = 'image' AND cover.external_url IS NOT NULL
+             ORDER BY cover.sort_order, cover.id LIMIT 1)
+          ) AS preview_url
         FROM works work
         JOIN users author ON author.id = work.author_id
         LEFT JOIN work_tags relation ON relation.work_id = work.id
@@ -303,11 +318,11 @@ export class PortalService {
   }
 
   private mapSearchResult(type: "course" | "workflow" | "work", row: SearchRow) {
-    const typeLabel = { course: "教学资源", workflow: "工作流", work: "案例社区" }[type];
+    const typeLabel = { course: "AI 讲堂", workflow: "设计工具", work: "案例社区" }[type];
     const metadataLabel = type === "course"
       ? ({ beginner: "入门", intermediate: "进阶", advanced: "高级" }[row.metadata ?? ""] ?? row.metadata)
       : type === "workflow"
-        ? ({ chat: "对话式", workbench: "工作台", external_tool: "外部工具" }[row.metadata ?? ""] ?? row.metadata)
+        ? ({ chat: "对话式", workbench: "设计工具", external_tool: "外部工具" }[row.metadata ?? ""] ?? row.metadata)
         : null;
     const tags = [typeLabel, row.category, metadataLabel, ...(row.tags ?? [])].filter((value): value is string => Boolean(value));
     return {
@@ -321,7 +336,13 @@ export class PortalService {
       methods: [...new Set([...(row.methods ?? []), ...(row.tags ?? []).filter((value) => ["UI 创作", "图案生成", "Vibe Coding", "UI设计", "图案设计"].includes(value)), ...(type === "course" && /coding|网页|代码/i.test(row.title) ? ["Vibe Coding"] : type === "course" && /纹样|图案/.test(row.title) ? ["图案生成"] : [])])],
       tools: [...new Set([...(row.tools ?? []), ...(type === "workflow" ? row.tags ?? [] : [])])],
       tags: [...new Set(tags)],
-      route: { course: "/learning", workflow: "/studio", work: "/community" }[type],
+      // 搜索与对应页面使用同一封面来源；仅传 URL，不在 JSON 中内嵌二进制图片。
+      coverUrl: type === "course" ? row.cover_url ?? null : null,
+      coverImageUrl: type === "course" && row.cover_asset_key && row.cover_mime_type ? `/api/courses/${encodeURIComponent(row.id)}/cover` : null,
+      previewUrl: type === "work" ? row.preview_url ?? null : null,
+      difficulty: type === "course" ? row.metadata : null,
+      lessonCount: type === "course" ? Number(row.lesson_count ?? 0) : null,
+      route: { course: `/learning?course=${encodeURIComponent(row.id)}`, workflow: "/studio", work: "/community" }[type],
       updatedAt: row.updated_at.toISOString(),
     };
   }

@@ -4,23 +4,41 @@ import {
   MagnifyingGlass, SpinnerGap, X,
 } from "@phosphor-icons/react";
 import { searchPortal } from "./services/adminApi.js";
+import { coverImageFor, titleCoverDataUrl } from "./coverImages.js";
+import { decorateCourse, difficultyName } from "./coursePresentation.js";
 
 const TYPE_FILTERS = [
   ["all", "全部"],
-  ["course", "教学资源"],
-  ["workflow", "工作流"],
+  ["course", "AI 讲堂"],
+  ["workflow", "设计工具"],
   ["work", "案例社区"],
 ];
 
 const TYPE_META = {
-  course: { label: "教学资源", Icon: BookOpenText, route: "/learning" },
-  workflow: { label: "工作流", Icon: CirclesThreePlus, route: "/studio" },
+  course: { label: "AI 讲堂", Icon: BookOpenText, route: "/learning" },
+  workflow: { label: "设计工具", Icon: CirclesThreePlus, route: "/studio" },
   work: { label: "案例社区", Icon: ImageSquare, route: "/community" },
 };
 
+const MODULE_LABELS = new Set(["AI 讲堂", "设计工具", "案例社区"]);
+function currentLabel(value) {
+  return ({ 教学资源: "AI 讲堂", 教学资源库: "AI 讲堂", 工作台: "设计工具", 设计工作台: "设计工具", 设计工具区: "设计工具", UI创作: "UI 创作", "vibe coding": "Vibe Coding" })[value] ?? value;
+}
+
+function normalizePayload(result) {
+  const items = (result.items ?? []).map((item) => {
+    const tags = [...new Set((item.tags ?? []).map(currentLabel))];
+    const methods = [...new Set((item.methods ?? []).map(currentLabel))];
+    if (item.type !== "course") return { ...item, tags, methods };
+    const course = decorateCourse({ ...item, tags, methods });
+    return { ...course, methods: [...new Set([...(course.methods ?? []), course.method].filter(Boolean))] };
+  });
+  return { ...result, items, availableTags: [...new Set(items.flatMap((item) => item.tags))].filter((value) => !MODULE_LABELS.has(value)) };
+}
+
 export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate }) {
   const [draft, setDraft] = useState(initialQuery);
-  const [payload, setPayload] = useState(() => fallbackSearch(initialQuery, fallbackData));
+  const [payload, setPayload] = useState(() => normalizePayload(fallbackSearch(initialQuery, fallbackData)));
   const [type, setType] = useState("all");
   const [tag, setTag] = useState("");
   const [author, setAuthor] = useState("");
@@ -37,31 +55,31 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
     setTag("");
     setAuthor(""); setMethod(""); setTool(""); setSort("relevance");
     if (!initialQuery.trim()) {
-      setPayload(fallbackSearch("", fallbackData));
+      setPayload(normalizePayload(fallbackSearch("", fallbackData)));
       return;
     }
     let active = true;
     setLoading(true);
     searchPortal(initialQuery).then((result) => {
       if (!active) return;
-      setPayload(result);
+      setPayload(normalizePayload(result));
       setOffline(false);
     }).catch(() => {
       if (!active) return;
-      setPayload(fallbackSearch(initialQuery, fallbackData));
+      setPayload(normalizePayload(fallbackSearch(initialQuery, fallbackData)));
       setOffline(true);
     }).finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [initialQuery, fallbackData, retryKey]);
 
-  const filteredItems = useMemo(() => payload.items.filter((item) => {
-    const matchesType = type === "all" || item.type === type;
+  const facetFilteredItems = useMemo(() => payload.items.filter((item) => {
     const matchesTag = !tag || item.tags.includes(tag);
     const matchesAuthor = !author || item.author === author;
     const matchesMethod = !method || (item.methods ?? []).includes(method);
     const matchesTool = !tool || (item.tools ?? []).includes(tool);
-    return matchesType && matchesTag && matchesAuthor && matchesMethod && matchesTool;
-  }), [payload.items, tag, type, author, method, tool]);
+    return matchesTag && matchesAuthor && matchesMethod && matchesTool;
+  }), [payload.items, tag, author, method, tool]);
+  const filteredItems = useMemo(() => facetFilteredItems.filter((item) => type === "all" || item.type === type), [facetFilteredItems, type]);
 
   const visibleItems = useMemo(() => [...filteredItems].sort((left, right) => {
     if (sort === "title") return left.title.localeCompare(right.title, "zh-CN");
@@ -78,11 +96,11 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
   }), [payload.items]);
 
   const counts = useMemo(() => ({
-    all: filteredItems.length,
-    course: filteredItems.filter((item) => item.type === "course").length,
-    workflow: filteredItems.filter((item) => item.type === "workflow").length,
-    work: filteredItems.filter((item) => item.type === "work").length,
-  }), [filteredItems]);
+    all: facetFilteredItems.length,
+    course: facetFilteredItems.filter((item) => item.type === "course").length,
+    workflow: facetFilteredItems.filter((item) => item.type === "workflow").length,
+    work: facetFilteredItems.filter((item) => item.type === "work").length,
+  }), [facetFilteredItems]);
 
   const activeFilters = Boolean(type !== "all" || tag || author || method || tool);
   const clearFilters = () => { setType("all"); setTag(""); setAuthor(""); setMethod(""); setTool(""); };
@@ -101,7 +119,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
 
   return <section className="search-page" aria-labelledby="search-page-title">
     <header className="search-page__hero">
-      <div><p className="eyebrow">// SEARCH EVERYTHING</p><h1 id="search-page-title">探索知识与<span>创作</span></h1><p>一次搜索教学资源、可复用工作流与师生案例。</p></div>
+      <div><p className="eyebrow">// SEARCH EVERYTHING</p><h1 id="search-page-title">探索知识与<span>创作</span></h1><p>一次搜索 AI 讲堂、设计工具与案例社区。</p></div>
       <form onSubmit={submit}><MagnifyingGlass size={22} weight="bold" /><input autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} aria-label="搜索平台内容" placeholder="搜索课程、工作流、案例或标签" /><button disabled={!draft.trim()}>搜索 <ArrowRight size={17} weight="bold" /></button></form>
     </header>
 
@@ -115,7 +133,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
     <div className="search-layout">
       <aside className="search-filters">
         <header><Funnel size={18} weight="bold" /><div><strong>筛选结果</strong><span>按内容类型与标签</span></div></header>
-        <div className="search-filter-group"><span>内容类型</span>{TYPE_FILTERS.map(([value, label]) => <button key={value} className={type === value ? "is-active" : ""} onClick={() => setType(value)}><i />{label}<b>{value === "all" ? filteredItems.length : filteredItems.filter(item => item.type === value).length}</b></button>)}</div>
+        <div className="search-filter-group"><span>内容类型</span>{TYPE_FILTERS.map(([value, label]) => <button key={value} className={type === value ? "is-active" : ""} aria-pressed={type === value} onClick={() => setType(value)}><i />{label}<b>{counts[value]}</b></button>)}</div>
         <div className="search-filter-group search-filter-group--tags"><span>相关标签</span><div>{primaryTags.map(tagButton)}</div>{extraTags.length > 0 && <details className="search-tag-more"><summary>更多标签（{extraTags.length}）</summary><div>{extraTags.map(tagButton)}</div></details>}</div>
         <FacetSelect label="作者" value={author} options={facets.authors} onChange={setAuthor} />
         <FacetSelect label="使用方法" value={method} options={facets.methods} onChange={setMethod} />
@@ -124,7 +142,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
       </aside>
 
       <div className="search-results">
-        <header><div><span>// RESULTS</span><h2>{loading ? "正在整理结果…" : `${visibleItems.length} 项匹配内容`}</h2><small>按课程、工作流与案例分组 · {payload.matchCount ?? payload.items.length} 条原始匹配</small></div><label className="search-sort">排序<select value={sort} onChange={event => setSort(event.target.value)}><option value="relevance">匹配度</option><option value="latest">最近更新</option><option value="title">标题 A–Z</option></select></label></header>
+        <header><div><span>// RESULTS</span><h2>{loading ? "正在整理结果…" : `${visibleItems.length} 项匹配内容`}</h2><small>按 AI 讲堂、设计工具与案例社区分组 · {payload.matchCount ?? payload.items.length} 条原始匹配</small></div><label className="search-sort">排序<select value={sort} onChange={event => setSort(event.target.value)}><option value="relevance">匹配度</option><option value="latest">最近更新</option><option value="title">标题 A–Z</option></select></label></header>
         {loading ? <div className="search-state"><SpinnerGap className="spin" size={34} /><strong>正在搜索 ArtEdu</strong><p>正在汇总课程、工作流与案例内容。</p></div> : visibleItems.length ? <div className="search-result-groups">{groupedItems.map(group => <section className="search-result-group" key={group.type}><h3>{TYPE_META[group.type].label}<span>{group.items.length} 项</span></h3><div className="search-result-list">{group.items.map((item, index) => <SearchCard key={`${item.type}-${item.id}`} item={item} index={index} onOpen={() => onNavigate(item.route ?? TYPE_META[item.type].route)} />)}</div></section>)}</div> : <div className="search-state"><MagnifyingGlass size={38} weight="thin" /><strong>没有找到匹配内容</strong><p>尝试减少筛选条件，或搜索“AI 设计”“传统纹样”“网页”等关键词。</p><button onClick={() => { clearFilters(); setDraft(""); onSearch(""); }}>重置关键词与筛选</button></div>}
       </div>
     </div>
@@ -133,18 +151,27 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
 
 function SearchCard({ item, index, onOpen }) {
   const { Icon, label } = TYPE_META[item.type];
+  // 无上传封面的课程生成与卡片同宽高的标题图，避免 object-fit 裁掉中英文标题。
+  const visual = item.type === "course" ? coverImageFor(item, 220, 230) : item.type === "work" ? item.previewUrl : null;
+  const visibleTags = [...new Set([item.category, ...(item.methods ?? []), ...(item.tags ?? [])].filter((value) => value && !MODULE_LABELS.has(value)))].slice(0, 4);
   return <article className={`search-card search-card--${index % 3}`}>
-    <div className="search-card__visual"><Icon size={33} weight="thin" /><span>{String(index + 1).padStart(2, "0")}</span></div>
-    <div className="search-card__body"><div className="search-card__type"><b>{label}</b><span>{item.category}</span></div><h3>{item.title}</h3><p>{item.summary || "该内容暂未填写简介。"}</p><div className="search-card__tags">{item.tags.slice(0, 5).map((itemTag) => <span key={itemTag}>{itemTag}</span>)}</div>{((item.methods?.length ?? 0) > 0 || (item.tools?.length ?? 0) > 0) && <small className="search-card__facets">{item.methods?.length ? `方法：${item.methods.join("、")}` : ""}{item.tools?.length ? `${item.methods?.length ? " · " : ""}工具：${item.tools.join("、")}` : ""}</small>}<footer><small>作者 / {item.author}</small><button onClick={onOpen}>进入{label} <ArrowRight size={16} weight="bold" /></button></footer></div>
+    <div className={`search-card__visual ${visual ? "has-image" : ""}`}>{visual ? <img src={visual} alt={`${item.title}封面`} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = titleCoverDataUrl(item.title, 220, 230); }} /> : <div className="search-card__placeholder"><Icon size={34} weight="light" /><span>{item.title}</span></div>}</div>
+    <div className="search-card__body">
+      <div className="search-card__type"><b>{label}</b><span>{item.type === "course" ? `${item.lessonCount ?? 0} 个课时 · ${difficultyName(item.difficulty)}` : item.category}</span></div>
+      <h3>{item.title}</h3><p>{item.summary || "该内容暂未填写简介。"}</p>
+      <div className="search-card__tags">{visibleTags.map((itemTag) => <span key={itemTag}>{itemTag}</span>)}</div>
+      <div className="search-card__details"><span><strong>{item.type === "course" ? "授课作者" : "创作者"}</strong>{item.author}</span>{item.tools?.length > 0 && <span><strong>创作工具</strong>{item.tools.slice(0, 3).join(" · ")}{item.tools.length > 3 ? ` 等 ${item.tools.length} 种` : ""}</span>}</div>
+      <footer><button onClick={onOpen}>{item.type === "course" ? "查看课程" : item.type === "work" ? "查看案例" : "查看设计工具"} <ArrowRight size={16} weight="bold" /></button></footer>
+    </div>
   </article>;
 }
 
 function fallbackSearch(query, data) {
   const keyword = query.trim().toLowerCase();
   const candidates = [
-    ...(data.courses ?? []).map((item) => ({ id: item.id, type: "course", title: item.title, summary: item.summary, category: item.category ?? "课程", author: item.author ?? "ArtEdu 教学团队", methods: [item.method].filter(Boolean), tools: item.tools ?? [], updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["教学资源", item.method, item.category, ...(item.tools ?? [])].filter(Boolean), route: "/learning" })),
-    ...(data.workflows ?? []).map((item) => ({ id: item.id, type: "workflow", title: item.name, summary: item.description, category: item.category ?? "工作流", author: "ArtEdu 教学团队", methods: item.methods ?? [], tools: item.tools ?? [], updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["工作流", item.category].filter(Boolean), route: "/studio" })),
-    ...(data.works ?? []).map((item) => ({ id: item.id, type: "work", title: item.title, summary: item.summary, category: item.discipline ?? "案例", author: item.author ?? "ArtEdu 用户", methods: item.methods ?? [], tools: item.tools ?? [], updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["案例社区", item.discipline].filter(Boolean), route: "/community" })),
+    ...(data.courses ?? []).map((item) => ({ id: item.id, type: "course", title: item.title, summary: item.summary, category: item.category ?? "课程", author: item.author ?? item.creatorName, methods: [item.method].filter(Boolean), tools: item.tools ?? [], coverUrl: item.coverUrl, coverImageUrl: item.coverImageUrl, difficulty: item.difficulty, lessonCount: item.lessonCount, updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["AI 讲堂", item.method, item.category, ...(item.tools ?? [])].filter(Boolean), route: `/learning?course=${encodeURIComponent(item.id)}` })),
+    ...(data.workflows ?? []).map((item) => ({ id: item.id, type: "workflow", title: item.name, summary: item.description, category: item.category ?? "工作流", author: "ArtEdu 教学团队", methods: item.methods ?? [], tools: item.tools ?? [], updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["设计工具", item.category].filter(Boolean), route: "/studio" })),
+    ...(data.works ?? []).map((item) => ({ id: item.id, type: "work", title: item.title, summary: item.summary, category: item.discipline ?? "案例", author: item.author ?? "ArtEdu 用户", methods: item.methods ?? [], tools: item.tools ?? [], previewUrl: item.previewUrl, updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["案例社区", item.discipline].filter(Boolean), route: "/community" })),
   ];
   const items = keyword ? candidates.filter((item) => `${item.title}${item.summary}${item.category}${item.author}${item.tags.join("")}`.toLowerCase().includes(keyword)) : [];
   return { query, items, matchCount: items.length, counts: { all: items.length }, availableTags: [...new Set(items.flatMap((item) => item.tags))] };
