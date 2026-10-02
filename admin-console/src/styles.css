@@ -2083,6 +2083,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 /* Learning loop cards: make the lesson sequence, exercise and completion gate explicit. */
 .lesson-card { padding: 20px; display: grid; gap: 16px; background: #fff; border: 1px solid #e5e5e2; border-radius: 16px; }
+.lesson-card { scroll-margin-top: 120px; }
+.lesson-card.lesson-card--recommended { border-color: #9bb6a8; box-shadow: 0 0 0 3px #edf4ef; }
+.lesson-list article > .lesson-card__recommendation-label { justify-self: start; padding: 6px 10px; border-radius: 7px; color: #42634f; background: #edf4ef; font-size: 12px; font-weight: 500; }
 .lesson-card__heading { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; align-items: start; gap: 13px; }
 .lesson-card__heading > span { width: 34px; height: 34px; display: grid; place-items: center; color: #fff; background: #202124; border-radius: 10px; font-weight: 700; }
 .lesson-card__heading > div { display: grid; gap: 5px; }.lesson-card__heading small { color: #777; font-size: 12px; }.lesson-card__heading strong { font-size: 17px; }.lesson-card__heading p, .lesson-card__section p, .lesson-card__submission p { margin: 0; color: #68696d; line-height: 1.65; }.lesson-card__heading > em { color: #6b6c70; font-size: 12px; font-style: normal; }

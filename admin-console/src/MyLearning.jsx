@@ -141,7 +141,7 @@ export function MyLearning({ account, onNavigate, onNotice }) {
 
       <div id="learning-view-content" className="learning-content" aria-busy={loading}>
         {loading ? <LearningLoading /> : loadError ? <LearningLoadError message={loadError} onRetry={load} /> : <>
-          {view === "graph" && <LearningGraph data={data} displayName={displayName} onNavigate={onNavigate} onView={setView} />}
+          {view === "graph" && <LearningGraph data={data} onNavigate={onNavigate} onView={setView} />}
           {view === "overview" && <Overview data={data} recentResources={recentResources} displayName={displayName} onView={setView} onToggleTask={toggleTask} onNavigate={onNavigate} />}
           {view === "courses" && <CoursesView courses={data.courses} onNavigate={onNavigate} />}
           {view === "plan" && <PlanView tasks={data.tasks} form={taskForm} setForm={setTaskForm} saving={saving} onSubmit={addTask} onToggle={toggleTask} onDelete={removeTask} />}

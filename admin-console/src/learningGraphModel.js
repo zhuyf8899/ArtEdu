@@ -34,7 +34,7 @@ export function buildLearningGraph(data) {
   if (!notes.length && courses.length && recommendations.length < 2) recommendations.push({ title: "记录一条学习笔记", reason: "已开始课程学习，但还没有笔记。写下方法与疑问，便于下次复习。", action: "写学习笔记", view: "notes" });
 
   return {
-    courses, tasks, notes, works, runs, events,
+    courses, tasks, notes, works, runs, events, lessons: asList(data?.learningLessons),
     recommendations: recommendations.slice(0, 2),
     summary: {
       courseCount: courses.length,
@@ -50,6 +50,134 @@ export function buildLearningGraph(data) {
       practiceTaskCount: practiceTasks.length,
     },
   };
+}
+
+const titleOf = (item, fallback) => typeof item?.title === "string" && item.title.trim() ? item.title.trim() : fallback;
+const courseHref = (id, lessonId) => id ? `/learning?course=${encodeURIComponent(id)}${lessonId ? `&lesson=${encodeURIComponent(lessonId)}` : ""}` : "/learning";
+const runHref = (run) => run?.workflowId && run?.id ? `/studio?workflow=${encodeURIComponent(run.workflowId)}&run=${encodeURIComponent(run.id)}` : "/studio";
+const unique = (values) => [...new Set(values.filter((value) => typeof value === "string" && value.trim()).map((value) => value.trim()))];
+
+// The stage goals are cumulative milestones, not a claim about when a record was created.
+// Never turn a joined course, an unfinished lesson, or a workflow name into mastered knowledge.
+export function buildLearningOrbitContent(graph, framework) {
+  const completedLessons = graph.lessons.filter((lesson) => asNumber(lesson.progressPercent) >= 100);
+  const pendingLessons = graph.lessons.filter((lesson) => asNumber(lesson.progressPercent) < 100);
+  const completedCourses = graph.courses.filter((course) => asNumber(course.lessonCount) > 0 && asNumber(course.completedLessons) >= asNumber(course.lessonCount));
+  const activeCourses = graph.courses.filter((course) => !completedCourses.includes(course));
+  const tasks = graph.tasks.filter((task) => task.taskType !== "lesson");
+  const doneTasks = tasks.filter((task) => task.status === "completed");
+  const pendingTask = tasks.find((task) => task.status === "pending");
+  const doneRuns = graph.runs.filter((run) => run.status === "completed");
+  const distinctRuns = [...new Map(graph.runs.filter((run) => run.workflowId).map((run) => [run.workflowId, run])).values()];
+  const pendingRun = graph.runs.find((run) => !["completed", "failed", "cancelled"].includes(run.status));
+  const lessonTopics = (lessons) => unique(lessons.flatMap((lesson) => [lesson.title, ...asList(lesson.learningSteps)]));
+  const nextLesson = (courseId) => pendingLessons.find((lesson) => !courseId || lesson.courseId === courseId);
+  const lessonNext = (lesson, fallback) => lesson
+    ? { title: titleOf(lesson, "继续下一课时"), text: `待学内容：${unique([lesson.title, ...asList(lesson.learningSteps)]).join("、")}。来自「${lesson.courseTitle || "已选课程"}」。`, action: courseHref(lesson.courseId, lesson.id) }
+    : { title: fallback, text: "前往 AI 讲堂选择适合当前方向的课程；尚未配置的知识点不会显示为已学。", action: "/learning" };
+  const result = {};
+  framework.stages.forEach((stage, index) => {
+    const course = index === 3 ? completedCourses[1] ?? graph.courses.find((item) => item !== completedCourses[0] && item !== activeCourses[0])
+      : index === 2 ? completedCourses[0] ?? activeCourses[0] : graph.courses[index] ?? graph.courses[0];
+    const courseLessons = graph.lessons.filter((lesson) => lesson.courseId === course?.id && asNumber(lesson.progressPercent) >= 100);
+    const courseKnowledge = lessonTopics(courseLessons);
+    const activeLesson = graph.lessons.find((lesson) => lesson.courseId === course?.id && asNumber(lesson.progressPercent) > 0 && asNumber(lesson.progressPercent) < 100);
+    const courseStatus = !course ? "待选课程" : completedCourses.includes(course) ? "课程已完成" : asNumber(course.progressPercent) > 0 || asNumber(course.completedLessons) > 0 ? "正在学习" : "已加入课程";
+    const map = {
+      headline: titleOf(course, index === 3 ? "探索第二门课程" : index >= 2 ? "选择进阶课程" : "选择入门课程"),
+      topic: courseKnowledge.length ? `已学：${courseKnowledge[0]}` : activeLesson ? `在学：${activeLesson.title}` : course ? "课时内容待学习" : "建立学习主线",
+      recordLabel: courseStatus,
+      records: course ? [{ title: course.title, detail: `${asNumber(course.completedLessons)} / ${asNumber(course.lessonCount)} 节已完成`, action: courseHref(course.id) }] : [],
+      knowledge: courseKnowledge,
+      next: lessonNext(nextLesson(course?.id), index >= 2 ? "探索新的课程方向" : "开始第一门课程"),
+      action: courseHref(course?.id),
+      source: course ? { kind: "course", id: course.id } : null,
+    };
+    if (index === 1 && course) map.recordLabel = `已学 ${graph.summary.completedLessons} / 3 课时`;
+    if (index >= 2) {
+      map.recordLabel = `完成 ${graph.summary.completedCourseCount} / ${index === 2 ? 1 : 2} 门`;
+      if (nextLesson(course?.id)) map.topic = `下一课：${nextLesson(course?.id).title}`;
+    }
+    let ability;
+    if (index === 0 || index === 3) {
+      const lesson = index === 0 ? completedLessons[0] ?? pendingLessons[0] : completedLessons[7] ?? pendingLessons[0] ?? completedLessons.at(-1);
+      const completed = lesson && asNumber(lesson.progressPercent) >= 100;
+      ability = {
+        headline: titleOf(lesson, index === 0 ? "学习第一节课" : "深化课程实践"),
+        topic: lesson ? `${completed ? "已学" : asNumber(lesson.progressPercent) > 0 ? "在学" : "待学"}：${asList(lesson.learningSteps)[0] || lesson.title}` : "知识内容待选择",
+        recordLabel: completed ? "已学课时" : lesson && asNumber(lesson.progressPercent) > 0 ? "课时学习中" : "待学课时",
+        records: lesson ? [{ title: lesson.title, detail: `${lesson.courseTitle || "课程"} · ${asNumber(lesson.progressPercent)}%`, action: courseHref(lesson.courseId) }] : [],
+        knowledge: completed ? lessonTopics([lesson]) : [],
+        next: lessonNext(pendingLessons[0], "学习一个新的艺术课题"),
+        action: courseHref(lesson?.courseId, lesson?.id),
+        source: lesson ? { kind: "lesson", id: lesson.id, courseId: lesson.courseId, workflowId: lesson.workflowId } : null,
+      };
+      if (index === 3) ability.recordLabel = `已学 ${graph.summary.completedLessons} / 8 课时`;
+    } else {
+      const task = doneTasks[index - 1] ?? pendingTask ?? doneTasks[0];
+      const completed = task?.status === "completed";
+      ability = {
+        headline: titleOf(task, index === 1 ? "完成一次实践任务" : "验证另一种创作方法"),
+        topic: "通过实践验证所学",
+        recordLabel: completed ? "任务已完成" : "待完成任务",
+        records: task ? [{ title: task.title, detail: completed ? "学习任务已完成" : "学习任务待完成", action: "plan" }] : [],
+        knowledge: [],
+        next: { title: titleOf(pendingTask, "安排一项创作练习"), text: pendingTask ? "完成学习计划中的待办任务，再记录自己的方法和结果。" : "在学习计划中安排一个具体练习，将课程方法用于作品。", action: "plan" },
+        action: "plan",
+        source: task ? { kind: "task", id: task.id } : null,
+      };
+      ability.recordLabel = `完成 ${doneTasks.length} / ${index === 1 ? 1 : 2} 项`;
+      if (doneTasks.length < (index === 1 ? 1 : 2)) {
+        ability.headline = titleOf(pendingTask, index === 1 ? "完成一次实践任务" : "验证另一种创作方法");
+        ability.topic = doneTasks[0] ? `已做：${titleOf(doneTasks[0], "学习任务")}` : "把所学用于创作";
+      }
+    }
+    const run = index === 0 ? graph.runs[0] : index === 2 ? distinctRuns[1] : doneRuns[index === 3 ? 3 : 0] ?? pendingRun ?? graph.runs[0];
+    const tools = {
+      headline: run?.workflowName || (index >= 2 ? "尝试另一种工作流" : "体验创作工作流"),
+      topic: run?.category || "平台内创作实践",
+      recordLabel: run?.status === "completed" ? "工作流已完成" : run ? "已尝试工作流" : "待体验工作流",
+      records: run ? [{ title: run.workflowName || "平台工作流", detail: run.status === "completed" ? "已完成" : run.status === "failed" ? "未成功完成" : "有运行记录，尚未完成", action: runHref(run) }] : [],
+      knowledge: [],
+      next: { title: pendingRun?.workflowName || (index >= 2 ? "对比一种新的创作工作流" : "完成一次工作流实践"), text: pendingRun ? "继续未完成的工作流，并回看每一步的输入和输出。" : "进入设计工具选择工作流，将所学方法转化为实际结果；外部工具使用尚未接入。", action: pendingRun ? runHref(pendingRun) : "/studio" },
+      action: run ? runHref(run) : "/studio",
+      source: run ? { kind: "run", id: run.id, workflowId: run.workflowId } : null,
+    };
+    if (index === 2) tools.recordLabel = `尝试 ${distinctRuns.length} / 2 种`;
+    if (index === 3) {
+      tools.recordLabel = `完成 ${doneRuns.length} / 4 次`;
+      if (doneRuns.length < 4) {
+        tools.headline = pendingRun?.workflowName || "对比不同创作方案";
+        tools.topic = run?.workflowName ? `已用：${run.workflowName}` : "反复验证方法";
+      }
+    }
+    const isNotes = index < 2;
+    const growthRecord = isNotes ? graph.notes[index] ?? graph.notes[0] : graph.works[index - 2] ?? graph.works[0];
+    const growth = {
+      headline: titleOf(growthRecord, isNotes ? "写下学习观察" : "保存一件个人作品"),
+      topic: growthRecord ? isNotes ? growthRecord.courseTitle || "方法与创作反思" : growthRecord.discipline || "个人创作记录" : isNotes ? "记录方法与疑问" : "把所学转化为作品",
+      recordLabel: growthRecord ? isNotes ? "已写学习笔记" : "已保存作品" : isNotes ? "待记录笔记" : "待保存作品",
+      records: (isNotes ? graph.notes : graph.works).map((item) => ({ title: titleOf(item, "未命名记录"), detail: isNotes ? item.courseTitle || "学习笔记" : item.status === "approved" ? "已发布作品" : "已保存作品，未发布", action: isNotes ? "notes" : "works" })),
+      knowledge: [],
+      next: { title: isNotes ? "记录下一次学习的收获" : "保存作品并写一条复盘", text: isNotes ? "写下本次课程或工作流中的观察、方法与待解决的问题。" : "将实践结果保存为作品，再用笔记说明方法和改进方向。", action: isNotes ? "notes" : "works" },
+      action: isNotes ? "notes" : "works",
+      source: growthRecord ? { kind: isNotes ? "note" : "work", id: growthRecord.id, courseId: growthRecord.courseId, lessonId: growthRecord.lessonId } : null,
+    };
+    if (index === 1) {
+      growth.recordLabel = `已写 ${graph.notes.length} / 2 篇`;
+      if (graph.notes.length < 2) {
+        growth.headline = "再写一篇学习复盘";
+        growth.topic = growthRecord ? `已有：${growthRecord.title}` : "记录工具与方法";
+      }
+    }
+    if (index === 3) {
+      growth.recordLabel = "作品与反思积累";
+      growth.headline = stage.cells[3].ratio < 1 ? "持续创作与复盘" : titleOf(growthRecord, "持续创作与复盘");
+      growth.topic = `作品 ${graph.works.length} / 2 · 笔记 ${graph.notes.length} / 3`;
+    }
+    result[stage.id] = [map, ability, tools, growth];
+  });
+  return result;
 }
 
 function makeCell(title, value, target, unit, nextStep, action, display) {

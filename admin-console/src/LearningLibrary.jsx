@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowsOutSimple, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, UserCircle, Wrench, X } from "@phosphor-icons/react";
 import { enrollCourse, getCourse, getCourses, getMyWorks, submitLessonWork, updateLessonProgress } from "./services/adminApi.js";
@@ -7,7 +7,7 @@ import { decorateCourse, difficultyName } from "./coursePresentation.js";
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
 
-export function LearningLibrary({ onNotice, initialCourseId = "" }) {
+export function LearningLibrary({ onNotice, initialCourseId = "", initialLessonId = "" }) {
   const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -19,6 +19,8 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
   // 学习闭环：本课时的作品关联与"我已完成本课时要求"的确认勾选。
   const [myWorks, setMyWorks] = useState([]);
   const [completionChecks, setCompletionChecks] = useState({});
+  const lessonNodes = useRef(new Map());
+  const courseRequest = useRef(0);
 
   const loadCatalog = async () => {
     setCatalogLoading(true);
@@ -37,17 +39,25 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
    * 现在放回它该在的位置。
    */
   useEffect(() => {
-    if (initialCourseId && !selected && !loading) void openCourse(initialCourseId);
+    if (initialCourseId && selected?.id !== initialCourseId) void openCourse(initialCourseId);
   }, [initialCourseId]);
 
+  // Deep links focus only a published lesson returned by this course, never another course's ID.
+  useEffect(() => {
+    const target = selected?.id === initialCourseId && lessonNodes.current.get(initialLessonId);
+    if (target) { target.scrollIntoView({ block: "start" }); target.focus({ preventScroll: true }); }
+  }, [selected?.id, initialCourseId, initialLessonId]);
+
   const openCourse = async (courseId) => {
+    const requestId = ++courseRequest.current;
     setLoading(true);
     try {
       const [course, works] = await Promise.all([getCourse(courseId), getMyWorks()]);
+      if (requestId !== courseRequest.current) return;
       setSelected(decorateCourse(course)); setMyWorks(works.items ?? []); setCompletionChecks({});
     }
-    catch (error) { onNotice(error.message); }
-    finally { setLoading(false); }
+    catch (error) { if (requestId === courseRequest.current) onNotice(error.message); }
+    finally { if (requestId === courseRequest.current) setLoading(false); }
   };
 
   const enroll = async () => {
@@ -94,7 +104,8 @@ export function LearningLibrary({ onNotice, initialCourseId = "" }) {
     <button className="learning-back" onClick={() => setSelected(null)}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
     <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟 · {selected.lessonCount} 个课时 · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div><aside><strong>{selected.progressPercent}%</strong><span>学习进度</span><i><b style={{ width: `${selected.progressPercent}%` }} /></i>{selected.enrollmentStatus ? <em>已加入学习</em> : <button disabled={loading} onClick={enroll}><PlayCircle size={18} weight="fill" /> 加入课程</button>}</aside></div>
     {/* 课时卡把"分步学习 → 练习 → 完成标准 →（可选）关联作品 → 确认完成"整条闭环摆出来。 */}
-    <div className="lesson-list">{selected.lessons.map((lesson, index) => <article className="lesson-card" key={lesson.id}>
+    <div className="lesson-list">{selected.lessons.map((lesson, index) => <article className={`lesson-card ${lesson.id === initialLessonId ? "lesson-card--recommended" : ""}`} key={lesson.id} tabIndex={-1} ref={(node) => { if (node) lessonNodes.current.set(lesson.id, node); else lessonNodes.current.delete(lesson.id); }}>
+      {lesson.id === initialLessonId && <span className="lesson-card__recommendation-label">本次推荐课时 · 从这里继续学习</span>}
       <div className="lesson-card__heading"><span>{String(index + 1).padStart(2, "0")}</span><div><small>{lesson.lessonType === "workflow" ? "AI 工作流实践" : lesson.lessonType === "practice" ? "动手练习" : lesson.lessonType === "assignment" ? "课时作业" : "课程课时"} · {lesson.estimatedMinutes} 分钟</small><strong>{lesson.title}</strong><p>{lesson.summary}</p></div><em>{lesson.progressPercent >= 100 ? "已完成" : `${lesson.progressPercent ?? 0}%`}</em></div>
       {!!lesson.learningSteps?.length && <section className="lesson-card__section"><strong>学习步骤</strong><ol>{lesson.learningSteps.map((step, stepIndex) => <li key={`${stepIndex}-${step}`}>{step}</li>)}</ol></section>}
       {lesson.practiceTask && <section className="lesson-card__section"><strong>练习任务</strong><p>{lesson.practiceTask}</p></section>}
