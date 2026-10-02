@@ -85,7 +85,7 @@ export function LocalLogin({ onLogin }) {
   </main>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", studioWorkflowId = "", studioRunId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", learningLessonId = "", studioWorkflowId = "", studioRunId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -236,7 +236,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
-        {section === "courses" && <LearningLibrary initialCourseId={learningCourseId} onNotice={showToast} />}
+        {section === "courses" && <LearningLibrary initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNotice={showToast} />}
 
         {section === "studio" && <WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
