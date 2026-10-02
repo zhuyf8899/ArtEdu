@@ -48,7 +48,7 @@ test("一键跑到底：提示词直接读节点默认值，不再停下来让�
   // 画布上的试运行同样要自动往下执行，不再要求点「执行当前节点」。
   const admin = await read("WorkflowAdmin.jsx");
   assert.ok(admin.includes("autoAdvanced"), "画布要有一键跑到底的自动推进");
-  assert.match(admin, /if \(node\.type === "input" && !String\(node\.data\?\.value \?\? ""\)\.trim\(\) && !nodesCarryPrompt\(editor\.definition\.nodes\)\) return;/);
+  assert.match(admin, /if \(node\.type === "input" && !String\(node\.data\?\.value \?\? ""\)\.trim\(\) && !nodesCarryPrompt\(runNodes\)\) return;/);
   assert.ok(admin.includes("void executeCurrentNode()"), "自动推进要真的执行当前节点");
 });
 
@@ -58,7 +58,14 @@ test("编辑器页不会因为旧守卫把自动推进掐断", async () => {
   // 否则自动推进去执行时会被直接 return 掉，运行永远停在 0%（只有 start 事件）。
   assert.match(
     admin,
-    /if \(activeNode\.type === "input" && !runPrompt\.trim\(\) && !String\(activeNode\.data\.value \|\| ""\)\.trim\(\) && !nodesCarryPrompt\(editor\.definition\.nodes\)\) \{/,
+    /if \(activeNode\.type === "input" && !runPrompt\.trim\(\) && !String\(activeNode\.data\.value \|\| ""\)\.trim\(\) && !nodesCarryPrompt\(runNodes\)\) \{/,
   );
   assert.ok(!/if \(activeNode\.type === "input" && !runPrompt\.trim\(\) && !String\(activeNode\.data\.value \|\| ""\)\.trim\(\)\) \{ onNotice/.test(admin), "不能只按输入节点自身判断");
+});
+
+test("恢复旧任务时按运行快照读取节点参数", async () => {
+  const admin = await read("WorkflowAdmin.jsx");
+  assert.ok(admin.includes("const runNodes = run?.nodes?.length ? run.nodes : editor.definition.nodes"));
+  assert.ok(admin.includes("const node = runNodes.find"));
+  assert.ok(admin.includes("getWorkflowRun(item.id)"));
 });

@@ -67,10 +67,19 @@ const workflowEdgeSchema = z.object({
   targetHandle: z.string().trim().min(1).max(80).optional(),
 });
 
+const workflowGroupSchema = z.object({
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(80),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#9ed85b"),
+  nodeIds: z.array(z.string().trim().min(1).max(80)).min(2).max(80),
+});
+
 export const workflowDefinitionSchema = z.object({
   schemaVersion: z.literal(2).default(2),
   nodes: z.array(workflowNodeSchema).min(1).max(80),
   edges: z.array(workflowEdgeSchema).max(160).default([]),
+  // 视觉分组随版本保存，但不参与节点执行。
+  groups: z.array(workflowGroupSchema).max(20).default([]),
   viewport: z.object({ x: z.number().finite(), y: z.number().finite(), zoom: z.number().positive().max(4) }).default({ x: 0, y: 0, zoom: 1 }),
 }).superRefine((definition, context) => {
   const nodeIds = new Set<string>();
@@ -84,6 +93,12 @@ export const workflowDefinitionSchema = z.object({
     edgeIds.add(edge.id);
     if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "连线必须连接到已有节点" });
     if (edge.source === edge.target) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "节点不能连接到自身" });
+  }
+  const groupIds = new Set<string>();
+  for (const group of definition.groups) {
+    if (groupIds.has(group.id)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["groups"], message: "分组 ID 不能重复" });
+    groupIds.add(group.id);
+    if (new Set(group.nodeIds).size !== group.nodeIds.length || group.nodeIds.some((id) => !nodeIds.has(id))) context.addIssue({ code: z.ZodIssueCode.custom, path: ["groups"], message: "分组只能包含不重复的现有节点" });
   }
   const outgoing = new Map([...nodeIds].map((id) => [id, [] as string[]]));
   for (const edge of definition.edges) outgoing.get(edge.source)?.push(edge.target);

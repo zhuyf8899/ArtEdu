@@ -77,9 +77,12 @@ async function main() {
             continue;
           }
 
-          const storageKey = `${randomUUID()}-${randomUUID()}`;
-          const targetPath = path.join(uploadRoot, storageKey);
+          // 平台读取课件时要求存储键形如 admin/courses/<courseId>/<uuid>-<uuid>；
+          // 早期写成裸 UUID 会被 courses.service 的存储记录校验拒绝，预览与下载一律 404。
+          const storageKey = `admin/courses/${courseId}/${randomUUID()}-${randomUUID()}`;
+          const targetPath = path.join(uploadRoot, ...storageKey.split("/"));
           const metadata = await stat(sourcePath);
+          await mkdir(path.dirname(targetPath), { recursive: true, mode: 0o700 });
           await copyFile(sourcePath, targetPath);
           try {
             await client.query(`

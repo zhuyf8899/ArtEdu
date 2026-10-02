@@ -46,7 +46,7 @@ function formatLastActive(value) {
 }
 
 function AppLogo() {
-  return <div className="brand"><div className="brand__mark">A</div><div><strong>AIGC 管理台</strong><span>清华美院 AI 实验场</span></div></div>;
+  return <div className="brand"><div className="brand__mark">A</div><div><strong>ArtEdu 管理台</strong><span>清华美院 AI 艺术教育平台</span></div></div>;
 }
 
 function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items, actor, onBack, dashboard }) {
@@ -59,8 +59,9 @@ function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items,
         {items.map((item, index) => { const Icon = item.icon; return <button key={item.id} className={section === item.id ? "is-active" : ""} onClick={() => { onSectionChange(item.id); onClose(); }}><span className="side-nav__index">0{index + 1}</span><Icon size={20} weight={section === item.id ? "fill" : "regular"} /><span>{item.label}</span>{item.id === "reviews" && <b>{pendingCount}</b>}</button>; })}
       </nav>
       {/* 管理台是独立页面，站点顶栏不在场：这里必须留一个明确的「返回首页」入口。 */}
-      <button className="sidebar__back" onClick={onBack}>← 返回首页（ArtEdu 测试站）</button>
-      <div className="sidebar__notice"><div className="sidebar__notice-label"><Sparkle size={15} weight="fill" /> 系统状态</div><strong>本地模型执行未启用</strong><div className="status-line"><span /> {dashboard ? `${dashboard.activeModels} 个模型配置已启用` : "正在读取模型配置"}</div></div>
+      <button className="sidebar__back" onClick={onBack}>← 返回 ArtEdu 首页</button>
+      {/* 状态文案跟随真实模型配置数量，不再写死成"未启用"——否则与用户端实际可用的模型自相矛盾。 */}
+      <div className="sidebar__notice"><div className="sidebar__notice-label"><Sparkle size={15} weight="fill" /> 系统状态</div><strong>{dashboard ? (dashboard.activeModels > 0 ? "模型服务已接入" : "模型服务未启用") : "正在读取模型配置"}</strong><div className="status-line"><span /> {dashboard ? `${dashboard.activeModels} 个模型配置已启用` : "正在读取模型配置"}</div></div>
       <div className="sidebar__account"><div className="avatar avatar--light">{actor?.shortName?.slice(0, 1) ?? "管"}</div><div><strong>{actor?.shortName ?? "平台管理员"}</strong><span>{actor?.roleLabel ?? "管理员"}</span></div><CaretDown size={16} weight="bold" /></div>
     </aside>
   </>;
@@ -118,7 +119,9 @@ function Overview({ users, reviews, dashboard, onNavigate, onEditQuota }) {
     </section>
     <section className="overview-grid">
       <article className="panel usage-panel"><div className="panel__heading"><div><p>// API USAGE</p><h2>调用统计</h2></div><span className="live-chip">数据库实时</span></div><div className="usage-summary"><strong>{formatCount(dashboard?.todayApiCalls)}</strong><span>次调用 · 今日</span></div><div className="usage-chart" aria-label="最近八小时 API 调用趋势">{hourlyUsage.map((item) => <div key={item.hour} title={`${new Date(item.hour).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}：${item.calls} 次`}><i style={{ height: `${Math.max(5, Math.round(Number(item.calls) / maxHourlyUsage * 100))}%` }} /><span>{new Date(item.hour).getHours().toString().padStart(2, "0")}</span></div>)}</div><small className="usage-chart__caption">最近 8 小时 · 成功调用</small></article>
-      <article className="panel model-panel"><div className="panel__heading"><div><p>// MODEL STATUS</p><h2>模型服务</h2></div><span className="live-chip"><i /> {dashboard ? `${dashboard.activeModels} 个配置已启用` : "读取中"}</span></div><div className="empty-state"><Robot size={28} /><strong>外部模型执行未接入</strong><span>用户端仍可使用本地演示流程；接入密钥与执行器后再开放真实生成。</span></div></article>
+      <article className="panel model-panel"><div className="panel__heading"><div><p>// MODEL STATUS</p><h2>模型服务</h2></div><span className="live-chip"><i /> {dashboard ? `${dashboard.activeModels} 个配置已启用` : "读取中"}</span></div>{dashboard && dashboard.activeModels > 0
+        ? <div className="empty-state"><Robot size={28} /><strong>模型服务已接入</strong><span>创作问答、图案生成与文档导出统一走平台服务端入口，供应商密钥只保存在服务端环境变量。</span></div>
+        : <div className="empty-state"><Robot size={28} /><strong>模型服务未启用</strong><span>用户端仍可使用本地演示流程；接入密钥与执行器后再开放真实生成。</span></div>}</article>
       <article className="panel review-panel"><div className="panel__heading"><div><p>// REVIEW QUEUE</p><h2>最新待审核</h2></div><button className="text-button" onClick={() => onNavigate("reviews")}>全部审核 <ArrowRight size={16} weight="bold" /></button></div><div className="review-list">{reviews.filter((item) => item.status === "pending").slice(0, 3).map((item, index) => <button key={item.id} onClick={() => onNavigate("reviews")}><span className="queue-index">0{index + 1}</span><div><strong>{item.title}</strong><span>{item.author} · {item.department}</span></div><em>{item.submittedAt}</em><ArrowRight size={17} weight="bold" /></button>)}{reviews.every((item) => item.status !== "pending") && <div className="empty-state empty-state--compact"><Check size={26} /><strong>审核队列已清空</strong><span>新的用户投稿会显示在这里。</span></div>}</div></article>
       <article className="panel quota-alerts"><div className="panel__heading"><div><p>// QUOTA ALERTS</p><h2>额度预警</h2></div><button className="text-button" onClick={() => onNavigate("users")}>管理用户 <ArrowRight size={16} weight="bold" /></button></div>{users.filter((user) => user.monthlyLimit > 0 && user.monthlyUsed / user.monthlyLimit >= 0.7).slice(0, 3).map((user) => { const ratio = Math.round((user.monthlyUsed / user.monthlyLimit) * 100); return <div className="quota-alert" key={user.id}><div className="avatar avatar--outline">{user.initials}</div><div className="quota-alert__info"><strong>{user.name}</strong><span>{user.monthlyUsed} / {user.monthlyLimit} 额度</span></div><div className="quota-alert__meter"><div><i style={{ width: `${ratio}%` }} /></div><span>{ratio}%</span></div><button className="small-button" onClick={() => onEditQuota(user)}>调整</button></div>; })}</article>
     </section>

@@ -66,9 +66,9 @@ export function LocalLogin({ onLogin }) {
   return <main className="test-login">
     <section className="test-login__intro">
       <div className="test-login__brand"><span>A</span><strong>ArtEdu</strong></div>
-      <p className="eyebrow">// SECURE LOCAL ACCESS</p>
+      <p className="eyebrow">// WELCOME</p>
       <h1>登录后进入<br />学习与创作空间。</h1>
-      <p>当前为受控的本地账号入口。学校单点登录接入后，将替换为统一认证入口。</p>
+      <p>使用平台账号登录，课程进度、学习笔记与创作记录都会跟随账号保存。</p>
       <div className="test-login__note"><LockKey size={17} weight="bold" /><span>密码不会保存在浏览器；登录会话仅使用 HttpOnly 安全 Cookie。</span></div>
     </section>
     <section className="test-login__accounts">

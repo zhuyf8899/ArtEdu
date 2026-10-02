@@ -703,6 +703,7 @@ export class StudioService {
         schemaVersion: 2,
         nodes: definition.nodes,
         edges: Array.isArray(definition.edges) ? definition.edges : [],
+        groups: Array.isArray(definition.groups) ? definition.groups : [],
         viewport: definition.viewport ?? { x: 0, y: 0, zoom: 1 },
       };
     }
