@@ -153,6 +153,9 @@ echo "[10/14] 备份数据库与上传文件"
 bash deploy/backup-staging.sh "$(pwd -P)/backups/predeploy-$(date +%Y%m%d-%H%M%S)-$$"
 echo "[11/14] 应用数据库迁移"
 "${COMPOSE[@]}" run --rm api npm run db:migrate
+echo "[11b/14] 校验并安装公开案例展示包"
+# 只含已获展示授权的九个案例和图片；重复部署不会覆盖用户上传文件或案例内容。
+"${COMPOSE[@]}" run --rm api npm run showcase:install
 echo "[12/14] 重建 embedding、应用与 RAG Worker"
 "${COMPOSE[@]}" up -d embedding api rag-worker web
 echo "[13/14] 容器状态与健康检查"

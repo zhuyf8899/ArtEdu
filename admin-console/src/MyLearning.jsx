@@ -15,6 +15,7 @@ import {
 } from "./services/adminApi.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { coverImageFor } from "./coverImages.js";
+import { LearningGraph } from "./LearningGraph.jsx";
 
 const COURSE_IMAGES = {
   "course-ai-design-foundation": "/assets/learning/ai-design-foundations.jpg",
@@ -31,6 +32,7 @@ const EMPTY_DATA = {
 };
 
 const VIEWS = [
+  ["graph", "知识图谱", Student],
   ["overview", "学习首页", House],
   ["courses", "我的课程", BookOpenText],
   ["plan", "学习计划", CalendarCheck],
@@ -41,7 +43,7 @@ const VIEWS = [
 
 export function MyLearning({ account, onNavigate, onNotice }) {
   const [data, setData] = useState(EMPTY_DATA);
-  const [view, setView] = useState("overview");
+  const [view, setView] = useState("graph");
   const [loading, setLoading] = useState(true);
   const [taskForm, setTaskForm] = useState({ title: "", dueDate: "" });
   const [noteForm, setNoteForm] = useState({ title: "", content: "", courseId: "" });
@@ -123,21 +125,23 @@ export function MyLearning({ account, onNavigate, onNotice }) {
     } catch (error) { onNotice(error.message); }
   };
 
-  return <section className="my-learning-page">
+  return <section className="my-learning-page my-learning-page--compact">
     <header className="my-learning-heading">
-      <div><p className="eyebrow">// PERSONAL LEARNING SPACE</p><h1>我的学习</h1><p>从下一步开始，课程、练习和作品都在这里。</p></div>
+      <div><p className="eyebrow">// PERSONAL LEARNING SPACE</p><h1>我的学习</h1><p>回看学习路径，管理课程与创作，让每一次探索都有迹可循。</p></div>
       <div className="my-learning-heading__status"><span>已完成课时</span><strong>{data.summary.completedLessons}</strong><em>/ {data.summary.totalLessons} 节</em></div>
     </header>
 
-    <div className="learning-space">
+    {/* All views share the atlas shell; switching content must not restore the legacy sidebar. */}
+    <div className="learning-space learning-space--horizontal">
       <aside className="learning-rail" aria-label="我的学习导航">
         <div className="learning-rail__brand"><Student size={23} weight="duotone" /><div><strong>学习空间</strong><span>YOUR LEARNING SPACE</span></div></div>
-        <nav>{VIEWS.map(([id, label, Icon]) => <button key={id} className={view === id ? "is-active" : ""} onClick={() => setView(id)}><Icon size={17} weight={view === id ? "fill" : "bold"} /><span>{label}</span>{id === "plan" && pendingTasks.length > 0 && <b>{pendingTasks.length}</b>}</button>)}</nav>
+        <nav>{VIEWS.map(([id, label, Icon]) => <button key={id} aria-pressed={view === id} aria-controls="learning-view-content" className={view === id ? "is-active" : ""} onClick={() => setView(id)}><Icon size={20} weight={view === id ? "fill" : "bold"} /><span>{label}</span>{id === "plan" && pendingTasks.length > 0 && <b>{pendingTasks.length}</b>}</button>)}</nav>
         <div className="learning-rail__account"><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><small>{account.roleLabel}</small></div></div>
       </aside>
 
-      <div className="learning-content" aria-busy={loading}>
+      <div id="learning-view-content" className="learning-content" aria-busy={loading}>
         {loading ? <LearningLoading /> : loadError ? <LearningLoadError message={loadError} onRetry={load} /> : <>
+          {view === "graph" && <LearningGraph data={data} onNavigate={onNavigate} onView={setView} />}
           {view === "overview" && <Overview data={data} recentResources={recentResources} displayName={displayName} onView={setView} onToggleTask={toggleTask} onNavigate={onNavigate} />}
           {view === "courses" && <CoursesView courses={data.courses} onNavigate={onNavigate} />}
           {view === "plan" && <PlanView tasks={data.tasks} form={taskForm} setForm={setTaskForm} saving={saving} onSubmit={addTask} onToggle={toggleTask} onDelete={removeTask} />}
@@ -157,16 +161,22 @@ function Overview({ data, recentResources, displayName, onView, onToggleTask, on
   const remainingLessons = nextCourse ? Math.max(0, nextCourse.lessonCount - nextCourse.completedLessons) : 0;
   return <>
     <div className="learning-welcome"><div><span>// YOUR NEXT STEP</span><h2>{displayName}，接下来做什么？</h2><p>先完成一件事，再继续探索。</p></div></div>
+    <div className="learning-overview-stats" aria-label="学习概览">
+      <div><BookOpenText size={22} /><span>我的课程</span><strong>{data.courses.length}<small> 门</small></strong></div>
+      <div><Check size={22} /><span>已完成课时</span><strong>{data.summary.completedLessons}<small> / {data.summary.totalLessons} 节</small></strong></div>
+      <div><CalendarCheck size={22} /><span>待完成任务</span><strong>{data.tasks.filter((task) => task.status === "pending").length}<small> 项</small></strong></div>
+      <div><NotePencil size={22} /><span>学习笔记</span><strong>{data.notes.length}<small> 篇</small></strong></div>
+    </div>
     <section className="learning-next-step">
-      <div><small>{nextCourse ? "继续课程" : "开始学习"}</small><h3>{nextCourse?.title ?? "选择第一门课程"}</h3><p>{nextCourse ? `还剩 ${remainingLessons} 节课时 · 整门课程预计 ${nextCourse.estimatedMinutes} 分钟` : "从教学资源库选择感兴趣的课程。"}</p>
+      <div><small>{nextCourse ? "继续课程" : "开始学习"}</small><h3>{nextCourse?.title ?? "选择第一门课程"}</h3><p>{nextCourse ? `还剩 ${remainingLessons} 节课时 · 整门课程预计 ${nextCourse.estimatedMinutes} 分钟` : "从 AI 讲堂选择感兴趣的课程。"}</p>
         {nextCourse && <span>已完成 {nextCourse.completedLessons} / {nextCourse.lessonCount} 节课时</span>}</div>
       <button onClick={() => onNavigate(nextCourse ? `/learning?course=${encodeURIComponent(nextCourse.id)}` : "/learning")}>{nextCourse ? "继续学习" : "浏览课程"} <ArrowRight size={17} weight="bold" /></button>
     </section>
     <div className="learning-focus-grid">
       <section className="learning-focus-panel"><SectionHeader eyebrow="// TO DO" title="待完成" action="全部计划" onAction={() => onView("plan")} />
         {nextTask ? <TaskRow task={nextTask} onToggle={onToggleTask} /> : <button className="learning-suggestion" onClick={() => onView("plan")}>还没有待办。添加一项今天要完成的练习 <ArrowRight size={15} /></button>}</section>
-      <section className="learning-focus-panel"><SectionHeader eyebrow="// CREATE" title="创作进度" action="工作台" onAction={() => onNavigate("/studio")} />
-        {nextRun ? <button className="learning-suggestion" onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(nextRun.workflowId)}&run=${encodeURIComponent(nextRun.id)}`)}><strong>{nextRun.workflowName}</strong><span>已执行 {nextRun.currentStep} / {nextRun.totalSteps} 个节点 · 继续运行</span><ArrowRight size={15} /></button> : <button className="learning-suggestion" onClick={() => onNavigate("/studio")}>从设计工作台开始一次创作 <ArrowRight size={15} /></button>}</section>
+      <section className="learning-focus-panel"><SectionHeader eyebrow="// CREATE" title="创作进度" action="设计工具" onAction={() => onNavigate("/studio")} />
+        {nextRun ? <button className="learning-suggestion" onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(nextRun.workflowId)}&run=${encodeURIComponent(nextRun.id)}`)}><strong>{nextRun.workflowName}</strong><span>已执行 {nextRun.currentStep} / {nextRun.totalSteps} 个节点 · 继续运行</span><ArrowRight size={15} /></button> : <button className="learning-suggestion" onClick={() => onNavigate("/studio")}>从设计工具开始一次创作 <ArrowRight size={15} /></button>}</section>
     </div>
     {(recentResources.length > 0 || data.favorites.length > 0 || data.workflowRuns.some((run) => run.status === "completed")) && <section className="learning-recent-compact"><SectionHeader eyebrow="// RECENT" title="最近资源与成果" />
       {recentResources.slice(0, 2).map((resource) => <button key={resource.resourceId} onClick={() => onNavigate(`/learning?course=${encodeURIComponent(resource.courseId)}`)}><FileText size={16} /><span>{resource.title}</span><ArrowRight size={15} /></button>)}
@@ -177,7 +187,14 @@ function Overview({ data, recentResources, displayName, onView, onToggleTask, on
 }
 
 function CoursesView({ courses, onNavigate }) {
-  return <><SectionHeader eyebrow="// MY COURSES" title="我的课程" action="发现更多课程" onAction={() => onNavigate("/learning")} />{courses.length ? <div className="my-course-grid">{courses.map((course, index) => <article key={course.id} className="my-course-card"><img src={courseImage(course, index)} alt={`${course.title}课程缩略图`} /><div><span>{course.category} · {course.creatorName}</span><h3>{course.title}</h3><p>{course.summary}</p><div className="course-progress"><i><b style={{ width: `${course.progressPercent}%` }} /></i><strong>{course.progressPercent}%</strong></div><footer><small>{course.completedLessons}/{course.lessonCount} 节课时</small><button onClick={() => onNavigate(`/learning?course=${encodeURIComponent(course.id)}`)}>继续学习 <ArrowRight size={15} /></button></footer></div></article>)}</div> : <EmptyBlock icon={BookOpenText} title="还没有加入课程" text="从资源库选择课程后，你的学习进度会显示在这里。" action="浏览课程" onAction={() => onNavigate("/learning")} />}</>;
+  return <><SectionHeader eyebrow="// MY COURSES" title="我的课程" action="发现更多课程" onAction={() => onNavigate("/learning")} />{courses.length ? <div className="my-course-grid">{courses.map((course, index) => <article key={course.id} className="my-course-card"><div className="my-course-card__cover"><img src={courseImage(course, index)} alt={`${course.title}课程缩略图`} /><CourseStatusBadge course={course} /></div><div className="my-course-card__content"><span>{course.category} · {course.creatorName}</span><h3>{course.title}</h3><p>{course.summary}</p><div className="course-progress"><i><b style={{ width: `${course.progressPercent}%` }} /></i><strong>{course.progressPercent}%</strong></div><footer><small>{course.completedLessons}/{course.lessonCount} 节课时</small><button onClick={() => onNavigate(`/learning?course=${encodeURIComponent(course.id)}`)}>继续学习 <ArrowRight size={15} /></button></footer></div></article>)}</div> : <EmptyBlock icon={BookOpenText} title="还没有加入课程" text="从 AI 讲堂选择课程后，你的学习进度会显示在这里。" action="浏览课程" onAction={() => onNavigate("/learning")} />}</>;
+}
+
+function CourseStatusBadge({ course }) {
+  const completed = course.progressPercent >= 100;
+  const started = course.progressPercent > 0 || course.completedLessons > 0;
+  const Icon = completed ? Check : started ? Clock : BookOpenText;
+  return <span className={`my-course-status ${completed ? "is-completed" : ""}`}><Icon size={14} weight="bold" />{completed ? "已完成" : started ? "进行中" : "未开始"}</span>;
 }
 
 function PlanView({ tasks, form, setForm, saving, onSubmit, onToggle, onDelete }) {
@@ -204,7 +221,7 @@ function CourseRow({ course, index, onNavigate }) {
 
 function TaskRow({ task, compact, onToggle, onDelete }) {
   const autoCompleted = task.taskType === "lesson";
-  return <article className={`learning-task-row ${task.status === "completed" ? "is-complete" : ""} ${compact ? "is-compact" : ""}`}><button className="task-check" disabled={autoCompleted} onClick={() => onToggle(task)} aria-label={autoCompleted ? "课时任务由课程进度自动维护" : task.status === "completed" ? "标记为未完成" : "标记为已完成"}>{task.status === "completed" && <Check size={13} weight="bold" />}</button><div><strong>{task.title}</strong>{!compact && <span>{taskTypeName(task.taskType)} · {task.dueDate ? formatDate(task.dueDate) : "未设置日期"}</span>}</div>{!compact && !autoCompleted && <button className="task-delete" onClick={() => onDelete(task.id)} aria-label={`删除${task.title}`}><Trash size={16} /></button>}</article>;
+  return <article className={`learning-task-row ${task.status === "completed" ? "is-complete" : ""} ${compact ? "is-compact" : ""}`}><button className="task-check" disabled={autoCompleted} onClick={() => onToggle(task)} aria-label={autoCompleted ? "课时任务由课程进度自动维护" : task.status === "completed" ? "标记为未完成" : "标记为已完成"}>{task.status === "completed" && <Check size={13} weight="bold" />}</button><div><strong>{task.title}</strong>{!compact && <span>{taskTypeName(task.taskType)} · {task.dueDate ? formatDate(task.dueDate) : "未设置日期"}</span>}</div>{!compact && !autoCompleted && onDelete && <button className="task-delete" onClick={() => onDelete(task.id)} aria-label={`删除${task.title}`}><Trash size={16} /></button>}</article>;
 }
 
 function WorkMiniCard({ work, index, onClick }) {
@@ -212,7 +229,14 @@ function WorkMiniCard({ work, index, onClick }) {
 }
 
 function SectionHeader({ eyebrow, title, action, onAction }) {
-  return <div className="learning-section-header"><div><span>{eyebrow}</span><h2>{title}</h2></div>{action && <button onClick={onAction}>{action} <ArrowRight size={14} /></button>}</div>;
+  const descriptions = {
+    "我的课程": "按自己的节奏推进课程，随时从上次的进度继续。",
+    "学习计划": "把下一步变成具体任务，逐项完成你的学习目标。",
+    "学习笔记": "记录观察、方法与反思，积累自己的创作方法库。",
+    "收藏案例": "留住启发你的作品，为下一次创作积累灵感。",
+    "我的作品": "回看自己的创作成果，持续探索新的表达方式。",
+  };
+  return <div className="learning-section-header"><div><span>{eyebrow}</span><h2>{title}</h2>{descriptions[title] && <p>{descriptions[title]}</p>}</div>{action && <button onClick={onAction}>{action} <ArrowRight size={18} /></button>}</div>;
 }
 
 function EmptyBlock({ icon: Icon, title, text, action, onAction }) {

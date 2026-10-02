@@ -130,12 +130,14 @@ test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条
 test("创作对话页独立成屏：不显示站点导航，也不显示两侧装饰", async () => {
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   assert.ok(portal.includes('const standalone = section === "creation"'), "对话页要单独标记");
-  // 设计工作台也走同一套「无站点外壳」开关（chromeFree = standalone || workbench）。
-  assert.ok(portal.includes("const chromeFree = standalone || workbench"), "无外壳页面要统一开关");
-  assert.ok(portal.includes('{!chromeFree && <header className="portal-topbar">'), "无外壳页面不渲染顶部导航");
-  assert.ok(portal.includes("{!chromeFree && <PortalArtRails />}"), "无外壳页面不渲染两侧装饰");
+  assert.ok(portal.includes("const chromeFree = standalone || workbench"));
+  assert.ok(portal.includes('{!chromeFree && <header className="portal-topbar">'));
+  assert.ok(!portal.includes("PortalArtRails"));
+  assert.ok(portal.includes('["courses", "AI 讲堂", GraduationCap]'));
+  assert.ok(portal.includes('["studio", "设计工具", Palette]'));
   assert.ok(portal.includes("portal-main--standalone"));
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  assert.ok(!css.includes("portal-art-rails"), "样式表不再保留两侧装饰栏");
   // 腾出来的空间要让给对话本体：更宽的主区、更高的消息区。
   assert.ok(css.includes(".portal-main--standalone { width: min(1520px"));
   // 整屏固定、页面不滚动：消息区自己滚，输入区钉在底部（不会被移动/滚动遮住）。
@@ -154,6 +156,15 @@ test("设计工作台是独立页面，并自带「返回首页」入口", async
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
   assert.ok(css.includes(".portal-main--workbench { width: min(1360px"), "工作台主区要更宽");
   assert.ok(css.includes(".portal-workbench-bar__home"), "返回首页按钮要有样式");
+});
+test("AI 讲堂与设计工具移除重复标题，同时保留课程和工具内容", async () => {
+  const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
+  const studio = await readFile(new URL("../src/WorkflowStudio.jsx", import.meta.url), "utf8");
+  assert.ok(portal.includes('section !== "courses" && section !== "studio"'), "两页跳过重复的大标题区");
+  assert.ok(portal.includes('{section === "courses" && <LearningLibrary'), "AI 讲堂仍加载课程目录");
+  assert.ok(!portal.includes('<SectionHeading eyebrow="// RESOURCE LIBRARY"'), "AI 讲堂不再显示重复入口标题");
+  assert.ok(!studio.includes("// DESIGN TOOLBOX") && !studio.includes("设计工具入口"), "设计工具区不再显示重复入口标题");
+  assert.ok(studio.includes("tool-directory__actions") && studio.includes("tool-directory__list"), "保留工具浏览控制和工具卡片");
 });
 
 test("历次会话是常驻左侧栏，收起后按钮仍在", async () => {

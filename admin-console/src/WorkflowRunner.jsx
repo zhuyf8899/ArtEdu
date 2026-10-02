@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, Play, SpinnerGap } from "@phosphor-icons/react";
@@ -21,6 +21,8 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
   const activeStep = run?.status === "in_progress" ? steps[run.currentStep] : null;
   const activeId = activeStep?.id;
   const [nodePositions, setNodePositions] = useState({});
+  const flowRef = useRef(null);
+  const canvasRef = useRef(null);
   useEffect(() => { setNodePositions({}); }, [selected.id]);
   // 仅在拖拽结束后写回位置，避免鼠标移动时反复重算所有节点导致画布卡顿。
   const onNodeDragStop = useCallback((_, node) => setNodePositions((current) => ({ ...current, [node.id]: node.position })), []);
@@ -29,6 +31,21 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
   const nodes = useMemo(() => versionNodes.map((node) => ({ ...node, position: nodePositions[node.id] ?? node.position, data: { ...node.data, nodeType: node.type, isActive: node.id === activeId, isComplete: completedIds.has(node.id) } })), [versionNodes, nodePositions, activeId, completedIds]);
   const edges = useMemo(() => (run?.edges ?? selected.edges ?? []).map((edge) => ({ ...edge, markerEnd: { type: MarkerType.ArrowClosed } })), [run?.edges, selected.edges]);
   const progress = run?.totalSteps ? Math.round((run.currentStep / run.totalSteps) * 100) : 0;
+  const focusNode = useCallback((id) => {
+    if (id) flowRef.current?.fitView({ nodes: [{ id }], padding: 0.5, minZoom: 0.85, maxZoom: 1.15, duration: 280 });
+  }, []);
+  useEffect(() => { focusNode(activeId ?? versionNodes[0]?.id); }, [activeId, selected.id, focusNode]);
+  // 窗口改变尺寸时重新聚焦当前节点，防止移动端切换方向后沿用桌面偏移量。
+  useEffect(() => {
+    if (!canvasRef.current || typeof ResizeObserver === "undefined") return;
+    let frame;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => focusNode(activeId ?? versionNodes[0]?.id));
+    });
+    observer.observe(canvasRef.current);
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+  }, [activeId, selected.id, focusNode]);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -48,7 +65,10 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
       <div className="workflow-graph-runner__run-state">{loading ? <SpinnerGap className="spin" size={17} /> : run?.status === "completed" ? <CheckCircle size={18} weight="fill" /> : <FlowArrow size={18} />}<span>{loading ? "正在自动运行" : autoError ? "运行已暂停" : run?.status === "completed" ? "运行完成" : run ? "自动运行已开启" : "等待开始"}</span></div>
     </header>
     <div className="workflow-graph-runner__body">
-      <div className="workflow-run-canvas" aria-label="工作流节点图"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={fitViewOptions} nodesDraggable nodesConnectable={false} elementsSelectable zoomOnDoubleClick={false} onNodeDragStop={onNodeDragStop}><Background color="#384250" gap={18} size={1} /><Controls showInteractive={false} /></ReactFlow></div>
+      <div className="workflow-run-canvas" ref={canvasRef} aria-label="工作流节点图">
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={fitViewOptions} minZoom={0.2} maxZoom={2} nodesDraggable nodesConnectable={false} elementsSelectable zoomOnDoubleClick={false} onNodeDragStop={onNodeDragStop} onInit={(instance) => { flowRef.current = instance; requestAnimationFrame(() => focusNode(activeId ?? versionNodes[0]?.id)); }}><Background color="#384250" gap={18} size={1} /><Controls showInteractive={false} /></ReactFlow>
+        <div className="workflow-run-canvas__actions"><button type="button" onClick={() => focusNode(activeId ?? versionNodes[0]?.id)}>聚焦当前节点</button><button type="button" onClick={() => flowRef.current?.fitView({ padding: 0.18, duration: 280 })}>查看全图</button></div>
+      </div>
       <aside className="workflow-graph-runner__sidebar">
         <div className="workflow-graph-runner__summary"><span>{run?.trialRun ? "草稿试运行进度" : "运行进度"}</span><strong>{run?.status === "completed" ? "已完成" : `${run?.currentStep ?? 0} / ${run?.totalSteps ?? versionNodes.length} 个节点`}</strong><div className="workflow-player__progress"><i><b style={{ width: `${run?.status === "completed" ? 100 : progress}%` }} /></i><span>{run?.status === "completed" ? 100 : progress}%</span></div>{run?.versionNumber ? <small>版本 V{run.versionNumber} · {run.versionPublished ? "已发布" : "草稿"}</small> : null}</div>
         <div className="workflow-graph-runner__sidebar-content">

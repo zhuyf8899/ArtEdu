@@ -9,6 +9,8 @@
     "worker": "npm run build && node dist/worker.js",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed.ts",
+    "showcase:verify": "node scripts/install-community-showcase.mjs --verify",
+    "showcase:install": "node scripts/install-community-showcase.mjs --install",
     "auth:provision-local": "tsx src/scripts/provision-local-user.ts",
     "auth:generate-test-accounts": "tsx src/scripts/generate-test-accounts.ts",
     "import:course-library": "tsx src/scripts/import-course-library.ts",
@@ -18,14 +20,14 @@
     "typecheck": "tsc --noEmit"
   },
   "overrides": {
-    "fastify": "5.12.1",
+    "fastify": "5.12.5",
     "image-size": "file:vendor/image-size"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.1",
     "@nestjs/common": "^11.0.11",
     "@nestjs/core": "^11.0.11",
-    "@nestjs/platform-fastify": "^11.0.11",
+    "@nestjs/platform-fastify": "^11.2.5",
     "docx": "^9.7.1",
     "dotenv": "^16.4.7",
     "pg": "^8.13.3",

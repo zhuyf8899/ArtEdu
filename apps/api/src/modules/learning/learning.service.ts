@@ -71,7 +71,7 @@ export class LearningService {
   constructor(private readonly database: DatabaseService) {}
 
   async getDashboard(actor: Actor) {
-    const [courses, tasks, notes, favorites, works, workflowRuns] = await Promise.all([
+    const [courses, tasks, notes, favorites, works, workflowRuns, learningLessons] = await Promise.all([
       this.listCourses(actor.id),
       this.listTasks(actor.id),
       this.listNotes(actor.id),
@@ -86,6 +86,17 @@ export class LearningService {
         WHERE r.user_id = $1
         ORDER BY r.updated_at DESC
         LIMIT 6
+      `, [actor.id]),
+      this.database.query(`
+        SELECT l.id, l.course_id AS "courseId", c.title AS "courseTitle", l.title,
+          l.learning_steps AS "learningSteps", l.practice_task AS "practiceTask", l.workflow_id AS "workflowId",
+          COALESCE(p.progress_percent, 0)::int AS "progressPercent"
+        FROM course_enrollments e
+        JOIN courses c ON c.id = e.course_id AND c.status = 'published'
+        JOIN course_lessons l ON l.course_id = c.id AND l.status = 'published'
+        LEFT JOIN learning_progress p ON p.lesson_id = l.id AND p.user_id = e.user_id
+        WHERE e.user_id = $1 AND e.status <> 'withdrawn'
+        ORDER BY e.updated_at DESC, l.sort_order, l.created_at, l.id
       `, [actor.id]),
     ]);
 
@@ -110,6 +121,8 @@ export class LearningService {
       favorites,
       works,
       workflowRuns: workflowRuns.rows,
+      // Topics are authored lesson titles/steps, not inferred knowledge-point mastery.
+      learningLessons: learningLessons.rows,
     };
   }
 

@@ -59,6 +59,8 @@ npm run db:prepare
 
 Docker Compose 只负责 PostgreSQL 容器和数据卷；数据库结构必须由 `db:migrate` 统一管理，避免初始化脚本和版本化迁移重复执行。
 
+`db:prepare` 现在也会安装九个已获展示授权的公开案例及 53 张配图。其他本地/服务器启动方式同样会在迁移后校验并补齐它们；素材包内容与恢复说明见 [案例社区可重复部署](docs/community-showcase-deployment.md)。
+
 `.env.example` 中只允许出现本地演示配置。真实数据库密码、模型密钥和学校认证凭据不得提交到 Git。本地联调时可设置 `ENABLE_LOCAL_AUTH=true`，再通过 `auth:provision-local` 为指定演示用户配置临时密码；生产环境会拒绝本地认证开关，必须接入学校 SSO/OIDC 或受管身份提供方。
 
 ## 启动

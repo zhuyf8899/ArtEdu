@@ -45,3 +45,15 @@ test('已驳回案例在作者详情展示整改意见和审核历史', async ()
   assert.match(css, /\.case-review-feedback/);
   assert.match(css, /\.case-review-history/);
 });
+
+test('案例社区页头仅保留新建草稿主操作，并沿用 AI 讲堂紧凑布局', async () => {
+  const library = await readFile(new URL('../src/CommunityLibrary.jsx',import.meta.url),'utf8');
+  const portal = await readFile(new URL('../src/Portal.jsx',import.meta.url),'utf8');
+  const css = await readFile(new URL('../src/styles.css',import.meta.url),'utf8');
+  assert.match(library, /className="learning-library-intro community-page-intro"/);
+  assert.match(library, /<h1 id="community-page-title">案例社区<\/h1>/);
+  assert.match(library, /className="community-create-draft"[^>]*>.*新建案例草稿/);
+  assert.doesNotMatch(library, /分享创作，也分享过程|我的案例与草稿/);
+  assert.match(portal, /section !== "community"/);
+  assert.match(css, /\.community-page-intro \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/);
+});

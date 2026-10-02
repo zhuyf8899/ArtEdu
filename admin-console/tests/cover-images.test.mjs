@@ -23,3 +23,12 @@ test("窄版课程卡片封面保留文字安全区", () => {
   assert.ok(lines.length > 1);
   assert.ok(lines.every((line) => Array.from(line).length * fontSize <= 240 * 0.8));
 });
+
+test("中英混排课程标题不会拆开英文单词或过早省略", () => {
+  const title = "用 Vibe Coding 构建数字作品展";
+  const svg = decodeURIComponent(titleCoverDataUrl(title, 240, 400).split(",", 2)[1]);
+  const lines = [...svg.matchAll(/<text[^>]*>([^<]+)<\/text>/g)].map((match) => match[1]);
+  assert.ok(lines.length <= 3);
+  assert.ok(lines.some((line) => line.includes("Vibe Coding")));
+  assert.equal(lines.join("").replace(/\s/gu, ""), title.replace(/\s/gu, ""));
+});

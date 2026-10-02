@@ -1,5 +1,6 @@
 -- 标准的「正/负提示词 → 图像生成」节点工作流。
 -- 学生点开就能跑：填一句需求、看一眼负向词，剩下的（导入模型 → 采样 → 预览）自动执行。
+-- 迁移在演示账号 seed 之前执行，不能引用尚不存在的 user-teacher-demo。
 BEGIN;
 
 INSERT INTO workflows (id, name, description, category, entry_type, entry_url, status, created_by)
@@ -11,7 +12,7 @@ VALUES (
   'workbench',
   '/studio#workflow-catalog',
   'published',
-  'user-teacher-demo'
+  NULL
 )
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
@@ -52,7 +53,7 @@ VALUES (
   }'::jsonb,
   '按创作需求生成图片；负向词可先改成不想要的内容再运行。',
   CURRENT_TIMESTAMP,
-  'user-teacher-demo'
+  NULL
 )
 ON CONFLICT (id) DO UPDATE SET
   definition_json = EXCLUDED.definition_json,

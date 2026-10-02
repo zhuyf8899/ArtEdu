@@ -23,8 +23,8 @@ const emptyPortalData = {
 
 const navItems = [
   ["home", "首页", GridFour],
-  ["courses", "教学资源", GraduationCap],
-  ["studio", "设计工作台", Palette],
+  ["courses", "AI 讲堂", GraduationCap],
+  ["studio", "设计工具", Palette],
   ["community", "案例社区", UsersThree],
   ["myLearning", "我的学习", BookOpenText],
 ];
@@ -36,23 +36,6 @@ function RolePill({ account }) {
 function WorkflowGlyph({ entryType }) {
   const Icon = entryType === "workbench" ? CirclesThreePlus : entryType === "external_tool" ? RocketLaunch : Brain;
   return <span className="workflow-glyph"><Icon size={21} weight="bold" /></span>;
-}
-
-function PortalArtRails() {
-  return <div className="portal-art-rails" aria-hidden="true">
-    <div className="portal-art-rail portal-art-rail--left">
-      <span className="art-rail__index">ART / 01</span>
-      <figure className="art-rail__tile art-rail__tile--pattern"><img src="/assets/learning/traditional-patterns.jpg" alt="" /><figcaption>传统纹样</figcaption></figure>
-      <i className="art-rail__shape art-rail__shape--ring" />
-      <figure className="art-rail__tile art-rail__tile--code"><img src="/assets/learning/vibe-coding.jpg" alt="" /><figcaption>数字实验</figcaption></figure>
-    </div>
-    <div className="portal-art-rail portal-art-rail--right">
-      <figure className="art-rail__tile art-rail__tile--visual"><img src="/assets/learning/ai-design-foundations.jpg" alt="" /><figcaption>视觉叙事</figcaption></figure>
-      <i className="art-rail__shape art-rail__shape--spark" />
-      <span className="art-rail__index">02 / EDU</span>
-      <figure className="art-rail__tile art-rail__tile--detail"><img src="/assets/learning/traditional-patterns.jpg" alt="" /><figcaption>观察 · 重组</figcaption></figure>
-    </div>
-  </div>;
 }
 
 export function LocalLogin({ onLogin }) {
@@ -102,7 +85,7 @@ export function LocalLogin({ onLogin }) {
   </main>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", studioWorkflowId = "", studioRunId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", learningLessonId = "", studioWorkflowId = "", studioRunId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -220,7 +203,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   };
   const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal, onDelta) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal, onDelta);
 
-  const pageTitle = { home: "学习与创作总览", courses: "教学资源库", studio: "设计工作台", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
+  const pageTitle = { home: "学习与创作总览", courses: "AI讲堂", studio: "设计工具", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning", creation: "/create" }[nextSection] ?? "/");
   const navigateSearch = (query) => onNavigate(`/search?query=${encodeURIComponent(query)}`);
 
@@ -240,8 +223,6 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "API 已验证" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
     </header>}
 
-    {!chromeFree && <PortalArtRails />}
-
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}${workbench ? " portal-main--workbench" : ""}`}>
       <div key={`${section}:${searchQuery}`} className="route-transition">
       {/* 工作台自己带表头：站点顶栏被隐藏后，这里是唯一的「返回首页」入口。 */}
@@ -251,26 +232,26 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         <span className="portal-workbench-bar__hint">课程负责学习，工作台负责动手。</span>
         {canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}
       </header>}
-      {section !== "home" && section !== "myLearning" && section !== "search" && section !== "creation" && section !== "studio" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
+      {section !== "home" && section !== "courses" && section !== "studio" && section !== "community" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
         <AiCreationLauncher account={account} creation={data.creation} onNotice={showToast} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />
         {portalLoading && <HomeDataState loading />}
         {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
-        {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从教学资源库选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}
+        {!portalLoading && !portalError && (nextCourse ? <section className="progress-strip"><div><span>当前学习</span><strong>{nextCourse.title}</strong></div><div className="progress-line"><i style={{ width: `${nextCourse.progressPercent ?? 0}%` }} /></div><b>{nextCourse.progressPercent ?? 0}%</b><button onClick={() => navigateSection("courses")}>打开课程 <ArrowRight size={15} weight="bold" /></button></section> : <HomeDataState title="还没有进行中的课程" text="从 AI 讲堂选择一门课程，开始记录你的学习进度。" action="浏览课程" onRetry={() => navigateSection("courses")} />)}
         {!portalLoading && !portalError && <CourseDiscovery courses={data.courses} onSearch={navigateSearch} onBrowse={() => navigateSection("courses")} onCoach={() => setCoachOpen(true)} />}
         <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => navigateSection("studio")} />
         <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课程与工作流生成下一步学习建议。" onClick={() => setCoachOpen(true)} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
         <SectionHeading eyebrow="// FEATURED WORKFLOWS" title="精选工作流" />
-        {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入工作台" onRetry={() => navigateSection("studio")} />}
+        {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入设计工具" onRetry={() => navigateSection("studio")} />}
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
-        {section === "courses" && <><SectionHeading eyebrow="// RESOURCE LIBRARY" title="课程与学习资源" /><LearningLibrary initialCourseId={learningCourseId} onNotice={showToast} /></>}
+        {section === "courses" && <LearningLibrary initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNotice={showToast} />}
 
         {section === "studio" && <WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
-        {section === "community" && <><SectionHeading eyebrow="// COMMUNITY" title="大家正在创作" /><CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} /></>}
+        {section === "community" && <CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
 
         {section === "myLearning" && <MyLearning account={account} onNavigate={onNavigate} onNotice={showToast} />}
 
@@ -322,7 +303,7 @@ function GlobalSearchForm({ value, onSearch }) {
     event.preventDefault();
     if (query.trim()) onSearch(query.trim());
   };
-  return <form className="portal-search" onSubmit={submit}><MagnifyingGlass size={16} weight="bold" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="搜索教学资源、工作流和案例" placeholder="搜索课程、工作流、案例…" /><button aria-label="提交搜索" disabled={!query.trim()}><ArrowRight size={15} weight="bold" /></button></form>;
+  return <form className="portal-search" onSubmit={submit}><MagnifyingGlass size={16} weight="bold" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="搜索 AI 讲堂、设计工具和案例" placeholder="搜索课程、设计工具、案例…" /><button aria-label="提交搜索" disabled={!query.trim()}><ArrowRight size={15} weight="bold" /></button></form>;
 }
 
 function SectionHeading({ eyebrow, title, action, onAction }) {
