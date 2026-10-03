@@ -11,6 +11,7 @@ import type {
 } from "./learning.contracts";
 
 interface LearningCourseRow extends QueryResultRow {
+  knowledge_points: string[];
   id: string;
   title: string;
   summary: string | null;
@@ -80,9 +81,11 @@ export class LearningService {
       this.database.query(`
         SELECT r.id, r.workflow_id AS "workflowId", r.status, r.current_step AS "currentStep", r.total_steps AS "totalSteps",
           r.updated_at AS "updatedAt", w.name AS "workflowName", w.category,
-          r.context_json->'artifact' AS artifact
+          r.context_json->'artifact' AS artifact,
+          v.definition_json->'learning' AS "learningBindings"
         FROM workflow_runs r
         JOIN workflows w ON w.id = r.workflow_id
+        JOIN workflow_versions v ON v.id = r.workflow_version_id
         WHERE r.user_id = $1
         ORDER BY r.updated_at DESC
         LIMIT 6
@@ -90,11 +93,15 @@ export class LearningService {
       this.database.query(`
         SELECT l.id, l.course_id AS "courseId", c.title AS "courseTitle", l.title,
           l.learning_steps AS "learningSteps", l.practice_task AS "practiceTask", l.workflow_id AS "workflowId",
+          l.knowledge_points AS "knowledgePoints",
+          submission.work_id AS "submittedWorkId", submitted.title AS "submittedWorkTitle",
           COALESCE(p.progress_percent, 0)::int AS "progressPercent"
         FROM course_enrollments e
         JOIN courses c ON c.id = e.course_id AND c.status = 'published'
         JOIN course_lessons l ON l.course_id = c.id AND l.status = 'published'
         LEFT JOIN learning_progress p ON p.lesson_id = l.id AND p.user_id = e.user_id
+        LEFT JOIN course_lesson_submissions submission ON submission.lesson_id = l.id AND submission.user_id = e.user_id
+        LEFT JOIN works submitted ON submitted.id = submission.work_id AND submitted.author_id = e.user_id
         WHERE e.user_id = $1 AND e.status <> 'withdrawn'
         ORDER BY e.updated_at DESC, l.sort_order, l.created_at, l.id
       `, [actor.id]),
@@ -189,7 +196,7 @@ export class LearningService {
   private async listCourses(userId: string) {
     const result = await this.database.query<LearningCourseRow>(`
       SELECT c.id, c.title, c.summary, c.category, c.difficulty, c.estimated_minutes,
-        c.cover_url, c.cover_asset_key, c.cover_mime_type,
+        c.cover_url, c.cover_asset_key, c.cover_mime_type, c.knowledge_points,
         creator.display_name AS creator_name, e.status AS enrollment_status,
         COUNT(DISTINCT l.id)::int AS lesson_count,
         COUNT(DISTINCT l.id) FILTER (WHERE p.progress_percent = 100)::int AS completed_lessons,
@@ -206,6 +213,7 @@ export class LearningService {
       ORDER BY MAX(p.updated_at) DESC NULLS LAST, e.updated_at DESC
     `, [userId]);
     return result.rows.map((row) => ({
+      knowledgePoints: row.knowledge_points ?? [],
       id: row.id,
       title: row.title,
       summary: row.summary ?? "",

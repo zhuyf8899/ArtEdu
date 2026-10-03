@@ -29,6 +29,22 @@ test("图谱课时内容只读取当前用户已选的已发布课程，进度�
   assert.match(lessonQuery, /l.status = 'published'/);
   assert.match(lessonQuery, /p.user_id = e.user_id/);
   assert.match(lessonQuery, /l.workflow_id AS "workflowId"/);
+  assert.match(lessonQuery, /l.knowledge_points AS "knowledgePoints"/);
+  assert.match(lessonQuery, /submission.user_id = e.user_id/);
+  assert.match(lessonQuery, /submitted.author_id = e.user_id/);
+});
+
+test("工具关联读取实际运行版本，不用后来发布的版本改写历史", async () => {
+  let runSql = "";
+  const service = new LearningService({ query: async (sql: string, values: unknown[]) => {
+    if (sql.includes("FROM workflow_runs r")) { runSql = sql; assert.deepEqual(values, ["me"]); }
+    return { rows: [] };
+  } } as unknown as DatabaseService);
+  await service.getDashboard({ id: "me", roles: ["student"] } as Actor);
+  assert.match(runSql, /JOIN workflow_versions v ON v.id = r.workflow_version_id/);
+  assert.match(runSql, /v.definition_json->'learning'/);
+  assert.match(runSql, /r.user_id = \$1/);
+  assert.doesNotMatch(runSql, /MAX\(version_number\)|ORDER BY v.version/);
 });
 
 test("学习任务限制日期格式和任务类型", () => {

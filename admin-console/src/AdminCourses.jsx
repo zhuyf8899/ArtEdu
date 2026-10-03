@@ -5,8 +5,11 @@ import {
   createAdminCourse, decideCourseReview, getAdminCourse, getAdminCourses, getCourseReviews,
   submitCourseReview, updateAdminCourse, updateCourseResource, uploadCourseResource,
   uploadCourseCover, uploadCourseResourceCover,
+  updateCourseKnowledgeBindings,
 } from "./services/adminApi.js";
 import { coverImageFor, prepareCoverFile } from "./coverImages.js";
+import { LearningBindingFields } from "./LearningBindingFields.jsx";
+import { normalizeLearningBindings } from "./learningBindings.js";
 
 const statusNames = { draft: "草稿", pending_review: "待审核", published: "已发布", rejected: "已驳回", archived: "已归档" };
 const editable = (course) => ["draft", "rejected"].includes(course.status);
@@ -23,6 +26,7 @@ export function AdminCourses({ showToast }) {
   const [courseEditor, setCourseEditor] = useState(null);
   const [resourceCourse, setResourceCourse] = useState(null);
   const [resourceEditor, setResourceEditor] = useState(null);
+  const [bindingCourse, setBindingCourse] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
@@ -42,6 +46,7 @@ export function AdminCourses({ showToast }) {
     try {
       const detail = await getAdminCourse(course.id);
       if (target === "course") setCourseEditor(detail);
+      else if (target === "bindings") setBindingCourse(detail);
       else setResourceCourse(detail);
     } catch (error) { showToast(error.message); }
     finally { setBusy(false); }
@@ -58,6 +63,7 @@ export function AdminCourses({ showToast }) {
           <em className={`course-state course-state--${course.status}`}>{statusNames[course.status] ?? course.status}</em>
           <div className="course-admin-actions">
             <button disabled={busy || !editable(course)} onClick={() => openCourse(course, "course")}>编辑课程</button>
+            <button disabled={busy || !["draft", "rejected", "published"].includes(course.status)} onClick={() => openCourse(course, "bindings")}>图谱配置</button>
             <button disabled={busy} onClick={() => openCourse(course, "resources")}>管理资料</button>
             <button disabled={busy || !editable(course)} onClick={() => run(() => submitCourseReview(course.id), "课程已提交发布审核")}>提交审核 <ArrowRight size={15} weight="bold" /></button>
           </div>
@@ -73,6 +79,10 @@ export function AdminCourses({ showToast }) {
         {!reviews.length && <div className="empty-state"><Check size={34} /><strong>暂无审核记录</strong><span>课程提交后会出现在这里。</span></div>}
       </article>
     </section>
+    {bindingCourse && <CourseKnowledgeEditor key={bindingCourse.id} course={bindingCourse} busy={busy} onClose={() => { if (!busy) setBindingCourse(null); }} onSave={(input) => run(async () => {
+      await updateCourseKnowledgeBindings(bindingCourse.id, input);
+      setBindingCourse(null);
+    }, "图谱配置已保存；学习记录保持不变")} />}
     {courseEditor && <CourseEditor key={courseEditor.id ?? "new"} course={courseEditor} busy={busy} onClose={() => setCourseEditor(null)} onSave={(input, coverFile) => run(async () => {
       const preparedCover = coverFile ? await prepareCoverFile(coverFile) : null;
       const saved = courseEditor.new ? await createAdminCourse(input) : await updateAdminCourse(courseEditor.id, input);
@@ -95,6 +105,30 @@ export function AdminCourses({ showToast }) {
       setResourceEditor(null);
     }, resourceEditor.new ? "课程资料已上传" : "资料信息已更新")} />}
   </div>;
+}
+
+function CourseKnowledgeEditor({ course, busy, onClose, onSave }) {
+  const [knowledgePoints, setKnowledgePoints] = useState(course.knowledgePoints ?? []);
+  const [lessons, setLessons] = useState(course.lessons ?? []);
+  const [error, setError] = useState("");
+  const save = (event) => {
+    event.preventDefault();
+    try {
+      const input = { knowledgePoints: normalizeLearningBindings({ knowledgePoints }).knowledgePoints,
+        lessons: lessons.map((lesson) => ({ lessonId: lesson.id, knowledgePoints: normalizeLearningBindings(lesson).knowledgePoints })) };
+      setError(""); onSave(input);
+    } catch (problem) { setError(problem.message); }
+  };
+  return <Modal title={`${course.title} · 图谱配置`} subtitle="// KNOWLEDGE BINDINGS" onClose={onClose} className="course-modal--wide course-modal--bindings">
+    <form onSubmit={save}><p className="learning-binding-note">课程知识点描述整体学习范围；课时知识点用于关联具体学习记录。已发布课程可单独配置，不更改课程正文、课时 ID 或学习进度。配置本身不代表用户已掌握知识。</p>
+      <h3>课程涉及的知识</h3><LearningBindingFields knowledgeOnly disabled={busy} value={{ knowledgePoints }} onChange={(_, value) => setKnowledgePoints(value)} />
+      <h3>将知识落实到课时</h3>{lessons.map((lesson, index) => <fieldset key={lesson.id} className="course-lesson-editor"><legend>{index + 1}. {lesson.title}</legend>
+        <LearningBindingFields knowledgeOnly disabled={busy} value={lesson} onChange={(_, value) => setLessons((current) => current.map((item) => item.id === lesson.id ? { ...item, knowledgePoints: value } : item))} />
+      </fieldset>)}{!lessons.length && <p>请先创建课时，再绑定具体知识点。</p>}
+      {error && <p role="alert" className="form-error">{error}</p>}
+      <footer><button type="button" className="outline-button" disabled={busy} onClick={onClose}>取消</button><button type="submit" className="primary-button" disabled={busy}>{busy ? "正在保存…" : "保存图谱配置"}</button></footer>
+    </form>
+  </Modal>;
 }
 
 function Modal({ title, subtitle, onClose, children, className = "" }) {

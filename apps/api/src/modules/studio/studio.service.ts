@@ -675,6 +675,7 @@ export class StudioService {
     if (Array.isArray(definition?.nodes)) {
       return {
         schemaVersion: 2,
+        learning: definition.learning ?? { knowledgePoints: [], tools: [], abilityGoals: [] },
         nodes: definition.nodes,
         edges: Array.isArray(definition.edges) ? definition.edges : [],
         viewport: definition.viewport ?? { x: 0, y: 0, zoom: 1 },
