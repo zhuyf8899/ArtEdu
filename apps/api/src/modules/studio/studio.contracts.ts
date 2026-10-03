@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workflowLearningSchema } from "../../common/learning-bindings";
 import { caseStorySchema } from "./case-story";
 
 export const catalogQuerySchema = z.object({
@@ -66,6 +67,7 @@ const workflowEdgeSchema = z.object({
 });
 
 export const workflowDefinitionSchema = z.object({
+  learning: workflowLearningSchema.optional(),
   schemaVersion: z.literal(2).default(2),
   nodes: z.array(workflowNodeSchema).min(1).max(80),
   edges: z.array(workflowEdgeSchema).max(160).default([]),

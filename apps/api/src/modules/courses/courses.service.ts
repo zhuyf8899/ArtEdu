@@ -14,6 +14,7 @@ import { RagService } from "../rag/rag.service";
 import { uploadCourseResourceMetadataSchema } from "./courses.contracts";
 import type {
   CourseReviewDecisionInput,
+  CourseKnowledgeBindingsInput,
   CreateCourseInput,
   LessonSubmissionInput,
   ProgressInput,
@@ -22,6 +23,7 @@ import type {
 } from "./courses.contracts";
 
 interface CourseRow extends QueryResultRow {
+  knowledge_points: string[];
   id: string;
   slug: string;
   title: string;
@@ -46,6 +48,7 @@ interface CourseRow extends QueryResultRow {
 }
 
 interface LessonRow extends QueryResultRow {
+  knowledge_points: string[];
   id: string;
   title: string;
   summary: string | null;
@@ -191,7 +194,7 @@ export class CoursesService {
     const [lessons, resources] = await Promise.all([
       this.database.query<LessonRow>(`
         SELECT l.id, l.title, l.summary, l.lesson_type, l.sort_order, l.estimated_minutes,
-          l.workflow_id, l.model_config_ids, l.learning_steps, l.practice_task,
+          l.workflow_id, l.model_config_ids, l.knowledge_points, l.learning_steps, l.practice_task,
           l.completion_criteria, l.requires_work_submission,
           COALESCE(p.progress_percent, 0)::int AS progress_percent,
           COALESCE(p.status, 'not_started') AS progress_status,
@@ -222,6 +225,7 @@ export class CoursesService {
         estimatedMinutes: lesson.estimated_minutes ?? 0,
         workflowId: lesson.workflow_id,
         modelConfigIds: lesson.model_config_ids ?? [],
+        knowledgePoints: lesson.knowledge_points ?? [],
         learningSteps: lesson.learning_steps ?? [],
         practiceTask: lesson.practice_task ?? "",
         completionCriteria: lesson.completion_criteria ?? "",
@@ -406,6 +410,7 @@ export class CoursesService {
     const [lessons, resources] = await Promise.all([
       this.database.query<LessonRow>(`
         SELECT id,title,summary,lesson_type,sort_order,estimated_minutes,workflow_id,model_config_ids,
+          knowledge_points,learning_steps,practice_task,completion_criteria,requires_work_submission,
           0::int AS progress_percent,'not_started'::text AS progress_status
         FROM course_lessons WHERE course_id=$1 ORDER BY sort_order,created_at
       `, [courseId]),
@@ -420,6 +425,11 @@ export class CoursesService {
         id: lesson.id, title: lesson.title, summary: lesson.summary ?? "", lessonType: lesson.lesson_type,
         estimatedMinutes: lesson.estimated_minutes ?? 0, workflowId: lesson.workflow_id,
         modelConfigIds: lesson.model_config_ids ?? [],
+        knowledgePoints: lesson.knowledge_points ?? [],
+        learningSteps: lesson.learning_steps ?? [],
+        practiceTask: lesson.practice_task ?? "",
+        completionCriteria: lesson.completion_criteria ?? "",
+        requiresWorkSubmission: lesson.requires_work_submission ?? false,
       })),
       resources: resources.rows.map((resource) => ({
         id: resource.id, lessonId: resource.lesson_id, title: resource.title,
@@ -430,6 +440,30 @@ export class CoursesService {
         sizeBytes: resource.file_size, status: resource.status,
       })),
     };
+  }
+
+  // Metadata-only update: published course content and all progress/submissions stay intact.
+  async updateKnowledgeBindings(actor: Actor, courseId: string, input: CourseKnowledgeBindingsInput) {
+    this.authService.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
+    await this.database.transaction(async (client) => {
+      const course = await client.query<{ status: string; created_by: string | null }>(
+        "SELECT status,created_by FROM courses WHERE id=$1 FOR UPDATE", [courseId]);
+      const current = course.rows[0];
+      if (!current) throw new NotFoundException("课程不存在");
+      if (!actor.roles.includes("admin") && current.created_by !== actor.id) throw new ForbiddenException("只能管理自己创建的课程");
+      if (!["draft", "rejected", "published"].includes(current.status)) throw new ConflictException("待审核或已归档课程暂不可修改图谱配置");
+      const lessons = await client.query<{ id: string }>("SELECT id FROM course_lessons WHERE course_id=$1 FOR UPDATE", [courseId]);
+      const ownedIds = new Set(lessons.rows.map((lesson) => lesson.id));
+      if (input.lessons.some((lesson) => !ownedIds.has(lesson.lessonId))) throw new BadRequestException("课时不属于当前课程");
+      await client.query("UPDATE courses SET knowledge_points=$2::jsonb,updated_at=CURRENT_TIMESTAMP WHERE id=$1",
+        [courseId, JSON.stringify(input.knowledgePoints)]);
+      for (const lesson of input.lessons) {
+        await client.query("UPDATE course_lessons SET knowledge_points=$3::jsonb,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND course_id=$2",
+          [lesson.lessonId, courseId, JSON.stringify(lesson.knowledgePoints)]);
+      }
+      await this.writeAudit(client, "course", courseId, actor.id, "update_knowledge_bindings", "更新课程与课时知识点；不改变学习进度或能力评价");
+    });
+    return this.getManagedDetail(actor, courseId);
   }
 
   async uploadResource(actor: Actor, courseId: string, request: FastifyRequest) {
@@ -809,6 +843,7 @@ export class CoursesService {
 
   private mapCourse(row: CourseRow) {
     return {
+      knowledgePoints: row.knowledge_points ?? [],
       id: row.id,
       slug: row.slug,
       title: row.title,

@@ -2,6 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { StudioService } from "./studio.service";
 
+test("工作流读取、预览和执行保留版本知识绑定，旧版本不推测工具", () => {
+  const service = new StudioService({} as any, {} as any);
+  const learning = { knowledgePoints: ["提示词"], tools: ["DeepSeek"], abilityGoals: ["比较方案"] };
+  const definition = { schemaVersion: 2, nodes: [{ id: "n", type: "note", data: { label: "说明" } }], edges: [], learning };
+  assert.deepEqual((service as any).normalizeWorkflowDefinition(definition).learning, learning);
+  assert.deepEqual((service as any).normalizeWorkflowDefinition({ nodes: [], edges: [] }).learning, { knowledgePoints: [], tools: [], abilityGoals: [] });
+});
+
 const actor = { id: "student-a", username: "student-a", displayName: "学生", roles: ["student"], accountStatus: "active" } as any;
 
 test("连接的节点调用文本模型，结果持久化并可继续查看", async () => {

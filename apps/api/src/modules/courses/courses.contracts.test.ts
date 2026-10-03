@@ -2,6 +2,22 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
+import { courseKnowledgeBindingsSchema } from "./courses.contracts";
+import { workflowLearningSchema } from "../../common/learning-bindings";
+
+test("知识绑定去重并限制数量、长度、重复课时及越权字段", () => {
+  assert.deepEqual(courseKnowledgeBindingsSchema.parse({ knowledgePoints: [" 色彩 ", "色彩"], lessons: [] }).knowledgePoints, ["色彩"]);
+  for (const input of [
+    { knowledgePoints: [""], lessons: [] },
+    { knowledgePoints: ["a".repeat(81)], lessons: [] },
+    { knowledgePoints: Array.from({ length: 21 }, (_, index) => `k${index}`), lessons: [] },
+    { knowledgePoints: ["x\u0000"], lessons: [] },
+    { knowledgePoints: [], lessons: [{ lessonId: "l", knowledgePoints: [] }, { lessonId: "l", knowledgePoints: [] }] },
+    { knowledgePoints: [], lessons: [], progressPercent: 100 },
+  ]) assert.equal(courseKnowledgeBindingsSchema.safeParse(input).success, false);
+  assert.deepEqual(workflowLearningSchema.parse({ tools: ["Figma", " Figma "] }), { knowledgePoints: [], tools: ["Figma"], abilityGoals: [] });
+  assert.equal(workflowLearningSchema.safeParse({ mastery: 100 }).success, false);
+});
 import { createCourseSchema, lessonSubmissionSchema, updateCourseResourceMetadataSchema, updateProgressSchema, uploadCourseResourceMetadataSchema } from "./courses.contracts";
 
 test("课程课时支持分步学习、练习与可选作品提交门槛", () => {

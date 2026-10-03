@@ -70,10 +70,10 @@ export function buildLearningOrbitContent(graph, framework) {
   const doneRuns = graph.runs.filter((run) => run.status === "completed");
   const distinctRuns = [...new Map(graph.runs.filter((run) => run.workflowId).map((run) => [run.workflowId, run])).values()];
   const pendingRun = graph.runs.find((run) => !["completed", "failed", "cancelled"].includes(run.status));
-  const lessonTopics = (lessons) => unique(lessons.flatMap((lesson) => [lesson.title, ...asList(lesson.learningSteps)]));
+  const lessonTopics = (lessons) => unique(lessons.flatMap((lesson) => [...asList(lesson.knowledgePoints), lesson.title, ...asList(lesson.learningSteps)]));
   const nextLesson = (courseId) => pendingLessons.find((lesson) => !courseId || lesson.courseId === courseId);
   const lessonNext = (lesson, fallback) => lesson
-    ? { title: titleOf(lesson, "继续下一课时"), text: `待学内容：${unique([lesson.title, ...asList(lesson.learningSteps)]).join("、")}。来自「${lesson.courseTitle || "已选课程"}」。`, action: courseHref(lesson.courseId, lesson.id) }
+    ? { title: titleOf(lesson, "继续下一课时"), text: `待学内容：${unique([...asList(lesson.knowledgePoints), lesson.title, ...asList(lesson.learningSteps)]).join("、")}。来自「${lesson.courseTitle || "已选课程"}」。`, action: courseHref(lesson.courseId, lesson.id) }
     : { title: fallback, text: "前往 AI 讲堂选择适合当前方向的课程；尚未配置的知识点不会显示为已学。", action: "/learning" };
   const result = {};
   framework.stages.forEach((stage, index) => {
@@ -104,7 +104,7 @@ export function buildLearningOrbitContent(graph, framework) {
       const completed = lesson && asNumber(lesson.progressPercent) >= 100;
       ability = {
         headline: titleOf(lesson, index === 0 ? "学习第一节课" : "深化课程实践"),
-        topic: lesson ? `${completed ? "已学" : asNumber(lesson.progressPercent) > 0 ? "在学" : "待学"}：${asList(lesson.learningSteps)[0] || lesson.title}` : "知识内容待选择",
+        topic: lesson ? `${completed ? "已学" : asNumber(lesson.progressPercent) > 0 ? "在学" : "待学"}：${asList(lesson.knowledgePoints)[0] || asList(lesson.learningSteps)[0] || lesson.title}` : "知识内容待选择",
         recordLabel: completed ? "已学课时" : lesson && asNumber(lesson.progressPercent) > 0 ? "课时学习中" : "待学课时",
         records: lesson ? [{ title: lesson.title, detail: `${lesson.courseTitle || "课程"} · ${asNumber(lesson.progressPercent)}%`, action: courseHref(lesson.courseId) }] : [],
         knowledge: completed ? lessonTopics([lesson]) : [],

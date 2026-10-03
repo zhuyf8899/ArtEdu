@@ -3,6 +3,7 @@ import { ArrowRight, BookOpenText, Clock, ImageSquare, Lightbulb, NotePencil, St
 import { buildLearningFramework, buildLearningGraph, buildLearningOrbitContent } from "./learningGraphModel.js";
 import { buildLearningPaths } from "./learningPathModel.js";
 import { LearningPathCanvas } from "./LearningPathCanvas.jsx";
+import { KnowledgeEvidence } from "./KnowledgeEvidence.jsx";
 import "./LearningGraph.css";
 
 const COLUMNS = [
@@ -11,7 +12,7 @@ const COLUMNS = [
   ["我的工具轨迹", ImageSquare, "平台工作流"],
   ["我的成长记录", Clock, "笔记与作品"],
 ];
-const STATUS = { skilled: "熟练", good: "良好", basic: "一般", none: "未学习" };
+const STATUS = { skilled: "目标达成", good: "持续积累", basic: "已经开始", none: "暂无记录" };
 const dateLabel = (value) => new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(new Date(value));
 
 export function LearningGraph({ data, onNavigate, onView }) {
@@ -52,7 +53,8 @@ export function LearningGraph({ data, onNavigate, onView }) {
           <section className="knowledge-orbits__next"><h5>下一步学什么</h5><strong>{selectedContent.next.title}</strong><p>{selectedContent.next.text}</p><button type="button" onClick={() => goTo(selectedContent.next.action)}>开始下一步<ArrowRight size={15} /></button></section>
         </div>
       </div>}
-      <p className="knowledge-framework__disclaimer">实线表示已有记录或明确配置的关联，虚线表示建议路径；“后续阶段”是路线规划，不表示已绑定课程或必须按顺序解锁。阶段采用累计展示目标，不代表记录发生于该阶段。“熟练”仅指展示目标达成，不是能力认证。已学内容来自已完成课时，不推测知识掌握；工作流记录不等于外部工具使用。</p>
+      <KnowledgeEvidence graph={graph} source={selectedColumn === 4 ? null : selectedContent.source} onGoTo={goTo} />
+      <p className="knowledge-framework__disclaimer">实线表示已有记录或明确配置的关联，虚线表示建议路径；“后续阶段”是路线规划，不表示已绑定课程或必须按顺序解锁。颜色表示累计记录目标，不是知识掌握或能力认证。已学内容来自已完成课时；工作流工具配置不等于外部工具使用。</p>
     </section>
 
     <section className="knowledge-guidance" aria-label="下一阶段建议">

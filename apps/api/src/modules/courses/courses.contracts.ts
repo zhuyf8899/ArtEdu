@@ -1,4 +1,15 @@
 import { z } from "zod";
+import { learningLabelsSchema } from "../../common/learning-bindings";
+
+export const courseKnowledgeBindingsSchema = z.object({
+  knowledgePoints: learningLabelsSchema,
+  lessons: z.array(z.object({
+    lessonId: z.string().trim().min(1).max(100),
+    knowledgePoints: learningLabelsSchema,
+  }).strict()).max(100),
+}).strict().refine((input) => new Set(input.lessons.map((lesson) => lesson.lessonId)).size === input.lessons.length,
+  "同一课时不能重复配置");
+export type CourseKnowledgeBindingsInput = z.infer<typeof courseKnowledgeBindingsSchema>;
 
 const storageKeySchema = z.string().trim().min(1).max(500).refine(
   (value) => !value.startsWith("/") && !value.includes("\\") && !/[\u0000-\u001F\u007F]/.test(value)
