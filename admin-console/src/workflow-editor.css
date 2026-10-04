@@ -1,0 +1,42 @@
+/* Fullscreen editing shares the runner's dark canvas and right panel. */
+.workflow-editor-fullscreen { position: fixed; inset: 0; z-index: 1000; padding: 0 !important; margin: 0 !important; max-width: none !important; display: grid; grid-template-columns: minmax(0, 1fr) 350px; grid-template-rows: 88px minmax(0, 1fr) 62px; gap: 0; background: #191d23; color: #edf0f4; overflow: hidden; font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+.workflow-editor-fullscreen > .learning-back { position: absolute; top: 25px; left: 22px; z-index: 2; margin: 0; padding: 10px 14px; color: #edf0f4; background: #292d33; border: 1px solid #40454c; border-radius: 10px; }
+.workflow-editor-fullscreen .workflow-canvas-topbar { grid-column: 1 / -1; margin: 0; padding: 14px 22px 14px 160px; background: #14171c; border-bottom: 1px solid #30343b; gap: 16px; }
+.workflow-editor-fullscreen .workflow-canvas-topbar h1 { margin: 0; font-size: 21px; line-height: 1.5; color: #edf0f4; }
+.workflow-editor-fullscreen .workflow-canvas-topbar p { margin: 0 0 3px; font-size: 11px; color: #a6b1a0; }
+.workflow-editor-fullscreen .workflow-canvas-topbar > div > span { display: none; }
+.workflow-editor-fullscreen .workflow-canvas-shell { position: relative; margin: 0; display: block; min-height: 0; border: 0; border-radius: 0; overflow: hidden; }
+.workflow-editor-fullscreen .workflow-flow-wrap { width: 100%; height: 100%; min-height: 0; background: #191d23; }
+.workflow-editor-fullscreen .workflow-node-palette { display: none; position: absolute; top: 60px; left: 18px; bottom: 20px; width: 280px; z-index: 8; border: 1px solid #424852; border-radius: 14px; background: #20252d; box-shadow: 0 16px 40px #0006; overflow: auto; }
+.workflow-editor-fullscreen.palette-open .workflow-node-palette { display: block; }
+.workflow-editor-sidebar { min-height: 0; overflow-y: auto; padding: 18px; background: #20242b; border-left: 1px solid #30343b; }
+.workflow-editor-sidebar > nav { display: flex; gap: 5px; padding: 4px; margin-bottom: 18px; border: 1px solid #353b43; border-radius: 10px; }
+.workflow-editor-sidebar > nav button { flex: 1; padding: 9px 4px; border: 0; border-radius: 7px; background: transparent; color: #aab3be; font-size: 12px; }
+.workflow-editor-sidebar > nav button[aria-pressed=true] { background: #353e32; color: #c8ef9b; }
+.workflow-editor-fullscreen .workflow-inspector, .workflow-editor-fullscreen .workflow-group-panel, .workflow-editor-fullscreen .workflow-canvas-runner, .workflow-editor-fullscreen .workflow-run-history, .workflow-editor-fullscreen .workflow-versions { margin: 0 0 18px; padding: 18px; border: 1px solid #353b43; border-radius: 14px; background: #161a1f; color: #dce2e9; min-width: 0; }
+.workflow-editor-fullscreen .workflow-inspector h2, .workflow-editor-fullscreen .workflow-canvas-runner h2, .workflow-editor-fullscreen .workflow-run-history h2 { color: #edf0f4; font-size: 19px; }
+.workflow-editor-fullscreen .workflow-form label { color: #bfc7d1; font-size: 13px; }
+.workflow-editor-fullscreen :is(input, textarea, select) { color: #e5e9f0; background: #252b34; border-color: #414a57; }
+.workflow-editor-fullscreen .outline-button { color: #dce2e9; border-color: #444b55; background: #252b32; font-size: 12px; }
+.workflow-editor-fullscreen .primary-button { background: #a8da65; color: #1b2714; border-color: #a8da65; font-size: 12px; }
+.workflow-editor-fullscreen .workflow-group-panel { display: flex; flex-direction: column; align-items: stretch; }
+.workflow-editor-fullscreen .workflow-canvas-runner { display: flex; flex-direction: column; align-items: stretch; }
+.workflow-editor-fullscreen .workflow-canvas-runner__done { flex-direction: column; align-items: stretch; }
+.workflow-editor-fullscreen .workflow-run-progress { width: 100%; }
+.workflow-editor-fullscreen .workflow-run-progress i { background: #a8da65; }
+.workflow-editor-fullscreen .workflow-runbar { grid-column: 1 / -1; margin: 0; padding: 10px 18px; border: 0; border-top: 1px solid #30343b; background: #14171c; color: #aab3be; }
+.workflow-editor-fullscreen .workflow-runbar > div:first-child { display: none; }
+.workflow-editor-fullscreen .workflow-runbar > div:last-child { width: 100%; justify-content: flex-end; }
+.workflow-editor-fullscreen .workflow-flow-tools { top: 14px; left: 14px; right: auto; background: #20252ded; border: 1px solid #3a424c; border-radius: 9px; padding: 5px; }
+.workflow-editor-fullscreen .workflow-flow-tools button { color: #c4ccd7; background: transparent; }
+.workflow-editor-fullscreen .workflow-flow-node { background: #252b34; border-color: #49515d; color: #e6eaf0; }
+.workflow-editor-fullscreen .workflow-flow-node :is(strong, span, small) { color: inherit; }
+.workflow-editor-fullscreen .react-flow__controls button { background: #303844; border-color: #434c59; fill: #e5e9f0; }
+.workflow-editor-fullscreen .react-flow__minimap { background: #242a32; }
+.workflow-editor-fullscreen.panel-settings :is(.workflow-canvas-runner, .workflow-run-history, .workflow-versions), .workflow-editor-fullscreen.panel-run :is(.workflow-inspector, .workflow-group-panel, .workflow-run-history, .workflow-versions), .workflow-editor-fullscreen.panel-history :is(.workflow-inspector, .workflow-group-panel, .workflow-canvas-runner) { display: none; }
+@media(max-width:900px) { .workflow-editor-fullscreen { grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: 130px minmax(0, 1fr) 62px; } .workflow-editor-fullscreen .workflow-canvas-topbar { flex-wrap: wrap; padding-left: 145px; } }
+@media(max-width:600px) { .workflow-editor-fullscreen { grid-template-columns: 1fr; grid-template-rows: 155px minmax(260px, 1fr) 240px 62px; overflow-y: auto; } .workflow-editor-sidebar { border-left: 0; border-top: 1px solid #353b43; } .workflow-editor-fullscreen .workflow-canvas-topbar { padding: 15px; align-content: flex-end; } .workflow-editor-fullscreen .workflow-canvas-topbar h1 { font-size: 17px; } .workflow-editor-fullscreen .workflow-editor-actions { gap: 5px; flex-wrap: wrap; } .workflow-editor-fullscreen .workflow-runbar { overflow-x: auto; } .workflow-editor-fullscreen .workflow-canvas-selection-hint { display: none; } .workflow-editor-fullscreen .workflow-flow-tools { max-width: calc(100% - 28px); flex-wrap: wrap; } }
+.workflow-editor-fullscreen .react-flow__node { background: transparent; border: 0; padding: 0; width: auto; box-shadow: none; }
+.workflow-editor-fullscreen .workflow-flow-node { border-top: 3px solid var(--node-color, #a8da65); }
+.workflow-editor-fullscreen .workflow-graph-check { color: #c8dfad; background: #263221; border-color: #455c36; }
+.workflow-editor-fullscreen .workflow-canvas-selection-hint { color: #aab3be; background: transparent; }

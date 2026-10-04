@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test:sites": "node --test tests/sites-worker.test.mjs",
     "test:chat": "node --test tests/ai-markdown.test.mjs tests/creation-capabilities.test.mjs tests/conversation-context.test.mjs tests/chat-suggestions.test.mjs tests/chat-stream.test.mjs tests/image-viewer.test.mjs",
-    "test:platform": "node --test tests/platform-runtime.test.mjs tests/capability-menu-layout.test.mjs tests/case-story.test.mjs tests/upload-file.test.mjs tests/piying-tool.test.mjs tests/cover-images.test.mjs tests/courseware-display.test.mjs tests/search-results.test.mjs tests/learning-graph.test.mjs tests/catalog-card-layout.test.mjs tests/workflow-publish-separation.test.mjs"
+    "test:platform": "node --test tests/platform-runtime.test.mjs tests/capability-menu-layout.test.mjs tests/case-story.test.mjs tests/upload-file.test.mjs tests/piying-tool.test.mjs tests/cover-images.test.mjs tests/courseware-display.test.mjs tests/search-results.test.mjs tests/learning-graph.test.mjs tests/catalog-card-layout.test.mjs tests/workflow-publish-separation.test.mjs tests/comfy-graph.test.mjs"
   },
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.3.0",

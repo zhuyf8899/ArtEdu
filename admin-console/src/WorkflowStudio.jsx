@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
+import { ComfyCanvas } from './ComfyCanvas.jsx';
 import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflowRun, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 import { faviconSourcesFor } from "./imageSources.js";
 
@@ -38,7 +39,7 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
       setSelected(detail);
       setRun(null);
       setAutoError("");
-      const next = previous ?? (detail.versionId ? await startWorkflowRun(detail.id) : null);
+      const next = previous ?? (detail.versionId && detail.definition?.engine !== "comfyui" ? await startWorkflowRun(detail.id) : null);
       setRun(next);
     }
     catch (error) { onNotice(error.message); }
@@ -69,7 +70,7 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
     // 正向/负向提示词都直接读节点里配好的默认值。
     // 只有「非现场给不可」的两种情况才停下来：要上传的参考图片；
     // 以及整条链路里一句提示词都没有时，创作需求必须问一句（否则没东西可生成）。
-    if (!node || node.type === "load_image") return;
+    if (run.context?.engine === "comfyui" || !node || node.type === "load_image") return;
     if (node.type === "input" && !String(node.data?.value ?? "").trim() && !nodesCarryPrompt(run.nodes)) return;
     const key = `${run.id}:${run.currentStep}`;
     if (advancing.current === key) return;
@@ -81,6 +82,7 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice,
     }).finally(() => setLoading(false));
   }, [run, selected, loading, autoError, onNotice]);
 
+  if (selected?.definition?.engine === 'comfyui') return <ComfyCanvas readOnly editor={{name:selected.name,definition:selected.definition}} selected={selected} onNotice={onNotice} onBack={()=>{setSelected(null);setRun(null);}} />;
   if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onNotice={onNotice} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={() => { setSelected(null); setRun(null); setAutoError(""); }} onStart={start} onExecute={executeNode} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
     <button className="learning-back" onClick={() => setBuilderOpen(false)}><ArrowLeft size={16} weight="bold" /> 返回设计工具</button>

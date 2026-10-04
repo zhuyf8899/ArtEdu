@@ -278,3 +278,10 @@ export const reviewSubmission = (reviewId, decision) => request(`/admin/reviews/
 });
 export const getAdminReports = () => request("/admin/reports");
 export const decideReport = (reportId, decision) => request(`/admin/reports/${reportId}/decision`, { method: "POST", body: JSON.stringify(decision) });
+
+export const getComfyCatalog=()=>request('/comfy/catalog');
+export const getComfyQueue=()=>request('/comfy/queue');
+export const getComfyJob=id=>request(`/comfy/jobs/${encodeURIComponent(id)}`);
+export const cancelComfyJob=id=>request(`/comfy/jobs/${encodeURIComponent(id)}/cancel`,{method:'POST'});
+
+export const retryComfyJob=id=>request(`/comfy/jobs/${encodeURIComponent(id)}/retry`,{method:'POST'});

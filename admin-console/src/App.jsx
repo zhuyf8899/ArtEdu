@@ -3,6 +3,7 @@ import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/600.css";
 import "@fontsource/space-grotesk/700.css";
 import "@fontsource/noto-sans-sc/400.css";
+import "@fontsource/noto-sans-sc/600.css";
 import "@fontsource/noto-sans-sc/700.css";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { LocalLogin, UserPortal } from "./Portal.jsx";

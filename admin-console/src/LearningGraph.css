@@ -127,3 +127,39 @@
 @media (prefers-reduced-motion: reduce) {
   .knowledge-orbits__node { transition: none; }
 }
+
+/* Chinese-first typography; keep knowledge labels readable inside circular nodes. */
+.knowledge-page--orbits {
+  font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  letter-spacing: normal;
+}
+.knowledge-page--orbits button { font-family: inherit; }
+.knowledge-orbits__node { padding: 12px 8px; gap: 4px; }
+.knowledge-orbits__node strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 3;
+  text-wrap: pretty;
+}
+.knowledge-orbits__node .knowledge-orbits__node-record {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.knowledge-orbits__node small { font-size: 11px; line-height: 1.5; opacity: 1; }
+.knowledge-path__node--3 strong { font-size: 16px; line-height: 1.5; }
+.knowledge-path__suggestion strong { font-size: 13px; }
+.knowledge-orbits__stage-heading h4 { font-weight: 600; line-height: 1.5; }
+.knowledge-orbits__detail-body p,
+.knowledge-orbits__detail-body li { font-size: 14px; line-height: 1.85; }
+.knowledge-orbits__detail-body h5 { font-size: 13px; font-weight: 600; }
+.knowledge-orbits__record-link strong { font-size: 14px; font-weight: 600; line-height: 1.65; }
+.knowledge-orbits__record-link small { font-size: 12px; line-height: 1.65; }
+.knowledge-orbits__detail h4 { font-size: 20px; font-weight: 600; line-height: 1.5; }
+.knowledge-orbits__detail p { font-size: 14px; line-height: 1.8; }
+.knowledge-path__edges text { font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif; font-size: 11px; }
+.knowledge-guidance__lead p, .knowledge-guidance__reason p { font-size: 14px; line-height: 1.8; }

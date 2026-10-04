@@ -1,3 +1,4 @@
+import { ComfyService } from './comfy.service';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -55,6 +56,7 @@ export class StudioService {
     private readonly generation?: GenerationService,
     private readonly models?: ModelRegistry,
     private readonly creationStorage?: CreationStorageService,
+    private readonly comfy?: ComfyService,
   ) {}
 
   async listToolDirectoryLinks() {
@@ -236,7 +238,10 @@ export class StudioService {
     if (!actor.roles.includes("admin") && workflow.rows[0].created_by !== actor.id) throw new ForbiddenException("只能编辑自己创建的工作流");
     if (input.publish) this.auth.requireAnyRole(actor, WORKFLOW_PUBLISH_ROLES);
     const definition = input.definition ?? this.legacyStepsToDefinition(input.steps ?? []);
-    if (input.publish) this.assertExecutableDefinition(definition);
+    if (definition.engine === 'comfyui') {
+      if (!this.comfy) throw new BadRequestException('缺少原生工作流执行服务');
+      definition.comfyPrompt = await this.comfy.validateGraph(actor, definition);
+    } else if (input.publish) this.assertExecutableDefinition(definition);
     const version = await this.database.transaction(async (client) => {
       const next = await client.query<{ number: number }>("SELECT COALESCE(MAX(version_number), 0)::int + 1 AS number FROM workflow_versions WHERE workflow_id = $1", [workflowId]);
       const id = `workflow-version-${randomUUID()}`;
@@ -269,12 +274,15 @@ export class StudioService {
     if (!result.rows[0]) throw new NotFoundException("工作流不存在或尚未发布");
     const workflow = this.mapWorkflow(result.rows[0]);
     if (!workflow.versionId) throw new ConflictException("工作流还没有可运行版本");
-    this.assertExecutableDefinition(workflow.definition);
+    if (workflow.definition.engine === 'comfyui') {
+      if (!this.comfy) throw new ConflictException('ComfyUI 执行服务尚未配置');
+      workflow.definition.comfyPrompt = await this.comfy.validateGraph(actor, workflow.definition);
+    } else this.assertExecutableDefinition(workflow.definition);
     const initialPrompt = typeof input.context.prompt === "string" ? input.context.prompt.trim().slice(0, 10000) : "";
     const initialSize = typeof input.context.size === "string" && /^\d{3,4}x\d{3,4}$/.test(input.context.size) ? input.context.size : "1024x1024";
     // 这次运行跑的是草稿还是已发布版本，前端要据此标注「草稿试运行」。
     const trialRun = !result.rows[0].published_at;
-    const runContext = { initialPrompt, initialSize, size: initialSize, trialRun, versionNumber: workflow.versionNumber, nodeResults: {}, nodeStates: {} };
+    const runContext = { engine: workflow.definition.engine ?? 'platform', initialPrompt, initialSize, size: initialSize, trialRun, versionNumber: workflow.versionNumber, nodeResults: {}, nodeStates: {} };
     const id = `workflow-run-${randomUUID()}`;
     await this.database.transaction(async (client) => {
       await client.query(`
@@ -283,6 +291,10 @@ export class StudioService {
       `, [id, actor.id, workflowId, workflow.versionId, workflow.stepCount, JSON.stringify(runContext)]);
       await client.query("INSERT INTO workflow_run_events (id,run_id,step_index,event_type) VALUES ($1,$2,0,'start')", [`workflow-event-${randomUUID()}`, id]);
     });
+    if (workflow.definition.engine === 'comfyui') {
+      try { await this.comfy!.enqueue(actor,id,workflow.definition.comfyPrompt!); }
+      catch(error) { await this.database.query("UPDATE workflow_runs SET status='cancelled' WHERE id=$1",[id]); throw error; }
+    }
     return this.getRun(actor, id);
   }
 
@@ -326,6 +338,7 @@ export class StudioService {
   async executeRun(actor: Actor, runId: string, input: WorkflowRunExecuteInput) {
     const current = await this.getRun(actor, runId) as Record<string, any>;
     if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");
+    if (current.definition.engine === 'comfyui') throw new ConflictException('原生工作流由 GPU Worker 执行，请查看队列状态');
     const step = current.steps[current.currentStep];
     const node = current.nodes.find((item: Record<string, any>) => item.id === step?.id);
     if (!node) throw new ConflictException("当前节点不存在，无法执行");
@@ -701,6 +714,7 @@ export class StudioService {
     if (Array.isArray(definition?.nodes)) {
       return {
         schemaVersion: 2,
+        engine: definition.engine, comfyPrompt: definition.comfyPrompt,
         nodes: definition.nodes,
         edges: Array.isArray(definition.edges) ? definition.edges : [],
         groups: Array.isArray(definition.groups) ? definition.groups : [],
@@ -718,7 +732,7 @@ export class StudioService {
       data: { label: step.title || `步骤 ${index + 1}`, description: step.description ?? "", value: step.instruction ?? "", estimatedMinutes: step.estimatedMinutes ?? 10 },
     }));
     const edges = nodes.slice(1).map((node, index) => ({ id: `legacy-edge-${index + 1}`, source: nodes[index].id, sourceHandle: "output", target: node.id, targetHandle: "input" }));
-    return { schemaVersion: 2, nodes, edges, viewport: { x: 0, y: 0, zoom: 1 } };
+    return { schemaVersion: 2, engine: undefined as 'platform' | 'comfyui' | undefined, comfyPrompt: undefined as Record<string,any> | undefined, nodes, edges, viewport: { x: 0, y: 0, zoom: 1 } };
   }
 
   private definitionToSteps(definition: { nodes: Array<Record<string, any>>; edges?: Array<Record<string, any>> }) {

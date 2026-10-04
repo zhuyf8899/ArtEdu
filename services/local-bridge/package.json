@@ -2,5 +2,11 @@
   "name": "@artedu/local-bridge",
   "private": true,
   "type": "module",
-  "scripts": { "configure": "node bridge.mjs configure", "run": "node bridge.mjs run", "pair": "node bridge.mjs pair" }
+  "scripts": {
+    "configure": "node bridge.mjs configure",
+    "run": "node bridge.mjs run",
+    "pair": "node bridge.mjs pair",
+    "run:gpu": "node comfy-worker.mjs",
+    "test:gpu": "node --test comfy-worker.test.mjs"
+  }
 }

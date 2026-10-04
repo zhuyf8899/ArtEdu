@@ -47,7 +47,7 @@ const graphPointSchema = z.object({
 const workflowNodeSchema = z.object({
   id: z.string().trim().min(1).max(80),
   // 节点名是平台稳定的执行契约；执行器可按能力忽略未支持节点，但不得把未知节点当作模型调用。
-  type: z.enum(["input", "prompt", "negative_prompt", "skill", "model", "text_generate", "preview", "note", "load_checkpoint", "text_encode", "empty_latent", "ksampler", "vae_decode", "load_image", "save_image", "lora", "controlnet", "upscale"]),
+  type: z.enum(["comfy", "input", "prompt", "negative_prompt", "skill", "model", "text_generate", "preview", "note", "load_checkpoint", "text_encode", "empty_latent", "ksampler", "vae_decode", "load_image", "save_image", "lora", "controlnet", "upscale"]),
   position: graphPointSchema,
   data: z.object({
     label: z.string().trim().min(1).max(160),
@@ -76,12 +76,16 @@ const workflowGroupSchema = z.object({
 
 export const workflowDefinitionSchema = z.object({
   schemaVersion: z.literal(2).default(2),
+  engine: z.enum(['platform','comfyui']).optional(),
+  comfyPrompt: z.record(z.string(), z.object({class_type:z.string().min(1).max(160),inputs:z.record(z.string(),z.unknown()),_meta:z.object({title:z.string().max(160)}).optional()})).optional(),
   nodes: z.array(workflowNodeSchema).min(1).max(80),
   edges: z.array(workflowEdgeSchema).max(160).default([]),
   // 视觉分组随版本保存，但不参与节点执行。
   groups: z.array(workflowGroupSchema).max(20).default([]),
   viewport: z.object({ x: z.number().finite(), y: z.number().finite(), zoom: z.number().positive().max(4) }).default({ x: 0, y: 0, zoom: 1 }),
 }).superRefine((definition, context) => {
+  if (definition.engine === 'comfyui' && definition.nodes.some(n=>n.type!=='comfy')) context.addIssue({code:z.ZodIssueCode.custom,message:'原生工作流只能包含 ComfyUI 节点'});
+  if (definition.engine !== 'comfyui' && definition.nodes.some(n=>n.type==='comfy')) context.addIssue({code:z.ZodIssueCode.custom,message:'ComfyUI 节点必须使用原生执行引擎'});
   const nodeIds = new Set<string>();
   for (const node of definition.nodes) {
     if (nodeIds.has(node.id)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["nodes"], message: "节点 ID 不能重复" });

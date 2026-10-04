@@ -165,3 +165,7 @@ PostgreSQL 保存用户、权限、课程、工作流、额度、任务、作品
 
 回复结束后的「建议提问内容」、课程资料里 PDF 与视频的显示方式、Agent 绘制 SVG 的下发策略，
 以及流式渲染与入口包的性能改良记录见 [`docs/agent-svg-courseware-perf.md`](docs/agent-svg-courseware-perf.md)。
+
+## 原生 ComfyUI 工作流（2026-10-03）
+
+新入口支持真实节点定义、类型化端口、API 工作流交换、GPU Worker 主动领取、持久化队列、取消、进度及实时图片预览。现有教学工作流仍可使用。需要迁移 `0034`、受控上传和配对 Worker；配置、已验证范围及兼容边界见 [原生 ComfyUI 工作流](docs/comfyui-workflows.md)。这不代表正式服务器已部署或所有 ComfyUI 插件已通过兼容验收。
