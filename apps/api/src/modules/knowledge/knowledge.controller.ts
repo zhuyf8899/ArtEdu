@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Put, Req } from "@nestjs/com
 import type { FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
-import { activityInputSchema, goalInputSchema, goalUpdateSchema, nodeInputSchema, nodeLinksSchema, nodeUpdateSchema, toolUsageInputSchema } from "./knowledge.contracts";
+import { activityInputSchema, goalInputSchema, goalUpdateSchema, nodeInputSchema, nodeLinksSchema, nodeUpdateSchema, toolUsageInputSchema, learningPathInputSchema } from "./knowledge.contracts";
 import type { ActivityInput, GoalInput, NodeInput } from "./knowledge.contracts";
 import { KnowledgeService } from "./knowledge.service";
 
@@ -31,6 +31,14 @@ export class KnowledgeController {
   async recordToolUsage(@Req() request: FastifyRequest, @Body() body: unknown) {
     return this.knowledge.recordToolUsage(await this.auth.getActor(request), parseInput(toolUsageInputSchema, body).toolId);
   }
+
+  @Put("me/knowledge-path")
+  async savePath(@Req() request: FastifyRequest, @Body() body: unknown) {
+    return this.knowledge.savePath(await this.auth.getActor(request), parseInput(learningPathInputSchema, body));
+  }
+
+  @Post("admin/knowledge-map/sync-labels")
+  async sync(@Req() request: FastifyRequest) { return this.knowledge.syncLabels(await this.auth.getActor(request)); }
 
   @Get("admin/knowledge-map")
   async manage(@Req() request: FastifyRequest) { return this.knowledge.getManagedMap(await this.auth.getActor(request)); }

@@ -40,3 +40,6 @@ export type NodeLinks = z.infer<typeof nodeLinksSchema>;
 export type GoalInput = z.infer<typeof goalInputSchema>;
 export type GoalUpdate = z.infer<typeof goalUpdateSchema>;
 export type ActivityInput = z.infer<typeof activityInputSchema>;
+
+export const learningPathInputSchema = z.object({ title: z.string().trim().min(1).max(120), nodeIds: z.array(id).max(100).refine(ids => new Set(ids).size === ids.length, '路径知识点不能重复') }).strict();
+export type LearningPathInput = z.infer<typeof learningPathInputSchema>;

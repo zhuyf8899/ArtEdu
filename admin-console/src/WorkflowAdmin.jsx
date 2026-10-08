@@ -268,9 +268,9 @@ export function WorkflowAdmin({ showToast, canPublish = true, initialWorkflowId 
     try {
       // 历史数据可能把站内路由（例如 /studio）存进入口地址；服务端仅接受无凭据 HTTP(S) 外链。
       const entryUrl = /^https?:\/\//i.test(editor.entryUrl || "") ? editor.entryUrl : undefined;
-      const definition = { ...editor.definition, learning: normalizeLearningBindings(editor.definition.learning) };
+      const savedDefinition = { ...definition, learning: normalizeLearningBindings(definition.learning) };
       await updateWorkflow(selected.id, { name: editor.name, description: editor.description, category: editor.category, entryType: editor.entryType, entryUrl });
-      await createWorkflowVersion(selected.id, { definition, promptTemplate: editor.promptTemplate, publish });
+      await createWorkflowVersion(selected.id, { definition: savedDefinition, promptTemplate: editor.promptTemplate, publish });
       if (draftTimer.current) window.clearTimeout(draftTimer.current);
       window.localStorage.removeItem(draftKey(selected.id));
       setDirty(false);

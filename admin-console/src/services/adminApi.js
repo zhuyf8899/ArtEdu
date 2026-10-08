@@ -289,3 +289,19 @@ export const getComfyJob=id=>request(`/comfy/jobs/${encodeURIComponent(id)}`);
 export const cancelComfyJob=id=>request(`/comfy/jobs/${encodeURIComponent(id)}/cancel`,{method:'POST'});
 
 export const retryComfyJob=id=>request(`/comfy/jobs/${encodeURIComponent(id)}/retry`,{method:'POST'});
+
+export const getKnowledgeMap=()=>request('/me/knowledge-map');
+export const getAbilityPortrait=()=>request('/me/ability-portrait');
+export const getToolTrail=()=>request('/me/tool-trail');
+export const getGrowthRecord=()=>request('/me/growth-record');
+export const saveKnowledgePath=input=>request('/me/knowledge-path',{method:'PUT',body:JSON.stringify(input)});
+export const recordKnowledgeActivity=input=>request('/me/knowledge-activities',{method:'POST',body:JSON.stringify(input)});
+export const getManagedKnowledgeMap=()=>request('/admin/knowledge-map');
+export const syncKnowledgeLabels=()=>request('/admin/knowledge-map/sync-labels',{method:'POST'});
+export const createKnowledgeNode=input=>request('/admin/knowledge-nodes',{method:'POST',body:JSON.stringify(input)});
+export const updateKnowledgeNode=(id,input)=>request('/admin/knowledge-nodes/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(input)});
+export const saveKnowledgeLinks=(id,input)=>request('/admin/knowledge-nodes/'+encodeURIComponent(id)+'/links',{method:'PUT',body:JSON.stringify(input)});
+export const createAbilityGoal=input=>request('/admin/ability-goals',{method:'POST',body:JSON.stringify(input)});
+export const updateAbilityGoal=(id,input)=>request('/admin/ability-goals/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(input)});
+
+export const recordKnowledgeToolUsage=toolId=>request('/me/tool-usage',{method:'POST',body:JSON.stringify({toolId})});

@@ -5,6 +5,12 @@
  * 这里记录基础表的用途；完整字段、约束和新增表以 migrations/ 为准。
  */
 export const tables = {
+  knowledgeNodes: '知识点及发布状态',
+  knowledgeEdges: '知识点的前置与相关关系',
+  knowledgeBindings: '知识点与课程、课时、工作流、工具的绑定',
+  knowledgeLearningPaths: '按用户持久化的有序学习路径',
+  knowledgeActivityEvents: '用户自行记录的学习、练习和创作活动',
+  abilityGoals: '知识点关联的能力目标，不是能力认证',
   departments: '院系与组织层级',
   roles: '系统角色：管理员、运营、老师、学生',
   users: '平台用户基础资料',
@@ -43,4 +49,4 @@ export const tables = {
 } as const;
 
 export const initialMigration = '0001_initial';
-export const latestMigration = '0003_course_resource_business';
+export const latestMigration = '0036_knowledge_label_sync_triggers';

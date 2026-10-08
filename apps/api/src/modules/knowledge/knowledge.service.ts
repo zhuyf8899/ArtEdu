@@ -4,7 +4,7 @@ import type { PoolClient, QueryResultRow } from "pg";
 import { ADMIN_MANAGEMENT_ROLES } from "../../common/constants";
 import { AuthService, type Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
-import type { ActivityInput, GoalInput, GoalUpdate, NodeInput, NodeLinks, NodeUpdate } from "./knowledge.contracts";
+import type { LearningPathInput, ActivityInput, GoalInput, GoalUpdate, NodeInput, NodeLinks, NodeUpdate } from "./knowledge.contracts";
 
 interface NodeRow extends QueryResultRow { id: string; title: string; description: string; domain: string; sort_order: number; status: string; }
 interface EdgeRow extends QueryResultRow { from_node_id: string; to_node_id: string; relation: "prerequisite" | "related"; }
@@ -19,55 +19,67 @@ export class KnowledgeService {
 
   private async graph(managed: boolean) {
     const filter = managed ? "" : "WHERE status = 'published'";
-    const [nodes, edges, bindings, goals, nodeGoals] = await Promise.all([
+    const [nodes, edges, bindingRows, goals, nodeGoals, resources] = await Promise.all([
       this.database.query<NodeRow>(`SELECT * FROM knowledge_nodes ${filter} ORDER BY sort_order, id`),
       this.database.query<EdgeRow>(`SELECT e.* FROM knowledge_edges e JOIN knowledge_nodes a ON a.id=e.from_node_id JOIN knowledge_nodes b ON b.id=e.to_node_id ${managed ? "" : "WHERE a.status='published' AND b.status='published'"}`),
       this.database.query<BindingRow>(`SELECT b.* FROM knowledge_bindings b JOIN knowledge_nodes n ON n.id=b.node_id ${managed ? "" : "WHERE n.status='published'"}`),
       this.database.query<GoalRow>(`SELECT * FROM ability_goals ${filter} ORDER BY sort_order, id`),
       this.database.query<NodeGoalRow>(`SELECT ng.* FROM knowledge_ability_goals ng JOIN knowledge_nodes n ON n.id=ng.node_id JOIN ability_goals g ON g.id=ng.goal_id ${managed ? "" : "WHERE n.status='published' AND g.status='published'"}`),
+      this.database.query<{ target_type: string; target_id: string; title: string; course_id: string | null; entry_url: string | null; status: string }>(`
+        SELECT 'course' AS target_type,id AS target_id,title,NULL::text AS course_id,NULL::text AS entry_url,status FROM courses ${managed ? "" : "WHERE status='published'"}
+        UNION ALL SELECT 'lesson',l.id,c.title || ' · ' || l.title,l.course_id,NULL,l.status FROM course_lessons l JOIN courses c ON c.id=l.course_id ${managed ? "" : "WHERE l.status='published' AND c.status='published'"}
+        UNION ALL SELECT 'workflow',id,name,NULL,NULL,status FROM workflows ${managed ? "" : "WHERE status='published'"}
+        UNION ALL SELECT 'tool',id,name,NULL,entry_url,status FROM tools ${managed ? "" : "WHERE status='published'"}
+      `),
     ]);
-    return { nodes: nodes.rows, edges: edges.rows, bindings: bindings.rows, goals: goals.rows, nodeGoals: nodeGoals.rows };
+    const catalog = resources.rows.map(row => ({ targetType:row.target_type,targetId:row.target_id,title:row.title,status:row.status,
+      href:row.target_type==='course' ? '/learning?course='+encodeURIComponent(row.target_id) : row.target_type==='lesson' ? '/learning?course='+encodeURIComponent(row.course_id!)+ '&lesson='+encodeURIComponent(row.target_id) : row.target_type==='workflow' ? '/studio?workflow='+encodeURIComponent(row.target_id) : row.entry_url }));
+    const available = new Map(catalog.map(item => [item.targetType+':'+item.targetId,item]));
+    const bindings = bindingRows.rows.filter(row => available.has(row.target_type+':'+row.target_id));
+    return { nodes: nodes.rows, edges: edges.rows, bindings, goals: goals.rows, nodeGoals: nodeGoals.rows, catalog, available };
   }
 
   async getManagedMap(actor: Actor) {
     this.auth.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
     const graph = await this.graph(true);
-    return { nodes: graph.nodes.map(this.mapNode), edges: graph.edges.map(this.mapEdge), bindings: graph.bindings.map(this.mapBinding), goals: graph.goals.map(this.mapGoal), nodeGoals: graph.nodeGoals.map((row) => ({ nodeId: row.node_id, goalId: row.goal_id })) };
+    return { nodes: graph.nodes.map(this.mapNode), edges: graph.edges.map(this.mapEdge), catalog: graph.catalog, bindings: graph.bindings.map(this.mapBinding), goals: graph.goals.map(this.mapGoal), nodeGoals: graph.nodeGoals.map((row) => ({ nodeId: row.node_id, goalId: row.goal_id })) };
   }
 
   private async progress(userId: string) {
     const result = await this.database.query<ProgressRow>(`
       WITH evidence AS (
-        SELECT b.node_id, p.progress_percent::int AS score
+        SELECT b.node_id, FLOOR(AVG(COALESCE(p.progress_percent,0)))::int AS score
         FROM knowledge_bindings b JOIN course_lessons l ON b.target_type='lesson' AND l.id=b.target_id AND l.status='published'
         JOIN courses c ON c.id=l.course_id AND c.status='published'
-        JOIN learning_progress p ON p.lesson_id=l.id AND p.user_id=$1
+        LEFT JOIN course_enrollments ce ON ce.course_id=c.id AND ce.user_id=$1 AND ce.status <> 'withdrawn'
+        LEFT JOIN learning_progress p ON p.lesson_id=l.id AND p.user_id=$1 AND ce.id IS NOT NULL
+        GROUP BY b.node_id
         UNION ALL
-        SELECT b.node_id, COALESCE(ROUND(AVG(COALESCE(p.progress_percent,0))),0)::int
+        SELECT b.node_id, COALESCE(FLOOR(AVG(COALESCE(p.progress_percent,0))),0)::int
         FROM knowledge_bindings b JOIN courses c ON b.target_type='course' AND c.id=b.target_id AND c.status='published'
         JOIN course_enrollments ce ON ce.course_id=c.id AND ce.user_id=$1 AND ce.status <> 'withdrawn'
+        JOIN knowledge_nodes kn ON kn.id=b.node_id AND b.source='manual'
         JOIN course_lessons l ON l.course_id=c.id AND l.status='published'
         LEFT JOIN learning_progress p ON p.lesson_id=l.id AND p.user_id=$1
         GROUP BY b.node_id,b.target_id
         UNION ALL
         SELECT b.node_id, CASE WHEN r.status='completed' THEN 100 ELSE 50 END
         FROM knowledge_bindings b JOIN workflows w ON b.target_type='workflow' AND w.id=b.target_id AND w.status='published'
-        JOIN workflow_runs r ON r.workflow_id=w.id AND r.user_id=$1 AND r.status <> 'cancelled'
-        UNION ALL
-        SELECT b.node_id, CASE WHEN r.status='completed' THEN 100 ELSE 50 END
-        FROM knowledge_bindings b JOIN tools t ON b.target_type='tool' AND t.id=b.target_id AND t.status='published'
-        JOIN workflow_tools wt ON wt.tool_id=t.id JOIN workflow_runs r ON r.workflow_id=wt.workflow_id AND r.user_id=$1 AND r.status <> 'cancelled'
+        JOIN workflow_runs r ON r.workflow_id=w.id AND r.user_id=$1 AND r.status IN ('in_progress','completed')
+        JOIN workflow_versions v ON v.id=r.workflow_version_id AND v.published_at IS NOT NULL
+        JOIN knowledge_nodes n ON n.id=b.node_id
+        WHERE b.source='manual' OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(COALESCE(v.definition_json->'learning'->'knowledgePoints','[]'::jsonb)) label WHERE lower(btrim(label))=lower(n.title))
         UNION ALL
         SELECT node_id, CASE activity_type WHEN 'learn' THEN 30 WHEN 'practice' THEN 70 ELSE 100 END
         FROM knowledge_activity_events WHERE user_id=$1
       )
-      SELECT node_id, MAX(score)::int AS progress, COUNT(*)::int AS evidence_count FROM evidence GROUP BY node_id
+      SELECT node_id, MAX(score)::int AS progress, COUNT(*) FILTER (WHERE score>0)::int AS evidence_count FROM evidence GROUP BY node_id
     `, [userId]);
     return new Map(result.rows.map((row) => [row.node_id, { progress: Number(row.progress), evidenceCount: Number(row.evidence_count) }]));
   }
 
   async getMap(actor: Actor) {
-    const [graph, progress] = await Promise.all([this.graph(false), this.progress(actor.id)]);
+    const [graph, progress, path] = await Promise.all([this.graph(false), this.progress(actor.id), this.database.query('SELECT title,node_ids AS "nodeIds",updated_at AS "updatedAt" FROM knowledge_learning_paths WHERE user_id=$1',[actor.id])]);
     const nodes = graph.nodes.map((row) => {
       const activity = progress.get(row.id) ?? { progress: 0, evidenceCount: 0 };
       return { ...this.mapNode(row), progressPercent: activity.progress, evidenceCount: activity.evidenceCount,
@@ -77,10 +89,39 @@ export class KnowledgeService {
     const recommendations = nodes.filter((node) => node.state !== "completed" && graph.edges
       .filter((edge) => edge.relation === "prerequisite" && edge.to_node_id === node.id)
       .every((edge) => completed.has(edge.from_node_id)))
-      .sort((a, b) => (b.progressPercent - a.progressPercent) || (a.sortOrder - b.sortOrder))
-      .slice(0, 3).map((node) => ({ nodeId: node.id, reason: node.progressPercent > 0 ? "继续学习" : "前置知识点已完成" }));
-    return { nodes, edges: graph.edges.map(this.mapEdge), bindings: graph.bindings.map(this.mapBinding), recommendations,
+      .sort((a, b) => {
+        const ids: string[] = path.rows[0]?.nodeIds ?? [];
+        const rank = (id:string) => ids.includes(id) ? ids.indexOf(id) : 100000;
+        return rank(a.id)-rank(b.id) || (b.progressPercent-a.progressPercent) || (a.sortOrder-b.sortOrder);
+      })
+      .filter(node => graph.bindings.some(binding => binding.node_id===node.id))
+      .slice(0, 3).map((node) => ({ nodeId: node.id, reason: node.progressPercent > 0 ? "继续学习" : graph.edges.some(edge=>edge.relation==='prerequisite' && edge.to_node_id===node.id) ? "前置知识点已完成" : "可从此知识点开始" }));
+    return { nodes, edges: graph.edges.map(this.mapEdge), bindings: graph.bindings.map(row=>({...this.mapBinding(row),...graph.available.get(row.target_type+':'+row.target_id)})), recommendations,
+      path: path.rows[0] ?? {title:"我的学习路径",nodeIds:[]},
       summary: { total: nodes.length, completed: completed.size, inProgress: nodes.filter((node) => node.state === "in_progress").length } };
+  }
+
+  async syncLabels(actor: Actor) {
+    this.auth.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
+    await this.database.transaction(client => client.query('SELECT refresh_knowledge_labels()'));
+    return this.getManagedMap(actor);
+  }
+
+  async savePath(actor: Actor, input: LearningPathInput) {
+    await this.database.transaction(async client => {
+      await client.query('SELECT pg_advisory_xact_lock(7410633)');
+      const nodes = await client.query<{id:string}>("SELECT id FROM knowledge_nodes WHERE status='published' AND id=ANY($1::text[])",[input.nodeIds]);
+      if(nodes.rows.length!==input.nodeIds.length) throw new BadRequestException('路径包含不存在或未发布的知识点');
+      const edges = await client.query<EdgeRow>("SELECT e.* FROM knowledge_edges e JOIN knowledge_nodes n ON n.id=e.from_node_id AND n.status='published' WHERE relation='prerequisite' AND to_node_id=ANY($1::text[])",[input.nodeIds]);
+      const progress = await this.progress(actor.id);
+      for(const edge of edges.rows) {
+        const before=input.nodeIds.indexOf(edge.from_node_id), after=input.nodeIds.indexOf(edge.to_node_id);
+        if((before<0 || before>=after) && (progress.get(edge.from_node_id)?.progress ?? 0)<100) throw new BadRequestException('请将未完成的前置知识点加入路径并排在后续知识点之前');
+      }
+      const result = await client.query('INSERT INTO knowledge_learning_paths(user_id,title,node_ids) VALUES($1,$2,$3::jsonb) ON CONFLICT(user_id) DO UPDATE SET title=EXCLUDED.title,node_ids=EXCLUDED.node_ids,updated_at=CURRENT_TIMESTAMP RETURNING title,node_ids AS "nodeIds"',[actor.id,input.title,JSON.stringify(input.nodeIds)]);
+      return result.rows[0];
+    });
+    return { title:input.title,nodeIds:input.nodeIds };
   }
 
   async getAbilities(actor: Actor) {
@@ -100,7 +141,7 @@ export class KnowledgeService {
         (SELECT MAX(u.occurred_at) FROM tool_usage_events u WHERE u.tool_id=t.id AND u.user_id=$1) AS "lastDirectUseAt",
         COALESCE(array_agg(DISTINCT b.node_id) FILTER (WHERE n.status='published'), '{}') AS "nodeIds"
       FROM tools t LEFT JOIN workflow_tools wt ON wt.tool_id=t.id
-      LEFT JOIN workflow_runs r ON r.workflow_id=wt.workflow_id AND r.user_id=$1 AND r.status <> 'cancelled'
+      LEFT JOIN workflow_runs r ON r.workflow_id=wt.workflow_id AND r.user_id=$1 AND r.status IN ('in_progress','completed')
       LEFT JOIN knowledge_bindings b ON b.target_type='tool' AND b.target_id=t.id
       LEFT JOIN knowledge_nodes n ON n.id=b.node_id
       WHERE t.status='published' GROUP BY t.id ORDER BY "runCount" DESC, t.name
@@ -174,7 +215,7 @@ export class KnowledgeService {
   async updateNode(actor: Actor, nodeId: string, input: NodeUpdate) {
     this.auth.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
     const result = await this.database.query<NodeRow>(`
-      UPDATE knowledge_nodes SET title=COALESCE($2,title),description=COALESCE($3,description),domain=COALESCE($4,domain),
+      UPDATE knowledge_nodes SET source='manual',title=COALESCE($2,title),description=COALESCE($3,description),domain=COALESCE($4,domain),
         sort_order=COALESCE($5,sort_order),status=COALESCE($6,status),updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING *
     `, [nodeId, input.title ?? null, input.description ?? null, input.domain ?? null, input.sortOrder ?? null, input.status ?? null]);
     if (!result.rows[0]) throw new NotFoundException("知识点不存在");
