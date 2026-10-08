@@ -29,7 +29,7 @@ export function LearningPathCanvas({ graph, framework, contents, paths, selected
           const arrowId = `${id}-${stage.id}-arrow`;
           const suggestion = paths[stage.id].recommendation;
           return <section className={`knowledge-orbits__stage knowledge-path__stage ${active ? "is-current" : ""}`} key={stage.id} aria-label={`第${stage.number}阶段：${stage.title}`}>
-            <header className="knowledge-orbits__stage-heading"><span>阶段 {stage.number}</span><h4>{stage.title}</h4><small>{active ? "当前阶段" : stage.id === framework.stages[focusIndex + 1]?.id ? "下一阶段" : "阶段目标"} · {progress}%</small></header>
+            <header className="knowledge-orbits__stage-heading"><span>阶段 {stage.number}</span><h4>{stage.title}</h4><small>{active ? "当前阶段" : stage.id === framework.stages[focusIndex + 1]?.id ? "下一阶段" : "阶段目标"} · 记录目标进度 {progress}%</small></header>
             <svg className="knowledge-path__edges" width="400" height="552" viewBox="0 0 400 552" aria-hidden="true" focusable="false">
               <defs><marker id={arrowId} markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto"><path d="M1 1 L5.5 3.5 L1 6" fill="none" stroke="currentColor" strokeWidth="1.2" /></marker></defs>
               {paths[stage.id].edges.map((edge) => <g key={edge.id} className={edge.existing ? "is-existing" : "is-suggested"} data-edge={edge.id}>

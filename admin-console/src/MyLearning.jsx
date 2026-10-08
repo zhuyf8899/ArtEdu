@@ -16,6 +16,7 @@ import {
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { coverImageFor } from "./coverImages.js";
 import { LearningGraph } from "./LearningGraph.jsx";
+import { CurriculumAtlas } from "./CurriculumAtlas.jsx";
 
 const COURSE_IMAGES = {
   "course-ai-design-foundation": "/assets/learning/ai-design-foundations.jpg",
@@ -41,7 +42,7 @@ const VIEWS = [
   ["works", "我的作品", ImageSquare],
 ];
 
-export function MyLearning({ account, onNavigate, onNotice }) {
+export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", learningAtlasCourse = "" }) {
   const [data, setData] = useState(EMPTY_DATA);
   const [view, setView] = useState("graph");
   const [loading, setLoading] = useState(true);
@@ -51,12 +52,18 @@ export function MyLearning({ account, onNavigate, onNotice }) {
   const [loadError, setLoadError] = useState("");
   const [recentResources, setRecentResources] = useState([]);
   const { confirmAction } = useFeedback();
+  const isPersonalAtlas = learningAtlas === "personal";
+  const isGenericAtlas = view === "graph" && !isPersonalAtlas;
+
+  // URL keeps the personal extension shareable; browser Back returns to the generic map.
+  useEffect(() => { setView("graph"); }, [learningAtlas, learningAtlasCourse]);
 
   const load = async () => {
     setLoading(true);
     setLoadError("");
-    try { const [learning, recent] = await Promise.all([getLearningSpace(), getRecentCourseResources()]); setData(learning); setRecentResources(recent.items ?? []); }
-    catch (error) { setLoadError(error.message); onNotice(error.message); }
+    // Recent files are optional. Their failure must not hide the personal learning record.
+    try { const [learning, recent] = await Promise.all([getLearningSpace(), getRecentCourseResources().catch(() => ({ items: [] }))]); setData(learning); setRecentResources(recent.items ?? []); }
+    catch (error) { setLoadError(error.message); }
     finally { setLoading(false); }
   };
 
@@ -125,7 +132,7 @@ export function MyLearning({ account, onNavigate, onNotice }) {
     } catch (error) { onNotice(error.message); }
   };
 
-  return <section className="my-learning-page my-learning-page--compact">
+  return <section className={`my-learning-page my-learning-page--compact ${isGenericAtlas ? "my-learning-page--atlas" : ""}`}>
     <header className="my-learning-heading">
       <div><p className="eyebrow">// PERSONAL LEARNING SPACE</p><h1>我的学习</h1><p>回看学习路径，管理课程与创作，让每一次探索都有迹可循。</p></div>
       <div className="my-learning-heading__status"><span>已完成课时</span><strong>{data.summary.completedLessons}</strong><em>/ {data.summary.totalLessons} 节</em></div>
@@ -139,15 +146,18 @@ export function MyLearning({ account, onNavigate, onNotice }) {
         <div className="learning-rail__account"><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><small>{account.roleLabel}</small></div></div>
       </aside>
 
-      <div id="learning-view-content" className="learning-content" aria-busy={loading}>
+      <div id="learning-view-content" className="learning-content" aria-busy={!isGenericAtlas && loading}>
+        {isGenericAtlas ? <CurriculumAtlas courseId={learningAtlas === "course" ? learningAtlasCourse : ""} onNavigate={onNavigate} onPersonal={() => onNavigate("/my-learning?atlas=personal")} /> : <>
+        {view === "graph" && <div className="personal-atlas-entry"><div><strong>个性化知识图谱</strong><p>依据我的课程、实践与成长记录展示；未配置知识点时不推断掌握度。</p></div><button onClick={() => onNavigate("/my-learning")}>返回通用图谱 <ArrowRight size={17} /></button></div>}
         {loading ? <LearningLoading /> : loadError ? <LearningLoadError message={loadError} onRetry={load} /> : <>
-          {view === "graph" && <LearningGraph data={data} onNavigate={onNavigate} onView={setView} />}
+          {view === "graph" && isPersonalAtlas && <LearningGraph data={data} onNavigate={onNavigate} onView={setView} />}
           {view === "overview" && <Overview data={data} recentResources={recentResources} displayName={displayName} onView={setView} onToggleTask={toggleTask} onNavigate={onNavigate} />}
           {view === "courses" && <CoursesView courses={data.courses} onNavigate={onNavigate} />}
           {view === "plan" && <PlanView tasks={data.tasks} form={taskForm} setForm={setTaskForm} saving={saving} onSubmit={addTask} onToggle={toggleTask} onDelete={removeTask} />}
           {view === "notes" && <NotesView notes={data.notes} courses={data.courses} form={noteForm} setForm={setNoteForm} saving={saving} onSubmit={addNote} onDelete={removeNote} />}
           {view === "favorites" && <WorksView title="收藏案例" eyebrow="// SAVED CASES" items={data.favorites} empty="还没有收藏案例" onNavigate={() => onNavigate("/community")} />}
           {view === "works" && <WorksView title="我的作品" eyebrow="// MY CREATIONS" items={data.works} empty="还没有发布作品" onNavigate={() => onNavigate("/community")} />}
+        </>}
         </>}
       </div>
     </div>

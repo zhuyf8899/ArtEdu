@@ -45,7 +45,7 @@ export function LearningGraph({ data, onNavigate, onView }) {
         <section className="knowledge-path__reason"><h5>为什么推荐这一步？</h5><p>{selectedRecommendation.reason}</p><small>基于当前记录和阶段展示目标的规则推荐，不是 AI 测评或教师评分。</small></section>
       </div> : <div className={`knowledge-orbits__detail is-${selectedCell.state}`} id={detailId} role="region" aria-label="选中板块学习详情" aria-live="polite" aria-atomic="true">
         <div><span className="knowledge-kicker">阶段 {selectedStage.number} · {COLUMNS[selectedColumn][0]} · {selectedContent.recordLabel}</span><h4>{selectedContent.headline}</h4><p>{selectedContent.topic}</p></div>
-        <div className="knowledge-orbits__detail-progress"><span>{STATUS[selectedCell.state]}</span><strong>{selectedCell.display ?? `${selectedCell.value} / ${selectedCell.target} ${selectedCell.unit}`}</strong></div>
+        <div className="knowledge-orbits__detail-progress"><span>阶段累计目标 · {STATUS[selectedCell.state]}</span><strong>{selectedContent.stageGoal}</strong><small>跨课程与记录累计，不是上方单条记录的进度或知识掌握度。</small></div>
         <button type="button" onClick={() => goTo(selectedContent.action)}>前往{actionLabel(selectedContent.action)}<ArrowRight size={17} /></button>
         <div className="knowledge-orbits__detail-body">
           <section><h5>学习与创作记录</h5>{selectedContent.records.length ? selectedContent.records.map((record, index) => <button className="knowledge-orbits__record-link" type="button" key={`${record.title}-${index}`} onClick={() => goTo(record.action)}><span><strong>{record.title}</strong><small>{record.detail}</small></span><ArrowRight size={15} /></button>) : <p>尚无对应记录，先从下一步开始。</p>}</section>

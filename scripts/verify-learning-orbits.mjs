@@ -44,7 +44,7 @@ try {
     };
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(responses[endpoint] ?? { items: [] }) });
   });
-  await page.goto(`${base}/my-learning`, { waitUntil: "networkidle" });
+  await page.goto(`${base}/my-learning?atlas=personal`, { waitUntil: "networkidle" });
   await page.locator(".knowledge-orbits__node").first().waitFor();
   assert.equal(await page.locator(".knowledge-intro, .knowledge-stats").count(), 0, "graph has no duplicate welcome or summary cards");
   assert.equal(await page.locator(".knowledge-orbits__stage").count(), 2);
@@ -55,6 +55,11 @@ try {
   assert.equal(await page.locator(".knowledge-orbits__annotations > span").count(), 5);
   assert.equal(await page.locator(".knowledge-orbits__node strong", { hasText: "我的学习地图" }).count(), 0);
   assert.equal(await page.locator(".knowledge-orbits__node strong").first().innerText(), "AI 艺术入门");
+  await page.locator('.knowledge-path__node--0').first().click();
+  assert.equal(await page.locator('.knowledge-path__node--0 .knowledge-orbits__node-record').first().innerText(), '本课程 3/8 课时');
+  assert.equal(await page.locator('.knowledge-orbits__detail-progress strong').innerText(), '3 / 3 节课时');
+  assert.match(await page.locator('.knowledge-orbits__detail-progress').innerText(), /阶段累计目标.*不是上方单条记录/s);
+  await page.getByRole('button', { name: '收起分支', exact: true }).click();
   for (const [width, height] of [[1440, 1080], [1280, 900], [768, 1024], [390, 844]]) {
     await page.setViewportSize({ width, height });
     await page.evaluate(() => document.fonts.ready);
@@ -127,7 +132,7 @@ try {
   assert.equal(await page.locator(".lesson-card--recommended").evaluate((node) => document.activeElement === node), true);
   await page.screenshot({ path: path.join(output, "recommended-lesson.png") });
   fixture = empty;
-  await page.goto(`${base}/my-learning`, { waitUntil: "networkidle" });
+  await page.goto(`${base}/my-learning?atlas=personal`, { waitUntil: "networkidle" });
   await page.locator(".knowledge-orbits__node.is-none").first().waitFor();
   assert.equal(await page.locator('[data-node-kind="record"].is-none').count(), 8);
   await page.locator(".knowledge-orbits").screenshot({ path: path.join(output, "graph-empty.png") });
