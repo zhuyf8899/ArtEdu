@@ -72,7 +72,7 @@ try {
   await page.locator(".workflow-learning-config summary").click();
   assert.equal(await fields.nth(1).inputValue(), "DeepSeek\nFigma");
   await page.locator(".workflow-learning-config").screenshot({ path: path.join(output, "workflow-config.png") });
-  await page.goto(`${base}/my-learning`, { waitUntil: "networkidle" });
+  await page.goto(`${base}/my-learning?atlas=personal`, { waitUntil: "networkidle" });
   await page.locator(".knowledge-point").first().waitFor();
   assert.match(await page.locator(".knowledge-bindings").innerText(), /色彩搭配/);
   const completed = page.locator(".knowledge-point").filter({ has: page.getByRole("heading", { name: "纹样提取", exact: true }) });
@@ -92,7 +92,7 @@ try {
   assert.equal(new URL(page.url()).searchParams.get("lesson"), "qa-l2");
   await page.locator(".lesson-knowledge").first().waitFor();
   assert.match(await page.locator(".lesson-knowledge").first().innerText(), /色彩搭配/);
-  await page.goto(`${base}/my-learning`, { waitUntil: "networkidle" });
+  await page.goto(`${base}/my-learning?atlas=personal`, { waitUntil: "networkidle" });
   await page.locator(".knowledge-path__node--2").first().click();
   await page.locator(".knowledge-tools summary").click();
   assert.match(await page.locator(".knowledge-tools").innerText(), /DeepSeek/);
