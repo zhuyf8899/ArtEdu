@@ -38,3 +38,20 @@ test("未发布课程的封面只对管理者开放，异常存储键不能读�
   coverKey = "admin/courses/other-course/covers/11111111-1111-1111-1111-111111111111-22222222-2222-2222-2222-222222222222";
   await assert.rejects(service.openCover(student, "course-a"), /封面不存在/);
 });
+
+test("已退课学生不再获得课件链接，有效选课仍提供预览", async () => {
+  let enrollment = 'withdrawn';
+  const database = {query: async (sql: string) => {
+    if(sql.includes('MAX(my_e.status)')) return {rows:[{id:'course-a',created_by:'teacher-a',enrollment_status:enrollment,status:'published',title:'课程'}]};
+    if(sql.includes('FROM course_resources')) return {rows:[{id:'resource-a',course_id:'course-a',title:'课件',resource_type:'pdf',storage_key:'private.pdf',mime_type:'application/pdf'}]};
+    return {rows:[]};
+  }} as unknown as DatabaseService;
+  const service = new CoursesService(database, {} as AuthService, {} as RagService);
+  const student = {id:'student-a',roles:['student']} as Actor;
+  const withdrawn = await service.getPublished(student,'course-a');
+  assert.equal(withdrawn.resources[0].previewUrl,null);
+  assert.equal(withdrawn.resources[0].downloadUrl,null);
+  enrollment='in_progress';
+  const active=await service.getPublished(student,'course-a');
+  assert.match(active.resources[0].previewUrl ?? '', /resources\/resource-a\/preview/);
+});

@@ -187,7 +187,7 @@ function FlowNode({ data, selected }) {
 
 const nodeTypes = Object.fromEntries(Object.keys(palette).map((type) => [type, FlowNode]));
 
-export function WorkflowAdmin({ showToast, canPublish = true }) {
+export function WorkflowAdmin({ showToast, canPublish = true, initialWorkflowId = "", onWorkflowNavigate }) {
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
   const [editor, setEditor] = useState(null);
@@ -195,6 +195,8 @@ export function WorkflowAdmin({ showToast, canPublish = true }) {
   const [search, setSearch] = useState("");
   const [dirty, setDirty] = useState(false);
   const draftTimer = useRef(null);
+  const opening = useRef(0);
+  const [openError, setOpenError] = useState("");
 
   useEffect(() => () => { if (draftTimer.current) window.clearTimeout(draftTimer.current); }, []);
 
@@ -205,9 +207,11 @@ export function WorkflowAdmin({ showToast, canPublish = true }) {
   useEffect(() => { load(); }, []);
 
   const open = async (workflow) => {
-    setLoading(true);
+    const requestId = ++opening.current;
+    setOpenError(""); setLoading(true);
     try {
       const detail = await getAdminWorkflow(workflow.id);
+      if(requestId !== opening.current) return;
       const latest = detail.versions?.[0];
       const local = readDraft(workflow.id);
       setSelected(detail);
@@ -217,15 +221,24 @@ export function WorkflowAdmin({ showToast, canPublish = true }) {
         promptTemplate: local?.promptTemplate ?? latest?.promptTemplate ?? "",
         definition: normalizeDefinition(local?.definition ?? latest?.definition, latest?.steps),
       });
-    } catch (error) { showToast(error.message); }
-    finally { setLoading(false); }
+    } catch (error) { if(requestId === opening.current) { setOpenError(error.message); showToast(error.message); } }
+    finally { if(requestId === opening.current) setLoading(false); }
   };
+
+  useEffect(() => {
+    if (!onWorkflowNavigate) return;
+    if (initialWorkflowId) { setEditor(null); setSelected(null); void open({id:initialWorkflowId}); }
+    else { opening.current++; setEditor(null); setSelected(null); setOpenError(""); setLoading(false); }
+    return () => { opening.current++; };
+  }, [initialWorkflowId]);
+  const openFromList = (workflow) => onWorkflowNavigate ? onWorkflowNavigate(workflow.id) : open(workflow);
+  const backToList = () => { if(onWorkflowNavigate) onWorkflowNavigate(""); else { setEditor(null); setSelected(null); } };
 
   const create = async (native = false) => {
     setLoading(true);
     try {
       const workflow = await createWorkflow({ ...blankWorkflow, name: "未命名节点工作流", description: "请在画布中配置这条工作流的节点与连接。" });
-      await load(); await open(workflow); if(native) {setEditor(current=>({...current,definition:{schemaVersion:2,engine:'comfyui',nodes:[],edges:[],groups:[],viewport:{x:0,y:0,zoom:1}}}));setDirty(true);} showToast("节点工作流草稿已创建");
+      await load(); await open(workflow); if(onWorkflowNavigate) onWorkflowNavigate(workflow.id); if(native) {writeDraft(workflow.id,{definition:{schemaVersion:2,engine:"comfyui",nodes:[],edges:[],groups:[],viewport:{x:0,y:0,zoom:1}}});setEditor(current=>({...current,definition:{schemaVersion:2,engine:'comfyui',nodes:[],edges:[],groups:[],viewport:{x:0,y:0,zoom:1}}}));setDirty(true);} showToast("节点工作流草稿已创建");
     } catch (error) { showToast(error.message); }
     finally { setLoading(false); }
   };
@@ -288,12 +301,13 @@ export function WorkflowAdmin({ showToast, canPublish = true }) {
     } catch (error) { showToast(`导入失败：${error.message}`); }
   };
 
-  if (editor && selected && editor.definition.engine === 'comfyui') return <ComfyCanvas editor={editor} selected={selected} loading={loading} canPublish={canPublish} onNotice={showToast} onBack={() => {setEditor(null);setSelected(null);}} onChange={change} onDefinition={changeDefinition} onSave={save} />;
-  if (editor && selected) return <WorkflowCanvas editor={editor} selected={selected} loading={loading} dirty={dirty} canPublish={canPublish} onNotice={showToast} onBack={() => { setEditor(null); setSelected(null); }} onChange={change} onDefinition={changeDefinition} onSave={save} onExport={exportJson} onImport={importJson} />;
+  if (editor && selected && editor.definition.engine === 'comfyui') return <ComfyCanvas editor={editor} selected={selected} loading={loading} canPublish={canPublish} onNotice={showToast} onBack={backToList} onChange={change} onDefinition={changeDefinition} onSave={save} />;
+  if (editor && selected) return <WorkflowCanvas editor={editor} selected={selected} loading={loading} dirty={dirty} canPublish={canPublish} onNotice={showToast} onBack={backToList} onChange={change} onDefinition={changeDefinition} onSave={save} onExport={exportJson} onImport={importJson} />;
 
+  if (initialWorkflowId && !editor) return <section className="portal-empty"><h2>{loading ? "正在打开编辑画布…" : "无法打开此工作流"}</h2>{openError && <p role="alert">{openError}</p>}<button onClick={backToList}>返回工作流列表</button></section>;
   return <div className="page-content">
     <section className="page-intro"><div><p>// COMFY-STYLE WORKFLOW OPERATIONS</p><h1>节点工作流</h1><span>用画布连接输入、提示词、模型与输出节点；保存后生成不可变版本。</span></div><button className="primary-button" disabled={loading} onClick={() => create()}><Plus size={18} weight="bold" /> 新建节点工作流</button><button className="outline-button" disabled={loading} onClick={() => create(true)}>新建 ComfyUI 工作流</button></section>
-    <section className="table-panel workflow-admin-panel"><div className="table-tools workflow-admin-tools"><label><FlowArrow size={18} weight="bold" /><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索工作流名称或描述" /></label><button className="outline-button" onClick={load}>搜索</button></div><div className="workflow-admin-list">{items.map((workflow) => <button className="workflow-admin-row" key={workflow.id} onClick={() => open(workflow)}><div className="workflow-admin-icon"><FlowArrow size={22} weight="bold" /></div><div><span>{workflow.category} · {workflow.stepCount ?? 0} 个节点</span><strong>{workflow.name}</strong><small>{workflow.creatorName} · V{workflow.versionNumber ?? 0} · {workflow.updatedAt ? new Date(workflow.updatedAt).toLocaleString("zh-CN") : "尚未保存版本"}</small></div><em className={`course-state course-state--${workflow.status}`}>{workflow.status === "published" ? "已发布" : workflow.status === "archived" ? "已归档" : "草稿"}</em><ArrowRight size={17} /></button>)}{!items.length && <div className="empty-state"><FlowArrow size={34} /><strong>尚无工作流</strong><span>创建第一条节点工作流，开始搭建画布。</span></div>}</div></section>
+    <section className="table-panel workflow-admin-panel"><div className="table-tools workflow-admin-tools"><label><FlowArrow size={18} weight="bold" /><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索工作流名称或描述" /></label><button className="outline-button" onClick={load}>搜索</button></div><div className="workflow-admin-list">{items.map((workflow) => <button className="workflow-admin-row" key={workflow.id} onClick={() => openFromList(workflow)}><div className="workflow-admin-icon"><FlowArrow size={22} weight="bold" /></div><div><span>{workflow.category} · {workflow.stepCount ?? 0} 个节点</span><strong>{workflow.name}</strong><small>{workflow.creatorName} · V{workflow.versionNumber ?? 0} · {workflow.updatedAt ? new Date(workflow.updatedAt).toLocaleString("zh-CN") : "尚未保存版本"}</small></div><em className={`course-state course-state--${workflow.status}`}>{workflow.status === "published" ? "已发布" : workflow.status === "archived" ? "已归档" : "草稿"}</em><ArrowRight size={17} /></button>)}{!items.length && <div className="empty-state"><FlowArrow size={34} /><strong>尚无工作流</strong><span>创建第一条节点工作流，开始搭建画布。</span></div>}</div></section>
   </div>;
 }
 

@@ -1,3 +1,6 @@
+/**
+ * 【数据库迁移入口】按完整 SQL 文件名排序，跳过 schema_migrations 已记录的文件。迁移锁避免多个迁移器同时执行；新增数据库结构通过新迁移表达，不在这里直接定义表。
+ */
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { readRepositorySql, repositoryRoot, withDatabase } from "./run-sql-file";

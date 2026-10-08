@@ -2,27 +2,28 @@
  * 工作区预览页的安全策略。
  *
  * 预览页是模型替用户生成的内容，必须当成不可信页面：保留 CSP sandbox，
- * 让它拿不到同源身份（读不到 cookie 与 localStorage），同时禁止联网、提交表单和顶层跳转。
+ * 当前允许脚本和同源身份，以便加载需要会话认证的工作区资源；禁止 fetch/WebSocket、提交表单和顶层跳转。
  *
  * 但 sandbox 会把文档变成不透明来源（opaque origin），此时 CSP 里的 'self'
  * 不匹配任何 URL —— HTML 引用的同目录 CSS/JS/图片会被全部拦掉，
  * 页面只剩浏览器默认样式，看起来就是"生成的网页完全没有样式"。
  * 这里改为显式写出预览自身的主机名（任意端口、http/https 都允许）：
  * 资源匹配是按 URL 判定的，不受不透明来源影响，所以工作区内的文件能正常加载，
- * 而沙箱、断网这些限制一条都没有放松。
+ * 显式来源同时适用于当前 allow-same-origin 策略；资源加载允许同主机的任意端口。
  *
  * 注意：这条策略还必须真的落到响应上。main.ts 的全局 onSend 钩子只在响应
  * 没有声明 CSP 时才补默认值，否则会把这里的策略覆盖成 default-src 'none'，
  * 页面依然会退化成没有样式的裸 HTML。
  *
- * 另外必须带 allow-same-origin（见 buildPolicy 下方说明）：只声明 allow-scripts
+ * 当前带 allow-same-origin（见 workspacePreviewCsp 下方实现）：只声明 allow-scripts
  * 时文档是不透明来源，"加载同目录样式表/脚本"会被当成跨站请求——SameSite=Lax 的
  * 会话 cookie 不发送 → 接口返回 401 JSON → Chrome 的 ORB 以
  * net::ERR_BLOCKED_BY_ORB 拦掉，页面永远是裸 HTML、脚本也不执行。
  * 这是实测结论（绕过 CSP 渲染同一页面时样式与脚本都正常）。
  *
  * 代价：生成页与平台同源，能读到本站 localStorage / IndexedDB。仍保留的限制是
- * 不能联网（connect-src 'none'）、不能提交表单、不能内嵌框架与插件、不能下载、不能开弹窗。
+ * fetch/WebSocket 等连接被 connect-src 'none' 阻止，但允许的图片、脚本等资源仍可发起请求；
+ * 不能提交表单、内嵌框架与插件、下载或开弹窗。同源存储不受此策略隔离，HttpOnly cookie 不能由脚本读取。
  * 后续更干净的方案是给预览资源发签名令牌（不依赖 cookie），再恢复不透明来源。
  */
 export function workspacePreviewCsp(hostHeader: string | string[] | undefined) {
@@ -54,7 +55,8 @@ export function workspacePreviewCsp(hostHeader: string | string[] | undefined) {
  * 这里刻意**不用** sandbox，而是直接 script-src 'none'：sandbox 只在文档型浏览上下文里
  * 有意义，而同一份 SVG 还会被生成页用 <img src="x.svg"> 引用；对图片加载路径来说，
  * 少一个语义可能不一致的指令，少一份"图片渲染不出来"的风险。绘图本来也不需要脚本。
- * 允许的只有同目录（同主机）的样式、图片、字体和 data:/blob:，依旧不能联网。
+ * 允许同主机任意路径和端口的样式、图片、字体及媒体，部分资源类型允许 data:/blob:；
+ * connect-src 禁止 fetch/WebSocket 等连接，并不禁止这些获准资源的网络加载。
  */
 export function svgPreviewCsp(hostHeader: string | string[] | undefined) {
   const assetSources = assetSourcesFor(normalizeHost(hostHeader));
@@ -96,7 +98,7 @@ function joinSources(...parts: string[]) {
 
 /**
  * Host 头由请求方提供，只取主机名部分，并且必须长得像主机名。
- * 拿不到合法主机名时不返回该来源，页面退回"只有内联样式/脚本可用"，
+ * 拿不到合法主机名时不返回该来源，仍保留策略显式允许的内联样式/脚本及 data:/blob: 资源，
  * 既不报错也不把不可信字符串原样拼进响应头。
  */
 function normalizeHost(hostHeader: string | string[] | undefined) {

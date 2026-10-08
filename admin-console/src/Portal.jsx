@@ -1,3 +1,6 @@
+/**
+ * 【学生门户】提供 LocalLogin 登录界面和 UserPortal 门户布局，按 App 传入的 section 显示课程、创作、社区等页面。先找这两个导出函数，再按需追页面加载和事件处理，图标与样式细节可后读。
+ */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowClockwise, ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
@@ -38,7 +41,7 @@ function WorkflowGlyph({ entryType }) {
   return <span className="workflow-glyph"><Icon size={21} weight="bold" /></span>;
 }
 
-export function LocalLogin({ onLogin }) {
+export function LocalLogin({ onLogin, message = "" }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -75,6 +78,7 @@ export function LocalLogin({ onLogin }) {
       <div className="account-panel__heading"><div><p>// SIGN IN</p><h2>账号登录</h2></div></div>
       {isHostedPreview && <p className="login-error" role="status">当前为界面预览，未连接 API 或测试数据库；账号仅可在本地测试环境使用。</p>}
       {!isHostedPreview && <div className={`login-service login-service--${serviceStatus}`} role="status"><span>{serviceStatus === "checking" ? <ArrowClockwise className="spin" size={16} /> : serviceStatus === "online" ? <CheckCircle size={16} weight="fill" /> : <X size={16} weight="bold" />}{serviceStatus === "checking" ? "正在检测登录服务" : serviceStatus === "online" ? "登录服务与数据库连接正常" : "登录服务暂不可用"}</span>{serviceStatus === "offline" && <button type="button" onClick={checkService}>重新检测</button>}</div>}
+      {message && <p role="status">{message}</p>}
       <form className="local-login-form" onSubmit={submit}>
         <label>账号<input autoComplete="username" required maxLength="120" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
         <label>密码<input type="password" autoComplete="current-password" required minLength="1" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
@@ -85,7 +89,7 @@ export function LocalLogin({ onLogin }) {
   </main>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", learningLessonId = "", studioWorkflowId = "", studioRunId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", learningLessonId = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -243,13 +247,13 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => navigateSection("studio")} />
         <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课程与工作流生成下一步学习建议。" onClick={() => setCoachOpen(true)} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
         <SectionHeading eyebrow="// FEATURED WORKFLOWS" title="精选工作流" />
-        {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入设计工具" onRetry={() => navigateSection("studio")} />}
+        {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(workflow.id)}`)}>打开此工作流 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入设计工具" onRetry={() => navigateSection("studio")} />}
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
-        {section === "courses" && <LearningLibrary initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNotice={showToast} />}
+        {section === "courses" && <LearningLibrary initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNavigate={onNavigate} onNotice={showToast} />}
 
-        {section === "studio" && <WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
+        {section === "studio" && <WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
         {section === "community" && <CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
 

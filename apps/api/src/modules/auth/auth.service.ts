@@ -1,3 +1,6 @@
+/**
+ * 【身份与会话】读取当前用户、验证本地登录、管理会话 Cookie 与令牌摘要。Actor 是传给业务模块的用户身份信息。先追 getActor → 会话查询，再看 loginLocal/logout；学校 SSO 尚未接入。
+ */
 import { ForbiddenException, HttpException, HttpStatus, Injectable, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { FastifyRequest } from "fastify";

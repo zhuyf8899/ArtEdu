@@ -1,3 +1,6 @@
+/**
+ * 【后端 HTTP 入口】读取配置 → 创建 NestJS/Fastify 应用 → 注册前缀、上传与全局处理 → 监听端口。NestJS 组织业务模块，Fastify 接收 HTTP 请求。模块总目录见 app.module.ts。
+ */
 import "reflect-metadata";
 import "dotenv/config";
 import { Logger } from "@nestjs/common";
@@ -13,6 +16,7 @@ import { ApiExceptionFilter } from "./common/api-exception.filter";
 import { apiRateLimitHook } from "./common/rate-limit";
 
 async function bootstrap() {
+  // 先验证配置，再创建服务器；配置不完整时尽早失败，避免带着错误参数运行。
   const environment = getEnvironment();
   // multipart 的全局上限必须覆盖所有允许的视频上传路由；具体路由仍以
   // request.file({ limits }) + storePrivateUpload 的类型策略约束非视频为 10 MiB。
@@ -23,9 +27,11 @@ async function bootstrap() {
     new FastifyAdapter({ logger: environment.nodeEnv !== "test", bodyLimit: 1_048_576, genReqId: () => randomUUID() }),
   );
 
+  // Controller 中写 courses，实际访问路径就是 /api/courses。
   app.setGlobalPrefix("api");
   app.useGlobalFilters(new ApiExceptionFilter());
   app.enableShutdownHooks();
+  // CORS 控制哪些网页来源可在浏览器中调用 API；credentials 支持会话 Cookie。
   app.enableCors({
     origin: environment.corsOrigins,
     credentials: true,
@@ -39,6 +45,7 @@ async function bootstrap() {
     });
   }
 
+  // Hook 是请求生命周期中的回调：onRequest 在请求开始，onSend 在返回响应前。
   const fastify = app.getHttpAdapter().getInstance();
   fastify.addHook("onRequest", async (request, reply) => { reply.header("X-Request-ID", request.id); });
   fastify.addHook("onRequest", async (request, reply) => {
@@ -69,6 +76,7 @@ async function bootstrap() {
     return payload;
   });
 
+  // 到这里才真正开始监听端口，接收浏览器或 Worker 发来的请求。
   await app.listen({ port: environment.port, host: environment.host });
   Logger.log(`ArtEdu API listening on http://${environment.host}:${environment.port}/api`, "Bootstrap");
 }

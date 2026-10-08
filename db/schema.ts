@@ -1,8 +1,8 @@
 /**
- * ArtEdu 第一版数据库结构说明。
+ * ArtEdu 基础业务表用途索引（不覆盖全部增量迁移）。
  *
  * 正式环境使用 PostgreSQL。真正执行数据库变更时，使用 migrations/ 下的迁移文件；
- * 这里集中记录表的用途，方便后端代码和新人理解数据模型。
+ * 这里记录基础表的用途；完整字段、约束和新增表以 migrations/ 为准。
  */
 export const tables = {
   departments: '院系与组织层级',

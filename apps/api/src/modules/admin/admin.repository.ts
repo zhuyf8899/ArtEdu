@@ -411,7 +411,7 @@ export class AdminRepository {
       monthlyUsed,
       concurrentLimit,
       works: Number(row.works ?? 0),
-      // 用户表当前没有登录日志；此处暂以资料更新时间作为保守替代。
+      // last_active 来自 users.updated_at，表示用户资料更新时间，不是 auth_sessions 的登录或活跃时间。
       lastActive: row.last_active.toISOString(),
     };
   }

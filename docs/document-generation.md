@@ -15,7 +15,7 @@
 - 私有 `apps/api/.env` 中的 MODEL_PROVIDERS_JSON 同样需要包含 document；密钥只放在其 apiKeyEnv 指定的私有环境变量。
 - PDF 使用 puppeteer-core，不自动下载浏览器。管理员应在 API 主机安装独立 Chrome/Chromium 与中文字体，并设置 PDF_BROWSER_EXECUTABLE 为可执行文件绝对路径。
 - 使用独立临时浏览器配置，关闭网页脚本，阻断网络请求，保留浏览器沙箱。不应通过 --no-sandbox 解决部署问题。
-- 当前 Dockerfile 不包含 PDF 浏览器和字体；容器 PDF 部署尚待专门验收。不能把本机浏览器路径直接复制进容器配置。
+- 当前 API Dockerfile 已安装 Chromium 与 Noto CJK 字体；目标容器中的 PDF 导出仍需按实际浏览器路径与字体配置验收，不能直接复用本机浏览器路径。
 - 原有 DeepSeek 密钥不进入 Git；从对话等不受控位置暴露过的密钥建议轮换。
 
 ## 数据与接口

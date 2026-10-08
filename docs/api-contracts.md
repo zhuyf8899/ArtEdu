@@ -1,26 +1,26 @@
 # ArtEdu API 契约索引
 
-所有业务接口以 `/api` 为前缀，使用 JSON；客户端通过 service 调用，禁止在页面组件内直接拼接请求。
+所有业务接口以 `/api` 为前缀；结构化请求/响应使用 JSON，上传使用 multipart，流式回复使用 SSE，下载/预览按文件类型返回；客户端通过 service 调用，禁止在页面组件内直接拼接请求。
 
 | 领域 | 路径前缀 | 当前状态 | 后续负责范围 |
 | --- | --- | --- | --- |
 | health | `/health` | 已实现 | 存活检查 |
-| auth | `/auth` | 开发身份回退 | 学校 SSO、会话刷新、登出 |
+| auth | `/auth` | 本地账号登录、会话、身份查询与登出 | 学校 SSO |
 | portal | `/portal` | 首页聚合、全局搜索 | 推荐排序、搜索分析 |
-| courses | `/courses`、`/me/learning-progress` | 已实现第一阶段 | 资源上传、成果绑定查询 |
+| courses | `/courses`、`/me/learning-progress` | 课程目录、选课、进度、资料访问与成果关联 | 对象存储适配 |
 | learning | `/me/learning-space` | 已实现 | 学习首页聚合、任务与笔记管理 |
-| workflows | `/workflows`、`/workflow-runs` | 已实现教学画布与人工进度 | GPU Worker 节点执行、成果自动采集；执行层通过可替换 Adapter 接入 |
+| workflows | `/workflows`、`/workflow-runs`、`/comfy` | 教学画布、节点执行、原生 ComfyUI 队列与 GPU Worker 回传 | 共享 GPU 多账号调度与插件兼容验收 |
 | works | `/works`、`/me/works` | 已实现第一阶段 | 对象存储直传、媒体转码 |
-| admin | `/admin` | 用户、额度、作品审核、课程 CMS 与发布审核 | 资源上传、模型配置管理 |
-| generation-jobs | `/generation-jobs` | 排队和查询 | 模型执行、输出文件、取消与重试 |
-| agent-runs | `/agent-runs` | 已实现服务端工具循环、受控平台查询、确认后保存成果/启动工作流，以及 mock/local Harness | Local Bridge 配对、结果回传、异步队列与专用适配器 |
-| rag | `/courses/:courseId/rag`、`/admin/courses/:courseId/resources/:resourceId/rag` | 已实现接口、索引队列与课程转写文本精确检索 | 校内 embedding Provider、PDF 解析与向量检索 |
+| admin | `/admin` | 用户、额度、审核、课程 CMS、资料上传与设备管理 | 正式身份提供方接入 |
+| generation-jobs | `/generation-jobs` | 创建、查询、run 执行与产物下载；独立生成 Worker 当前不领取任务 | 通用队列消费、取消与重试 |
+| agent-runs | `/agent-runs` | 服务端工具循环、流式执行、工作区、产物及 Local Bridge 派发/回传 | 更多专用适配器与执行调度 |
+| rag | `/courses/:courseId/rag`、`/admin/courses/:courseId/resources/:resourceId/rag` | PDF 索引、内部 embedding、权限过滤向量检索与转写文本回退 | 检索质量验收；RAG 接口本身不执行联网兜底 |
 
 ## Agent Run Contract
 
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
-| POST | `/api/agent-runs` | 创建 UI 创作、网页生成或图案生成任务；输入命中关键词时生成审计与管理员告警。 |
+| POST | `/api/agent-runs` | 创建文本问答、UI、网页、图案或文档任务；安全扫描和告警在具体执行及产物记录阶段处理。 |
 | POST | `/api/agent-runs/:runId/execute` | 领取一次 Run；默认 local 模式只向本地 Bridge 派发，无密钥上传云端。 |
 | GET | `/api/agent-runs/me` | 查询当前用户最近 50 次任务。 |
 | GET | `/api/agent-runs/:runId` | 查询完整任务档案：消息、工具调用、成果、扫描结果及告警。 |
@@ -67,7 +67,7 @@ Local Bridge 是本机 GPU Worker 的安全基础：Worker 主动领取任务，
 | POST | `/api/courses/:courseId/enroll` | 加入或重新加入课程 |
 | PUT | `/api/courses/:courseId/lessons/:lessonId/progress` | 保存课时进度，全部完成后自动完成课程 |
 | GET | `/api/me/learning-progress` | 查询当前用户已加入的课程 |
-| POST | `/api/courses/:courseId/rag/search` | 课程知识库检索契约；当前明确返回等待校内 embedding Provider，不伪造答案 |
+| POST | `/api/courses/:courseId/rag/search` | 课程知识库证据检索：优先 PDF 向量召回，回退到转写文本；无证据时明确返回状态，不伪造答案 |
 
 课程资料为 PDF 时，上传响应会附带 `rag` 状态。PDF 会写入索引队列；DOCX、PPTX、视频不进入第一版 RAG。`allowWebFallback` 仅表示用户允许本地证据不足时联网搜索其问题，课程正文不会发送到联网搜索链路。
 

@@ -1,3 +1,6 @@
+/**
+ * 【创作起始页】收集需求、创作能力与模型等选项，处理浏览器草稿，并把提交交给上层。它是输入入口，长对话阅读与继续输入在 CreationWorkspace.jsx。
+ */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ChatCircleDots, FloppyDisk, ImageSquare, Paperclip, Trash } from "@phosphor-icons/react";
 import { CapabilityPicker } from "./CapabilityPicker.jsx";

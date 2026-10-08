@@ -2,16 +2,16 @@
 
 课程正文不会发送到互联网：embedding 由部署在同一台服务器上的本地模型服务承担，检索链路不调用任何外部模型。
 
-当前（2026-09-18）的状态分两层：
+当前代码与部署配置分两层（目标服务运行状态需单独检查）：
 
-- **Provider 已就绪**：`docker-compose.staging.yml` 的 `embedding` 服务已在 staging 上运行，提供 OpenAI 兼容的 `/v1/embeddings`（见下文）。
+- **Provider 已接入部署配置**：`docker-compose.staging.yml` 定义 `embedding` 服务，提供 OpenAI 兼容的 `/v1/embeddings`（见下文）；配置存在不代表目标环境当前运行正常。
 - **摄取与向量检索已落地**：`rag.worker.ts` 会领取 PDF 索引任务、调用本地 embedding 服务并写入 pgvector；`rag.service.ts` 按余弦相似度召回证据，服务暂时不可用时回退到教师录入的 `transcript_text` 精确匹配。Worker 对失败任务最多重试 3 次，并会回收崩溃 Worker 遗留的过期 processing 任务。
 
 - `POST /api/courses/:courseId/rag/search`：课程提问接口；命中 PDF 向量分块时返回 `vector_evidence`，命中转写文本时返回 `local_text_evidence`，均无命中时返回 `indexed_no_match` 或 `awaiting_embedding_provider`。
 - `POST /api/admin/courses/:courseId/resources/:resourceId/rag/reindex`：教师或管理员把 PDF 放入索引队列。
 - `GET /api/admin/courses/:courseId/resources/:resourceId/rag/status`：读取索引队列和资料状态。
 
-上传 PDF 会自动入队；DOCX、PPTX、视频不在第一版解析范围。当前的本地文本匹配只读取教师随资源录入的转写文本，且学生必须已加入课程；课程资料正文不会发送给互联网搜索链路。联网搜索只会在本地证据不足时接收用户问题，并由 `allowWebFallback` 明确控制。
+上传 PDF 会自动入队；DOCX、PPTX、视频不在当前解析范围。精确文本回退读取教师录入的转写文本，学生必须已加入课程。此 RAG 接口不调用联网搜索，始终返回空 webEvidence；allowWebFallback 仅作为 webFallbackEligible 回传，不能视为已执行联网兜底。Agent 的独立联网搜索见 model-harness.md。
 
 ## 本地 embedding Provider
 

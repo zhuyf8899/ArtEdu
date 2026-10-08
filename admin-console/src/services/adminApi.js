@@ -1,3 +1,7 @@
+/**
+ * 【前端 API 适配层】页面调用这里的函数，由它们向后端发 HTTP 请求。先读 request 的地址、Cookie 和错误处理，再找 getCurrentUser、getCourses 等具体函数。文件虽叫 adminApi，也服务学生门户；上传、流式和文件接口有各自处理方式。
+ */
+import { responseError } from "./httpFeedback.js";
 import { uploadFile } from "./uploadFile.js";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
@@ -24,13 +28,7 @@ async function request(path, options = {}) {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const message = Array.isArray(data?.message) ? data.message.join("；") : data?.message;
-    const error = new Error(message || `请求失败（HTTP ${response.status}）`);
-    error.status = response.status;
-    if (response.status === 401) error.message = "登录状态已失效，请重新登录";
-    if (response.status === 403 && !message) error.message = "当前账号没有执行此操作的权限";
-    if (response.status === 403 && message === "跨站写请求被拒绝") error.message = "当前访问地址未获服务器授权，请联系管理员配置此地址后重试";
-    throw error;
+    throw responseError(response.status, data, path);
   }
   return data ?? {};
 }
@@ -162,8 +160,11 @@ export const executeAgentRunStream = async (runId, input = {}, options = {}) => 
     body: JSON.stringify({ mode: "server", ...input }),
     signal,
   });
-  if (!response.ok || !response.body || !String(response.headers.get("content-type") ?? "").includes("text/event-stream")) {
-    return executeAgentRun(runId, input, { signal });
+  // Only a route-level rejection proves that execution has not started.
+  if ([404, 405, 501].includes(response.status)) return executeAgentRun(runId, input, { signal });
+  if (!response.ok) throw responseError(response.status, await response.json().catch(() => null), '/agent-runs/execute-stream');
+  if (!response.body || !String(response.headers.get("content-type") ?? "").includes("text/event-stream")) {
+    throw new Error('服务未返回流式结果，请查看执行记录；为避免重复生成，没有自动重发请求');
   }
 
   const reader = response.body.getReader();
@@ -203,7 +204,7 @@ export const uploadTemporaryCreationFile = (file, conversationLocalId) => {
 
 /**
  * 工作流目录。设计工作台会带上 includeDrafts：作者能看到自己的草稿去试运行，
- * 服务端只对作者本人放行，其他人（含未登录）拿到的仍然是已发布工作流。
+ * 草稿可见性由服务端权限控制；该业务接口要求登录，不能作为匿名公开目录使用。
  */
 export const getWorkflows = (query = "", options = {}) => {
   const params = new URLSearchParams();

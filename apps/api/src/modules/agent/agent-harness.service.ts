@@ -1,3 +1,6 @@
+/**
+ * 【Agent 编排】把身份、执行模式、模型、工具、文件、搜索与审计接起来。local 模式派发本地 Bridge，server 模式使用服务端配置；模型与工具的循环见 agent-runtime.ts，任务记录见 agent.service.ts。
+ */
 import { BadRequestException, Injectable } from "@nestjs/common";
 import type { Actor } from "../auth/auth.service";
 import type { ExecuteAgentRunInput } from "./agent.contracts";
