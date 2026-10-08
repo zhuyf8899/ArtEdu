@@ -9,6 +9,7 @@ import { AuthService } from "../auth/auth.service";
 import { workspacePreviewCsp } from "../agent/workspace-preview-csp";
 import {
   courseReviewDecisionSchema,
+  courseKnowledgeBindingsSchema,
   createCourseSchema,
   listCoursesQuerySchema,
   lessonSubmissionSchema,
@@ -18,6 +19,7 @@ import {
 } from "./courses.contracts";
 import type {
   CourseReviewDecisionInput,
+  CourseKnowledgeBindingsInput,
   CreateCourseInput,
   LessonSubmissionInput,
   ProgressInput,
@@ -170,6 +172,12 @@ export class CoursesController {
 @Controller("admin")
 export class AdminCoursesController {
   constructor(private readonly courses: CoursesService, private readonly auth: AuthService) {}
+
+  @Put("courses/:courseId/knowledge-bindings")
+  async knowledgeBindings(@Req() request: FastifyRequest, @Param("courseId") courseId: string, @Body() body: unknown) {
+    return this.courses.updateKnowledgeBindings(await this.auth.getActor(request), courseId,
+      parseInput(courseKnowledgeBindingsSchema, body) as CourseKnowledgeBindingsInput);
+  }
 
   @Get("courses")
   async list(@Req() request: FastifyRequest) {

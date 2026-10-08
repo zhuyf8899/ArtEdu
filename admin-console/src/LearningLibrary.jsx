@@ -7,6 +7,8 @@ import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowsOutSimple, BookOpenText, C
 import { enrollCourse, getCourse, getCourses, getMyWorks, submitLessonWork, updateLessonProgress } from "./services/adminApi.js";
 import { coverImageFor } from "./coverImages.js";
 import { decorateCourse, difficultyName } from "./coursePresentation.js";
+import { learningLabels } from "./learningBindings.js";
+import "./LearningBindings.css";
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
 
@@ -114,8 +116,10 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
     <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
     <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟 · {selected.lessonCount} 个课时 · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div><aside><strong>{selected.progressPercent}%</strong><span>学习进度</span><i><b style={{ width: `${selected.progressPercent}%` }} /></i>{selected.enrollmentStatus ? <em>已加入学习</em> : <button disabled={loading} onClick={enroll}><PlayCircle size={18} weight="fill" /> 加入课程</button>}</aside></div>
     {/* 课时卡把"分步学习 → 练习 → 完成标准 →（可选）关联作品 → 确认完成"整条闭环摆出来。 */}
+    {learningLabels(selected.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>这门课涉及的知识</strong><div>{learningLabels(selected.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div><small>课程知识范围；具体学习记录将在“我的学习”图谱中呈现。</small></section>}
     <div className="lesson-list">{selected.lessons.map((lesson, index) => <article className={`lesson-card ${lesson.id === initialLessonId ? "lesson-card--recommended" : ""}`} key={lesson.id} tabIndex={-1} ref={(node) => { if (node) lessonNodes.current.set(lesson.id, node); else lessonNodes.current.delete(lesson.id); }}>
       {lesson.id === initialLessonId && <span className="lesson-card__recommendation-label">本次推荐课时 · 从这里继续学习</span>}
+      {learningLabels(lesson.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>本课时知识点</strong><div>{learningLabels(lesson.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div></section>}
       <div className="lesson-card__heading"><span>{String(index + 1).padStart(2, "0")}</span><div><small>{lesson.lessonType === "workflow" ? "AI 工作流实践" : lesson.lessonType === "practice" ? "动手练习" : lesson.lessonType === "assignment" ? "课时作业" : "课程课时"} · {lesson.estimatedMinutes} 分钟</small><strong>{lesson.title}</strong><p>{lesson.summary}</p></div><em>{lesson.progressPercent >= 100 ? "已完成" : `${lesson.progressPercent ?? 0}%`}</em></div>
       {!!lesson.learningSteps?.length && <section className="lesson-card__section"><strong>学习步骤</strong><ol>{lesson.learningSteps.map((step, stepIndex) => <li key={`${stepIndex}-${step}`}>{step}</li>)}</ol></section>}
       {lesson.practiceTask && <section className="lesson-card__section"><strong>练习任务</strong><p>{lesson.practiceTask}</p></section>}

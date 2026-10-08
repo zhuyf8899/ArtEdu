@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workflowLearningSchema } from "../../common/learning-bindings";
 import { caseStorySchema } from "./case-story";
 
 export const catalogQuerySchema = z.object({
@@ -75,6 +76,7 @@ const workflowGroupSchema = z.object({
 });
 
 export const workflowDefinitionSchema = z.object({
+  learning: workflowLearningSchema.optional(),
   schemaVersion: z.literal(2).default(2),
   engine: z.enum(['platform','comfyui']).optional(),
   comfyPrompt: z.record(z.string(), z.object({class_type:z.string().min(1).max(160),inputs:z.record(z.string(),z.unknown()),_meta:z.object({title:z.string().max(160)}).optional()})).optional(),

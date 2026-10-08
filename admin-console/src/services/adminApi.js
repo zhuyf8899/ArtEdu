@@ -87,6 +87,9 @@ export const deleteLearningNote = (noteId) => request(`/me/learning-space/notes/
 
 export const getAdminCourses = () => request("/admin/courses");
 export const getAdminCourse = (courseId) => request(`/admin/courses/${encodeURIComponent(courseId)}`);
+export const updateCourseKnowledgeBindings = (courseId, input) => request(`/admin/courses/${encodeURIComponent(courseId)}/knowledge-bindings`, {
+  method: "PUT", body: JSON.stringify(input),
+});
 export const createAdminCourse = (input) => request("/admin/courses", {
   method: "POST",
   body: JSON.stringify(input),

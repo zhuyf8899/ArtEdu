@@ -3,6 +3,7 @@ import { ArrowRight, BookOpenText, Clock, ImageSquare, Lightbulb, NotePencil, St
 import { buildLearningFramework, buildLearningGraph, buildLearningOrbitContent } from "./learningGraphModel.js";
 import { buildLearningPaths } from "./learningPathModel.js";
 import { LearningPathCanvas } from "./LearningPathCanvas.jsx";
+import { KnowledgeEvidence } from "./KnowledgeEvidence.jsx";
 import "./LearningGraph.css";
 
 const COLUMNS = [
@@ -11,7 +12,7 @@ const COLUMNS = [
   ["我的工具轨迹", ImageSquare, "平台工作流"],
   ["我的成长记录", Clock, "笔记与作品"],
 ];
-const STATUS = { skilled: "熟练", good: "良好", basic: "一般", none: "未学习" };
+const STATUS = { skilled: "目标达成", good: "持续积累", basic: "已经开始", none: "暂无记录" };
 const dateLabel = (value) => new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(new Date(value));
 
 export function LearningGraph({ data, onNavigate, onView }) {
@@ -44,7 +45,7 @@ export function LearningGraph({ data, onNavigate, onView }) {
         <section className="knowledge-path__reason"><h5>为什么推荐这一步？</h5><p>{selectedRecommendation.reason}</p><small>基于当前记录和阶段展示目标的规则推荐，不是 AI 测评或教师评分。</small></section>
       </div> : <div className={`knowledge-orbits__detail is-${selectedCell.state}`} id={detailId} role="region" aria-label="选中板块学习详情" aria-live="polite" aria-atomic="true">
         <div><span className="knowledge-kicker">阶段 {selectedStage.number} · {COLUMNS[selectedColumn][0]} · {selectedContent.recordLabel}</span><h4>{selectedContent.headline}</h4><p>{selectedContent.topic}</p></div>
-        <div className="knowledge-orbits__detail-progress"><span>{STATUS[selectedCell.state]}</span><strong>{selectedCell.display ?? `${selectedCell.value} / ${selectedCell.target} ${selectedCell.unit}`}</strong></div>
+        <div className="knowledge-orbits__detail-progress"><span>阶段累计目标 · {STATUS[selectedCell.state]}</span><strong>{selectedContent.stageGoal}</strong><small>跨课程与记录累计，不是上方单条记录的进度或知识掌握度。</small></div>
         <button type="button" onClick={() => goTo(selectedContent.action)}>前往{actionLabel(selectedContent.action)}<ArrowRight size={17} /></button>
         <div className="knowledge-orbits__detail-body">
           <section><h5>学习与创作记录</h5>{selectedContent.records.length ? selectedContent.records.map((record, index) => <button className="knowledge-orbits__record-link" type="button" key={`${record.title}-${index}`} onClick={() => goTo(record.action)}><span><strong>{record.title}</strong><small>{record.detail}</small></span><ArrowRight size={15} /></button>) : <p>尚无对应记录，先从下一步开始。</p>}</section>
@@ -52,7 +53,8 @@ export function LearningGraph({ data, onNavigate, onView }) {
           <section className="knowledge-orbits__next"><h5>下一步学什么</h5><strong>{selectedContent.next.title}</strong><p>{selectedContent.next.text}</p><button type="button" onClick={() => goTo(selectedContent.next.action)}>开始下一步<ArrowRight size={15} /></button></section>
         </div>
       </div>}
-      <p className="knowledge-framework__disclaimer">实线表示已有记录或明确配置的关联，虚线表示建议路径；“后续阶段”是路线规划，不表示已绑定课程或必须按顺序解锁。阶段采用累计展示目标，不代表记录发生于该阶段。“熟练”仅指展示目标达成，不是能力认证。已学内容来自已完成课时，不推测知识掌握；工作流记录不等于外部工具使用。</p>
+      <KnowledgeEvidence graph={graph} source={selectedColumn === 4 ? null : selectedContent.source} onGoTo={goTo} />
+      <p className="knowledge-framework__disclaimer">实线表示已有记录或明确配置的关联，虚线表示建议路径；“后续阶段”是路线规划，不表示已绑定课程或必须按顺序解锁。颜色表示累计记录目标，不是知识掌握或能力认证。已学内容来自已完成课时；工作流工具配置不等于外部工具使用。</p>
     </section>
 
     <section className="knowledge-guidance" aria-label="下一阶段建议">

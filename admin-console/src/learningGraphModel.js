@@ -70,10 +70,10 @@ export function buildLearningOrbitContent(graph, framework) {
   const doneRuns = graph.runs.filter((run) => run.status === "completed");
   const distinctRuns = [...new Map(graph.runs.filter((run) => run.workflowId).map((run) => [run.workflowId, run])).values()];
   const pendingRun = graph.runs.find((run) => !["completed", "failed", "cancelled"].includes(run.status));
-  const lessonTopics = (lessons) => unique(lessons.flatMap((lesson) => [lesson.title, ...asList(lesson.learningSteps)]));
+  const lessonTopics = (lessons) => unique(lessons.flatMap((lesson) => [...asList(lesson.knowledgePoints), lesson.title, ...asList(lesson.learningSteps)]));
   const nextLesson = (courseId) => pendingLessons.find((lesson) => !courseId || lesson.courseId === courseId);
   const lessonNext = (lesson, fallback) => lesson
-    ? { title: titleOf(lesson, "继续下一课时"), text: `待学内容：${unique([lesson.title, ...asList(lesson.learningSteps)]).join("、")}。来自「${lesson.courseTitle || "已选课程"}」。`, action: courseHref(lesson.courseId, lesson.id) }
+    ? { title: titleOf(lesson, "继续下一课时"), text: `待学内容：${unique([...asList(lesson.knowledgePoints), lesson.title, ...asList(lesson.learningSteps)]).join("、")}。来自「${lesson.courseTitle || "已选课程"}」。`, action: courseHref(lesson.courseId, lesson.id) }
     : { title: fallback, text: "前往 AI 讲堂选择适合当前方向的课程；尚未配置的知识点不会显示为已学。", action: "/learning" };
   const result = {};
   framework.stages.forEach((stage, index) => {
@@ -86,16 +86,14 @@ export function buildLearningOrbitContent(graph, framework) {
     const map = {
       headline: titleOf(course, index === 3 ? "探索第二门课程" : index >= 2 ? "选择进阶课程" : "选择入门课程"),
       topic: courseKnowledge.length ? `已学：${courseKnowledge[0]}` : activeLesson ? `在学：${activeLesson.title}` : course ? "课时内容待学习" : "建立学习主线",
-      recordLabel: courseStatus,
+      recordLabel: course ? asNumber(course.lessonCount) ? `本课程 ${asNumber(course.completedLessons)}/${asNumber(course.lessonCount)} 课时` : "课时待配置" : courseStatus,
       records: course ? [{ title: course.title, detail: `${asNumber(course.completedLessons)} / ${asNumber(course.lessonCount)} 节已完成`, action: courseHref(course.id) }] : [],
       knowledge: courseKnowledge,
       next: lessonNext(nextLesson(course?.id), index >= 2 ? "探索新的课程方向" : "开始第一门课程"),
       action: courseHref(course?.id),
       source: course ? { kind: "course", id: course.id } : null,
     };
-    if (index === 1 && course) map.recordLabel = `已学 ${graph.summary.completedLessons} / 3 课时`;
     if (index >= 2) {
-      map.recordLabel = `完成 ${graph.summary.completedCourseCount} / ${index === 2 ? 1 : 2} 门`;
       if (nextLesson(course?.id)) map.topic = `下一课：${nextLesson(course?.id).title}`;
     }
     let ability;
@@ -104,7 +102,7 @@ export function buildLearningOrbitContent(graph, framework) {
       const completed = lesson && asNumber(lesson.progressPercent) >= 100;
       ability = {
         headline: titleOf(lesson, index === 0 ? "学习第一节课" : "深化课程实践"),
-        topic: lesson ? `${completed ? "已学" : asNumber(lesson.progressPercent) > 0 ? "在学" : "待学"}：${asList(lesson.learningSteps)[0] || lesson.title}` : "知识内容待选择",
+        topic: lesson ? `${completed ? "已学" : asNumber(lesson.progressPercent) > 0 ? "在学" : "待学"}：${asList(lesson.knowledgePoints)[0] || asList(lesson.learningSteps)[0] || lesson.title}` : "知识内容待选择",
         recordLabel: completed ? "已学课时" : lesson && asNumber(lesson.progressPercent) > 0 ? "课时学习中" : "待学课时",
         records: lesson ? [{ title: lesson.title, detail: `${lesson.courseTitle || "课程"} · ${asNumber(lesson.progressPercent)}%`, action: courseHref(lesson.courseId) }] : [],
         knowledge: completed ? lessonTopics([lesson]) : [],
@@ -112,7 +110,6 @@ export function buildLearningOrbitContent(graph, framework) {
         action: courseHref(lesson?.courseId, lesson?.id),
         source: lesson ? { kind: "lesson", id: lesson.id, courseId: lesson.courseId, workflowId: lesson.workflowId } : null,
       };
-      if (index === 3) ability.recordLabel = `已学 ${graph.summary.completedLessons} / 8 课时`;
     } else {
       const task = doneTasks[index - 1] ?? pendingTask ?? doneTasks[0];
       const completed = task?.status === "completed";
@@ -126,11 +123,6 @@ export function buildLearningOrbitContent(graph, framework) {
         action: "plan",
         source: task ? { kind: "task", id: task.id } : null,
       };
-      ability.recordLabel = `完成 ${doneTasks.length} / ${index === 1 ? 1 : 2} 项`;
-      if (doneTasks.length < (index === 1 ? 1 : 2)) {
-        ability.headline = titleOf(pendingTask, index === 1 ? "完成一次实践任务" : "验证另一种创作方法");
-        ability.topic = doneTasks[0] ? `已做：${titleOf(doneTasks[0], "学习任务")}` : "把所学用于创作";
-      }
     }
     const run = index === 0 ? graph.runs[0] : index === 2 ? distinctRuns[1] : doneRuns[index === 3 ? 3 : 0] ?? pendingRun ?? graph.runs[0];
     const tools = {
@@ -143,14 +135,6 @@ export function buildLearningOrbitContent(graph, framework) {
       action: run ? runHref(run) : "/studio",
       source: run ? { kind: "run", id: run.id, workflowId: run.workflowId } : null,
     };
-    if (index === 2) tools.recordLabel = `尝试 ${distinctRuns.length} / 2 种`;
-    if (index === 3) {
-      tools.recordLabel = `完成 ${doneRuns.length} / 4 次`;
-      if (doneRuns.length < 4) {
-        tools.headline = pendingRun?.workflowName || "对比不同创作方案";
-        tools.topic = run?.workflowName ? `已用：${run.workflowName}` : "反复验证方法";
-      }
-    }
     const isNotes = index < 2;
     const growthRecord = isNotes ? graph.notes[index] ?? graph.notes[0] : graph.works[index - 2] ?? graph.works[0];
     const growth = {
@@ -163,18 +147,11 @@ export function buildLearningOrbitContent(graph, framework) {
       action: isNotes ? "notes" : "works",
       source: growthRecord ? { kind: isNotes ? "note" : "work", id: growthRecord.id, courseId: growthRecord.courseId, lessonId: growthRecord.lessonId } : null,
     };
-    if (index === 1) {
-      growth.recordLabel = `已写 ${graph.notes.length} / 2 篇`;
-      if (graph.notes.length < 2) {
-        growth.headline = "再写一篇学习复盘";
-        growth.topic = growthRecord ? `已有：${growthRecord.title}` : "记录工具与方法";
-      }
-    }
-    if (index === 3) {
-      growth.recordLabel = "作品与反思积累";
-      growth.headline = stage.cells[3].ratio < 1 ? "持续创作与复盘" : titleOf(growthRecord, "持续创作与复盘");
-      growth.topic = `作品 ${graph.works.length} / 2 · 笔记 ${graph.notes.length} / 3`;
-    }
+    // A named node describes that record only; cumulative goals belong to the stage detail.
+    [map, ability, tools, growth].forEach((content, column) => {
+      const cell = stage.cells[column];
+      content.stageGoal = cell.display ?? `${cell.value} / ${cell.target} ${cell.unit}`;
+    });
     result[stage.id] = [map, ability, tools, growth];
   });
   return result;

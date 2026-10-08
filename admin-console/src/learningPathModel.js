@@ -1,3 +1,4 @@
+import { buildKnowledgeEvidence } from "./learningBindings.js";
 const countLabel = (cell) => cell.display ?? `${cell.value} / ${cell.target} ${cell.unit}`;
 const lessonHref = (lesson) => `/learning?course=${encodeURIComponent(lesson.courseId)}&lesson=${encodeURIComponent(lesson.id)}`;
 
@@ -21,6 +22,19 @@ export function buildLearningPaths(graph, framework, contents) {
       column: column >= 0 ? column : 0,
       label: stage.id === framework.currentStage.id && !framework.allComplete ? "现在可做" : "阶段建议",
     };
+    // Prefer unfinished explicitly bound lessons when recommending course learning.
+    // This is not an assessment of a user's weak abilities.
+    if (recommendation.action.startsWith("/learning")) {
+      const courseId = new URL(recommendation.action, "http://artedu.local").searchParams.get("course");
+      const point = buildKnowledgeEvidence(graph).find((item) => item.next && (!courseId || item.next.courseId === courseId));
+      if (point) {
+        const lesson = point.next;
+        recommendation.title = lesson.title;
+        recommendation.text = `继续学习「${point.name}」：${lesson.courseTitle || "已选课程"}中的「${lesson.title}」。`;
+        recommendation.action = lessonHref(lesson);
+        recommendation.reason = `「${point.name}」由课程明确绑定，目前 ${point.completedCount} / ${point.lessonCount} 个关联课时完成；「${lesson.title}」尚未完成，因此推荐继续。完成课时不等于已掌握能力。`;
+      }
+    }
     const [map, ability, tools, growth] = contents[stage.id];
     const authoredLesson = map.source?.kind === "course" && ability.source?.kind === "lesson" && map.source.id === ability.source.courseId;
     const boundWorkflow = ability.source?.workflowId && tools.source?.workflowId === ability.source.workflowId;
@@ -47,8 +61,10 @@ export function learningBranches(graph, content, recommendation, column) {
   }));
   if (source?.kind === "lesson") {
     const lesson = graph.lessons.find((item) => item.id === source.id);
-    return (lesson?.learningSteps ?? []).filter((step) => typeof step === "string" && step.trim()).slice(0, 3).map((step) => ({
-      title: step, relation: "课时内容", action: lessonHref(lesson), existing: true,
+    const topics = [...(lesson?.knowledgePoints ?? []).map((title) => ({ title, relation: "关联知识点" })),
+      ...(lesson?.learningSteps ?? []).map((title) => ({ title, relation: "课时内容" }))];
+    return topics.filter((topic) => typeof topic.title === "string" && topic.title.trim()).slice(0, 3).map((topic) => ({
+      ...topic, action: lessonHref(lesson), existing: true,
       state: lesson.progressPercent >= 100 ? "skilled" : lesson.progressPercent > 0 ? "basic" : "none",
     }));
   }

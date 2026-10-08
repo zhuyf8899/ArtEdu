@@ -35,7 +35,7 @@ test("已选课程、不完整课时、失败工作流和草稿不能误标为�
     works: [{ title: "我的海报", status: "draft" }],
   });
   const contents = buildLearningOrbitContent(graph, buildLearningFramework(graph));
-  assert.equal(contents.discover[0].recordLabel, "已加入课程");
+  assert.equal(contents.discover[0].recordLabel, "本课程 0/1 课时");
   assert.deepEqual(contents.discover[0].knowledge, []);
   assert.equal(contents.discover[1].recordLabel, "课时学习中");
   assert.deepEqual(contents.discover[1].knowledge, []);
@@ -51,6 +51,28 @@ test("缺少课时详情时不根据汇总数字虚构知识，空用户提供�
   assert.equal(contents.discover[0].recordLabel, "待选课程");
   assert.equal(contents.discover[0].next.action, "/learning");
   assert.equal(contents.discover[3].recordLabel, "待记录笔记");
+});
+
+test("圆内单条记录与阶段累计目标分开，不能把其他课程完成数算在本课程上", () => {
+  const data = {
+    summary: { completedLessons: 1, totalLessons: 2 },
+    courses: [{ id: "a", title: "已完成课程", completedLessons: 1, lessonCount: 1 }, { id: "b", title: "待学课程", completedLessons: 0, lessonCount: 1 }],
+    workflowRuns: [{ id: "failed", workflowId: "w", workflowName: "未成功工作流", status: "failed" }],
+    tasks: [{ id: "done", title: "已完成练习", status: "completed" }, { id: "pending", title: "待完成练习", status: "pending" }],
+  };
+  const original = JSON.stringify(data);
+  const graph = buildLearningGraph(data), framework = buildLearningFramework(graph);
+  const content = buildLearningOrbitContent(graph, framework);
+  assert.equal(content.explore[0].headline, "待学课程");
+  assert.equal(content.explore[0].recordLabel, "本课程 0/1 课时");
+  assert.equal(content.explore[0].stageGoal, "1 / 3 节课时");
+  assert.match(content.explore[0].records[0].detail, /^0 \/ 1/);
+  assert.equal(content.create[1].headline, "待完成练习");
+  assert.equal(content.create[1].recordLabel, "待完成任务");
+  assert.equal(content.create[1].stageGoal, "1 / 2 项练习");
+  assert.equal(content.integrate[2].recordLabel, "已尝试工作流");
+  assert.equal(content.integrate[2].stageGoal, "0 / 4 条近期记录");
+  assert.equal(JSON.stringify(data), original, "display calculations never mutate learning data");
 });
 
 test("圆形图谱保留四个方面，新增建议圆及可展开的关联分支", async () => {
@@ -132,7 +154,8 @@ test("全部阶段目标达成后仍可查看各圆详情，不产生虚假的�
 test("所有学习视图共用横向导航，不因切换退出统一布局", async () => {
   const source = await readFile(new URL("../src/MyLearning.jsx", import.meta.url), "utf8");
   assert.match(source, /className="learning-space learning-space--horizontal"/);
-  assert.match(source, /className="my-learning-page my-learning-page--compact"/);
+  assert.match(source, /className=\{`my-learning-page my-learning-page--compact /);
+  assert.match(source, /isGenericAtlas \? "my-learning-page--atlas"/);
   assert.match(source, /aria-pressed=\{view === id\}/);
   assert.match(source, /aria-controls="learning-view-content"/);
   assert.match(source, /id="learning-view-content"/);

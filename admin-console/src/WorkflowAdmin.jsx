@@ -12,6 +12,8 @@ import { shortId } from "./randomId.js";
 import { ZoomableImage } from "./ImageLightbox.jsx";
 import { isImageArtifact } from "./imageSources.js";
 
+import { LearningBindingFields } from "./LearningBindingFields.jsx";
+import { normalizeLearningBindings } from "./learningBindings.js";
 const blankWorkflow = { name: "", description: "", category: "视觉创作", entryType: "workbench" };
 const palette = {
   input: { title: "创作输入", hint: "接收本次的文字需求", color: "#4b87ff", group: "输入与素材" },
@@ -79,7 +81,7 @@ function legacyDefinition(steps = []) {
 }
 
 function normalizeDefinition(value, steps) {
-  if (value?.nodes && value?.edges) return { schemaVersion: 2, engine: value.engine, comfyPrompt: value.comfyPrompt, viewport: value.viewport || { x: 0, y: 0, zoom: 0.85 }, nodes: value.nodes, edges: value.edges, groups: value.groups || [] };
+  if (value?.nodes && value?.edges) return { schemaVersion: 2, learning: value.learning ?? {}, engine: value.engine, comfyPrompt: value.comfyPrompt, viewport: value.viewport || { x: 0, y: 0, zoom: 0.85 }, nodes: value.nodes, edges: value.edges, groups: value.groups || [] };
   return legacyDefinition(steps);
 }
 
@@ -266,6 +268,7 @@ export function WorkflowAdmin({ showToast, canPublish = true, initialWorkflowId 
     try {
       // 历史数据可能把站内路由（例如 /studio）存进入口地址；服务端仅接受无凭据 HTTP(S) 外链。
       const entryUrl = /^https?:\/\//i.test(editor.entryUrl || "") ? editor.entryUrl : undefined;
+      const definition = { ...editor.definition, learning: normalizeLearningBindings(editor.definition.learning) };
       await updateWorkflow(selected.id, { name: editor.name, description: editor.description, category: editor.category, entryType: editor.entryType, entryUrl });
       await createWorkflowVersion(selected.id, { definition, promptTemplate: editor.promptTemplate, publish });
       if (draftTimer.current) window.clearTimeout(draftTimer.current);
@@ -279,7 +282,10 @@ export function WorkflowAdmin({ showToast, canPublish = true, initialWorkflowId 
   };
 
   const exportJson = () => {
-    const payload = { format: "artedu-comfy-workflow", version: 2, workflow: { name: editor.name, description: editor.description, category: editor.category, entryType: editor.entryType, entryUrl: editor.entryUrl }, definition: editor.definition, promptTemplate: editor.promptTemplate };
+    let learning;
+    try { learning = normalizeLearningBindings(editor.definition.learning); }
+    catch (error) { showToast(error.message); return; }
+    const payload = { format: "artedu-comfy-workflow", version: 2, workflow: { name: editor.name, description: editor.description, category: editor.category, entryType: editor.entryType, entryUrl: editor.entryUrl }, definition: { ...editor.definition, learning }, promptTemplate: editor.promptTemplate };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
     const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${editor.name || "artedu-workflow"}.json`; anchor.click(); URL.revokeObjectURL(url); showToast("节点图 JSON 已导出");
   };
@@ -593,6 +599,9 @@ function WorkflowCanvas({ editor, selected, loading, dirty, canPublish, onNotice
     <aside className="workflow-editor-sidebar"><nav aria-label="编辑面板"><button onClick={() => setPanel("settings")} aria-pressed={panel === "settings"}>参数配置</button><button onClick={() => setPanel("run")} aria-pressed={panel === "run"}>运行与结果</button><button onClick={() => setPanel("history")} aria-pressed={panel === "history"}>历史</button></nav>
       <aside className="workflow-inspector"><p>// INSPECTOR</p><h2>{selectedNode ? "节点配置" : selectedEdge ? "连线配置" : "工作流配置"}</h2>{selectedNode ? <div className="workflow-form"><div className="node-type-badge" style={{ "--node-color": palette[selectedNode.type]?.color }}>{palette[selectedNode.type]?.title}</div><label>节点名称<input value={selectedNode.data.label || ""} onChange={(event) => updateNode("label", event.target.value)} /></label><label>节点说明<textarea value={selectedNode.data.description || ""} onChange={(event) => updateNode("description", event.target.value)} /></label><label>默认值 / 参数<textarea value={selectedNode.data.value || ""} onChange={(event) => updateNode("value", event.target.value)} placeholder={selectedNode.type === "skill" ? "例如：提取纹样骨架；保持四方连续；应用低饱和配色" : "例如：1024×1024、写实摄影、低饱和"} /></label><label>示例输入<textarea value={selectedNode.data.exampleInput || ""} onChange={(event) => updateNode("exampleInput", event.target.value)} placeholder="给学习者一个可直接参考的输入" /></label><label>参数说明<textarea value={selectedNode.data.parameterDescription || ""} onChange={(event) => updateNode("parameterDescription", event.target.value)} placeholder="解释尺寸、风格、步骤数等参数如何影响结果" /></label><label>示例输出<textarea value={selectedNode.data.exampleOutput || ""} onChange={(event) => updateNode("exampleOutput", event.target.value)} placeholder="描述或粘贴该步骤预期的输出示例" /></label><label>预计用时<input type="number" min="0" max="1440" value={selectedNode.data.estimatedMinutes ?? 10} onChange={(event) => updateNode("estimatedMinutes", Number(event.target.value))} /><small>用于学生端步骤提示，不影响图结构。</small></label><button className="outline-button" onClick={duplicateNode}><Plus size={15} /> 复制节点</button><button className="danger-text-button" onClick={deleteNode}><X size={15} /> 删除节点</button></div> : selectedEdge ? <div className="workflow-edge-inspector"><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.source)?.data?.label || selectedEdge.source}</strong><FlowArrow size={18} weight="bold" /><strong>{editor.definition.nodes.find((node) => node.id === selectedEdge.target)?.data?.label || selectedEdge.target}</strong><span>这条连线代表数据从上游节点传递到下游节点。</span><button className="danger-text-button" onClick={deleteEdge}><X size={15} /> 删除连线</button></div> : <div className="workflow-form"><label>工作流名称<input value={editor.name} onChange={(event) => onChange("name", event.target.value)} /></label><label>工作流描述<textarea value={editor.description} onChange={(event) => onChange("description", event.target.value)} /></label><label>分类<input value={editor.category} onChange={(event) => onChange("category", event.target.value)} /></label><label>入口<select value={editor.entryType} onChange={(event) => onChange("entryType", event.target.value)}><option value="chat">教学对话</option><option value="workbench">设计工作台</option><option value="external_tool">外部工具</option></select></label><label>提示模板（可选）<textarea value={editor.promptTemplate} onChange={(event) => onChange("promptTemplate", event.target.value)} placeholder="供未来模型节点调用的全局提示词" /></label></div>}<div className={`workflow-graph-check ${issues.length ? "is-error" : ""}`}><strong>{issues.length ? "图结构待修复" : "图结构有效"}</strong><span>{issues[0] || `${editor.definition.nodes.length} 个节点 · ${editor.definition.edges.length} 条连接`}</span>{!issues.length && warnings[0] && <em>{warnings[0]}</em>}</div></aside>
     <section className="workflow-group-panel" aria-label="画布节点分组"><div><strong>画布分组</strong><span>按住 Shift 点选多个节点，给相关步骤加一个可命名的视觉分组。</span></div><button className="outline-button" disabled={selectedNodeIds.length < 2} onClick={createGroup}><Plus size={15} /> 将选中节点建组</button>{groups.map((group) => <label key={group.id}><i style={{ background: group.color }} /><input aria-label={`分组 ${group.title} 名称`} value={group.title} onFocus={recordHistory} onChange={(event) => renameGroup(group.id, event.target.value)} maxLength={80} /><small>{group.nodeIds.length} 个节点</small><button aria-label={`删除分组 ${group.title}`} onClick={() => deleteGroup(group.id)}><X size={15} /></button></label>)}</section>
+    <details className="workflow-learning-config"><summary>学习图谱关联 · 知识、工具与能力目标</summary><p>随当前工作流版本保存。工具名称是配置说明，不是用户实际使用的证明；能力目标也不是能力评分。</p>
+        <LearningBindingFields disabled={loading} value={editor.definition.learning} onChange={(key, value) => onDefinition({ ...editor.definition, learning: { ...editor.definition.learning, [key]: value } })} />
+    </details>
     <section className="workflow-canvas-runner" aria-live="polite" ref={runPanelRef}>
       <div><p>// TRY RUN ON CANVAS</p><h2>{run?.status === "completed" ? (run.trialRun ? "本次草稿试运行已完成" : "本次运行已完成") : activeNode ? `正在执行：${activeNode.data.label || activeNode.type}` : "从画布试运行"}</h2><span>{run ? `${run.trialRun ? "草稿试运行 · " : ""}${Math.round((run.currentStep / Math.max(run.totalSteps, 1)) * 100)}% · ${run.currentStep}/${run.totalSteps} 个节点已完成` : "点一次试运行就自动跑到出图：正向/负向提示词都读节点里配好的默认值。只有「要上传参考图片」或「整条链路一句提示词都没有」时才会停下来问你。试运行不会发布；要让别人用，再点右下角的「保存并发布」。"}</span></div>
       {run && <div className="workflow-run-progress" aria-label={`运行进度 ${Math.round((run.currentStep / Math.max(run.totalSteps, 1)) * 100)}%`}><i style={{ width: `${Math.round((run.currentStep / Math.max(run.totalSteps, 1)) * 100)}%` }} /></div>}

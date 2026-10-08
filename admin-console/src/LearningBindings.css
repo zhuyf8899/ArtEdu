@@ -1,0 +1,18 @@
+.learning-binding-fields { display: grid; gap: 14px; min-width: 0; }
+.learning-binding-fields label { display: grid; gap: 8px; min-width: 0; color: #35443a; font-size: 14px; font-weight: 600; }
+.learning-binding-fields label > span { display: flex; justify-content: space-between; gap: 12px; }
+.learning-binding-fields small { font-size: 12px; font-weight: 400; color: #68776e; line-height: 1.6; }
+.learning-binding-fields textarea { box-sizing: border-box; width: 100%; min-height: 84px; padding: 11px 12px; border: 1px solid #d6e0d9; border-radius: 10px; background: #fff; color: #263b2e; font: inherit; font-weight: 400; line-height: 1.65; resize: vertical; }
+.learning-binding-fields textarea:focus-visible { outline: 2px solid #688d77; outline-offset: 2px; }
+.learning-binding-fields .is-error { color: #a63e35; }
+.learning-binding-note { margin: 0 0 20px; padding: 14px 16px; background: #f5f8f6; border: 1px solid #dde7df; border-radius: 12px; color: #5f7065; font-size: 13px; line-height: 1.75; }
+.course-modal--bindings h2 { overflow-wrap: anywhere; line-height: 1.5; }
+.course-modal--bindings footer button { min-height: 42px; padding: 10px 16px; border-radius: 9px; font-size: 14px; }
+.workflow-learning-config { margin: 18px 0; padding: 16px; background: #f7f9f8; border: 1px solid #dce5df; border-radius: 12px; }
+.workflow-learning-config summary { color: #354e3f; font-size: 14px; font-weight: 600; cursor: pointer; }
+.workflow-learning-config p { color: #68776e; font-size: 12px; line-height: 1.7; }
+.lesson-knowledge { margin: 16px 0; padding: 16px 18px; background: #f6f9f7; border: 1px solid #dde6e0; border-radius: 12px; }
+.lesson-knowledge > strong { color: #354f3e; font-size: 14px; }
+.lesson-knowledge > div { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.lesson-knowledge span { padding: 6px 10px; background: #fff; border: 1px solid #dbe5de; border-radius: 20px; color: #496453; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.lesson-knowledge > small { display: block; margin-top: 10px; color: #758177; font-size: 12px; line-height: 1.7; }

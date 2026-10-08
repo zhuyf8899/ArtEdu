@@ -79,7 +79,7 @@ function AppContent() {
   // 普通门户页面根据路径选择栏目；?course=... 等参数用于定位课程、课时或对话。
   // 传给组件的这些字段叫 props：由父组件向子组件提供数据和回调函数。
   const query = new URLSearchParams(search);
-  return <UserPortal account={account} section={sectionFromPath(pathname)} searchQuery={query.get("query") ?? ""} learningCourseId={query.get("course") ?? ""} learningLessonId={query.get("lesson") ?? ""} studioWorkflowId={query.get("workflow") ?? ""} studioRunId={query.get("run") ?? ""} studioBuilder={query.get("builder") === "1"} studioEditId={query.get("edit") ?? ""} creationStartNew={query.get("new") === "1"} creationId={query.get("id") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
+  return <UserPortal account={account} section={sectionFromPath(pathname)} searchQuery={query.get("query") ?? ""} learningCourseId={query.get("course") ?? ""} learningLessonId={query.get("lesson") ?? ""} learningAtlas={query.get("atlas") ?? ""} learningAtlasCourse={query.get("atlasCourse") ?? ""} studioWorkflowId={query.get("workflow") ?? ""} studioRunId={query.get("run") ?? ""} studioBuilder={query.get("builder") === "1"} studioEditId={query.get("edit") ?? ""} creationStartNew={query.get("new") === "1"} creationId={query.get("id") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
 }
 
 function toPortalAccount(actor) {
