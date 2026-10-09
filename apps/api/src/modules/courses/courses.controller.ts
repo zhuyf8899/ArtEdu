@@ -1,3 +1,6 @@
+/**
+ * 【课程接口入口】把 HTTP 请求交给课程业务层。@Get/@Post/@Put 等标记请求方法与路径；@Param 取路径参数，@Query 取查询参数，@Body 取请求正文，@Req 取请求对象。全局 /api 前缀在 main.ts 设置。
+ */
 import { Body, Controller, Get, HttpException, HttpStatus, Param, Patch, Post, Put, Query, Req, Res } from "@nestjs/common";
 import { createReadStream } from "node:fs";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -31,6 +34,7 @@ export class CoursesController {
 
   @Get("courses")
   async list(@Req() request: FastifyRequest, @Query() query: unknown) {
+    // 身份来自服务端会话；query 先经 Zod 校验，再交给 service 查询。
     return this.courses.listPublished(await this.auth.getActor(request), parseInput(listCoursesQuerySchema, query));
   }
 
@@ -61,6 +65,7 @@ export class CoursesController {
 
   @Post("courses/:courseId/enroll")
   async enroll(@Req() request: FastifyRequest, @Param("courseId") courseId: string) {
+    // :courseId 是地址中的变量；选课规则和数据库写入放在 service，而不是此入口。
     return this.courses.enroll(await this.auth.getActor(request), courseId);
   }
 

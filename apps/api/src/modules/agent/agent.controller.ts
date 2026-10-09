@@ -28,10 +28,9 @@ export class AgentController {
     const filePath = String((request.params as Record<string, string>)["*"] ?? "");
     const asset = await this.workspace.open(await this.auth.getActor(request), filePath);
     reply.header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff").header("Cache-Control", "private, no-store");
-    // Agent 生成的 HTML 是不可信内容：允许它运行自己的 JS，但不给它同源身份，
-    // 也禁止它联网、提交表单或借机调用平台 API。
-    // 资源来源必须显式写成主机名：沙箱下文档是不透明来源，CSP 里的 'self' 什么都不匹配，
-    // 于是同目录的 CSS/JS 全被拦掉，页面会变成没有样式的裸 HTML。
+    // HTML 使用 allow-scripts + allow-same-origin 以加载受认证资源，同源存储并未隔离。
+    // connect-src 阻止 fetch/WebSocket，form-action 阻止表单；获准的资源请求仍可携带会话。
+    // 显式主机来源允许同主机任意端口资源；完整策略与限制见 workspace-preview-csp。
     // SVG 也走同一条思路：它同样可以内嵌脚本，不能因为"只是图片"就跳过限制，
     // 只是策略更紧（script-src 'none'，见 workspace-preview-csp）。
     const csp = previewCspFor(asset.contentType, request.headers["x-forwarded-host"] ?? request.headers.host);

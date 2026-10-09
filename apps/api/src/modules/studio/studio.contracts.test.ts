@@ -73,6 +73,17 @@ test("工作流版本支持内置 Skill，且拒绝循环图", () => {
   assert.equal(workflowVersionInputSchema.safeParse({ definition: { ...base, edges: [...base.edges, { id: "cycle", source: "output", target: "input" }] } }).success, false);
 });
 
+test("画布分组随版本保存，并拒绝引用不存在的节点", () => {
+  const nodes = [
+    { id: "a", type: "input", position: { x: 0, y: 0 }, data: { label: "输入" } },
+    { id: "b", type: "preview", position: { x: 200, y: 0 }, data: { label: "输出" } },
+  ];
+  const group = { id: "group-1", title: "准备与输出", color: "#9ed85b", nodeIds: ["a", "b"] };
+  const definition = { schemaVersion: 2, nodes, edges: [{ id: "a-b", source: "a", target: "b" }], groups: [group] };
+  assert.deepEqual(workflowVersionInputSchema.parse({ definition }).definition?.groups[0], group);
+  assert.equal(workflowVersionInputSchema.safeParse({ definition: { ...definition, groups: [{ ...group, nodeIds: ["a", "missing"] }] } }).success, false);
+});
+
 test("节点执行接口仅允许可选的本次输入，不接受浏览器提交任意节点图", () => {
   assert.equal(workflowRunExecuteSchema.safeParse({ prompt: "生成青绿色连续纹样" }).success, true);
   assert.equal(workflowRunExecuteSchema.parse({ negativePrompt: "文字、水印" }).negativePrompt, "文字、水印");

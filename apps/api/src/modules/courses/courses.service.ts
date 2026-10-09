@@ -1,3 +1,6 @@
+/**
+ * 【课程业务层】实现课程目录、详情、选课、进度、发布审核和受控资料访问，并通过 DatabaseService 读写数据库。先找 controller 调用的方法；上面的 Row 接口描述数据库查询结果，下面的映射方法整理前端响应。
+ */
 import { randomUUID } from "node:crypto";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { rm, stat } from "node:fs/promises";
@@ -130,6 +133,7 @@ export class CoursesService {
     private readonly ragService: RagService,
   ) {}
 
+  // 课程目录：只查已发布课程，同时聚合当前用户进度；筛选值通过 SQL 参数传入。
   async listPublished(actor: Actor, filters: { query?: string; category?: string; difficulty?: string; featured?: string }) {
     const values: unknown[] = [actor.id];
     const clauses = ["c.status = 'published'"];
@@ -169,6 +173,7 @@ export class CoursesService {
     return { items: result.rows.map((row) => this.mapCourse(row)) };
   }
 
+  // 课程详情：组装课程、课时、资源及用户学习状态，资源地址按访问规则提供。
   async getPublished(actor: Actor, courseId: string) {
     const courseResult = await this.database.query<CourseRow>(`
       SELECT c.*, u.display_name AS creator_name,
@@ -189,7 +194,7 @@ export class CoursesService {
     if (!course) throw new NotFoundException("课程不存在或尚未发布");
     // 课件预览面向课程创建教师/管理员与已选课学生。
     const isManager = actor.roles.includes("admin") || (actor.roles.includes("teacher") && course.created_by === actor.id);
-    const canViewMaterials = isManager || Boolean(course.enrollment_status);
+    const canViewMaterials = isManager || ["in_progress", "completed"].includes(course.enrollment_status ?? "");
 
     const [lessons, resources] = await Promise.all([
       this.database.query<LessonRow>(`
@@ -262,6 +267,7 @@ export class CoursesService {
     };
   }
 
+  // 选课入口：先确认课程可读，再记录当前用户的选课关系。
   async enroll(actor: Actor, courseId: string) {
     const published = await this.database.query("SELECT id FROM courses WHERE id = $1 AND status = 'published'", [courseId]);
     if (!published.rows[0]) throw new NotFoundException("课程不存在或尚未发布");
@@ -276,6 +282,7 @@ export class CoursesService {
     return this.getPublished(actor, courseId);
   }
 
+  // 保存进度：在事务内校验课程、课时和选课关系，再更新课时与课程完成状态。
   async updateProgress(actor: Actor, courseId: string, lessonId: string, input: ProgressInput) {
     const lesson = await this.database.query(`
       SELECT l.id, l.title, l.estimated_minutes, l.requires_work_submission FROM course_lessons l JOIN courses c ON c.id = l.course_id
@@ -471,7 +478,7 @@ export class CoursesService {
     const course = await this.getOwnedCourse(actor, courseId);
     if (!["draft", "rejected"].includes(course.status)) throw new ConflictException("只有草稿或已驳回课程可以上传资料");
     const policy = courseUploadPolicy();
-    // 全局 multipart 上限是 10 MiB，这里按课件策略放宽（视频 100 MiB，其他仍 10 MiB）。
+    // 全局 multipart 上限覆盖课程/案例视频；此路由按课程策略限制视频，非视频仍为 10 MiB。
     const part = await request.file({ limits: { fileSize: policy.videoBytes } });
     if (!part) throw new BadRequestException("请选择课件文件：PDF、Word、PPT、视频、图片，或 HTML/CSS/JS 前端界面");
     const metadataField = part.fields.metadata;

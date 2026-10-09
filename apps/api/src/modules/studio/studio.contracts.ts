@@ -6,6 +6,8 @@ export const catalogQuerySchema = z.object({
   query: z.string().trim().max(100).optional(),
   category: z.string().trim().max(100).optional(),
   discipline: z.string().trim().max(100).optional(),
+  // 只有「设计工作台」的目录会带上这个开关：作者要能看到自己的草稿并试运行。
+  includeDrafts: z.enum(["1", "true"]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
@@ -46,7 +48,7 @@ const graphPointSchema = z.object({
 const workflowNodeSchema = z.object({
   id: z.string().trim().min(1).max(80),
   // 节点名是平台稳定的执行契约；执行器可按能力忽略未支持节点，但不得把未知节点当作模型调用。
-  type: z.enum(["input", "prompt", "negative_prompt", "skill", "model", "text_generate", "preview", "note", "load_checkpoint", "text_encode", "empty_latent", "ksampler", "vae_decode", "load_image", "save_image", "lora", "controlnet", "upscale"]),
+  type: z.enum(["comfy", "input", "prompt", "negative_prompt", "skill", "model", "text_generate", "preview", "note", "load_checkpoint", "text_encode", "empty_latent", "ksampler", "vae_decode", "load_image", "save_image", "lora", "controlnet", "upscale"]),
   position: graphPointSchema,
   data: z.object({
     label: z.string().trim().min(1).max(160),
@@ -66,13 +68,26 @@ const workflowEdgeSchema = z.object({
   targetHandle: z.string().trim().min(1).max(80).optional(),
 });
 
+const workflowGroupSchema = z.object({
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(80),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#9ed85b"),
+  nodeIds: z.array(z.string().trim().min(1).max(80)).min(2).max(80),
+});
+
 export const workflowDefinitionSchema = z.object({
   learning: workflowLearningSchema.optional(),
   schemaVersion: z.literal(2).default(2),
+  engine: z.enum(['platform','comfyui']).optional(),
+  comfyPrompt: z.record(z.string(), z.object({class_type:z.string().min(1).max(160),inputs:z.record(z.string(),z.unknown()),_meta:z.object({title:z.string().max(160)}).optional()})).optional(),
   nodes: z.array(workflowNodeSchema).min(1).max(80),
   edges: z.array(workflowEdgeSchema).max(160).default([]),
+  // 视觉分组随版本保存，但不参与节点执行。
+  groups: z.array(workflowGroupSchema).max(20).default([]),
   viewport: z.object({ x: z.number().finite(), y: z.number().finite(), zoom: z.number().positive().max(4) }).default({ x: 0, y: 0, zoom: 1 }),
 }).superRefine((definition, context) => {
+  if (definition.engine === 'comfyui' && definition.nodes.some(n=>n.type!=='comfy')) context.addIssue({code:z.ZodIssueCode.custom,message:'原生工作流只能包含 ComfyUI 节点'});
+  if (definition.engine !== 'comfyui' && definition.nodes.some(n=>n.type==='comfy')) context.addIssue({code:z.ZodIssueCode.custom,message:'ComfyUI 节点必须使用原生执行引擎'});
   const nodeIds = new Set<string>();
   for (const node of definition.nodes) {
     if (nodeIds.has(node.id)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["nodes"], message: "节点 ID 不能重复" });
@@ -84,6 +99,12 @@ export const workflowDefinitionSchema = z.object({
     edgeIds.add(edge.id);
     if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "连线必须连接到已有节点" });
     if (edge.source === edge.target) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "节点不能连接到自身" });
+  }
+  const groupIds = new Set<string>();
+  for (const group of definition.groups) {
+    if (groupIds.has(group.id)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["groups"], message: "分组 ID 不能重复" });
+    groupIds.add(group.id);
+    if (new Set(group.nodeIds).size !== group.nodeIds.length || group.nodeIds.some((id) => !nodeIds.has(id))) context.addIssue({ code: z.ZodIssueCode.custom, path: ["groups"], message: "分组只能包含不重复的现有节点" });
   }
   const outgoing = new Map([...nodeIds].map((id) => [id, [] as string[]]));
   for (const edge of definition.edges) outgoing.get(edge.source)?.push(edge.target);

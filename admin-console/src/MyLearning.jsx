@@ -16,6 +16,7 @@ import {
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { coverImageFor } from "./coverImages.js";
 import { LearningGraph } from "./LearningGraph.jsx";
+import { KnowledgeMap } from "./KnowledgeMap.jsx";
 import { CurriculumAtlas } from "./CurriculumAtlas.jsx";
 
 const COURSE_IMAGES = {
@@ -147,7 +148,7 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
       </aside>
 
       <div id="learning-view-content" className="learning-content" aria-busy={!isGenericAtlas && loading}>
-        {isGenericAtlas ? <CurriculumAtlas courseId={learningAtlas === "course" ? learningAtlasCourse : ""} onNavigate={onNavigate} onPersonal={() => onNavigate("/my-learning?atlas=personal")} /> : <>
+        {isGenericAtlas && !["reference","course"].includes(learningAtlas) ? <KnowledgeMap account={account} onNavigate={onNavigate} onNotice={onNotice} /> : isGenericAtlas ? <CurriculumAtlas courseId={learningAtlas === "course" ? learningAtlasCourse : ""} onNavigate={onNavigate} onPersonal={() => onNavigate("/my-learning?atlas=personal")} /> : <>
         {view === "graph" && <div className="personal-atlas-entry"><div><strong>个性化知识图谱</strong><p>依据我的课程、实践与成长记录展示；未配置知识点时不推断掌握度。</p></div><button onClick={() => onNavigate("/my-learning")}>返回通用图谱 <ArrowRight size={17} /></button></div>}
         {loading ? <LearningLoading /> : loadError ? <LearningLoadError message={loadError} onRetry={load} /> : <>
           {view === "graph" && isPersonalAtlas && <LearningGraph data={data} onNavigate={onNavigate} onView={setView} />}

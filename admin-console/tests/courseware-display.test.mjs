@@ -40,7 +40,7 @@ test("?course= 的自动展开逻辑在资源库组件里，不在 SourcePreview
   // 一渲染 .css/.js 源码课件就抛 ReferenceError，整个课程详情页变白屏。
   assert.ok(!sourcePreview.includes("initialCourseId"), "SourcePreview 不能引用作用域外的 initialCourseId");
   assert.ok(!sourcePreview.includes("openCourse(initialCourseId)"));
-  assert.ok(source.includes("if (initialCourseId && selected?.id !== initialCourseId) void openCourse(initialCourseId);"));
+  assert.ok(source.includes("if (initialCourseId && selected?.id !== initialCourseId) { setSelected(null); void openCourse(initialCourseId); }"));
   assert.ok(source.includes("if (requestId !== courseRequest.current) return;"), "快速切换课程不被过期响应覆盖");
   assert.ok(source.includes("selected?.id === initialCourseId && lessonNodes.current.get(initialLessonId)"), "课时定位限定在打开的课程中");
   assert.ok(source.includes("target.focus({ preventScroll: true })"));

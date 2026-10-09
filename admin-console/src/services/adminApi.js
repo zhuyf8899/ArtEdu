@@ -1,3 +1,7 @@
+/**
+ * 【前端 API 适配层】页面调用这里的函数，由它们向后端发 HTTP 请求。先读 request 的地址、Cookie 和错误处理，再找 getCurrentUser、getCourses 等具体函数。文件虽叫 adminApi，也服务学生门户；上传、流式和文件接口有各自处理方式。
+ */
+import { responseError } from "./httpFeedback.js";
 import { uploadFile } from "./uploadFile.js";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
@@ -24,13 +28,7 @@ async function request(path, options = {}) {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const message = Array.isArray(data?.message) ? data.message.join("；") : data?.message;
-    const error = new Error(message || `请求失败（HTTP ${response.status}）`);
-    error.status = response.status;
-    if (response.status === 401) error.message = "登录状态已失效，请重新登录";
-    if (response.status === 403 && !message) error.message = "当前账号没有执行此操作的权限";
-    if (response.status === 403 && message === "跨站写请求被拒绝") error.message = "当前访问地址未获服务器授权，请联系管理员配置此地址后重试";
-    throw error;
+    throw responseError(response.status, data, path);
   }
   return data ?? {};
 }
@@ -165,8 +163,11 @@ export const executeAgentRunStream = async (runId, input = {}, options = {}) => 
     body: JSON.stringify({ mode: "server", ...input }),
     signal,
   });
-  if (!response.ok || !response.body || !String(response.headers.get("content-type") ?? "").includes("text/event-stream")) {
-    return executeAgentRun(runId, input, { signal });
+  // Only a route-level rejection proves that execution has not started.
+  if ([404, 405, 501].includes(response.status)) return executeAgentRun(runId, input, { signal });
+  if (!response.ok) throw responseError(response.status, await response.json().catch(() => null), '/agent-runs/execute-stream');
+  if (!response.body || !String(response.headers.get("content-type") ?? "").includes("text/event-stream")) {
+    throw new Error('服务未返回流式结果，请查看执行记录；为避免重复生成，没有自动重发请求');
   }
 
   const reader = response.body.getReader();
@@ -204,7 +205,17 @@ export const uploadTemporaryCreationFile = (file, conversationLocalId) => {
   return request(`/creation-files${conversationLocalId ? `?conversationLocalId=${encodeURIComponent(conversationLocalId)}` : ""}`, { method: "POST", body: form });
 };
 
-export const getWorkflows = (query = "") => request(`/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
+/**
+ * 工作流目录。设计工作台会带上 includeDrafts：作者能看到自己的草稿去试运行，
+ * 草稿可见性由服务端权限控制；该业务接口要求登录，不能作为匿名公开目录使用。
+ */
+export const getWorkflows = (query = "", options = {}) => {
+  const params = new URLSearchParams();
+  if (query) params.set("query", query);
+  if (options.includeDrafts) params.set("includeDrafts", "1");
+  const search = params.toString();
+  return request(`/workflows${search ? `?${search}` : ""}`);
+};
 export const getWorkflow = (workflowId) => request(`/workflows/${workflowId}`);
 export const getToolDirectoryLinks = () => request("/tool-directory-links");
 export const getManagedToolDirectoryLinks = () => request("/admin/tool-directory-links");
@@ -271,3 +282,26 @@ export const reviewSubmission = (reviewId, decision) => request(`/admin/reviews/
 });
 export const getAdminReports = () => request("/admin/reports");
 export const decideReport = (reportId, decision) => request(`/admin/reports/${reportId}/decision`, { method: "POST", body: JSON.stringify(decision) });
+
+export const getComfyCatalog=()=>request('/comfy/catalog');
+export const getComfyQueue=()=>request('/comfy/queue');
+export const getComfyJob=id=>request(`/comfy/jobs/${encodeURIComponent(id)}`);
+export const cancelComfyJob=id=>request(`/comfy/jobs/${encodeURIComponent(id)}/cancel`,{method:'POST'});
+
+export const retryComfyJob=id=>request(`/comfy/jobs/${encodeURIComponent(id)}/retry`,{method:'POST'});
+
+export const getKnowledgeMap=()=>request('/me/knowledge-map');
+export const getAbilityPortrait=()=>request('/me/ability-portrait');
+export const getToolTrail=()=>request('/me/tool-trail');
+export const getGrowthRecord=()=>request('/me/growth-record');
+export const saveKnowledgePath=input=>request('/me/knowledge-path',{method:'PUT',body:JSON.stringify(input)});
+export const recordKnowledgeActivity=input=>request('/me/knowledge-activities',{method:'POST',body:JSON.stringify(input)});
+export const getManagedKnowledgeMap=()=>request('/admin/knowledge-map');
+export const syncKnowledgeLabels=()=>request('/admin/knowledge-map/sync-labels',{method:'POST'});
+export const createKnowledgeNode=input=>request('/admin/knowledge-nodes',{method:'POST',body:JSON.stringify(input)});
+export const updateKnowledgeNode=(id,input)=>request('/admin/knowledge-nodes/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(input)});
+export const saveKnowledgeLinks=(id,input)=>request('/admin/knowledge-nodes/'+encodeURIComponent(id)+'/links',{method:'PUT',body:JSON.stringify(input)});
+export const createAbilityGoal=input=>request('/admin/ability-goals',{method:'POST',body:JSON.stringify(input)});
+export const updateAbilityGoal=(id,input)=>request('/admin/ability-goals/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(input)});
+
+export const recordKnowledgeToolUsage=toolId=>request('/me/tool-usage',{method:'POST',body:JSON.stringify({toolId})});

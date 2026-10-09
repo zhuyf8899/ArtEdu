@@ -1,0 +1,20 @@
+.comfy-editor{position:fixed;inset:0;z-index:1000;overflow:auto;background:#151a22;color:#e5e9f0;padding:14px;min-height:80vh}.comfy-editor header{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.comfy-editor button,.comfy-editor select,.comfy-editor input,.comfy-editor textarea,.comfy-editor header label{background:#28323f;color:#fff;border:1px solid #506074;border-radius:5px;padding:7px}.comfy-editor button:disabled{opacity:.45}.comfy-editor [role=alert]{color:#ffc8c8}.comfy-editor__body{display:flex;gap:12px;margin-top:12px;height:calc(100dvh - 110px);min-height:520px}.comfy-editor aside{width:215px;flex-shrink:0;overflow:auto}.comfy-editor aside>button{display:block;width:100%;text-align:left;margin-top:6px}.comfy-editor small{display:block;color:#b9c6d9;font-size:11px}.comfy-editor__canvas{flex:1;min-width:0;border:1px solid #506074}.comfy-node{width:260px;background:#293443;border:2px solid #66768c;border-radius:9px;padding:12px}.comfy-node.is-selected{border-color:#85b8ff}.comfy-port,.comfy-node label{position:relative;display:flex;align-items:center;gap:8px;min-height:28px}.comfy-port--out{justify-content:flex-end}.comfy-node label{flex-wrap:wrap;padding:5px 0}.comfy-node input,.comfy-node select,.comfy-node textarea{width:100%;min-width:0}.comfy-node .react-flow__handle{width:10px;height:10px;background:#b697ee}.comfy-editor aside img{max-width:100%}@media(max-width:850px){.comfy-editor__body{flex-wrap:wrap;height:auto}.comfy-editor aside{width:100%;max-height:220px}.comfy-editor__canvas{width:100%;flex-basis:100%;height:65vh}}
+
+.comfy-group{position:absolute;pointer-events:none;border:2px solid;border-radius:12px;color:#c7d8b8;padding:8px;background:rgba(158,216,91,.035);z-index:-1}.comfy-node.is-running{border-color:#ffcd6e;box-shadow:0 0 16px #ffcd6e66}.comfy-editor aside label{display:block;margin:6px 0}.comfy-editor aside input{max-width:100%;box-sizing:border-box}
+
+.comfy-editor { padding: 0; overflow: hidden; background: #191d23; font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+.comfy-editor > header { min-height: 88px; padding: 18px 24px; background: #14171c; border-bottom: 1px solid #30343b; }
+.comfy-editor > header input { flex: 1; min-width: 100px; background: transparent; border-color: transparent; font-size: 21px; font-weight: 600; }
+.comfy-editor button { background: #292f38; color: #dce2e9; border: 1px solid #444d59; border-radius: 8px; padding: 8px 12px; }
+.comfy-editor > header > button:last-child { background: #a8da65; color: #1b2714; }
+.comfy-editor__body { position: relative; height: calc(100dvh - 88px); gap: 0; min-height: 0; }
+.comfy-editor__canvas { border: 0; border-radius: 0; background: #191d23; }
+.comfy-editor__library-toggle { position: absolute; left: 18px; top: 15px; z-index: 6; }
+.comfy-editor__body > .comfy-editor__library { position: absolute; z-index: 7; left: 18px; top: 62px; bottom: 20px; width: 280px; padding: 16px; background: #20252d; border: 1px solid #414a57; border-radius: 14px; box-shadow: 0 12px 36px #0006; }
+.comfy-editor__body > .comfy-editor__results { width: 350px; padding: 22px; background: #20242b; border-left: 1px solid #30343b; }
+.comfy-editor__progress { padding: 24px; margin-bottom: 24px; background: #161a1f; border: 1px solid #353b43; border-radius: 15px; }
+.comfy-editor__progress h3 { font-size: 23px; margin: 12px 0; }
+.comfy-editor__progress progress { width: 100%; accent-color: #a8da65; }
+.comfy-node { background: #252b34; border-color: #49515d; border-top: 3px solid #9ed85b; }
+.comfy-editor .react-flow__controls button { background: #303844; fill: #e5e9f0; }
+@media(max-width:850px) { .comfy-editor > header { min-height: 140px; padding: 12px; } .comfy-editor__body { height: calc(100dvh - 140px); display: grid; grid-template-rows: minmax(250px,1fr) 220px; } .comfy-editor__canvas { height: auto; min-height: 0; } .comfy-editor__body > .comfy-editor__results { width: 100%; max-height: none; padding: 14px; } .comfy-editor__body > .comfy-editor__library { width: min(280px,calc(100% - 36px)); max-height: none; bottom: 240px; } }

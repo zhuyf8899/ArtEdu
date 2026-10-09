@@ -1,6 +1,6 @@
 # ArtEdu
 
-清华美院 AI 艺术教育平台。第一阶段工程框架已完成，当前仓库可以在本地同时运行 PostgreSQL、NestJS API、生成任务 Worker 和 React 测试门户/管理后台。
+清华美院 AI 艺术教育平台。当前仓库包含 React 学生门户与管理后台、NestJS API、PostgreSQL、课程 RAG、Agent 创作和原生 ComfyUI 工作流。根目录本地启动命令启动数据库、API、前端和生成 Worker；RAG 与本地 GPU Worker 按各自配置启动。
 
 ## 当前已实现
 
@@ -21,20 +21,20 @@
 - React 测试门户与管理后台，支持学生、教师、运营和管理员四种演示身份。
 - 根目录统一启动/检查命令，以及 GitHub Actions CI。
 
-本阶段不包含学校 SSO、真实大模型调用和对象存储文件直传。工作流与作品业务已可在不依赖模型 API 的情况下完整演示；作品暂以安全的 HTTP(S) 资源链接登记，接入对象存储后替换上传适配器。详细边界见 [`docs/framework.md`](docs/framework.md)，接口状态见 [`docs/api-contracts.md`](docs/api-contracts.md)。
+已实现真实模型适配、Agent 执行、受控文件上传及生成产物下载；模型调用需要配置供应商、密钥和执行开关。学校 SSO 和对象存储直传尚未接入，文件目前保存到 API 私有目录或部署数据卷，作品也可登记 HTTP(S) 资源链接。详细边界见 [`docs/framework.md`](docs/framework.md)，接口状态见 [`docs/api-contracts.md`](docs/api-contracts.md)。
 
-学校 SSO 尚不可用时，可在受控测试环境以本地账号完成课程文件上传、选课与受控视频播放；PDF、Word、PPT 不对学生端开放原件。具体规则见 [`docs/pre-sso-file-access.md`](docs/pre-sso-file-access.md)。
+学校 SSO 尚不可用时，可在受控测试环境以本地账号完成课程文件上传、选课与课件访问；视频和单文件网页课件只开放预览，PDF、图片、Office 原件与 CSS/JS 源码可下载。具体规则见 [`docs/pre-sso-file-access.md`](docs/pre-sso-file-access.md)。
 
 ## 上线部署前置条件（尚未完成）
 
-以下事项尚未配置或接入，因此当前版本仅适合本地开发、联调和校内测试，**不能作为公网正式环境直接部署**：
+仓库包含测试部署配置，但不能据此确认目标环境已满足正式上线要求。公网正式部署前需核实以下事项：
 
 - 学校 SSO 或受管身份提供方尚未接入。生产环境会拒绝 `ENABLE_LOCAL_AUTH=true`，本地测试账号不能作为正式登录方式。
-- 学校云服务器、DMZ 网络策略、域名、TLS 证书、HTTPS 反向代理和正式 `CORS_ORIGIN` 尚未落实。
+- 核实学校云服务器、DMZ 网络策略、域名、TLS 证书、HTTPS 反向代理和正式 `CORS_ORIGIN`；已有 staging Compose 与 Nginx 配置不代表目标环境已完成这些配置。
 - 验证码、MFA 和统一风险控制尚未接入；应优先由 SSO 或接入层提供，而非在应用内保留独立的生产密码入口。
 - 本地限流只适用于单进程。多实例或公网部署前应在网关/Redis 配置共享限流、WAF 和登录异常告警。
 - 当前上传文件使用 API 私有目录。生产环境需指定学校托管的 `UPLOAD_ROOT`，并补充对象存储、恶意文件扫描、备份与保留策略。
-- 真实模型 API、国产模型合规验证、密钥管理和调用额度策略尚未配置；`MODEL_EXECUTION_ENABLED` 应保持为 `false`，直到这些条件满足。
+- 真实模型适配器和日/月/并发额度检查已实现；目标环境仍需完成供应商配置、合规验证和密钥管理，再启用 `MODEL_EXECUTION_ENABLED`。
 
 ## 环境要求
 
@@ -99,7 +99,7 @@ npm run dev
 npm run check
 ```
 
-该命令执行 API TypeScript 类型检查、前端生产构建和静态站点 Worker 测试。PR 和推送到 `main` 时，GitHub Actions 会执行相同检查。
+该命令执行 API TypeScript 类型检查、后端安全与业务回归、前端生产构建、Sites Worker/创作/平台测试、案例导入及启动可靠性测试。CI 配置见 `.github/workflows/ci.yml`。
 
 ## 本地调试记录（2026-09-02）
 
@@ -141,7 +141,7 @@ scripts/dev.mjs      多进程本地启动入口
 
 ## 数据与文件边界
 
-PostgreSQL 保存用户、权限、课程、工作流、额度、任务、作品状态、审计信息和对象存储键。图片、视频、PDF 等二进制文件后续进入学校提供的 S3 兼容对象存储，不直接写入数据库。
+PostgreSQL 保存用户、权限、课程、工作流、额度、任务、作品状态、审计信息和文件存储键。图片、视频、PDF 等文件当前保存到 API 私有目录或部署数据卷，不直接写入数据库；学校对象存储直传尚未接入。
 
 ## 课程资源业务
 
@@ -165,3 +165,11 @@ PostgreSQL 保存用户、权限、课程、工作流、额度、任务、作品
 
 回复结束后的「建议提问内容」、课程资料里 PDF 与视频的显示方式、Agent 绘制 SVG 的下发策略，
 以及流式渲染与入口包的性能改良记录见 [`docs/agent-svg-courseware-perf.md`](docs/agent-svg-courseware-perf.md)。
+
+## 原生 ComfyUI 工作流（2026-10-03）
+
+新入口支持真实节点定义、类型化端口、API 工作流交换、GPU Worker 主动领取、持久化队列、取消、进度及实时图片预览。现有教学工作流仍可使用。需要迁移 `0034`、受控上传和配对 Worker；配置、已验证范围及兼容边界见 [原生 ComfyUI 工作流](docs/comfyui-workflows.md)。这不代表正式服务器已部署或所有 ComfyUI 插件已通过兼容验收。
+
+## 知识图谱数据库闭环（2026-10-08）
+
+知识地图、教师图谱管理、关联资源、学习路径和四类记录已接入真实数据库。新增迁移 0035/0036 与按真实课程匹配的目录知识点导入；规则推荐不会把课程标签直接当作已掌握知识。迁移、验证和边界见 [知识图谱合并与数据库闭环](docs/knowledge-map-integration.md)。

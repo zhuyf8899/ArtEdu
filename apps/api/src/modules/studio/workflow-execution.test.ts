@@ -97,6 +97,85 @@ test("作者可试运行自己的草稿，其他用户不能读取未发布版�
   await assert.rejects(service.startWorkflow({ ...actor, id: "other-student" }, "draft-a", { context: {} } as any), /不存在或尚未发布/);
 });
 
+test("输入节点配了默认值时，不填需求也能直接跑起来", async () => {
+  const definition = { nodes: [
+    { id: "input", type: "input", data: { label: "创作需求", value: "青绿色传统纹样海报" } },
+    { id: "preview", type: "preview", data: { label: "预览" } },
+  ], edges: [{ source: "input", target: "preview" }] };
+  const row: Record<string, any> = { id: "run-default", user_id: actor.id, workflow_id: "flow-default", status: "in_progress", current_step: 0, total_steps: 2, context_json: { initialPrompt: "", initialSize: "1024x1024", size: "1024x1024", trialRun: true, nodeResults: {}, nodeStates: {} }, definition_json: definition };
+  const query = async (sql: string, values: any[] = []) => {
+    if (sql.includes("SELECT r.*,w.name")) return { rows: [{ ...row }], rowCount: 1 };
+    if (sql.includes("RETURNING id") && sql.includes("context_json=jsonb_set")) return { rows: [{ id: row.id }], rowCount: 1 };
+    if (sql.includes("UPDATE workflow_runs SET context_json=$2")) { row.context_json = JSON.parse(values[1]); row.current_step = values[2]; row.status = values[3]; }
+    return { rows: [], rowCount: 1 };
+  };
+  const service = new StudioService({ query, transaction: async (fn: any) => fn({ query }) } as any, {} as any);
+  const first = await service.executeRun(actor, row.id, {});
+  assert.equal(first.context.nodeResults.input.prompt, "青绿色传统纹样海报");
+  const second = await service.executeRun(actor, row.id, {});
+  assert.equal(second.status, "completed");
+  assert.equal(second.context.nodeResults.preview.text, "青绿色传统纹样海报");
+});
+
+test("创作需求留空也不算错：提示词由链路里写好的 prompt 节点补上", async () => {
+  const definition = { nodes: [
+    { id: "input", type: "input", data: { label: "创作需求" } },
+    { id: "positive", type: "prompt", data: { label: "正向提示词", value: "艺术教育插画风格，柔和自然光" } },
+    { id: "negative", type: "negative_prompt", data: { label: "负向提示词", value: "文字、水印" } },
+    { id: "preview", type: "preview", data: { label: "预览" } },
+  ], edges: [
+    { source: "input", target: "positive" }, { source: "positive", target: "negative" }, { source: "negative", target: "preview" },
+  ] };
+  const row: Record<string, any> = { id: "run-blank", user_id: actor.id, workflow_id: "flow-blank", status: "in_progress", current_step: 0, total_steps: 4, context_json: { initialPrompt: "", initialSize: "1024x1024", size: "1024x1024", nodeResults: {}, nodeStates: {} }, definition_json: definition };
+  const query = async (sql: string, values: any[] = []) => {
+    if (sql.includes("SELECT r.*,w.name")) return { rows: [{ ...row }], rowCount: 1 };
+    if (sql.includes("RETURNING id") && sql.includes("context_json=jsonb_set")) return { rows: [{ id: row.id }], rowCount: 1 };
+    if (sql.includes("UPDATE workflow_runs SET context_json=$2")) { row.context_json = JSON.parse(values[1]); row.current_step = values[2]; row.status = values[3]; }
+    return { rows: [], rowCount: 1 };
+  };
+  const service = new StudioService({ query, transaction: async (fn: any) => fn({ query }) } as any, {} as any);
+  // 什么都不填，一路按「执行当前节点」走下去，应该自己用上节点里写好的提示词。
+  for (let step = 0; step < 3; step += 1) await service.executeRun(actor, row.id, {});
+  const result = await service.executeRun(actor, row.id, {});
+  assert.equal(result.status, "completed");
+  assert.equal(result.context.nodeResults.input.prompt, "");
+  assert.match(result.context.nodeResults.positive.prompt, /艺术教育插画风格/);
+  assert.equal(result.context.nodeResults.negative.negativePrompt, "文字、水印");
+  assert.match(result.context.nodeResults.preview.text, /艺术教育插画风格/);
+});
+
+test("试运行会标明跑的是草稿还是已发布版本", async () => {
+  const definition = { nodes: [
+    { id: "input", type: "input", data: { label: "输入" } },
+    { id: "preview", type: "preview", data: { label: "预览" } },
+  ], edges: [{ source: "input", target: "preview" }] };
+  const start = async (publishedAt: Date | null) => {
+    let inserted: any[] = [];
+    const query = async (sql: string, values: any[] = []) => {
+      if (sql.includes("FROM workflows w") && sql.includes("latest.id AS version_id")) {
+        return { rows: [{ id: "flow-a", status: publishedAt ? "published" : "draft", created_by: actor.id, version_id: "version-a", version_number: 4, published_at: publishedAt, step_count: 2, definition_json: definition }], rowCount: 1 };
+      }
+      if (sql.includes("INSERT INTO workflow_runs")) { inserted = values; return { rows: [], rowCount: 1 }; }
+      if (sql.includes("SELECT r.*,w.name")) return { rows: [{ id: inserted[0], user_id: actor.id, workflow_id: "flow-a", workflow_version_id: "version-a", status: "in_progress", current_step: 0, total_steps: 2, context_json: JSON.parse(inserted[5]), definition_json: definition, version_number: 4, published_at: publishedAt }], rowCount: 1 };
+      return { rows: [], rowCount: 1 };
+    };
+    const service = new StudioService({ query, transaction: async (fn: any) => fn({ query }) } as any, {} as any);
+    return service.startWorkflow(actor, "flow-a", { context: {} } as any) as Promise<any>;
+  };
+
+  // 未发布：作者可以试运行，记录里必须能看出「这一版还没发布」。
+  const draft = await start(null);
+  assert.equal(draft.versionPublished, false);
+  assert.equal(draft.trialRun, true);
+  assert.equal(draft.context.trialRun, true);
+  assert.equal(draft.versionNumber, 4);
+
+  // 已发布：同样的入口跑的就不再是试运行。
+  const published = await start(new Date());
+  assert.equal(published.versionPublished, true);
+  assert.equal(published.trialRun, false);
+});
+
 test("图像节点调用统一生成服务并持久化真实产物", async () => {
   const definition = { nodes: [
     { id: "input", type: "input", data: { label: "输入" } },

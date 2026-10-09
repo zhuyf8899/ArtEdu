@@ -233,3 +233,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local review artifacts and recovered Desktop files
+local-artifacts/

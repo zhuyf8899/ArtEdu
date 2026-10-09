@@ -1,6 +1,6 @@
 # 管理后台后端对接说明
 
-本文是管理后台与 `feat/database-foundation`（或后续 API 分支）之间的接口契约。所有接口都以 `VITE_API_BASE_URL` 为前缀，默认是 `/api`。
+本文保留管理后台字段对照与示例；当前接口已接入主工程 `apps/api`，实际校验与响应以其 controller、contracts 和 service 为准。所有接口都以 `VITE_API_BASE_URL` 为前缀，默认是 `/api`。
 
 ## 通用约定
 
@@ -89,21 +89,21 @@
 
 响应返回更新后的完整审核对象。`status` 只能为 `approved` 或 `rejected`；后端应使用事务同时更新作品发布状态和审核日志。
 
-## 推荐数据库映射
+## 当前数据库映射
 
 | 前端概念 | 推荐表/领域 |
 |---|---|
-| 用户基础信息与状态 | `users`、`user_profiles` |
-| 日/月/并发额度 | `api_quota_policies` |
-| 实际用量 | `api_usage_ledger` 或按月汇总表 |
-| 投稿与资源库发布状态 | `artworks` / `resource_submissions` |
-| 审核结果与备注 | `moderation_reviews` |
-| 管理员操作记录 | `admin_audit_logs` |
+| 用户基础信息与状态 | `users`、`departments`、`user_roles` |
+| 日/月/并发额度 | `user_usage_limits` |
+| 实际用量 | `usage_records` |
+| 投稿与发布状态 | `works` |
+| 审核结果与备注 | `audit_records` |
+| 管理员操作记录 | `audit_records`（用户、额度与审核操作） |
 
 ## 合并前检查清单
 
 1. 后端接口路径或字段变化时，只修改 `src/services/adminApi.js` 或本文件约定。
-2. 增加管理员登录与 RBAC，所有写接口至少要求管理员角色。
+2. 保持已接入的登录与服务端角色校验；不同写接口使用各自角色范围，不能一律限定管理员。
 3. 为额度变更实现并发安全更新，避免用量统计与额度检查产生竞态。
 4. 为列表接口增加分页后，同步更新前端表格页码逻辑。
 5. 运行 `npm ci && npm run build && npm run test:sites`。

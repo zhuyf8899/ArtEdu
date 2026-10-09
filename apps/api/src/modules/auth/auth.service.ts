@@ -1,3 +1,6 @@
+/**
+ * 【身份与会话】读取当前用户、验证本地登录、管理会话 Cookie 与令牌摘要。Actor 是传给业务模块的用户身份信息。先追 getActor → 会话查询，再看 loginLocal/logout；学校 SSO 尚未接入。
+ */
 import { ForbiddenException, HttpException, HttpStatus, Injectable, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { FastifyRequest } from "fastify";
@@ -47,6 +50,14 @@ export class AuthService {
     const sessionActor = await this.getSessionActor(request);
     if (sessionActor) return this.cacheActor(request, sessionActor);
     throw new UnauthorizedException("缺少有效登录会话。");
+  }
+
+  /** 可选身份：公开目录在带登录态时要能额外带出「我自己的草稿」，未登录就按游客处理。 */
+  async getOptionalActor(request: FastifyRequest): Promise<Actor | null> {
+    const cachedActor = (request as FastifyRequest & { actor?: Actor }).actor;
+    if (cachedActor) return cachedActor;
+    const sessionActor = await this.getSessionActor(request);
+    return sessionActor ? this.cacheActor(request, sessionActor) : null;
   }
 
   async loginLocal(input: LocalLoginInput, ip: string) {

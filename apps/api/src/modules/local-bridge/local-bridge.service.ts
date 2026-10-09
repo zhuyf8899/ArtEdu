@@ -1,3 +1,5 @@
+import { ComfyService } from '../studio/comfy.service';
+import type { MultipartFile } from '@fastify/multipart';
 import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { DatabaseService } from "../database/database.service";
@@ -9,7 +11,7 @@ interface DeviceRow { id: string; user_id: string; status: "active" | "revoked";
 
 @Injectable()
 export class LocalBridgeService {
-  constructor(private readonly database: DatabaseService, private readonly agents: AgentService) {}
+  constructor(private readonly database: DatabaseService, private readonly agents: AgentService, private readonly comfy: ComfyService) {}
   async pair(actor: Actor, displayName: string, requestedTokenDays: number) {
     const token = randomBytes(32).toString("base64url");
     const deviceId = `bridge-${randomUUID()}`;
@@ -43,10 +45,15 @@ export class LocalBridgeService {
     const device = await this.authenticate(authorization);
     return this.agents.failFromLocalBridge(device.user_id, runId, reason);
   }
+  async comfyRegister(authorization:string|undefined,nodes:Record<string,any>){const d=await this.authenticate(authorization);await this.touch(d.id);return this.comfy.register(d,nodes);}
+  async comfyClaim(authorization:string|undefined){const d=await this.authenticate(authorization);await this.touch(d.id);return this.comfy.claim(d);}
+  async comfyPulse(authorization:string|undefined,id:string,progress?:Record<string,any>){const d=await this.authenticate(authorization);await this.touch(d.id);return this.comfy.pulse(d,id,progress);}
+  async comfyFinish(authorization:string|undefined,id:string,input:{status:string;error?:string}){const d=await this.authenticate(authorization);return this.comfy.finish(d,id,input);}
+  async comfyUpload(authorization:string|undefined,id:string,part:MultipartFile,preview=false){const d=await this.authenticate(authorization);return this.comfy.upload(d,id,part,preview);}
   private async authenticate(authorization?: string) {
     const token = authorization?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1];
     if (!token) throw new UnauthorizedException("缺少有效本地 Bridge 令牌");
-    const result = await this.database.query<DeviceRow>("SELECT id,user_id,status,expires_at FROM local_bridge_devices WHERE token_hash=$1 AND status='active' AND expires_at>CURRENT_TIMESTAMP", [this.hash(token)]);
+    const result = await this.database.query<DeviceRow>("SELECT d.id,d.user_id,d.status,d.expires_at FROM local_bridge_devices d JOIN users u ON u.id=d.user_id WHERE d.token_hash=$1 AND d.status='active' AND d.expires_at>CURRENT_TIMESTAMP AND u.status='active'", [this.hash(token)]);
     const device = result.rows[0];
     if (!device) throw new ForbiddenException("本地 Bridge 未配对、已过期或已撤销");
     return device;

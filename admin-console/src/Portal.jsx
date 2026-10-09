@@ -1,7 +1,10 @@
+/**
+ * 【学生门户】提供 LocalLogin 登录界面和 UserPortal 门户布局，按 App 传入的 section 显示课程、创作、社区等页面。先找这两个导出函数，再按需追页面加载和事件处理，图标与样式细节可后读。
+ */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowClockwise, ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
-  Compass, GraduationCap, GridFour, ImageSquare, Lightbulb, LockKey,
+  Compass, GraduationCap, GridFour, House, ImageSquare, Lightbulb, LockKey,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
 import { createAgentRun, executeAgentRun, executeAgentRunStream, getApiHealth, getPortalHome, runGenerationJob } from "./services/adminApi.js";
@@ -38,7 +41,7 @@ function WorkflowGlyph({ entryType }) {
   return <span className="workflow-glyph"><Icon size={21} weight="bold" /></span>;
 }
 
-export function LocalLogin({ onLogin }) {
+export function LocalLogin({ onLogin, message = "" }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -66,15 +69,16 @@ export function LocalLogin({ onLogin }) {
   return <main className="test-login">
     <section className="test-login__intro">
       <div className="test-login__brand"><span>A</span><strong>ArtEdu</strong></div>
-      <p className="eyebrow">// SECURE LOCAL ACCESS</p>
+      <p className="eyebrow">// WELCOME</p>
       <h1>登录后进入<br />学习与创作空间。</h1>
-      <p>当前为受控的本地账号入口。学校单点登录接入后，将替换为统一认证入口。</p>
+      <p>使用平台账号登录，课程进度、学习笔记与创作记录都会跟随账号保存。</p>
       <div className="test-login__note"><LockKey size={17} weight="bold" /><span>密码不会保存在浏览器；登录会话仅使用 HttpOnly 安全 Cookie。</span></div>
     </section>
     <section className="test-login__accounts">
       <div className="account-panel__heading"><div><p>// SIGN IN</p><h2>账号登录</h2></div></div>
       {isHostedPreview && <p className="login-error" role="status">当前为界面预览，未连接 API 或测试数据库；账号仅可在本地测试环境使用。</p>}
       {!isHostedPreview && <div className={`login-service login-service--${serviceStatus}`} role="status"><span>{serviceStatus === "checking" ? <ArrowClockwise className="spin" size={16} /> : serviceStatus === "online" ? <CheckCircle size={16} weight="fill" /> : <X size={16} weight="bold" />}{serviceStatus === "checking" ? "正在检测登录服务" : serviceStatus === "online" ? "登录服务与数据库连接正常" : "登录服务暂不可用"}</span>{serviceStatus === "offline" && <button type="button" onClick={checkService}>重新检测</button>}</div>}
+      {message && <p role="status">{message}</p>}
       <form className="local-login-form" onSubmit={submit}>
         <label>账号<input autoComplete="username" required maxLength="120" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
         <label>密码<input type="password" autoComplete="current-password" required minLength="1" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
@@ -85,7 +89,7 @@ export function LocalLogin({ onLogin }) {
   </main>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", learningLessonId = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", learningLessonId = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -209,9 +213,13 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
   // 创作对话页独立成屏：不带站点导航与两侧装饰，整屏都留给对话。
   const standalone = section === "creation";
+  // 设计工作台同样独立成屏：站点顶栏与两侧装饰都让位给画布与工作流目录。
+  // 顶栏原本是这里唯一的回首页入口，所以下面补了一条自带「返回首页」的工作台栏。
+  const workbench = section === "studio";
+  const chromeFree = standalone || workbench;
 
-  return <div className={`portal-shell${standalone ? " portal-shell--standalone" : ""}`} data-section={section} data-standalone={standalone ? "true" : undefined}>
-    {!standalone && <header className="portal-topbar">
+  return <div className={`portal-shell${standalone ? " portal-shell--standalone" : ""}${workbench ? " portal-shell--workbench" : ""}`} data-section={section} data-standalone={standalone ? "true" : undefined} data-chrome={chromeFree ? "none" : undefined}>
+    {!chromeFree && <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
       <nav className="portal-nav" aria-label="顶部主导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       <GlobalSearchForm value={searchQuery} onSearch={navigateSearch} />
@@ -219,8 +227,15 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "API 已验证" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
     </header>}
 
-    <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}`}>
+    <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}${workbench ? " portal-main--workbench" : ""}`}>
       <div key={`${section}:${searchQuery}`} className="route-transition">
+      {/* 工作台自己带表头：站点顶栏被隐藏后，这里是唯一的「返回首页」入口。 */}
+      {workbench && <header className="portal-workbench-bar">
+        <button className="portal-workbench-bar__home" onClick={() => navigateSection("home")}><House size={17} weight="bold" /> 返回首页</button>
+        <div className="portal-workbench-bar__title"><p>// STUDIO</p><strong>{pageTitle}</strong></div>
+        <span className="portal-workbench-bar__hint">课程负责学习，工作台负责动手。</span>
+        {canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}
+      </header>}
       {section !== "home" && section !== "courses" && section !== "studio" && section !== "community" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {section === "home" && <>
@@ -232,13 +247,13 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         <SectionHeading eyebrow="// QUICK START" title="今天想做什么？" action="查看全部工作流" onAction={() => navigateSection("studio")} />
         <section className="quick-grid"><QuickAction icon={Brain} title="问教学教练" text="根据课程与工作流生成下一步学习建议。" onClick={() => setCoachOpen(true)} /><QuickAction icon={ImageSquare} title="生成视觉草稿" text="输入灵感，启动图片或图案生成任务。" accent onClick={() => startGeneration("image", "以传统云纹为灵感，生成一张用于丝网印刷的青绿色视觉草稿。")} /><QuickAction icon={Compass} title="拆解优秀案例" text="从作品倒推同款工作流与创作方法。" onClick={() => navigateSection("community")} /></section>
         <SectionHeading eyebrow="// FEATURED WORKFLOWS" title="精选工作流" />
-        {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => navigateSection("studio")}>开始使用 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入设计工具" onRetry={() => navigateSection("studio")} />}
+        {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(workflow.id)}`)}>打开此工作流 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入设计工具" onRetry={() => navigateSection("studio")} />}
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
-        {section === "courses" && <LearningLibrary initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNotice={showToast} />}
+        {section === "courses" && <LearningLibrary initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNavigate={onNavigate} onNotice={showToast} />}
 
-        {section === "studio" && <WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
+        {section === "studio" && <WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
         {section === "community" && <CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
 

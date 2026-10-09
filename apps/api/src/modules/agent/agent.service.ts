@@ -44,7 +44,7 @@ export class AgentService {
     return { items: result.rows.map((row) => ({ id: row.id, runId: row.run_id, userId: row.user_id, severity: row.severity, status: row.status, summary: row.summary, targetType: row.target_type, targetId: row.target_id, createdAt: row.created_at.toISOString() })) };
   }
 
-  // 供未来 Agent Runtime 调用；不暴露为浏览器写接口，避免用户伪造 Agent 输出。
+  // 供服务端 Agent 执行链路记录消息；不暴露为浏览器写接口，避免用户伪造 Agent 输出。
   async appendAgentMessage(runId: string, content: string) {
     return this.database.transaction(async (client) => {
       const result = await client.query<{ user_id: string }>("SELECT user_id FROM agent_runs WHERE id=$1", [runId]);

@@ -1,3 +1,6 @@
+/**
+ * 【创作对话页】管理对话选择、输入、流式回复和暂停；通过上层回调请求执行，通过 conversationStore 保存浏览器对话。阅读时先追发送与暂停流程，再看消息渲染和布局。
+ */
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowRight, ChatCircleDots, Copy, DotsThreeVertical, PaperPlaneTilt, Paperclip, PencilSimple, Plus, SidebarSimple, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
 import { AiMarkdown, safeReplyUrl } from "./AiMarkdown.js";

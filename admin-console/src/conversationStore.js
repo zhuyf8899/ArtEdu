@@ -1,3 +1,6 @@
+/**
+ * 【浏览器存储】封装 IndexedDB 对话记录，按账号隔离。IndexedDB 是当前浏览器本地数据库，不是服务器 PostgreSQL；换浏览器或清除站点数据会影响这里的记录。
+ */
 import { randomId } from "./randomId.js";
 
 const DATABASE = "artedu-creation-conversations";

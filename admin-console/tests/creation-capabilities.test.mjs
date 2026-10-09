@@ -130,10 +130,11 @@ test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条
 test("创作对话页独立成屏：不显示站点导航，也不显示两侧装饰", async () => {
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   assert.ok(portal.includes('const standalone = section === "creation"'), "对话页要单独标记");
-  assert.ok(portal.includes('{!standalone && <header className="portal-topbar">'), "对话页不渲染顶部导航");
-  assert.ok(!portal.includes("PortalArtRails"), "全站不再渲染两侧装饰");
-  assert.ok(portal.includes('["courses", "AI 讲堂", GraduationCap]'), "课程入口与 AI 讲堂页面标题一致");
-  assert.ok(portal.includes('["studio", "设计工具", Palette]'), "工作台入口命名为设计工具");
+  assert.ok(portal.includes("const chromeFree = standalone || workbench"));
+  assert.ok(portal.includes('{!chromeFree && <header className="portal-topbar">'));
+  assert.ok(!portal.includes("PortalArtRails"));
+  assert.ok(portal.includes('["courses", "AI 讲堂", GraduationCap]'));
+  assert.ok(portal.includes('["studio", "设计工具", Palette]'));
   assert.ok(portal.includes("portal-main--standalone"));
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
   assert.ok(!css.includes("portal-art-rails"), "样式表不再保留两侧装饰栏");
@@ -145,6 +146,17 @@ test("创作对话页独立成屏：不显示站点导航，也不显示两侧�
   assert.ok(css.includes(".portal-shell--standalone .creation-canvas__composer { flex: 0 0 auto;"));
 });
 
+test("设计工作台是独立页面，并自带「返回首页」入口", async () => {
+  const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
+  // 顶栏是这两页唯一的回首页入口：隐藏外壳后必须自己补一个，否则用户被困住。
+  assert.ok(portal.includes('const workbench = section === "studio"'), "设计工作台要标记为无外壳页面");
+  assert.ok(portal.includes('className="portal-workbench-bar"'), "工作台要有自己的表头");
+  assert.ok(portal.includes("返回首页"), "工作台表头必须有返回首页按钮");
+  assert.ok(portal.includes('onClick={() => navigateSection("home")}'), "返回首页要真的回到首页路由");
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  assert.ok(css.includes(".portal-main--workbench { width: min(1360px"), "工作台主区要更宽");
+  assert.ok(css.includes(".portal-workbench-bar__home"), "返回首页按钮要有样式");
+});
 test("AI 讲堂与设计工具移除重复标题，同时保留课程和工具内容", async () => {
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   const studio = await readFile(new URL("../src/WorkflowStudio.jsx", import.meta.url), "utf8");

@@ -1,45 +1,37 @@
-# ArtEdu 后端第一版
+# ArtEdu 后端架构
 
-## 边界
+`apps/api` 使用 NestJS、Fastify 和 TypeScript，是学生门户与管理后台的业务入口。模块注册见 `src/app.module.ts`，HTTP 入口见 `src/main.ts`。
 
-- `apps/api` 是管理端、学生端和后续小程序的唯一业务入口；前端不得直接访问 PostgreSQL。
-- PostgreSQL 保存关系数据、状态和审计记录；图片、视频、课件等文件仅保存对象存储键。
-- 模型调用与文件处理放在独立 worker 进程，HTTP 请求只负责创建与查询任务。
-- 真实身份认证以后替换 `AuthService` 的开发身份逻辑为学校 SSO；业务模块继续只依赖 `Actor`。
+## 模块
 
-## 第一版已落地模块
+| 模块 | 职责 |
+| --- | --- |
+| auth | 本地账号、会话、身份及全局认证守卫；学校 SSO 尚未接入 |
+| admin | 用户、额度、审核、举报与管理总览 |
+| courses / learning | 课程 CMS、资料访问、选课、进度、学习计划与笔记 |
+| portal / knowledge | 首页聚合、统一搜索与知识图谱 |
+| studio | 教学工作流、案例作品、社区互动、审核及原生 ComfyUI 执行 |
+| generation | 任务、额度、模型适配、执行和产物导出 |
+| agent | 模型/工具循环、流式执行、搜索、工作区及产物预览 |
+| creation-storage | 创作临时文件与清理 |
+| rag | PDF 索引、embedding、权限过滤后的向量检索及转写文本回退 |
+| local-bridge | 本地设备配对、心跳和 Agent 任务领取/回传 |
+| database / health | PostgreSQL 访问与健康检查 |
 
-| 模块 | 责任 | 首批接口 |
-| --- | --- | --- |
-| auth | 开发身份回退、读取角色 | `GET /api/auth/me` |
-| admin | 用户、额度、审核和总览 | `/api/admin/*` |
-| courses | 课程目录、选课、学习进度、课程 CMS 和发布审核 | `/api/courses/*`、`/api/admin/courses/*` |
-| generation | 额度检查、任务创建和任务查询 | `/api/generation-jobs` |
-| worker | 原子领取 queued 任务并更新任务状态 | `npm run worker` |
+模块通常包含 controller、contracts、service 和 module；部分模块另外拆出 repository，其余直接通过 DatabaseService 查询。业务模块使用 Actor 进行权限判断。
 
-## 管理端状态映射
+## 执行与存储
 
-`users.status` 继续代表账户状态：`active`、`disabled`、`pending`。管理端的 `limited` 由 API 根据额度和进行中的任务计算，不写回用户表。
+- API 可创建排队任务，也提供 GenerationService.runJob 和 Agent 服务端执行/流式执行入口。
+- `src/worker.ts` 启动 GenerationWorkerService；当前 processOnce 仅记录配置提示并返回 false，不领取或执行任务。
+- `src/rag.worker.ts` 启动独立 PDF 索引 Worker，负责解析、切块、embedding 和向量入库。
+- 本地 Agent Bridge 与 ComfyUI GPU Worker 主动向平台领取任务；服务器不反向连接用户设备。配置见 [本地 GPU 接入](gpu-worker-integration.md) 与 [ComfyUI](comfyui-workflows.md)。
+- PostgreSQL 保存关系数据、状态、审计、存储键和检索文本/向量。二进制文件保存在 API 私有目录或部署卷；对象存储直传尚未接入。
 
-## 生成任务流程
+管理端的 limited 是依据额度与进行中任务计算的展示状态，不写回 users.status。last_active 当前取 users.updated_at，不代表登录时间。
 
-```text
-POST /generation-jobs
-  -> 校验登录与额度
-  -> 事务内锁定同一用户并写入 generation_jobs(queued)
-  -> worker 使用 FOR UPDATE SKIP LOCKED 领取任务
-  -> 模型适配器生成文件并写对象存储
-  -> 写 generation_outputs、usage_records，任务变为 succeeded / failed
-```
+## 迁移与运行
 
-## 增量迁移
+以 `migrations/` 和 `schema_migrations` 为数据库结构及执行状态依据；`db/schema.ts` 只是基础表用途索引。
 
-`0002_backend_alignment.sql` 增加 `concurrent` 额度周期，扩展审计表以记录用户额度与启停操作，并创建 `work_generation_jobs`，用于让审核列表追溯模型名称和提示词。
-
-`0003_course_resource_business.sql` 增加课程版本与发布状态、课程审核、选课记录、工作流课时和学习生成成果关联，现有已发布课程会自动回填 slug、发布时间和总学习时长。
-
-## 本地启动
-
-1. 用根目录 `docker-compose.yml` 启动 PostgreSQL，并按顺序执行 `0001_initial.sql`、`0002_backend_alignment.sql`、`0003_course_resource_business.sql` 和种子数据。
-2. 将 `apps/api/.env.example` 复制为 `apps/api/.env`，安装依赖后在 `apps/api` 执行 `npm run dev`。
-3. 仅当 `.env` 显式设置 `ENABLE_LOCAL_AUTH=true` 时，才可使用本地账号密码登录。生产环境会拒绝启动该开关；上线前必须接入学校 SSO。
+本地启动见根 README 与 scripts/dev.mjs；测试部署进程配置见 docker-compose.staging.yml。启用模型或 RAG 前必须配置对应服务和密钥。生产环境拒绝 ENABLE_LOCAL_AUTH=true，正式身份提供方仍需接入。

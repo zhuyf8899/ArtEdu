@@ -1,3 +1,6 @@
+/**
+ * 【课程输入规则】Zod schema 在运行时检查请求字段、范围和默认值；TypeScript 类型描述开发时的结构。先找 controller 使用的 schema，再看该 schema 的约束，不必一次读完所有字段。
+ */
 import { z } from "zod";
 import { learningLabelsSchema } from "../../common/learning-bindings";
 

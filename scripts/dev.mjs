@@ -1,3 +1,6 @@
+/**
+ * 【启动导读】根目录 npm run dev 执行本文件。先检查数据库、执行迁移和补齐展示素材，再启动 API、前端和生成 Worker。这里只协调进程，具体业务不写在这里。
+ */
 import { execFileSync, spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,12 +18,14 @@ try {
   console.error("[dev] 数据库预检查失败；修复上方错误后重新执行 npm run dev。");
   process.exit(1);
 }
+// 启动清单：cwd 是命令执行目录，args 是 npm 的参数；同名 dev 读取各目录自己的 package.json。
 const processes = [
   { name: "api", cwd: "apps/api", args: ["run", "dev"] },
   { name: "web", cwd: "admin-console", args: ["run", "dev"] },
   { name: "worker", cwd: "apps/api", args: ["run", "worker"] },
 ];
 
+// map 为清单中的每一项启动一个子进程；stdio: inherit 让日志直接显示在当前终端。
 const children = processes.map(({ name, cwd, args }) => {
   const command = npmCli ? process.execPath : npmCommand;
   const commandArgs = npmCli ? [npmCli, ...args] : args;
@@ -33,6 +38,7 @@ const children = processes.map(({ name, cwd, args }) => {
 });
 
 function stopAll(signal) {
+  // 收到终止信号时把信号转给已启动的子进程。
   for (const child of children) child.kill(signal);
 }
 

@@ -1,3 +1,4 @@
+import { ComfyService } from './comfy.service';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -55,6 +56,7 @@ export class StudioService {
     private readonly generation?: GenerationService,
     private readonly models?: ModelRegistry,
     private readonly creationStorage?: CreationStorageService,
+    private readonly comfy?: ComfyService,
   ) {}
 
   async listToolDirectoryLinks() {
@@ -93,9 +95,13 @@ export class StudioService {
     return this.mapToolDirectoryLink(result.rows[0]);
   }
 
-  async listWorkflows(query: CatalogQuery) {
+  async listWorkflows(query: CatalogQuery, actor: Actor | null = null) {
+    // includeDrafts 只在「设计工作台」目录里打开：作者能看到并试运行自己的草稿，
+    // 其他人（含未登录）依旧只看到已发布工作流。
+    const withDrafts = Boolean(actor) && query.includeDrafts !== undefined;
     const values: unknown[] = [];
-    const where = ["w.status = 'published'"];
+    const where = [withDrafts ? "(w.status = 'published' OR w.created_by = $1)" : "w.status = 'published'"];
+    if (withDrafts) values.push(actor!.id);
     if (query.query) {
       values.push(`%${query.query}%`);
       where.push(`(w.name ILIKE $${values.length} OR w.description ILIKE $${values.length})`);
@@ -106,13 +112,14 @@ export class StudioService {
     }
     values.push(query.pageSize, (query.page - 1) * query.pageSize);
     const result = await this.database.query(`
-      SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url,
+      SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url, w.status,
         latest.id AS version_id, latest.version_number, latest.definition_json,
+        latest.published_at,
         COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN LATERAL (
-        SELECT id, version_number, definition_json FROM workflow_versions
-        WHERE workflow_id = w.id AND published_at IS NOT NULL
+        SELECT id, version_number, definition_json, published_at FROM workflow_versions
+        WHERE workflow_id = w.id AND (published_at IS NOT NULL OR ${withDrafts ? "w.created_by = $1" : "FALSE"})
         ORDER BY version_number DESC LIMIT 1
       ) latest ON TRUE
       WHERE ${where.join(" AND ")}
@@ -122,18 +129,24 @@ export class StudioService {
     return { items: result.rows.map((row) => this.mapWorkflow(row)), page: query.page, pageSize: query.pageSize };
   }
 
-  async getWorkflow(workflowId: string) {
+  async getWorkflow(workflowId: string, actor: Actor | null = null) {
+    // 作者本人可以直接打开自己还没发布的草稿去试运行；其他人只能打开已发布版本。
+    const values: unknown[] = [workflowId];
+    const visibility = actor ? "w.status = 'published' OR w.created_by = $2" : "w.status = 'published'";
+    if (actor) values.push(actor.id);
     const result = await this.database.query(`
-      SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url,
+      SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url, w.status,
         latest.id AS version_id, latest.version_number, latest.definition_json, latest.prompt_template,
+        latest.published_at,
         COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN LATERAL (
-        SELECT * FROM workflow_versions WHERE workflow_id = w.id AND published_at IS NOT NULL
+        SELECT * FROM workflow_versions
+        WHERE workflow_id = w.id AND (published_at IS NOT NULL OR ${actor ? "w.created_by = $2" : "FALSE"})
         ORDER BY version_number DESC LIMIT 1
       ) latest ON TRUE
-      WHERE w.id = $1 AND w.status = 'published'
-    `, [workflowId]);
+      WHERE w.id = $1 AND (${visibility})
+    `, values);
     if (!result.rows[0]) throw new NotFoundException("工作流不存在或尚未发布");
     return this.mapWorkflow(result.rows[0]);
   }
@@ -225,7 +238,10 @@ export class StudioService {
     if (!actor.roles.includes("admin") && workflow.rows[0].created_by !== actor.id) throw new ForbiddenException("只能编辑自己创建的工作流");
     if (input.publish) this.auth.requireAnyRole(actor, WORKFLOW_PUBLISH_ROLES);
     const definition = input.definition ?? this.legacyStepsToDefinition(input.steps ?? []);
-    if (input.publish) this.assertExecutableDefinition(definition);
+    if (definition.engine === 'comfyui') {
+      if (!this.comfy) throw new BadRequestException('缺少原生工作流执行服务');
+      definition.comfyPrompt = await this.comfy.validateGraph(actor, definition);
+    } else if (input.publish) this.assertExecutableDefinition(definition);
     const version = await this.database.transaction(async (client) => {
       const next = await client.query<{ number: number }>("SELECT COALESCE(MAX(version_number), 0)::int + 1 AS number FROM workflow_versions WHERE workflow_id = $1", [workflowId]);
       const id = `workflow-version-${randomUUID()}`;
@@ -240,25 +256,33 @@ export class StudioService {
   }
 
   async startWorkflow(actor: Actor, workflowId: string, input: WorkflowRunInput) {
+    // 试运行与发布解耦：作者本人（以及教师/运营/管理员）可以直接跑最新版本，
+    // 包括还没发布的草稿；其它人仍然只能跑已发布版本。
+    const canTrialDraft = WORKFLOW_PUBLISH_ROLES.some((role) => actor.roles.includes(role));
     const result = await this.database.query(`
       SELECT w.id,w.name,w.description,w.category,w.entry_type,w.entry_url,w.status,w.created_by,
-        latest.id AS version_id,latest.version_number,latest.definition_json,latest.prompt_template,
+        latest.id AS version_id,latest.version_number,latest.definition_json,latest.prompt_template,latest.published_at,
         COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN LATERAL (
         SELECT * FROM workflow_versions
-        WHERE workflow_id=w.id AND (published_at IS NOT NULL OR w.created_by=$2)
+        WHERE workflow_id=w.id AND (published_at IS NOT NULL OR w.created_by=$2 OR $3::boolean)
         ORDER BY version_number DESC LIMIT 1
       ) latest ON TRUE
-      WHERE w.id=$1 AND (w.status='published' OR w.created_by=$2) AND w.status<>'archived'
-    `, [workflowId, actor.id]);
+      WHERE w.id=$1 AND (w.status='published' OR w.created_by=$2 OR $3::boolean) AND w.status<>'archived'
+    `, [workflowId, actor.id, canTrialDraft]);
     if (!result.rows[0]) throw new NotFoundException("工作流不存在或尚未发布");
     const workflow = this.mapWorkflow(result.rows[0]);
     if (!workflow.versionId) throw new ConflictException("工作流还没有可运行版本");
-    this.assertExecutableDefinition(workflow.definition);
+    if (workflow.definition.engine === 'comfyui') {
+      if (!this.comfy) throw new ConflictException('ComfyUI 执行服务尚未配置');
+      workflow.definition.comfyPrompt = await this.comfy.validateGraph(actor, workflow.definition);
+    } else this.assertExecutableDefinition(workflow.definition);
     const initialPrompt = typeof input.context.prompt === "string" ? input.context.prompt.trim().slice(0, 10000) : "";
     const initialSize = typeof input.context.size === "string" && /^\d{3,4}x\d{3,4}$/.test(input.context.size) ? input.context.size : "1024x1024";
-    const runContext = { initialPrompt, initialSize, size: initialSize, nodeResults: {}, nodeStates: {} };
+    // 这次运行跑的是草稿还是已发布版本，前端要据此标注「草稿试运行」。
+    const trialRun = !result.rows[0].published_at;
+    const runContext = { engine: workflow.definition.engine ?? 'platform', initialPrompt, initialSize, size: initialSize, trialRun, versionNumber: workflow.versionNumber, nodeResults: {}, nodeStates: {} };
     const id = `workflow-run-${randomUUID()}`;
     await this.database.transaction(async (client) => {
       await client.query(`
@@ -267,13 +291,18 @@ export class StudioService {
       `, [id, actor.id, workflowId, workflow.versionId, workflow.stepCount, JSON.stringify(runContext)]);
       await client.query("INSERT INTO workflow_run_events (id,run_id,step_index,event_type) VALUES ($1,$2,0,'start')", [`workflow-event-${randomUUID()}`, id]);
     });
+    if (workflow.definition.engine === 'comfyui') {
+      try { await this.comfy!.enqueue(actor,id,workflow.definition.comfyPrompt!); }
+      catch(error) { await this.database.query("UPDATE workflow_runs SET status='cancelled' WHERE id=$1",[id]); throw error; }
+    }
     return this.getRun(actor, id);
   }
 
   async listMyRuns(actor: Actor) {
     const result = await this.database.query(`
-      SELECT r.*, w.name AS workflow_name, w.category
+      SELECT r.*, w.name AS workflow_name, w.category, v.version_number, v.published_at
       FROM workflow_runs r JOIN workflows w ON w.id = r.workflow_id
+      JOIN workflow_versions v ON v.id = r.workflow_version_id
       WHERE r.user_id = $1 ORDER BY r.updated_at DESC
     `, [actor.id]);
     // Pass the mapper through an arrow function so it keeps the service
@@ -309,6 +338,7 @@ export class StudioService {
   async executeRun(actor: Actor, runId: string, input: WorkflowRunExecuteInput) {
     const current = await this.getRun(actor, runId) as Record<string, any>;
     if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");
+    if (current.definition.engine === 'comfyui') throw new ConflictException('原生工作流由 GPU Worker 执行，请查看队列状态');
     const step = current.steps[current.currentStep];
     const node = current.nodes.find((item: Record<string, any>) => item.id === step?.id);
     if (!node) throw new ConflictException("当前节点不存在，无法执行");
@@ -321,9 +351,11 @@ export class StudioService {
     try {
     const saved = this.workflowContext(current.context);
     const parents = current.edges.filter((edge: Record<string, any>) => edge.target === node.id).map((edge: Record<string, any>) => edge.source);
+    // 起跑时约定的需求为空时要留空（undefined），不能写成空字符串：
+    // 空字符串会让输入节点判空失败，把「节点里已经配好默认值」的草稿试运行挡在门外。
     const context = parents.length
       ? this.mergeNodeStates(saved, parents)
-      : this.workflowContext({ prompt: saved.initialPrompt, size: saved.initialSize });
+      : this.workflowContext({ prompt: saved.initialPrompt || undefined, size: saved.initialSize });
     if (input.prompt && node.type !== "input") throw new BadRequestException("只可在输入节点填写创作需求");
     if (input.negativePrompt !== undefined && node.type !== "negative_prompt") throw new BadRequestException("只可在负向提示词节点填写排除内容");
     if (input.referenceFileId && node.type !== "load_image") throw new BadRequestException("只可在参考素材节点上传图片");
@@ -610,7 +642,7 @@ export class StudioService {
 
   private async getRun(actor: Actor, runId: string) {
     const result = await this.database.query(`
-      SELECT r.*,w.name AS workflow_name,w.category,v.definition_json
+      SELECT r.*,w.name AS workflow_name,w.category,v.definition_json,v.version_number,v.published_at
       FROM workflow_runs r JOIN workflows w ON w.id=r.workflow_id
       JOIN workflow_versions v ON v.id=r.workflow_version_id
       WHERE r.id=$1 AND r.user_id=$2
@@ -624,7 +656,9 @@ export class StudioService {
       const workflows = await client.query("SELECT id FROM workflows WHERE id=ANY($1::text[]) AND status='published'", [input.workflowIds]);
       if (workflows.rowCount !== input.workflowIds.length) throw new BadRequestException("引用的工作流不存在或尚未发布");
     }
-    for (const workflowId of input.workflowIds) await client.query("INSERT INTO work_workflows (work_id,workflow_id) VALUES ($1,$2)", [workId, workflowId]);
+    // 创建与更新都会走这里，同一关联可能被写入两次；没有 ON CONFLICT 时
+    // 第二次插入会撞 work_workflows 主键并抛出 500，表现为"作品保存失败"。
+    for (const workflowId of input.workflowIds) await client.query("INSERT INTO work_workflows (work_id,workflow_id) VALUES ($1,$2) ON CONFLICT (work_id,workflow_id) DO NOTHING", [workId, workflowId]);
     for (const tagName of [...new Set(input.tagNames)]) {
       const slug = this.slugify(tagName);
       const tag = await client.query<{ id: string }>(`
@@ -660,8 +694,13 @@ export class StudioService {
       category: row.category,
       entryType: row.entry_type,
       entryUrl: row.entry_url,
+      status: row.status ?? null,
       versionId: row.version_id,
       versionNumber: row.version_number,
+      // null = 这次查询没带版本发布状态（例如管理端列表自己另算），
+      // false = 最新版本还是草稿，true = 最新版本已发布。
+      publishedAt: row.published_at ?? null,
+      versionPublished: row.published_at === undefined ? null : Boolean(row.published_at),
       stepCount: Number(row.step_count ?? definition.nodes.length),
       definition,
       nodes: definition.nodes,
@@ -676,8 +715,10 @@ export class StudioService {
       return {
         schemaVersion: 2,
         learning: definition.learning ?? { knowledgePoints: [], tools: [], abilityGoals: [] },
+        engine: definition.engine, comfyPrompt: definition.comfyPrompt,
         nodes: definition.nodes,
         edges: Array.isArray(definition.edges) ? definition.edges : [],
+        groups: Array.isArray(definition.groups) ? definition.groups : [],
         viewport: definition.viewport ?? { x: 0, y: 0, zoom: 1 },
       };
     }
@@ -692,7 +733,7 @@ export class StudioService {
       data: { label: step.title || `步骤 ${index + 1}`, description: step.description ?? "", value: step.instruction ?? "", estimatedMinutes: step.estimatedMinutes ?? 10 },
     }));
     const edges = nodes.slice(1).map((node, index) => ({ id: `legacy-edge-${index + 1}`, source: nodes[index].id, sourceHandle: "output", target: node.id, targetHandle: "input" }));
-    return { schemaVersion: 2, nodes, edges, viewport: { x: 0, y: 0, zoom: 1 } };
+    return { schemaVersion: 2, engine: undefined as 'platform' | 'comfyui' | undefined, comfyPrompt: undefined as Record<string,any> | undefined, nodes, edges, viewport: { x: 0, y: 0, zoom: 1 } };
   }
 
   private definitionToSteps(definition: { nodes: Array<Record<string, any>>; edges?: Array<Record<string, any>> }) {
@@ -760,7 +801,19 @@ export class StudioService {
 
   private mapRun(row: Record<string, any>) {
     const definition = this.normalizeWorkflowDefinition(row.definition_json);
-    return { id: row.id, workflowId: row.workflow_id, workflowName: row.workflow_name, category: row.category, status: row.status, currentStep: Number(row.current_step), totalSteps: Number(row.total_steps), context: row.context_json ?? {}, definition, nodes: definition.nodes, edges: definition.edges, steps: this.definitionToSteps(definition), startedAt: row.started_at, completedAt: row.completed_at, updatedAt: row.updated_at };
+    // 试运行跑的是草稿还是已发布版本：运行页据此显示「草稿试运行」。
+    const versionPublished = row.published_at === undefined ? null : Boolean(row.published_at);
+    const context = row.context_json ?? {};
+    return {
+      id: row.id, workflowId: row.workflow_id, workflowName: row.workflow_name, category: row.category,
+      status: row.status, currentStep: Number(row.current_step), totalSteps: Number(row.total_steps),
+      context, definition, nodes: definition.nodes, edges: definition.edges, steps: this.definitionToSteps(definition),
+      versionId: row.workflow_version_id ?? null,
+      versionNumber: row.version_number ?? null,
+      versionPublished,
+      trialRun: context.trialRun === true || versionPublished === false,
+      startedAt: row.started_at, completedAt: row.completed_at, updatedAt: row.updated_at,
+    };
   }
 
   private workflowContext(value: Record<string, any> | null | undefined) {
@@ -771,6 +824,7 @@ export class StudioService {
     context.size ??= "1024x1024";
     return context as {
       prompt?: string; negativePrompt?: string; initialPrompt?: string; initialSize?: string; text?: string; size: string; modelConfigId?: string;
+      trialRun?: boolean; versionNumber?: number;
       adapters: Array<{ type: string; value: string }>;
       referenceFileId?: string;
       artifact?: { downloadUrl?: string; fileName?: string; mimeType?: string; fileSize?: number };
@@ -808,9 +862,10 @@ export class StudioService {
     const appendPrompt = (piece: string) => { context.prompt = [context.prompt, piece].filter(Boolean).join("\n").trim(); };
     switch (node.type) {
       case "input":
+        // 输入节点是"可选的用户需求"。工作流自己带着正向提示词时，使用者什么都不填
+        // 也应该能一路跑到出图，不再当成错误拦住（提示词由后面的 prompt 节点补齐）。
         context.prompt ??= value;
-        if (!context.prompt) throw new BadRequestException("输入节点需要在开始运行时填写需求，或设置默认值");
-        return { kind: "input", prompt: context.prompt };
+        return { kind: "input", prompt: context.prompt ?? "" };
       case "load_image":
         if (!context.referenceFileId) throw new BadRequestException("请上传一张已获授权的参考图片");
         return { kind: "reference", source: context.referenceFileId };

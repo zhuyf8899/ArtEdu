@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
+import { ComfyCanvas } from './ComfyCanvas.jsx';
 import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflowRun, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
+import { studioUrl } from "./navigationModel.js";
 import { faviconSourcesFor } from "./imageSources.js";
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
@@ -9,88 +11,111 @@ const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ Workflo
 const TOOL_ICONS = { design: Palette, image: ImageSquare, idea: Lightbulb, learning: Path, ai: Robot, code: Code, link: LinkSimple };
 const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https://", coverImageUrl: "", iconKey: "link", launchMode: "new_tab", featured: false, status: "active" });
 
-export function WorkflowStudio({ initialWorkflowId, initialRunId = "", onNotice, canPublish = false, canManageToolDirectory = false }) {
+/**
+ * 工作流自己是否带着提示词。带着的话，「创作需求」输入节点只是"可选需求"：
+ * 使用者什么都不填也该能一键出图；整条链路一句提示词都没有时才需要停下来问一句。
+ */
+const PROMPT_NODE_TYPES = ["prompt", "text_encode", "skill"];
+const nodesCarryPrompt = (nodes = []) => nodes.some((node) => PROMPT_NODE_TYPES.includes(node.type) && String(node.data?.value ?? "").trim());
+
+export function WorkflowStudio({ initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", onNavigate, onNotice, canPublish = false, canManageToolDirectory = false }) {
   const [workflows, setWorkflows] = useState([]);
   const [selected, setSelected] = useState(null);
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [builderOpen, setBuilderOpen] = useState(false);
+  const [openError, setOpenError] = useState("");
+  const opening = useRef(0);
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const backToCatalog = () => onNavigate(studioUrl());
+  const openBuilder = () => onNavigate(studioUrl({builder:true}));
   const [autoError, setAutoError] = useState("");
   const advancing = useRef("");
 
-  useEffect(() => { getWorkflows().then((payload) => setWorkflows(payload.items ?? [])).catch((error) => onNotice(error.message)); }, []);
+  // 目录带 includeDrafts：作者在这里就能看到自己的草稿并直接试运行，不用先发布。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { getWorkflows("", { includeDrafts: true }).then((payload) => setWorkflows(payload.items ?? [])).catch((error) => onNotice(error.message)); }, []);
 
-  const open = async (workflow) => {
-    setLoading(true);
-    try {
-      const detail = await getWorkflow(workflow.id);
-      const previous = initialRunId ? await getWorkflowRun(initialRunId) : null;
-      if (previous && previous.workflowId !== detail.id) throw new Error("执行记录与工作流不匹配");
-      setSelected(detail);
-      setRun(null);
-      setAutoError("");
-      const next = previous ?? (detail.versionId ? await startWorkflowRun(detail.id) : null);
-      setRun(next);
-    }
-    catch (error) { onNotice(error.message); }
-    finally { setLoading(false); }
-  };
+  // A route opens the canvas; only an explicit start action creates a run.
   useEffect(() => {
-    if (!initialWorkflowId || selected || loading || !workflows.length) return;
-    const workflow = workflows.find((item) => item.id === initialWorkflowId);
-    if (workflow) void open(workflow);
-  }, [initialWorkflowId, loading, selected, workflows]);
-  const start = async () => {
+    const requestId = ++opening.current;
+    setSelected(null); setRun(null); setAutoError(''); setOpenError(''); advancing.current = '';
+    if (!initialWorkflowId || builderOpen) { setLoading(false); return; }
     setLoading(true);
-    try { const next = await startWorkflowRun(selected.id); setAutoError(""); setRun(next); onNotice("工作流已开始，节点进度会自动保存"); }
-    catch (error) { onNotice(error.message); }
-    finally { setLoading(false); }
+    Promise.all([getWorkflow(initialWorkflowId), initialRunId ? getWorkflowRun(initialRunId) : Promise.resolve(null)]).then(([detail, previous]) => {
+      if(requestId !== opening.current) return;
+      if(previous && previous.workflowId !== detail.id) throw new Error('执行记录不属于这个工作流，请返回目录重新打开');
+      setSelected(detail); setRun(previous);
+    }).catch(error => { if(requestId === opening.current) { setOpenError(error.message); onNotice(error.message); } })
+      .finally(() => { if(requestId === opening.current) setLoading(false); });
+    return () => { opening.current++; };
+  }, [initialWorkflowId, initialRunId, builderOpen, onNotice]);
+  const open = (workflow) => onNavigate(studioUrl({workflow:workflow.id}));
+  const start = async () => {
+    const requestId = opening.current;
+    setLoading(true);
+    try { const next = await startWorkflowRun(selected.id); setAutoError(""); if (!alive.current || requestId !== opening.current) return; onNavigate(studioUrl({workflow:selected.id,run:next.id}), {replace:true}); onNotice("工作流已开始，节点进度会自动保存"); }
+    catch (error) { if(requestId === opening.current) onNotice(error.message); }
+    finally { if(requestId === opening.current) setLoading(false); }
   };
   const executeNode = async (input = {}) => {
+    const requestId = opening.current;
     setLoading(true);
-    try { const next = await executeWorkflowRun(run.id, input); setAutoError(""); setRun(next); onNotice(next.status === "completed" ? "节点工作流已完成" : "节点已执行，正在进入下一节点"); }
-    catch (error) { onNotice(error.message); }
-    finally { setLoading(false); }
+    try { const next = await executeWorkflowRun(run.id, input); if(!alive.current || requestId !== opening.current) return; setAutoError(""); setRun(next); onNotice(next.status === "completed" ? "节点工作流已完成" : "节点已执行，正在进入下一节点"); }
+    catch (error) { if(requestId === opening.current) onNotice(error.message); }
+    finally { if(requestId === opening.current) setLoading(false); }
   };
   useEffect(() => {
     if (!run || !selected || loading || autoError || run.status !== "in_progress") return;
     const step = run.steps[run.currentStep];
     const node = run.nodes.find((item) => item.id === step?.id);
-    // 需要用户参与的两个节点停下来：输入节点（没填默认值时）与负向提示词节点
-    // （让人先看一眼、改掉不想要的内容，再继续采样）。
-    if (!node || node.type === "load_image" || node.type === "negative_prompt" || (node.type === "input" && !String(node.data?.value ?? "").trim())) return;
+    // 一键跑到底：整条链路自己往下走，直到出图，不再让人一个节点一个节点点。
+    // 正向/负向提示词都直接读节点里配好的默认值。
+    // 只有「非现场给不可」的两种情况才停下来：要上传的参考图片；
+    // 以及整条链路里一句提示词都没有时，创作需求必须问一句（否则没东西可生成）。
+    if (run.context?.engine === "comfyui" || !node || node.type === "load_image") return;
+    if (node.type === "input" && !String(node.data?.value ?? "").trim() && !nodesCarryPrompt(run.nodes)) return;
     const key = `${run.id}:${run.currentStep}`;
     if (advancing.current === key) return;
     advancing.current = key;
+    const requestId = opening.current;
     setLoading(true);
-    executeWorkflowRun(run.id).then((next) => setRun(next)).catch((error) => {
+    executeWorkflowRun(run.id).then((next) => { if(alive.current && requestId === opening.current) setRun(next); }).catch((error) => {
+      if(!alive.current || requestId !== opening.current) return;
       setAutoError(error.message || "节点运行失败");
       onNotice(error.message);
-    }).finally(() => setLoading(false));
+    }).finally(() => { if(alive.current && requestId === opening.current) setLoading(false); });
   }, [run, selected, loading, autoError, onNotice]);
 
-  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onNotice={onNotice} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={() => { setSelected(null); setRun(null); setAutoError(""); }} onStart={start} onExecute={executeNode} /></Suspense>;
+  if (initialWorkflowId && !selected && !builderOpen) return <section className="portal-empty"><h2>{loading ? '正在打开工作流…' : '工作流暂时无法打开'}</h2>{openError && <p role="alert">{openError}</p>}<button onClick={backToCatalog}>返回设计工具</button></section>;
+  if (selected?.definition?.engine === 'comfyui') return <ComfyCanvas readOnly editor={{name:selected.name,definition:selected.definition}} selected={selected} onNotice={onNotice} onBack={backToCatalog} />;
+  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onNotice={onNotice} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={backToCatalog} onStart={start} onExecute={executeNode} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
-    <button className="learning-back" onClick={() => setBuilderOpen(false)}><ArrowLeft size={16} weight="bold" /> 返回设计工具</button>
+    <button className="learning-back" onClick={backToCatalog}><ArrowLeft size={16} weight="bold" /> 返回设计工具</button>
     <Suspense fallback={<section className="portal-empty"><p>正在加载工作流创建器…</p></section>}>
-      <WorkflowAdmin showToast={onNotice} canPublish={canPublish} />
+      <WorkflowAdmin showToast={onNotice} canPublish={canPublish} initialWorkflowId={initialEditId} onWorkflowNavigate={(id) => onNavigate(studioUrl({builder:true,edit:id}))} />
     </Suspense>
   </div>;
   return <section className="workflow-catalog" id="workflow-catalog">
-    <ToolDirectory canManage={canManageToolDirectory} onNotice={onNotice} onOpenWorkflowBuilder={() => setBuilderOpen(true)} />
+    <ToolDirectory canManage={canManageToolDirectory} onNotice={onNotice} onOpenWorkflowBuilder={openBuilder} />
     {/* 工具入口之后必须有节点工作流列表：之前这一块被工具目录挤掉了，学生根本点不进工作流。 */}
     <div className="workflow-catalog__list">
       <header className="workflow-catalog__toolbar">
-        <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>点开就是独立画布，直接运行；要改图请用上面的「新建节点工作流」。</span></div>
-        <button className="primary-button" disabled={loading} onClick={() => setBuilderOpen(true)}><Plus size={18} weight="bold" /> 新建节点工作流</button>
+        <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>先打开画布查看节点，再点击开始运行；编辑与新建请进入工作流管理。</span></div>
+        <button className="primary-button" disabled={loading} onClick={openBuilder}><Plus size={18} weight="bold" /> 管理与新建工作流</button>
       </header>
-      {workflows.length ? <section className="workflow-grid">{workflows.map((workflow) => <article className="workflow-card" key={workflow.id}>
-        <Wrench size={21} weight="bold" />
-        <span>{workflow.category}</span>
-        <h3>{workflow.name}</h3>
-        <p>{workflow.description}</p>
-        <button disabled={loading} onClick={() => open(workflow)}>打开节点画布 <ArrowRight size={16} weight="bold" /></button>
-      </article>)}</section> : <div className="empty-state"><Wrench size={28} weight="thin" /><strong>还没有节点工作流</strong><span>点右侧「新建节点工作流」搭一个，保存发布后就会出现在这里。</span></div>}
+      {workflows.length ? <section className="workflow-grid">{workflows.map((workflow) => {
+        // 只有作者本人能在这里看到草稿，所以「草稿」标记同时也是一次试运行的入口。
+        const draft = workflow.versionPublished === false;
+        return <article className={`workflow-card${draft ? " workflow-card--draft" : ""}`} key={workflow.id}>
+          <Wrench size={21} weight="bold" />
+          <span>{workflow.category}{draft ? " · 草稿" : ""}</span>
+          <h3>{workflow.name}</h3>
+          <p>{workflow.description}</p>
+          <small className="workflow-card__state">{draft ? "未发布 · 草稿试运行仅自己可见" : workflow.versionNumber ? `V${workflow.versionNumber} · 已发布` : "尚无保存版本"}</small>
+          <button disabled={loading} onClick={() => open(workflow)}>{draft ? "打开草稿画布" : "打开节点画布"} <ArrowRight size={16} weight="bold" /></button>
+        </article>;
+      })}</section> : <div className="empty-state"><Wrench size={28} weight="thin" /><strong>还没有节点工作流</strong><span>进入「管理与新建工作流」搭一个：保存后你就能在这里试运行，发布后其他人也能看到。</span></div>}
     </div>
   </section>;
 }
@@ -139,8 +164,8 @@ function ToolDirectoryCard({ tool, canManage, onEdit, onOpenWorkflowBuilder }) {
   const Icon = TOOL_ICONS[tool.iconKey] ?? LinkSimple;
   const external = tool.launchMode !== "same_tab";
   const cover = tool.coverImageUrl || ({ design: "/assets/learning/ai-design-foundations.jpg", image: "/assets/learning/traditional-patterns.jpg", idea: "/assets/learning/vibe-coding.jpg", learning: "/assets/learning/traditional-patterns.jpg", ai: "/assets/learning/ai-design-foundations.jpg", code: "/assets/learning/vibe-coding.jpg", link: "/assets/learning/ai-design-foundations.jpg" }[tool.iconKey] ?? "/assets/learning/ai-design-foundations.jpg");
-  const content = <><span className="tool-directory__cover" style={{ backgroundImage: `url(${cover})` }} aria-hidden="true" /><span className="tool-directory__veil"><span className="tool-directory__icon" style={tool.coverImageUrl ? { backgroundImage: `url(${tool.coverImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>{!tool.coverImageUrl && <ToolSiteIcon href={tool.href} fallback={<Icon size={25} weight="duotone" />} />}</span><span className="tool-directory__copy"><small>{tool.category} · {tool.featured ? "推荐工具" : external ? "外部工具" : "平台功能"}</small><b>{tool.name}</b><em>{tool.detail}</em></span><span className="tool-directory__play"><span /></span></span></>;
+  const content = <><span className="tool-directory__cover" style={{ backgroundImage: `url(${cover})` }} aria-hidden="true" /><span className="tool-directory__veil"><span className="tool-directory__icon" style={tool.coverImageUrl ? { backgroundImage: `url(${tool.coverImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>{!tool.coverImageUrl && <ToolSiteIcon href={tool.href} fallback={<Icon size={25} weight="duotone" />} />}</span><span className="tool-directory__copy"><small>{tool.category} · {tool.featured ? "推荐工具" : external ? "外部工具" : "平台功能"}</small><b>{tool.id === "tool-directory-workflow" ? "管理与新建工作流" : tool.name}</b><em>{tool.id === "tool-directory-workflow" ? "查看、编辑或新建节点工作流" : tool.detail}</em></span><span className="tool-directory__play"><span /></span></span></>;
   const isWorkflowBuilder = tool.id === "tool-directory-workflow";
-  return <article className="tool-directory__card">{isWorkflowBuilder ? <button type="button" className="tool-directory__launch" onClick={onOpenWorkflowBuilder} aria-label="打开节点工作流创建器">{content}</button> : <a href={tool.href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined} referrerPolicy={external ? "no-referrer" : undefined}>{content}</a>}{canManage && <button className="tool-directory__edit" onClick={() => onEdit(tool)} aria-label={`编辑 ${tool.name}`}><PencilSimple size={14} weight="bold" /><span>编辑</span></button>}</article>;
+  return <article className="tool-directory__card">{isWorkflowBuilder ? <button type="button" className="tool-directory__launch" onClick={onOpenWorkflowBuilder} aria-label="打开工作流管理与创建页面">{content}</button> : <a href={tool.href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined} referrerPolicy={external ? "no-referrer" : undefined}>{content}</a>}{canManage && <button className="tool-directory__edit" onClick={() => onEdit(tool)} aria-label={`编辑 ${tool.name}`}><PencilSimple size={14} weight="bold" /><span>编辑</span></button>}</article>;
 }
 

@@ -1,3 +1,6 @@
+/**
+ * 【课程页面】从 API 加载目录与课程详情，处理选课、课时进度和资料展示。读代码时先找组件状态与 useEffect，再追一个按钮的处理函数；对应后端在 modules/courses。这里的界面限制不能代替后端权限校验。
+ */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowsOutSimple, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, UserCircle, Wrench, X } from "@phosphor-icons/react";
@@ -9,7 +12,7 @@ import "./LearningBindings.css";
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
 
-export function LearningLibrary({ onNotice, initialCourseId = "", initialLessonId = "" }) {
+export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", initialLessonId = "" }) {
   const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +35,7 @@ export function LearningLibrary({ onNotice, initialCourseId = "", initialLessonI
     finally { setCatalogLoading(false); }
   };
 
+  // 首次显示页面后加载目录；void 表示这里不使用异步函数返回的 Promise。
   useEffect(() => { void loadCatalog(); }, []);
 
   /**
@@ -41,7 +45,9 @@ export function LearningLibrary({ onNotice, initialCourseId = "", initialLessonI
    * 现在放回它该在的位置。
    */
   useEffect(() => {
-    if (initialCourseId && selected?.id !== initialCourseId) void openCourse(initialCourseId);
+    if (initialCourseId && selected?.id !== initialCourseId) { setSelected(null); void openCourse(initialCourseId); }
+    if (!initialCourseId && onNavigate) { courseRequest.current++; setSelected(null); setLoading(false); }
+    return () => { courseRequest.current++; };
   }, [initialCourseId]);
 
   // Deep links focus only a published lesson returned by this course, never another course's ID.
@@ -50,10 +56,14 @@ export function LearningLibrary({ onNotice, initialCourseId = "", initialLessonI
     if (target) { target.scrollIntoView({ block: "start" }); target.focus({ preventScroll: true }); }
   }, [selected?.id, initialCourseId, initialLessonId]);
 
+  const showCourse = (courseId) => onNavigate ? onNavigate(`/learning?course=${encodeURIComponent(courseId)}`) : openCourse(courseId);
+  const returnToCatalog = () => { courseRequest.current++; setSelected(null); if(onNavigate) onNavigate("/learning"); };
   const openCourse = async (courseId) => {
+    // 请求编号防止快速切换课程时，较早请求的结果覆盖后来选中的课程。
     const requestId = ++courseRequest.current;
     setLoading(true);
     try {
+      // 两个独立请求一起发出，等它们都成功再更新界面。
       const [course, works] = await Promise.all([getCourse(courseId), getMyWorks()]);
       if (requestId !== courseRequest.current) return;
       setSelected(decorateCourse(course)); setMyWorks(works.items ?? []); setCompletionChecks({});
@@ -103,7 +113,7 @@ export function LearningLibrary({ onNotice, initialCourseId = "", initialLessonI
   };
 
   if (selected) return <section className="learning-detail">
-    <button className="learning-back" onClick={() => setSelected(null)}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
+    <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
     <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟 · {selected.lessonCount} 个课时 · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div><aside><strong>{selected.progressPercent}%</strong><span>学习进度</span><i><b style={{ width: `${selected.progressPercent}%` }} /></i>{selected.enrollmentStatus ? <em>已加入学习</em> : <button disabled={loading} onClick={enroll}><PlayCircle size={18} weight="fill" /> 加入课程</button>}</aside></div>
     {/* 课时卡把"分步学习 → 练习 → 完成标准 →（可选）关联作品 → 确认完成"整条闭环摆出来。 */}
     {learningLabels(selected.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>这门课涉及的知识</strong><div>{learningLabels(selected.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div><small>课程知识范围；具体学习记录将在“我的学习”图谱中呈现。</small></section>}
@@ -152,7 +162,7 @@ export function LearningLibrary({ onNotice, initialCourseId = "", initialLessonI
           <div className="course-card__meta-row"><UserCircle size={17} weight="bold" /><span>授课作者</span><strong>{course.author}</strong></div>
           <div className="course-card__meta-row"><Wrench size={17} weight="bold" /><span>创作工具</span><div className="course-card__tools">{course.tools.map((tool, index) => <strong key={`${tool}-${index}`}>{tool}</strong>)}</div></div>
         </div>
-        <div className="course-card__footer"><div className="course-card__progress"><span>学习进度</span><i><b style={{ width: `${course.progressPercent ?? 0}%` }} /></i><strong>{course.progressPercent ?? 0}%</strong></div><button disabled={loading} onClick={() => openCourse(course.id)} aria-label={`打开${course.title}`}><ArrowRight size={18} weight="bold" /></button></div>
+        <div className="course-card__footer"><div className="course-card__progress"><span>学习进度</span><i><b style={{ width: `${course.progressPercent ?? 0}%` }} /></i><strong>{course.progressPercent ?? 0}%</strong></div><button disabled={loading} onClick={() => showCourse(course.id)} aria-label={`打开${course.title}`}><ArrowRight size={18} weight="bold" /></button></div>
       </div>
     </article>)}</section> : <section className="resource-empty"><strong>没有符合当前标签的课程</strong><p>可以减少一个筛选条件，或返回查看全部资源。</p><button onClick={resetFilters}>清除筛选</button></section>}
   </>;
@@ -305,7 +315,7 @@ function CourseMaterial({ resource }) {
     {downloadLink("下载源文件")}
   </article>;
 
-  // Office 原件浏览器无法渲染，下载后本地打开是唯一可行方式。
+  // 此组件不内嵌渲染 Office 原件，提供下载后用本地办公软件打开的入口。
   return <article className="course-material">
     <Icon size={18} weight="bold" />
     {meta("浏览器不能内嵌渲染 Office 原件：下载后用本机 PowerPoint / WPS 打开。")}

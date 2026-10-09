@@ -1,3 +1,6 @@
+/**
+ * 【生成业务层】处理任务、额度、模型调用与产物归档。createJob 与 runJob 是不同入口：前者创建任务，后者包含服务端执行流程。不要把此服务与当前不领取任务的独立生成 Worker 混淆。
+ */
 import { ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
