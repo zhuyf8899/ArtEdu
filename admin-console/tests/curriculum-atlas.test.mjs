@@ -5,6 +5,25 @@ import { atlasCourses, atlasDomains, atlasRelations, atlasNeighbors, atlasEdgePa
 import { buildCourseGraph, courseGraphPath, courseKnowledge, courseKnowledgeCount, courseAtlasUrl } from "../src/courseKnowledge.js";
 import { graphCenter, graphZoom } from "../src/graphViewport.js";
 
+test("圆形节点增强轮廓与层次，但保持尺寸、坐标、个人状态语义和键盘焦点", async () => {
+  const atlas = await readFile(new URL("../src/CurriculumAtlas.css", import.meta.url), "utf8");
+  const course = await readFile(new URL("../src/CourseKnowledgeGraph.css", import.meta.url), "utf8");
+  const personal = await readFile(new URL("../src/LearningGraph.css", import.meta.url), "utf8");
+  for (const [css, selector] of [[atlas, ".curriculum-atlas .curriculum-atlas__node"], [course, ".course-knowledge .course-knowledge__node"], [personal, ".knowledge-orbits__node"]]) {
+    const rule = css.slice(css.indexOf(`${selector} {`)).split("}")[0];
+    assert.match(rule, /border: 2px solid var\(--(?:atlas|orbit)-border\)/);
+    assert.match(rule, /border-radius: 50%/);
+    assert.match(rule, /box-shadow: .*inset/);
+    assert.match(css, /:focus-visible/);
+    assert.match(css, /prefers-reduced-motion/);
+  }
+  assert.match(atlas, /width: 152px; height: 152px/);
+  assert.match(personal, /width: 104px; height: 104px/);
+  for (const css of [atlas, course]) assert.match(css, /:active \{ transform: translate\(-50%, -50%\)/);
+  assert.match(personal, /\.knowledge-orbits__node\.is-skilled, \.knowledge-orbits__detail\.is-skilled \{ --orbit-ink: #2e5740; --orbit-surface: #dcefe2; --orbit-border: #b5d5bf/);
+  assert.match(course, /\.kind-practice \{[^}]*border-style: dashed/);
+});
+
 test("图谱缩放和节点定位有安全边界，小屏默认可将课程根节点置于画布中央", () => {
   const viewport = { clientWidth: 338, clientHeight: 460, scrollWidth: 960, scrollHeight: 1075 };
   assert.deepEqual(graphCenter({ x: 480, y: 105 }, 1, viewport), { left: 311, top: 0, behavior: "auto" });
