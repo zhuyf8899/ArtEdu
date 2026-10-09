@@ -4,17 +4,18 @@ import { atlasCourses } from "./curriculumAtlas.js";
 import { buildCourseGraph, courseAtlasUrl, courseGraphPath } from "./courseKnowledge.js";
 import { graphCenter, graphZoom } from "./graphViewport.js";
 import "./CourseKnowledgeGraph.css";
+import {useGraphSessionState} from "./useGraphSessionState.js";
 
 const nodeLabels = { root: "课程", branch: "知识主题", point: "知识点", practice: "建议练习" };
 
 export function CourseKnowledgeGraph({ course, onNavigate, onBack, onPersonal }) {
   const graph = useMemo(() => buildCourseGraph(course), [course]);
-  const [selectedId, setSelectedId] = useState(`${course.id}:root`);
-  const [showPractice, setShowPractice] = useState(true);
-  const [viewMode, setViewMode] = useState("graph");
-  const [zoomMode, setZoomMode] = useState("auto");
+  const [selectedId, setSelectedId] = useGraphSessionState(course.id,"selected",`${course.id}:root`);
+  const [showPractice, setShowPractice] = useGraphSessionState(course.id,"practice",true);
+  const [viewMode, setViewMode] = useGraphSessionState(course.id,"mode","graph");
+  const [zoomMode, setZoomMode] = useGraphSessionState(course.id,"zoomMode","auto");
   const [detailOpen, setDetailOpen] = useState(false);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useGraphSessionState(course.id,"scale",1);
   const viewport = useRef(null);
   const detail = useRef(null);
   const heading = useRef(null);

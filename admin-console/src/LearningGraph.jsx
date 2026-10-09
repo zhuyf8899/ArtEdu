@@ -5,6 +5,7 @@ import { buildLearningPaths } from "./learningPathModel.js";
 import { LearningPathCanvas } from "./LearningPathCanvas.jsx";
 import { KnowledgeEvidence } from "./KnowledgeEvidence.jsx";
 import "./LearningGraph.css";
+import {useGraphSessionState} from "./useGraphSessionState.js";
 
 const COLUMNS = [
   ["我的学习地图", BookOpenText, "课程路径"],
@@ -15,12 +16,12 @@ const COLUMNS = [
 const STATUS = { skilled: "目标达成", good: "持续积累", basic: "已经开始", none: "暂无记录" };
 const dateLabel = (value) => new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(new Date(value));
 
-export function LearningGraph({ data, onNavigate, onView }) {
+export function LearningGraph({ data, onNavigate, onView, accountId }) {
   const graph = useMemo(() => buildLearningGraph(data), [data]);
   const framework = useMemo(() => buildLearningFramework(graph), [graph]);
   const contents = useMemo(() => buildLearningOrbitContent(graph, framework), [graph, framework]);
   const paths = useMemo(() => buildLearningPaths(graph, framework, contents), [graph, framework, contents]);
-  const [selection, setSelection] = useState(null);
+  const [selection, setSelection] = useGraphSessionState("personal:"+accountId,"selection",null);
   const graphId = useId();
   const goTo = (action) => action?.startsWith("/") ? onNavigate(action) : action && onView(action);
   const next = framework.nextCell;

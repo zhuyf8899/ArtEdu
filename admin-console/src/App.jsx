@@ -12,6 +12,7 @@ import "@fontsource/noto-sans-sc/700.css";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { LocalLogin, UserPortal } from "./Portal.jsx";
 import { useResourceNavigation } from "./useResourceNavigation.js";
+import { clearGraphSessions } from "./graphSession.js";
 import { SESSION_EXPIRED } from "./services/httpFeedback.js";
 import { canViewAdminSection, adminRoutes } from "./navigationModel.js";
 import { FeedbackProvider, useFeedback } from "./FeedbackCenter.jsx";
@@ -65,7 +66,7 @@ function AppContent() {
   const signOut = async () => {
     try { await logoutLocal(); }
     catch(error) { if(error.status !== 401) { notify('退出失败，当前会话仍保留，请重试。' + error.message, 'error'); return; } }
-    setAccount(null); setSessionMessage(''); navigate('/');
+    clearGraphSessions(); setAccount(null); setSessionMessage(''); navigate('/');
   };
 
   // 按顺序选择一个界面；return 后本轮不会继续判断后面的分支。

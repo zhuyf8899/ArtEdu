@@ -4,7 +4,7 @@ import { learningBranches } from "./learningPathModel.js";
 
 export function LearningPathCanvas({ graph, framework, contents, paths, selectedStage, selectedColumn, onSelect, onGoTo, detailId, columns }) {
   const [showAll, setShowAll] = useState(false);
-  const [focusId, setFocusId] = useState(null);
+  const [focusId, setFocusId] = useState(selectedStage.id);
   const [expanded, setExpanded] = useState(false);
   const id = useId();
   const focusIndex = Math.max(0, framework.stages.findIndex((stage) => stage.id === (focusId ?? framework.currentStage.id)));

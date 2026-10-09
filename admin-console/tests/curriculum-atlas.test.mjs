@@ -149,7 +149,7 @@ test("静态图谱与个人 API 失败隔离，个人扩展保留并可往返", 
   assert.match(learning, /aria-busy=\{!isGenericAtlas && loading\}/);
   assert.match(learning, /learningAtlas === "personal"/);
   assert.match(learning, /onNavigate\("\/my-learning\?atlas=personal"\)/);
-  assert.match(learning, /返回通用图谱/);
+  assert.match(learning, /返回知识地图/);
   assert.match(learning, /isPersonalAtlas && <LearningGraph/);
   assert.doesNotMatch(atlas, /services\/adminApi|fetch\(|getLearningSpace|localStorage|sessionStorage/);
   assert.match(atlas, /颜色区分知识方向，不表示学习进度/);

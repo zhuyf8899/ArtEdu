@@ -12,6 +12,9 @@ RUN cd apps/api && npm ci
 COPY apps/api ./apps/api
 COPY migrations ./migrations
 COPY seed ./seed
+# Curated summaries used by the idempotent knowledge-atlas import, no private source files.
+COPY admin-console/package.json ./admin-console/package.json
+COPY admin-console/src/curriculumAtlas.js admin-console/src/courseKnowledge.js ./admin-console/src/
 
 WORKDIR /app/apps/api
 RUN npm run build

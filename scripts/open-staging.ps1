@@ -43,7 +43,7 @@ $sshArgs = @(
   '-o', 'ExitOnForwardFailure=yes',
   '-o', 'ServerAliveInterval=30',
   '-o', 'ServerAliveCountMax=3',
-  '-L', "$Port`:127.0.0.1:$RemotePort",
+  '-L', "127.0.0.1:$Port`:127.0.0.1:$RemotePort",
   $Server
 )
 

@@ -5,12 +5,13 @@ import { courseAtlasUrl, courseKnowledgeCount } from "./courseKnowledge.js";
 import { CourseKnowledgeGraph } from "./CourseKnowledgeGraph.jsx";
 import { graphCenter } from "./graphViewport.js";
 import "./CurriculumAtlas.css";
+import {useGraphSessionState} from "./useGraphSessionState.js";
 
 export function CurriculumAtlas({ onPersonal, onNavigate, courseId = "" }) {
-  const [selectedId, setSelectedId] = useState(atlasCourses[0].id);
-  const [query, setQuery] = useState("");
-  const [domain, setDomain] = useState("all");
-  const [connections, setConnections] = useState("route");
+  const [selectedId, setSelectedId] = useGraphSessionState("reference","selected",atlasCourses[0].id);
+  const [query, setQuery] = useGraphSessionState("reference","query","");
+  const [domain, setDomain] = useGraphSessionState("reference","domain","all");
+  const [connections, setConnections] = useGraphSessionState("reference","connections","route");
   const [scale, setScale] = useState(1);
   const viewport = useRef(null);
   const selectedRef = useRef(null);
@@ -60,8 +61,8 @@ export function CurriculumAtlas({ onPersonal, onNavigate, courseId = "" }) {
       <button className="curriculum-atlas__personal" onClick={onPersonal}><Student size={20} /><span>个性化图谱<small>查看我的进度与成长</small></span><ArrowRight size={18} /></button>
     </header>}
 
-    {courseView ? <CourseKnowledgeGraph key={courseView.id} course={courseView} onNavigate={onNavigate} onPersonal={onPersonal} onBack={() => onNavigate("/my-learning")} /> : <>
-    {courseId && <p className="curriculum-atlas__empty" role="status">未找到这门课程的图谱，已显示十门课程总图。<button onClick={() => onNavigate("/my-learning")}>返回总图</button></p>}
+    {courseView ? <CourseKnowledgeGraph key={courseView.id} course={courseView} onNavigate={onNavigate} onPersonal={onPersonal} onBack={() => onNavigate("/my-learning?atlas=reference")} /> : <>
+    {courseId && <p className="curriculum-atlas__empty" role="status">未找到这门课程的图谱，已显示十门课程总图。<button onClick={() => onNavigate("/my-learning?atlas=reference")}>返回总图</button></p>}
     <div className="curriculum-atlas__toolbar">
       <div className="curriculum-atlas__filters" role="group" aria-label="课程方向">
         {[{ id: "all", label: "全部方向" }, ...atlasDomains].map((item) => <button key={item.id} aria-pressed={domain === item.id} onClick={() => setDomain(item.id)}>{item.label}</button>)}
