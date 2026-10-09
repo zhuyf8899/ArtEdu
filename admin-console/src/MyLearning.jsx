@@ -148,8 +148,8 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
       </aside>
 
       <div id="learning-view-content" className="learning-content" aria-busy={!isGenericAtlas && loading}>
-        {isGenericAtlas && !["reference","course"].includes(learningAtlas) ? <KnowledgeMap key={account.id} account={account} onNavigate={onNavigate} onNotice={onNotice} /> : isGenericAtlas ? <CurriculumAtlas courseId={learningAtlas === "course" ? learningAtlasCourse : ""} onNavigate={onNavigate} onPersonal={() => onNavigate("/my-learning?atlas=personal")} /> : <>
-        {view === "graph" && <div className="personal-atlas-entry"><div><strong>个性化知识图谱</strong><p>依据我的课程、实践与成长记录展示；未配置知识点时不推断掌握度。</p></div><button onClick={() => onNavigate("/my-learning")}>返回知识地图 <ArrowRight size={17} /></button></div>}
+        {isGenericAtlas && learningAtlas === "knowledge" ? <KnowledgeMap key={account.id} account={account} onNavigate={onNavigate} onNotice={onNotice} /> : isGenericAtlas ? <CurriculumAtlas courseId={learningAtlas === "course" ? learningAtlasCourse : ""} onNavigate={onNavigate} onPersonal={() => onNavigate("/my-learning?atlas=personal")} /> : <>
+        {view === "graph" && <div className="personal-atlas-entry"><div><strong>个性化知识图谱</strong><p>依据我的课程、实践与成长记录展示；未配置知识点时不推断掌握度。</p></div><button onClick={() => onNavigate("/my-learning")}>返回课程总览 <ArrowRight size={17} /></button></div>}
         {loading ? <LearningLoading /> : loadError ? <LearningLoadError message={loadError} onRetry={load} /> : <>
           {view === "graph" && isPersonalAtlas && <LearningGraph key={account.id} accountId={account.id} data={data} onNavigate={onNavigate} onView={setView} />}
           {view === "overview" && <Overview data={data} recentResources={recentResources} displayName={displayName} onView={setView} onToggleTask={toggleTask} onNavigate={onNavigate} />}
