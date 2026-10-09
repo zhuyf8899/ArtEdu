@@ -43,18 +43,19 @@
 .curriculum-atlas__edges > path { stroke: #b6c7be; stroke-width: 1.3; fill: none; opacity: .55; }
 .curriculum-atlas__edges > path.is-transfer { stroke-dasharray: 5 6; }
 .curriculum-atlas__edges > path.is-related { stroke: #5f8a74; stroke-width: 2; opacity: 1; }
-.domain-foundation { --atlas-ink: #355f48; --atlas-fill: #edf5ef; --atlas-border: #c9ddcf; }
-.domain-method { --atlas-ink: #3c6172; --atlas-fill: #edf4f7; --atlas-border: #ccdde6; }
-.domain-visual { --atlas-ink: #816234; --atlas-fill: #faf5e9; --atlas-border: #e7dcc1; }
-.domain-interaction { --atlas-ink: #655483; --atlas-fill: #f3eff9; --atlas-border: #dad0e9; }
-.domain-material { --atlas-ink: #825e4b; --atlas-fill: #f8f0eb; --atlas-border: #e6d3c6; }
-.curriculum-atlas .curriculum-atlas__node { position: absolute; z-index: 1; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; width: 152px; height: 152px; padding: 14px 9px; border: 1px solid var(--atlas-border); border-radius: 50%; background: var(--atlas-fill); color: var(--atlas-ink); text-align: center; transition: box-shadow .15s, opacity .15s; }
+/* Slightly richer pastels and a defined rim keep circles visible without changing their meaning. */
+.domain-foundation { --atlas-ink: #355f48; --atlas-fill: #e4f0e8; --atlas-border: #7b9986; }
+.domain-method { --atlas-ink: #3c6172; --atlas-fill: #e4eef4; --atlas-border: #829dad; }
+.domain-visual { --atlas-ink: #816234; --atlas-fill: #f6edd9; --atlas-border: #b09a6d; }
+.domain-interaction { --atlas-ink: #655483; --atlas-fill: #ece5f5; --atlas-border: #9f8bb8; }
+.domain-material { --atlas-ink: #825e4b; --atlas-fill: #f2e6dd; --atlas-border: #af8e78; }
+.curriculum-atlas .curriculum-atlas__node { position: absolute; z-index: 1; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; width: 152px; height: 152px; padding: 14px 9px; border: 2px solid var(--atlas-border); border-radius: 50%; background: var(--atlas-fill); color: var(--atlas-ink); text-align: center; box-shadow: 0 3px 10px #263e2e12, inset 0 0 0 3px #ffffff80; transition: box-shadow .15s, opacity .15s; }
 .curriculum-atlas__node > span { font-size: 10px; line-height: 1.4; opacity: .85; white-space: nowrap; }
 .curriculum-atlas__node strong { display: block; font-size: 16px; font-weight: 650; line-height: 1.5; }
 .curriculum-atlas__node strong > span { display: block; white-space: nowrap; }
 .curriculum-atlas__node small { font-size: 11px; line-height: 1.5; white-space: nowrap; }
-.curriculum-atlas__node.is-selected { outline: 2px solid var(--atlas-ink); outline-offset: 5px; box-shadow: 0 6px 24px #263e2e10; }
-.curriculum-atlas__node:hover { box-shadow: 0 6px 20px #25463215; }
+.curriculum-atlas__node:hover { box-shadow: 0 5px 16px #25463222, inset 0 0 0 3px #ffffff80; }
+.curriculum-atlas__node.is-selected { outline: 2px solid var(--atlas-ink); outline-offset: 5px; box-shadow: 0 6px 20px #263e2e24, inset 0 0 0 3px #ffffff80; }
 /* Keep graph coordinates stable; the global pressed-button effect must not replace this transform. */
 .curriculum-atlas .curriculum-atlas__node:not(:disabled):active { transform: translate(-50%, -50%); }
 .curriculum-atlas__node.is-filtered { opacity: .25; cursor: default; }
