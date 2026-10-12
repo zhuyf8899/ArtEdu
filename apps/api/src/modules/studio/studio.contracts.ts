@@ -143,7 +143,7 @@ export const workflowRunProgressSchema = z.object({
 });
 
 export const workInputSchema = z.object({
-  story: caseStorySchema.optional(),
+  story: caseStorySchema.omit({ collection: true }).optional(),
   title: z.string().trim().min(2).max(160),
   summary: z.string().trim().min(2).max(3000),
   discipline: z.string().trim().min(1).max(100),

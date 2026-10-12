@@ -111,6 +111,17 @@ interface ReviewRow {
 export class AdminRepository {
   constructor(private readonly database: DatabaseService) {}
 
+  async setWorkCollection(client: PoolClient, workId: string, actorId: string, collection: "community" | "art-selection") {
+    const current = await client.query("SELECT status,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
+    if (!current.rowCount) return null;
+    if (current.rows[0].status !== "approved") throw new BadRequestException("只能调整已发布案例的模块归属");
+    const previous = current.rows[0].story_json?.collection ?? "community";
+    if (previous === collection) return { id: workId, collection };
+    await client.query("UPDATE works SET story_json=jsonb_set(COALESCE(story_json,'{}'::jsonb),'{collection}',to_jsonb($2::text),true),updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId, collection]);
+    await client.query("INSERT INTO audit_records(id,target_type,target_id,reviewer_id,action,reason) VALUES($1,'work',$2,$3,'publish',$4)", [randomUUID(), workId, actorId, `案例模块调整：${previous} → ${collection}`]);
+    return { id: workId, collection };
+  }
+
   async listUsers(): Promise<AdminUser[]> {
     const result = await this.database.query<UserRow>(`
       WITH role_values AS (

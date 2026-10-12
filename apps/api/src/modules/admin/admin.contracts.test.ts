@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bulkQuotaSchema, reviewDecisionSchema } from "./admin.contracts";
+import { bulkQuotaSchema, reviewDecisionSchema, workCollectionSchema } from "./admin.contracts";
 import { AdminRepository, getEditorialIssues } from "./admin.repository";
 
 const quota = { dailyLimit: 30, monthlyLimit: 600, concurrentLimit: 2 };
@@ -34,4 +34,20 @@ test("审核列表提示混入正文的编辑说明，旧待审记录也不能�
   await assert.rejects(repository.decideReview(client as any, "work-a", "admin-a", { status: "approved", note: "" }), /项目简介/);
   assert.equal(calls.length, 1);
   assert.ok(!calls.some(sql => sql.includes("UPDATE works")));
+});
+
+test("策展模块只允许两个值，写入只更新JSON归属并留下审计", async () => {
+  assert.equal(workCollectionSchema.safeParse({ collection: "art-selection" }).success, true);
+  assert.equal(workCollectionSchema.safeParse({ collection: "community", status: "approved" }).success, false);
+  assert.equal(workCollectionSchema.safeParse({ collection: "private" }).success, false);
+  const calls: { sql: string; values: unknown[] }[] = [];
+  const client = { query: async (sql: string, values: unknown[]) => { calls.push({sql,values}); return sql.startsWith("SELECT") ? {rowCount:1,rows:[{status:"approved",story_json:{collection:"community",reflection:"作者反思"}}]} : {rowCount:1,rows:[]}; } };
+  const repository = new AdminRepository({} as any);
+  assert.deepEqual(await repository.setWorkCollection(client as any,"work-a","admin-a","art-selection"),{id:"work-a",collection:"art-selection"});
+  assert.equal(calls.length,3);
+  assert.match(calls[1].sql,/jsonb_set/);
+  assert.ok(!calls[1].sql.includes("status="));
+  assert.match(calls[2].sql,/audit_records/);
+  const pending = { query: async () => ({rowCount:1,rows:[{status:"draft",story_json:{}}]}) };
+  await assert.rejects(repository.setWorkCollection(pending as any,"work-a","admin-a","art-selection"),/已发布/);
 });

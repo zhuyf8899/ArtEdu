@@ -108,6 +108,14 @@ test("工作流版本支持内置 Skill，且拒绝循环图", () => {
   assert.equal(workflowVersionInputSchema.safeParse({ definition: { ...base, edges: [...base.edges, { id: "cycle", source: "output", target: "input" }] } }).success, false);
 });
 
+test("普通投稿不能自选精选模块，读取旧案例默认归入社区", () => {
+  const base = { title: "测试作品", summary: "创作理念", discipline: "艺术" };
+  assert.equal(caseStorySchema.parse({}).collection, "community");
+  assert.equal(caseStorySchema.parse({ collection: "art-selection" }).collection, "art-selection");
+  assert.equal(workInputSchema.safeParse({ ...base, story: { collection: "art-selection" } }).success, false);
+  assert.equal(workInputSchema.safeParse({ ...base, collection: "art-selection" }).success, false);
+});
+
 test("画布分组随版本保存，并拒绝引用不存在的节点", () => {
   const nodes = [
     { id: "a", type: "input", position: { x: 0, y: 0 }, data: { label: "输入" } },

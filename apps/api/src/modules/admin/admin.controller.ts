@@ -9,6 +9,7 @@ import {
   quotaSchema,
   reviewDecisionSchema,
   reportDecisionSchema,
+  workCollectionSchema,
 } from "./admin.contracts";
 import { AdminService } from "./admin.service";
 
@@ -23,6 +24,12 @@ export class AdminController {
   async getDashboard(@Req() request: FastifyRequest) {
     const actor = await this.authService.getActor(request);
     return this.adminService.getDashboard(actor);
+  }
+
+  @Patch("works/:workId/collection")
+  async setWorkCollection(@Req() request: FastifyRequest, @Param("workId") workId: string, @Body() body: unknown) {
+    const actor = await this.authService.getActor(request);
+    return this.adminService.setWorkCollection(actor, workId, parseInput(workCollectionSchema, body).collection);
   }
 
   @Get("users")

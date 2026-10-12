@@ -62,7 +62,8 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
     cancellation.current = new AbortController();
     const signal = cancellation.current.signal;
     try {
-      const payload = { title: form.title, summary: form.summary, discipline: form.discipline, workflowIds: form.workflowId ? [form.workflowId] : [], tagNames: splitCaseLabels(form.tags), story: { ...form.story, ...Object.fromEntries(Object.entries(labelFields).map(([key,value]) => [key,splitCaseLabels(value)])) } };
+      const { collection, ...writableStory } = form.story; // 模块归属只能由管理员通过独立接口调整。
+      const payload = { title: form.title, summary: form.summary, discipline: form.discipline, workflowIds: form.workflowId ? [form.workflowId] : [], tagNames: splitCaseLabels(form.tags), story: { ...writableStory, ...Object.fromEntries(Object.entries(labelFields).map(([key,value]) => [key,splitCaseLabels(value)])) } };
       if (!workId.current) workId.current = (await createWork(payload)).id;
       else await updateWork(workId.current, payload);
       for (const file of remaining) {

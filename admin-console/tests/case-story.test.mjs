@@ -4,12 +4,28 @@ import { readFile } from 'node:fs/promises';
 import { caseUploadError, emptyStory, splitCaseLabels, safeCaseSourceUrl } from '../src/caseStory.js';
 import { findCaseEditorialIssues } from '../src/caseEditorial.js';
 import { correctCaseCopy } from '../../scripts/case-copy-corrections.mjs';
+import { splitCommunityCollections } from '../src/communityCollections.js';
 test('案例标签与权限默认值', () => {
   assert.deepEqual(splitCaseLabels('即梦，ChatGPT, 即梦'), ['即梦','ChatGPT']);
   assert.equal(emptyStory().allowDocumentDownload,false);
   assert.equal(emptyStory().authorization,'pending');
   assert.equal(emptyStory().displayStyle, 'case-study');
   assert.equal(emptyStory().originalUrl, '');
+});
+
+test('案例分为精选和社区，旧案例、外部来源及热门标记不会自动变成精选', async () => {
+  const works = [{id:'legacy',isFeatured:true},{id:'external',origin:'collected'},{id:'cvpr',collection:'art-selection'},{id:'posted',collection:'community'}];
+  const sections = splitCommunityCollections(works);
+  assert.deepEqual(sections['art-selection'].map(w=>w.id),['cvpr']);
+  assert.deepEqual(sections.community.map(w=>w.id),['legacy','external','posted']);
+  assert.equal(sections['art-selection'].length+sections.community.length,works.length);
+  const library = await readFile(new URL('../src/CommunityLibrary.jsx',import.meta.url),'utf8');
+  assert.match(library,/id="featured-art-cases" title="精选艺术案例"/);
+  assert.match(library,/id="community-cases" title="社区案例"/);
+  assert.match(library,/selected.status === "approved"/);
+  assert.match(library,/setWorkCollection\(selected.id, collection\)/);
+  const editor = await readFile(new URL('../src/CaseStoryEditor.jsx',import.meta.url),'utf8');
+  assert.match(editor,/const \{ collection, \.\.\.writableStory \} = form.story/);
 });
 
 test('外部作品链接仅接受无凭据 HTTP(S)，历史恶意地址不渲染为链接', () => {

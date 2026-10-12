@@ -244,6 +244,7 @@ export const executeWorkflowRun = (runId, input = {}) => request(`/workflow-runs
 export const getWorks = (query = "") => request(`/works${query ? `?query=${encodeURIComponent(query)}` : ""}`);
 export const getMyWorks = () => request("/me/works");
 export const getWork = (workId) => request(`/works/${workId}`);
+export const setWorkCollection = (workId, collection) => request(`/admin/works/${encodeURIComponent(workId)}/collection`, { method: "PATCH", body: JSON.stringify({ collection }) });
 export const createWork = (input) => request("/works", {
   method: "POST",
   body: JSON.stringify(input),
