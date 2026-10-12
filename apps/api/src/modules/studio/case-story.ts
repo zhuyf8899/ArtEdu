@@ -13,6 +13,8 @@ const sourceLinkSchema = z.string().trim().max(2048).refine(value => {
 export const caseStorySchema = z.object({
   version: z.literal(1).default(1),
   origin: z.enum(["unspecified", "platform", "collected"]).default("unspecified"),
+  // 平台策展信息；投稿写入契约排除此字段，旧案例默认归入社区。
+  collection: z.enum(["community", "art-selection"]).default("community"),
   creators: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
   tools: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
   methods: z.array(z.string().trim().min(1).max(60)).max(12).default([]),
@@ -46,7 +48,7 @@ export function visibleCaseStory(story: CaseStory, privileged: boolean): CaseSto
 }
 
 // No executable HTML or model calls: prompts are only educational text.
-export function assertCasePublication(story: CaseStory) {
+export function assertCasePublication(story: Pick<CaseStory, "origin" | "creators" | "authorization" | "authorizationNote">) {
   if (story.origin === "unspecified") {
     throw new Error("请先标明案例来源：ArtEdu 创作或外部收集案例");
   }

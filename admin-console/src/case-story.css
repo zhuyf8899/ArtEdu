@@ -17,6 +17,32 @@
 .case-error { color: #a32727; background: #fff2f2; padding: 12px; border-radius: 8px; }
 .case-editorial-warning { padding: 16px; border: 1px solid #e1d7bd; border-radius: 10px; background: #faf8f1; color: #65552f; font-size: 14px; line-height: 1.7; }
 .case-editorial-warning p { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.community-module-links { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.community-module-links a { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; color: #3b5246; background: #f4f7f3; border: 1px solid #dae3da; border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; }
+.community-module-links span { min-width: 24px; padding: 2px 7px; border-radius: 999px; background: #fff; text-align: center; font-size: 13px; }
+.community-module-links a:hover { background: #eaf1e8; }
+.community-module-links a:focus-visible { outline: 2px solid #63856e; outline-offset: 3px; }
+.community-case-module { scroll-margin-top: 100px; margin: 24px 0; padding: 24px; background: #fff; border: 1px solid #e0e6df; border-radius: 16px; min-width: 0; }
+.community-case-module__heading { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid #e8ece7; }
+.community-case-module__heading h2 { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; font-size: 23px; line-height: 1.35; letter-spacing: -.02em; }
+.community-case-module__heading h2 span { padding: 3px 9px; border-radius: 999px; background: #f0f4ed; color: #5a7160; font-size: 13px; font-weight: 500; }
+.community-case-module__heading p { margin: 0; color: #737c75; font-size: 14px; line-height: 1.65; }
+/* 精选区仅一件作品时用横向展品卡，避免三个网格位置中空出两格。 */
+.work-grid--art-selection[data-single-card="true"] { grid-template-columns: minmax(0,1fr); }
+.work-grid--art-selection[data-single-card="true"] > .work-card { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); }
+.work-grid--art-selection[data-single-card="true"] > .work-card .work-preview { aspect-ratio: 16 / 9; min-height: 280px; border-bottom: 0; border-right: 1px solid #e1e7df; }
+.work-grid--art-selection[data-single-card="true"] > .work-card .work-preview img { object-fit: contain; }
+.work-grid--art-selection[data-single-card="true"] > .work-card .work-card__body { padding: 24px; }
+.work-grid--art-selection[data-single-card="true"] > .work-card .work-card__body > small { font-size: 14px; }
+.work-grid--art-selection[data-single-card="true"] > .work-card .work-card__footer { margin: auto -24px -24px; padding: 16px 24px; }
+.work-grid--art-selection[data-single-card="true"] > .work-card .work-card__footer > button { min-height: 44px; font-size: 14px; }
+.work-grid--art-selection[data-single-card="true"] > .work-card h3 { font-size: 26px; line-height: 1.35; }
+@media (max-width: 760px) { .work-grid--art-selection[data-single-card="true"] > .work-card { grid-template-columns: minmax(0,1fr); }.work-grid--art-selection[data-single-card="true"] > .work-card .work-preview { min-height: 0; border-right: 0; border-bottom: 1px solid #e1e7df; }.work-grid--art-selection[data-single-card="true"] > .work-card .work-card__body { padding: 18px; }.work-grid--art-selection[data-single-card="true"] > .work-card .work-card__footer { margin: auto -18px -18px; padding: 14px 18px; }.work-grid--art-selection[data-single-card="true"] > .work-card h3 { font-size: 21px; } }
+.case-collection-control { margin: 20px 0; padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid #dde5da; border-radius: 10px; background: #f7f9f5; }
+.case-collection-control label { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
+.case-collection-control select { min-height: 44px; max-width: 100%; padding: 0 10px; color: #304d3d; border: 1px solid #cedbce; border-radius: 8px; background: #fff; font: inherit; }
+.case-collection-control > span { color: #68756c; font-size: 14px; }
+@media (max-width: 640px) { .community-case-module { padding: 16px; }.community-case-module__heading h2 { font-size: 20px; }.community-module-links a { flex: 1 1 140px; justify-content: center; } }
 .case-story { font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
 .community-detail__body .community-summary { font-size: 16px; }
 .community-detail__body > header span,.community-detail__body > header p { font-size: 14px; color: #666; }

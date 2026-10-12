@@ -471,7 +471,7 @@ export class StudioService {
     const id = `work-${randomUUID()}`;
     await this.database.transaction(async (client) => {
       if (input.story?.coverAssetId || input.story?.steps.some(step => step.assetIds.length)) throw new BadRequestException("请先保存草稿并上传文件，再关联案例图片");
-      await client.query("INSERT INTO works (id,author_id,title,summary,discipline,status,story_json) VALUES ($1,$2,$3,$4,$5,'draft',$6::jsonb)", [id, actor.id, input.title, input.summary, input.discipline, JSON.stringify(input.story ?? {})]);
+      await client.query("INSERT INTO works (id,author_id,title,summary,discipline,status,story_json) VALUES ($1,$2,$3,$4,$5,'draft',$6::jsonb)", [id, actor.id, input.title, input.summary, input.discipline, JSON.stringify({ ...input.story, collection: "community" })]);
       await this.replaceWorkRelations(client, id, input);
     });
     return this.getWork(actor, id);
@@ -503,7 +503,7 @@ export class StudioService {
 
   async updateWork(actor: Actor, workId: string, input: WorkInput) {
     await this.database.transaction(async client => {
-      const result = await client.query("SELECT author_id,status FROM works WHERE id=$1 FOR UPDATE", [workId]);
+      const result = await client.query("SELECT author_id,status,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
       const work = result.rows[0];
       if (!work) throw new NotFoundException("作品不存在");
       if (work.author_id !== actor.id) throw new ForbiddenException("只能编辑自己的草稿");
@@ -514,7 +514,9 @@ export class StudioService {
         const referenced = [input.story.coverAssetId, ...input.story.steps.flatMap(step => step.assetIds)].filter(Boolean);
         if (referenced.some(id => !ids.has(id))) throw new BadRequestException("封面与步骤只能引用本案例的图片");
       }
-      await client.query("UPDATE works SET title=$2,summary=$3,discipline=$4,story_json=COALESCE($5::jsonb,story_json),updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId, input.title, input.summary, input.discipline, input.story ? JSON.stringify(input.story) : null]);
+      // 作者更新内容不能修改或清掉由管理员维护的模块归属。
+      const storyForUpdate = input.story ? { ...input.story, collection: work.story_json?.collection ?? "community" } : null;
+      await client.query("UPDATE works SET title=$2,summary=$3,discipline=$4,story_json=COALESCE($5::jsonb,story_json),updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId, input.title, input.summary, input.discipline, storyForUpdate ? JSON.stringify(storyForUpdate) : null]);
       await this.replaceWorkRelations(client, workId, input);
     });
     return this.getWork(actor, workId);
@@ -954,7 +956,7 @@ export class StudioService {
   }
 
   private mapWork(row: WorkRow) {
-    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], tags: row.tags ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
+    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, collection: row.story_json?.collection ?? "community", authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], tags: row.tags ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
   }
 
   // 对外只暴露目录展示所需字段；不返回维护者身份，避免把后台账号信息带到学生端。

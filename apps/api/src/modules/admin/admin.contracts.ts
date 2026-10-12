@@ -30,6 +30,10 @@ export const reviewDecisionSchema = z.object({
   }
 });
 
+export const workCollectionSchema = z.object({
+  collection: z.enum(["community", "art-selection"]),
+}).strict();
+
 export const reportDecisionSchema = z.object({
   status: z.enum(["resolved", "dismissed"]),
   contentAction: z.enum(["keep", "hide"]).default("keep"),
