@@ -15,7 +15,8 @@ import { CreationStorageService } from "../creation-storage/creation-storage.ser
 import { storePrivateUpload, workAssetMimeTypes } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { caseUploadPolicy } from "../../common/upload-policy";
-import { assertCaseCover, assertCasePublication, caseStorySchema, type CaseStory } from "./case-story";
+import { assertCaseCover, assertCasePublication, caseStorySchema, visibleCaseStory, type CaseStory } from "./case-story";
+import { assertCaseEditorial } from "./case-editorial";
 import { extractImageText, findOcrRiskKeywords } from "./content-moderation";
 import type {
   CatalogQuery,
@@ -463,7 +464,7 @@ export class StudioService {
     }));
     const reviewHistory = reviewEvents.rows.map(event => ({ action: event.action, reason: event.reason ?? "", createdAt: event.created_at, reviewer: event.reviewer ?? "审核人员" }));
     const latestRejection = reviewHistory.find(event => event.action === "reject") ?? null;
-    return { ...this.mapWork(result.rows[0]), story: privileged ? story : { ...story, authorizationNote: "" }, assets: visibleAssets, tags: tags.rows, workflows: workflows.rows, comments: comments.rows, reviewHistory, latestRejection };
+    return { ...this.mapWork(result.rows[0]), story: visibleCaseStory(story, privileged), assets: visibleAssets, tags: tags.rows, workflows: workflows.rows, comments: comments.rows, reviewHistory, latestRejection };
   }
 
   async createWork(actor: Actor, input: WorkInput) {
@@ -478,11 +479,15 @@ export class StudioService {
 
   async submitWork(actor: Actor, workId: string) {
     const result = await this.database.transaction(async (client) => {
-      const work = await client.query<{ status: string; author_id: string; story_json: CaseStory }>("SELECT status,author_id,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
+      const work = await client.query<{ title: string; summary: string; status: string; author_id: string; story_json: CaseStory }>("SELECT title,summary,status,author_id,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
       if (!work.rows[0]) throw new NotFoundException("作品不存在");
       if (work.rows[0].author_id !== actor.id) throw new ForbiddenException("只能提交自己的作品");
       if (!["draft", "rejected"].includes(work.rows[0].status)) throw new ConflictException("当前作品不能重复提交");
-      try { assertCasePublication(caseStorySchema.parse(work.rows[0].story_json ?? {})); }
+      try {
+        const story = caseStorySchema.parse(work.rows[0].story_json ?? {});
+        assertCasePublication(story);
+        assertCaseEditorial({ title: work.rows[0].title, summary: work.rows[0].summary, story });
+      }
       catch (error) { throw new BadRequestException((error as Error).message); }
       // 提交审核要求至少一张图片作为封面：社区卡片没有封面就没有"所见即所得"的效果。
       const assets = await client.query<{ image_count: number }>("SELECT COUNT(*)::int AS image_count FROM work_assets WHERE work_id=$1 AND asset_type='image'", [workId]);

@@ -63,7 +63,7 @@ try {
         altText: image.alt_text, sortOrder: image.sort_order, createdAt: image.created_at,
       });
     }
-    const { authorizationNote, ...publicStory } = row.story_json;
+    const { authorizationNote, editorialNote, ...publicStory } = row.story_json;
     if (publicStory.authorization !== 'confirmed' || publicStory.origin !== 'collected') throw new Error(`Case authorization is not confirmed: ${id}`);
     publicStory.allowDocumentDownload = false;
     cases.push({

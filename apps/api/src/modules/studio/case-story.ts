@@ -1,13 +1,30 @@
 import { z } from "zod";
 
+// 仅保存来源链接，不由服务器抓取该地址；拒绝脚本、文件及携带凭据的 URL。
+const sourceLinkSchema = z.string().trim().max(2048).refine(value => {
+  if (!value) return true;
+  if (!/^https?:\/\//i.test(value) || /[\u0000-\u0020\u007f]/.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return !url.username && !url.password;
+  } catch { return false; }
+}, "请填写不含登录凭据的完整 HTTP(S) 来源网址").default("");
+
 export const caseStorySchema = z.object({
   version: z.literal(1).default(1),
   origin: z.enum(["unspecified", "platform", "collected"]).default("unspecified"),
   creators: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
   tools: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
   methods: z.array(z.string().trim().min(1).max(60)).max(12).default([]),
+  sourceName: z.string().trim().max(160).default(""),
+  sourceUrl: sourceLinkSchema,
+  originalUrl: sourceLinkSchema,
+  exhibitionName: z.string().trim().max(200).default(""),
+  exhibitionYear: z.string().trim().regex(/^(?:\d{4})?$/, "展览年份应为四位数字").default(""),
+  displayStyle: z.enum(["case-study", "exhibition"]).default("case-study"),
   authorization: z.enum(["pending", "confirmed"]).default("pending"),
   authorizationNote: z.string().trim().max(1000).default(""),
+  editorialNote: z.string().trim().max(8000).default(""),
   allowDocumentDownload: z.boolean().default(false),
   coverAssetId: z.string().trim().max(100).default(""),
   reflection: z.string().trim().max(4000).default(""),
@@ -23,6 +40,10 @@ export const caseStorySchema = z.object({
 }).strict();
 
 export type CaseStory = z.infer<typeof caseStorySchema>;
+
+export function visibleCaseStory(story: CaseStory, privileged: boolean): CaseStory {
+  return privileged ? story : { ...story, authorizationNote: "", editorialNote: "" };
+}
 
 // No executable HTML or model calls: prompts are only educational text.
 export function assertCasePublication(story: CaseStory) {

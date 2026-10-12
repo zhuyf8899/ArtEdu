@@ -22,6 +22,8 @@ test('published showcase bundle contains nine cases and 53 matching public image
   assert.equal(imageCount, 53);
   assert.ok(bytes > 0);
   assert.ok(manifest.cases.every(item => !Object.hasOwn(item.story, 'authorizationNote')));
+  assert.ok(manifest.cases.every(item => !Object.hasOwn(item.story, 'editorialNote')));
+  assert.ok(manifest.cases.every(item => !item.summary.includes('本案例根据作者提供') && !item.story.reflection?.includes('资料整理说明：')));
   assert.ok(manifest.cases.every(item => item.assets.every(asset => asset.mimeType.startsWith('image/'))));
 });
 
