@@ -50,9 +50,18 @@
 .case-story section { margin: 32px 0; }
 .case-meta,.case-labels { display: flex; gap: 8px 16px; flex-wrap: wrap; color: #555; }
 .case-meta span,.case-labels span { background: #f5f5f3; padding: 4px 10px; border-radius: 8px; font-size: 14px; }
-.case-gallery { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.case-gallery { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; }
 .case-gallery figure { margin: 0; min-width: 0; }
-.case-gallery img,.case-gallery video { width: 100%; max-height: 560px; object-fit: contain; border-radius: 10px; background: #f6f6f5; }
+.case-gallery img,.case-gallery video { width: 100%; max-height: 280px; object-fit: contain; border-radius: 10px; background: #f6f6f5; }
+.case-gallery .case-image-button { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border: 0; background: #f5f5f5; border-radius: 6px; }
+/* 网格只作裁切预览；点开看图层始终呈现完整原图，不改动原文件。 */
+.case-gallery .case-image-button img { display: block; width: 100%; height: 100%; max-height: 100%; object-fit: cover; padding: 0; box-sizing: border-box; border-radius: inherit; transition: filter .15s; }
+.case-gallery .case-image-button:hover img { filter: brightness(.94); }
+.case-image-button:focus-visible { outline: 2px solid #63856e; outline-offset: 3px; }
+.case-gallery-hint { margin: -4px 0 16px; color: #717b73; font-size: 13px; line-height: 1.6; }
+.case-gallery-count { margin-left: 6px; padding: 3px 9px; color: #617968; background: #eff4ed; border-radius: 999px; font-size: 12px; font-weight: 500; vertical-align: middle; }
+.community-detail .community-detail__hero { height: clamp(180px, 38dvh, 360px); background: #f5f7f3; }
+.community-detail .community-detail__hero img { background: #f5f7f3; }
 .case-image-button { display: block; width: 100%; padding: 0; border: 0; border-radius: 10px; background: transparent; cursor: zoom-in; }
 .case-image-button--hero { height: 100%; }
 .case-image-button--hero img { height: 100%; }
@@ -86,7 +95,6 @@
 .report-dialog > div { display: flex; justify-content: flex-end; gap: 10px; }
 .report-dialog button { padding: 9px 14px; border: 1px solid #333; border-radius: 7px; background: #fff; cursor: pointer; }
 .report-dialog button[type="submit"] { background: #222; color: #fff; }
-.case-gallery figcaption { color: #666; font-size: 14px; }
 .case-step { margin: 20px 0; padding: 20px 0; border-top: 1px solid #e5e5e5; }
 .case-step > span { font-size: 14px; color: #666; letter-spacing: .12em; }
 .case-step h4 { font-size: 21px; margin: 5px 0 12px; }
@@ -109,13 +117,13 @@
 .case-review-history article strong { margin-right: 12px; }
 .case-review-history time { color: #666; font-size: 13px; }
 .case-review-history p { margin: 7px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-@media (max-width: 640px) { .case-gallery { grid-template-columns: 1fr; } .case-editor .publish-form__row { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .case-gallery { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; } .case-editor .publish-form__row { grid-template-columns: 1fr; } }
 
 /* 外部艺术展览沿用 CVPR 的单列作品卡，不影响已有教学案例详情。 */
 .community-detail--exhibition { width: min(836px, 100%); margin: 0 auto; min-width: 0; }
 .community-detail--exhibition .learning-back { margin-bottom: 18px; }
-.community-detail--exhibition .community-detail__hero { height: auto; border: 1px solid #e5e7e5; border-bottom: 0; border-radius: 12px 12px 0 0; background: #f5f5f3; }
-.community-detail--exhibition .case-image-button--hero,.community-detail--exhibition .case-image-button--hero img { height: auto; display: block; }
+.community-detail--exhibition .community-detail__hero { height: clamp(180px, 38dvh, 360px); border: 1px solid #e5e7e5; border-bottom: 0; border-radius: 12px 12px 0 0; background: #f5f5f3; }
+.community-detail--exhibition .case-image-button--hero,.community-detail--exhibition .case-image-button--hero img { height: 100%; display: block; }
 .community-detail--exhibition .community-detail__hero img { width: 100%; object-fit: contain; background: #f5f5f3; }
 .community-detail--exhibition .community-detail__body { padding: 32px 48px 40px; border: 1px solid #e5e7e5; border-top: 0; border-radius: 0 0 12px 12px; box-shadow: 0 6px 20px rgb(28 40 34 / .04); }
 .community-detail--exhibition .community-detail__body > header > div:first-child { display: block; min-width: 0; }
@@ -125,9 +133,8 @@
 .community-detail--exhibition .case-labels { margin-top: 16px; gap: 8px; }
 .community-detail--exhibition .case-labels span { background: #f5f6f4; border: 1px solid #e6e8e4; border-radius: 999px; padding: 3px 10px; color: #636d66; }
 .community-detail--exhibition .community-summary { font-size: 16px; line-height: 1.8; margin: 32px 0; }
-.case-story--exhibition .case-gallery { grid-template-columns: minmax(0,1fr); }
-.case-story--exhibition .case-gallery img { max-height: none; }
-.case-story--exhibition .case-attachment__video { max-height: none; }
+.case-story--exhibition .case-gallery { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.case-story--exhibition .case-attachment__video { max-height: min(48dvh,420px); object-fit: contain; }
 .community-detail--exhibition .comment-section h3 { font-size: 18px; }
 .community-detail--exhibition .comment-section input { border-color: #d7dfd8; border-radius: 8px; font-size: 15px; min-width: 0; }
 .community-detail--exhibition .comment-section form > button { min-height: 44px; background: #edf4ee; border: 1px solid #d7dfd8; border-radius: 8px; color: #3f6654; }
@@ -146,3 +153,5 @@
   .community-detail--exhibition .community-detail__body > header h2 { font-size: 26px; }
   .case-source-footer__original { width: 100%; box-sizing: border-box; }
 }
+
+@media (max-width: 640px) { .case-story--exhibition .case-gallery { grid-template-columns: repeat(2,minmax(0,1fr)); } }

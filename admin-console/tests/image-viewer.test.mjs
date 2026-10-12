@@ -68,3 +68,20 @@ test("工作流生成的图片也用同一个看图浮层", async () => {
   assert.match(runner, /import \{ ZoomableImage \} from "\.\/ImageLightbox\.jsx"/);
   assert.match(runner, /<ZoomableImage src=\{run\.context\.artifact\.downloadUrl\}/);
 });
+
+test("全站图片使用无文件名的深色遮罩，切换按钮在画面两侧", async () => {
+  const lightbox = await read("../src/ImageLightbox.jsx");
+  const css = await read("../src/styles.css");
+  const courses = await read("../src/LearningLibrary.jsx");
+  const canvas = await read("../src/ImageCanvas.jsx");
+  assert.doesNotMatch(lightbox, /className="image-lightbox__name"/);
+  assert.match(lightbox, /className="image-lightbox__previous"/);
+  assert.match(lightbox, /className="image-lightbox__next"/);
+  assert.match(lightbox, /className="image-lightbox__close"/);
+  assert.match(css, /\.image-lightbox__navigation button \{[^}]*top: 50%/);
+  assert.match(css, /\.image-lightbox__stage \{[^}]*pointer-events: none/);
+  assert.match(courses, /const isMedia = \["image", "video"\]/);
+  assert.match(courses, /<ZoomableImage src=\{source\}/);
+  assert.match(canvas, /<ZoomableImage src=\{result.downloadUrl\}/);
+  assert.doesNotMatch(canvas, /<span>\{result.fileName/);
+});

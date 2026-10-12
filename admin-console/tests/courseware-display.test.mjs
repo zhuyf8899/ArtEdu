@@ -7,6 +7,16 @@ import test from "node:test";
 
 const library = () => readFile(new URL("../src/LearningLibrary.jsx", import.meta.url), "utf8");
 
+test("课程媒体不显示名称，图片共用看图层，视频不挤出手机视口", async () => {
+  const source = await library();
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  assert.ok(source.includes('const isMedia = ["image", "video"].includes(resource.resourceType)'));
+  assert.ok(source.includes('const fileName = !isMedia && resource.fileName'));
+  assert.ok(source.includes('<ZoomableImage src={source}'));
+  assert.match(css, /\.course-material-list > \.course-material--video \{[^}]*grid-template-columns: minmax\(0,1fr\)/);
+  assert.match(css, /\.course-material-list > \.course-material--video video \{[^}]*min-width: 0;[^}]*max-width: 100%/);
+});
+
 test("PDF 课件改为在新标签页用浏览器打开，不再内嵌 iframe", async () => {
   const source = await library();
   const pdfBlock = source.slice(source.indexOf('if (resource.resourceType === "pdf")'), source.indexOf("// 前端源码课件"));

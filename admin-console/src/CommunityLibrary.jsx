@@ -3,6 +3,7 @@ import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, Flag
 import { addWorkComment, getMyWorks, getWork, getWorkflows, getWorks, reportComment, reportWork, submitWork, toggleWorkReaction, setWorkCollection } from "./services/adminApi.js";
 import { CaseStoryEditor } from "./CaseStoryEditor.jsx";
 import { CaseStoryView } from "./CaseStoryView.jsx";
+import { ImageLightbox } from "./ImageLightbox.jsx";
 import { CASE_COLLECTIONS, splitCommunityCollections } from "./communityCollections.js";
 import "./case-story.css";
 
@@ -114,7 +115,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
       {!!selected.workflows?.length && <div className="same-workflow"><span>关联的教学工作流</span>{selected.workflows.map(workflow => <button key={workflow.id} onClick={() => onOpenWorkflow?.(workflow.id)}>查看「{workflow.name}」<ArrowRight size={15} /></button>)}</div>}
       {selected.status === "approved" && <><div className="community-report-row"><button onClick={() => setReportTarget({ type: "work", id: selected.id, label: selected.title })}><Flag size={16} /> 举报作品</button></div><section className="comment-section"><h3><ChatCircle size={20} /> 创作讨论</h3>{selected.comments?.map(item => <article key={item.id}><div><strong>{item.author}</strong><button className="comment-report" onClick={() => setReportTarget({ type: "comment", id: item.id, label: "这条评论" })}>举报</button></div><p>{item.content}</p></article>)}<form onSubmit={sendComment}><input maxLength={2000} value={comment} onChange={e => setComment(e.target.value)} aria-label="发表创作讨论" placeholder="写下你的建议或问题……" /><button aria-label="发表讨论"><PaperPlaneTilt /></button></form></section></>}
     </div>
-  </section>{activeImage && <ImageViewer image={activeImage} onClose={() => setActiveImage(null)} />}{reportTarget && <ReportDialog target={reportTarget} onClose={() => setReportTarget(null)} onSubmit={submitReport} />}{editor}</>;
+  </section>{activeImage && <ImageViewer image={activeImage} assets={selected.assets} onChange={setActiveImage} onClose={() => setActiveImage(null)} />}{reportTarget && <ReportDialog target={reportTarget} onClose={() => setReportTarget(null)} onSubmit={submitReport} />}{editor}</>;
   }
   return <>
     <section className="learning-library-intro community-page-intro" aria-labelledby="community-page-title">
@@ -166,11 +167,13 @@ function recommendWorks(works) {
   }).sort((left, right) => right.score - left.score || String(right.publishedAt).localeCompare(String(left.publishedAt))).slice(0, 3);
   return { items, personalized };
 }
-function ImageViewer({ image, onClose }) {
-  return <div className="case-image-viewer" role="dialog" aria-modal="true" aria-label="图片预览">
-    <button className="case-image-viewer__backdrop" onClick={onClose} aria-label="关闭图片预览" />
-    <div className="case-image-viewer__content"><img src={image.url} alt={image.alt || image.fileName} /><div><span>{image.fileName}</span><a href={image.url} download>下载原图</a><button onClick={onClose}>关闭</button></div></div>
-  </div>;
+function ImageViewer({ image, assets = [], onChange, onClose }) {
+  const images = assets.filter(asset => asset.asset_type === "image").map(asset => ({ url: asset.url, fileName: asset.file_name, alt: asset.alt_text }));
+  if (!images.some(item => item.url === image.url)) images.unshift(image);
+  const index = images.findIndex(item => item.url === image.url);
+  // 共用 body Portal 看图器，避免固定定位被 route-transition 的 transform 限制。
+  return <ImageLightbox src={image.url} fileName={image.fileName} alt={image.alt} variant="gallery"
+    gallery={{ index, count: images.length, onPrevious: index > 0 ? () => onChange(images[index - 1]) : null, onNext: index < images.length - 1 ? () => onChange(images[index + 1]) : null }} onClose={onClose} />;
 }
 function ReportDialog({ target, onClose, onSubmit }) {
   const [reason, setReason] = useState("other");

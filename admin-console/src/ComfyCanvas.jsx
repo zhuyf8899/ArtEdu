@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { ZoomableImage } from './ImageLightbox.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ReactFlow, ViewportPortal, Background, Controls, MiniMap, Handle, Position, addEdge, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 import { getComfyCatalog, getComfyQueue, cancelComfyJob, retryComfyJob, getComfyJob, getMyWorkflowRuns, startWorkflowRun } from './services/adminApi.js';
@@ -263,7 +264,7 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
                 catch (e) {
                     setError(e.message);
                 }
-            }}>重试</button></p>)}{job && <><strong>{job.status}</strong><p>{job.progress?.node ? `节点 ${job.progress.node}` : ''} {job.progress?.max ? `${job.progress.value}/${job.progress.max}` : ''}</p>{job.error && <p role="alert">{job.error}</p>}{job.previewUrl && <img src={job.previewUrl} alt="采样实时预览"/>}{job.artifacts?.map(a => <a key={a.id} href={a.downloadUrl} target="_blank" rel="noreferrer"><img src={a.downloadUrl} alt={a.fileName}/></a>)}</>}</aside></div>
+            }}>重试</button></p>)}{job && <><strong>{job.status}</strong><p>{job.progress?.node ? `节点 ${job.progress.node}` : ''} {job.progress?.max ? `${job.progress.value}/${job.progress.max}` : ''}</p>{job.error && <p role="alert">{job.error}</p>}{job.previewUrl && <ZoomableImage src={job.previewUrl} alt="采样实时预览"/>}{job.artifacts?.map(a => <ZoomableImage key={a.id} src={a.downloadUrl} alt="工作流生成的图片" fileName={a.fileName || ""}/>)}</>}</aside></div>
   </section>, document.body);
 }
 const cryptoId = () => globalThis.crypto?.randomUUID?.() || `node-${Date.now()}-${Math.random().toString(36).slice(2)}`;

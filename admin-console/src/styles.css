@@ -509,6 +509,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .course-material--locked .course-material__meta strong { color: var(--ink); }
 .course-material--image { align-items: flex-start; }
 .course-material--image img { width: 100%; max-width: 220px; max-height: 170px; object-fit: cover; background: #fff; border: 1px solid var(--ink); }
+.course-material-list { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; }
+.course-material-list > .course-material { grid-column: 1 / -1; min-width: 0; }
+.course-material-list > .course-material--image { grid-column: auto; display: grid; align-content: start; padding: 0; gap: 8px; border: 0; background: transparent; }
+.course-material--image .chat-image { width: 100%; max-width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border: 0; border-radius: 6px; }
+.course-material--image .chat-image img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; border: 0; border-radius: inherit; object-fit: cover; }
+.course-material--image .chat-image__hint { display: none; }
+.course-material--image .course-material__download { justify-self: end; min-height: 44px; display: inline-flex; align-items: center; }
+.course-material-list > .course-material--video { display: grid; grid-template-columns: minmax(0,1fr); min-width: 0; padding: 0; gap: 12px; border: 0; background: transparent; }
+.course-material-list > .course-material--video video { min-width: 0; max-width: 100%; max-height: min(48dvh,420px); border-radius: 6px; }
+.course-material-list > .course-material--video > div { min-width: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.course-material-list > .course-material--video small { font-size: 13px; line-height: 1.6; }
+.course-material-list > .course-material--video .course-material__expand { min-height: 44px; flex-shrink: 0; }
+@media (max-width: 640px) { .course-material-list { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; } }
 .course-material--document { align-items: stretch; flex-direction: column; gap: 8px; }
 .course-material--document header { display: flex; align-items: center; gap: 12px; }
 .course-material__actions { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
@@ -2272,20 +2285,28 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .chat-image:hover .chat-image__hint, .chat-image:focus-visible .chat-image__hint { opacity: 1; }
 
 /* 看图浮层：滚轮以指针为中心缩放，拖动平移，双击复位。 */
-.image-lightbox { position: fixed; inset: 0; z-index: 90; display: grid; grid-template-rows: 1fr auto; }
-.image-lightbox__scrim { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; background: rgba(8, 8, 10, .9); border: 0; }
-.image-lightbox__stage { position: relative; z-index: 1; display: grid; place-items: center; overflow: hidden; touch-action: none; }
-.image-lightbox__stage img { max-width: 92vw; max-height: calc(100vh - 108px); object-fit: contain; user-select: none; transform-origin: center center; transition: transform .06s linear; }
+.image-lightbox { position: fixed; inset: 0; height: 100dvh; box-sizing: border-box; z-index: 1200; display: grid; grid-template-rows: minmax(0,1fr); }
+.image-lightbox__scrim { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; background: rgba(10, 10, 10, .95); border: 0; cursor: default; }
+.image-lightbox__stage { position: relative; z-index: 1; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 64px 80px 100px; overflow: hidden; touch-action: none; pointer-events: none; }
+.image-lightbox__stage img { display: block; width: auto; height: min(56dvh,720px); max-width: 100%; max-height: 100%; min-height: 0; object-fit: contain; user-select: none; pointer-events: auto; transform-origin: center center; transition: transform .06s linear; }
 .image-lightbox__stage.is-dragging img { transition: none; }
-.image-lightbox__bar { position: relative; z-index: 2; padding: 8px 16px 14px; display: grid; justify-items: center; gap: 6px; color: #f2f2f2; }
-.image-lightbox__name { max-width: min(78vw, 720px); overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.image-lightbox__bar { position: absolute; z-index: 2; left: 50%; bottom: max(16px,env(safe-area-inset-bottom)); transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); padding: 6px 10px; display: grid; justify-items: center; gap: 6px; color: #f2f2f2; background: rgb(20 20 20 / .65); border-radius: 10px; }
 .image-lightbox__tools { display: inline-flex; align-items: center; gap: 6px; }
-.image-lightbox__tools button, .image-lightbox__tools a { width: 34px; height: 34px; display: grid; place-items: center; color: #f4f4f4; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .22); border-radius: 9px; cursor: pointer; }
-.image-lightbox__tools button:hover, .image-lightbox__tools a:hover, .image-lightbox__tools button:focus-visible, .image-lightbox__tools a:focus-visible { color: #191a1c; background: var(--lime); border-color: var(--lime); }
+.image-lightbox__tools button, .image-lightbox__tools a, .image-lightbox__close, .image-lightbox__navigation button { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; color: #f4f4f4; background: rgba(255, 255, 255, .07); border: 0; border-radius: 6px; cursor: pointer; }
+.image-lightbox :is(button,a):focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.image-lightbox__tools :is(button,a):hover, .image-lightbox__close:hover, .image-lightbox__navigation button:hover:not(:disabled) { color: #fff; background: rgb(255 255 255 / .18); }
 .image-lightbox__tools button:disabled { opacity: .35; cursor: not-allowed; }
 .image-lightbox__tools b { min-width: 54px; font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
 .image-lightbox__hint { color: rgba(255, 255, 255, .62); font-size: 11px; }
-@media (max-width: 720px) { .portal-main--standalone { width: calc(100% - 18px); padding: 8px 0 10px; }.portal-shell--standalone .creation-canvas__history { width: 214px; padding: 10px 8px; }.creation-canvas__history-toggle span { display: none; }.image-lightbox__stage img { max-height: calc(100vh - 132px); } }
+.image-lightbox__close { position: absolute; top: max(12px,env(safe-area-inset-top)); right: 16px; z-index: 3; }
+.image-lightbox__navigation { position: absolute; inset: 0; pointer-events: none; }
+.image-lightbox__navigation span { position: absolute; z-index: 2; top: 22px; left: 50%; transform: translateX(-50%); color: #ddd; font-size: 13px; font-variant-numeric: tabular-nums; }
+.image-lightbox__navigation button { position: absolute; z-index: 3; top: 50%; transform: translateY(-50%); height: 56px; pointer-events: auto; background: rgb(0 0 0 / .25); }
+.image-lightbox__previous { left: 18px; }
+.image-lightbox__next { right: 18px; }
+.image-lightbox__navigation button:disabled { visibility: hidden; }
+@media (max-width: 720px) { .portal-main--standalone { width: calc(100% - 18px); padding: 8px 0 10px; }.portal-shell--standalone .creation-canvas__history { width: 214px; padding: 10px 8px; }.creation-canvas__history-toggle span { display: none; }.image-lightbox__stage { padding: 60px 48px 90px; }.image-lightbox__previous { left: 2px; }.image-lightbox__next { right: 2px; }.image-lightbox__tools { gap: 2px; }.image-lightbox__tools b { min-width: 42px; }.image-lightbox__hint { display: none; } }
+@media (prefers-reduced-motion: reduce) { .image-lightbox__stage img { transition: none; } }
 
 /* 节点工作流运行页：整页就是画布，功能区收成浮层压在上面。 */
 /* Portal 在 body 末尾渲染，必须固定到视口；relative 会把画布放到长页面底部，锁滚动后只剩空背景。 */
