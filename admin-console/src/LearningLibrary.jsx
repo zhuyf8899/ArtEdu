@@ -8,6 +8,7 @@ import { enrollCourse, getCourse, getCourses, getMyWorks, submitLessonWork, upda
 import { coverImageFor } from "./coverImages.js";
 import { decorateCourse, difficultyName } from "./coursePresentation.js";
 import { learningLabels } from "./learningBindings.js";
+import { ZoomableImage } from "./ImageLightbox.jsx";
 import "./LearningBindings.css";
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
@@ -238,7 +239,7 @@ function VideoMaterial({ resource, source, cover, meta }) {
       <button type="button" className="course-material-lightbox__scrim" aria-label="关闭放大观看" onClick={() => setEnlarged(false)} />
       <div className="course-material-lightbox__panel">
         <header>
-          <strong>{resource.title}</strong>
+          <strong>视频预览</strong>
           <button type="button" onClick={() => setEnlarged(false)} aria-label="关闭放大观看"><X size={18} weight="bold" /></button>
         </header>
         <video controls autoPlay playsInline src={source} poster={cover} aria-label={`${resource.title}（放大）`} />
@@ -254,13 +255,12 @@ function CourseMaterial({ resource }) {
   const preview = resource.previewUrl || resource.externalUrl || "";
   const download = resource.downloadUrl || "";
   const source = preview || download;
-  const fileName = resource.fileName ? ` · ${resource.fileName}` : "";
-  // 封面优先用上传的图片；没上传时由标题生成白底黑字图，保证资料列表始终有可扫读的视觉。
-  const cover = coverImageFor(resource, 480, 270);
+  const isMedia = ["image", "video"].includes(resource.resourceType);
+  const fileName = !isMedia && resource.fileName ? ` · ${resource.fileName}` : "";
+  // 媒体不再生成带名称的文字海报；保留作者上传的封面，没封面的视频用原生首帧。
+  const cover = isMedia ? resource.coverImageUrl || resource.coverUrl || undefined : coverImageFor(resource, 480, 270);
   const meta = (note) => <span className="course-material__meta">
-    <img className="course-material-cover" src={cover} alt="" />
-    <strong>{resource.title}</strong>
-    <small>{kind.label}{fileName}</small>
+    {!isMedia && <><img className="course-material-cover" src={cover} alt="" /><strong>{resource.title}</strong><small>{kind.label}{fileName}</small></>}
     {note && <small>{note}</small>}
   </span>;
   // 下载是备选方案，统一做成弱化的小字链接；只有浏览器确实无法预览的 Office 才用按钮。
@@ -279,8 +279,7 @@ function CourseMaterial({ resource }) {
   if (resource.resourceType === "video") return <VideoMaterial resource={resource} source={source} cover={cover} meta={meta} />;
 
   if (resource.resourceType === "image") return <article className="course-material course-material--image">
-    <a href={source} target="_blank" rel="noreferrer"><img loading="lazy" src={source} alt={resource.title} /></a>
-    {meta("点击图片可查看原图。")}
+    <ZoomableImage src={source} alt="课程配图" fileName={resource.fileName || ""} />
     {downloadLink("下载原图")}
   </article>;
 

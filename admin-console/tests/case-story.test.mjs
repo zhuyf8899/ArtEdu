@@ -13,6 +13,24 @@ test('案例标签与权限默认值', () => {
   assert.equal(emptyStory().originalUrl, '');
 });
 
+test('案例图片复用 body Portal 适屏查看器，图集缩略图不撑成长页面', async () => {
+  const library = await readFile(new URL('../src/CommunityLibrary.jsx',import.meta.url),'utf8');
+  const lightbox = await readFile(new URL('../src/ImageLightbox.jsx',import.meta.url),'utf8');
+  const css = await readFile(new URL('../src/case-story.css',import.meta.url),'utf8');
+  assert.match(library, /<ImageLightbox[^>]*variant="gallery"/);
+  assert.match(library, /gallery=\{\{ index, count: images.length/);
+  assert.match(lightbox, /createPortal\(/);
+  assert.match(lightbox, /document.body\)/);
+  assert.match(lightbox, /previousFocus.focus\?\.\(\{ preventScroll: true \}\)/);
+  assert.match(lightbox, /event.key === "Tab"/);
+  assert.match(lightbox, /event.key === "ArrowRight"/);
+  assert.match(lightbox, /\[src, reset\]/);
+  assert.match(css, /\.case-gallery \.case-image-button \{[^}]*aspect-ratio: 4 \/ 3/);
+  const sharedCss = await readFile(new URL('../src/styles.css',import.meta.url),'utf8');
+  assert.match(sharedCss, /\.image-lightbox \{[^}]*height: 100dvh;[^}]*grid-template-rows: minmax\(0,1fr\)/);
+  assert.doesNotMatch(css, /\.case-story--exhibition \.case-gallery img \{ max-height: none/);
+});
+
 test('案例分为精选和社区，旧案例、外部来源及热门标记不会自动变成精选', async () => {
   const works = [{id:'legacy',isFeatured:true},{id:'external',origin:'collected'},{id:'cvpr',collection:'art-selection'},{id:'posted',collection:'community'}];
   const sections = splitCommunityCollections(works);
@@ -96,10 +114,13 @@ test('保存草稿不提交审核；案例提示词按文本渲染', async () =>
   assert.ok(view.includes('<video controls'), '附件整理后仍保留视频预览');
 });
 
-test('视频附件的名称、预览和下载独立成行，保留下载权限', async () => {
+test('视频只显示播放器和下载权限，文件名仅留在文档附件中', async () => {
   const view = await readFile(new URL('../src/CaseStoryView.jsx',import.meta.url),'utf8');
   const css = await readFile(new URL('../src/case-story.css',import.meta.url),'utf8');
   assert.match(view, /className="case-attachment__header"/);
+  assert.match(view, /asset.asset_type !== "video" && <header/);
+  assert.doesNotMatch(view, /<figcaption/);
+  assert.doesNotMatch(view, /aria-label=\{asset.file_name\}/);
   assert.match(view, /<video controls preload="metadata" className="case-attachment__video"/);
   assert.match(view, /className="case-attachment__actions">\{asset.canDownload \?/);
   assert.match(css, /\.case-related-assets article \{[^}]*grid-template-columns: minmax\(0,1fr\);/);
