@@ -165,6 +165,9 @@ test("静态图谱与个人 API 失败隔离，个人扩展保留并可往返", 
   const learning = await readFile(new URL("../src/MyLearning.jsx", import.meta.url), "utf8");
   const atlas = await readFile(new URL("../src/CurriculumAtlas.jsx", import.meta.url), "utf8");
   assert.match(learning, /isGenericAtlas \? <CurriculumAtlas/);
+  assert.doesNotMatch(learning, /import \{ KnowledgeMap \}|<KnowledgeMap/);
+  assert.doesNotMatch(learning, /\["reference","course"\]\.includes\(learningAtlas\)/);
+  assert.match(learning, /courseId=\{learningAtlas === "course" \? learningAtlasCourse : ""\}/);
   assert.match(learning, /aria-busy=\{!isGenericAtlas && loading\}/);
   assert.match(learning, /learningAtlas === "personal"/);
   assert.match(learning, /onNavigate\("\/my-learning\?atlas=personal"\)/);
