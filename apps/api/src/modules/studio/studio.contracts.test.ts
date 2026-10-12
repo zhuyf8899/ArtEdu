@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { workflowInputSchema, workflowRunExecuteSchema, workflowVersionInputSchema, workInputSchema } from "./studio.contracts";
-import { assertCaseCover, assertCasePublication, caseStorySchema } from "./case-story";
+import { assertCaseCover, assertCasePublication, caseStorySchema, visibleCaseStory } from "./case-story";
+import { assertCaseEditorial, findCaseEditorialIssues } from "./case-editorial";
 
 test("收集案例可存草稿，缺少原作者或授权不能提交审核", () => {
   const draft = caseStorySchema.parse({ origin: "collected", creators: ["匿名作者"] });
@@ -19,6 +20,40 @@ test("案例提交审核必须有图片封面，视频和文档只能作为补�
   assert.throws(() => assertCaseCover(0), /至少上传一张图片/);
   assert.doesNotThrow(() => assertCaseCover(1));
   assert.doesNotThrow(() => assertCaseCover(3));
+});
+
+test("展览来源字段兼容旧案例，链接严格校验且不代填授权", () => {
+  const legacy = caseStorySchema.parse({ origin: "collected" });
+  assert.equal(legacy.displayStyle, "case-study");
+  assert.equal(legacy.sourceUrl, "");
+  const source = { sourceName: "CVPR Art", sourceUrl: "https://thecvf-art.com/", originalUrl: "https://thecvf-art.com/project.php?year=2025&id=1043", exhibitionName: "CVPR Art Gallery", exhibitionYear: "2025", displayStyle: "exhibition" };
+  const work = workInputSchema.parse({ title: "外部艺术作品", summary: "作品介绍", discipline: "AI 艺术", story: { origin: "collected", ...source } });
+  assert.equal(work.story?.originalUrl, source.originalUrl);
+  assert.equal(work.story?.authorization, "pending");
+  assert.throws(() => assertCasePublication(work.story!), /授权/);
+  for (const value of ["javascript:alert(1)", "file:///private", "data:text/html,test", "https://user:secret@example.com/", "https://exa\nmple.com", "/relative", "https://"]) {
+    assert.equal(caseStorySchema.safeParse({ sourceUrl: value }).success, false);
+    assert.equal(caseStorySchema.safeParse({ originalUrl: value }).success, false);
+  }
+  assert.equal(caseStorySchema.safeParse({ exhibitionYear: "25" }).success, false);
+});
+
+test("作者叙述检查拦截编辑说明，但保留创作反思、技术经历和提示词", () => {
+  assert.throws(() => assertCaseEditorial({ summary: "原作页面包含视频，但该视频资源目前返回 404；这里先展示已获授权的封面。" }), /项目简介/);
+  assert.throws(() => assertCaseEditorial({ story: { reflection: "资料整理说明：工具字段留空。" } }), /经验与反思/);
+  assert.throws(() => assertCaseEditorial({ story: { creators: ["刘樾（其余团队成员署名待补充）"] } }), /原作者署名/);
+  const author = { summary: "我们尝试在网页作品中使用404错误表达失落。视频资源返回404后，我们修复了素材路径。", story: caseStorySchema.parse({ reflection: "AI是放大器，而非替代者。可生产性仍需另行验证。", editorialNote: "资料整理说明：原作视频待补充", steps: [{ title: "生成", prompt: "本次上传参考图片，整理资料后生成纹样", parameters: "api_status=404", description: "我们使用AI开展创作实验" }] }) };
+  assert.deepEqual(findCaseEditorialIssues(author), []);
+  assert.doesNotThrow(() => assertCaseEditorial(author));
+});
+
+test("普通读者无法获取编辑备注；原作者与审核人员保留备注且不修改来源", () => {
+  const story = caseStorySchema.parse({ sourceName: "CVPR Art", editorialNote: "内部素材核对", authorizationNote: "内部授权核对" });
+  const publicStory = visibleCaseStory(story, false);
+  assert.equal(publicStory.editorialNote, ""); assert.equal(publicStory.authorizationNote, "");
+  assert.equal(publicStory.sourceName, "CVPR Art");
+  assert.equal(visibleCaseStory(story, true).editorialNote, "内部素材核对");
+  assert.equal(story.editorialNote, "内部素材核对");
 });
 
 test("作品投稿不接受客户端提供的资源地址或资源元数据", () => {

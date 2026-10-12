@@ -41,7 +41,7 @@ export async function verifyBundle(root = bundleRoot) {
   let bytes = 0;
   for (const work of manifest.cases) {
     if (!work.id || workIds.has(work.id) || !work.title || !Array.isArray(work.assets)) throw new Error('Invalid showcase case');
-    if (work.authorId !== 'user-student-demo' || work.story?.authorizationNote || work.story?.allowDocumentDownload) throw new Error('Private case metadata is not allowed in the public bundle');
+    if (work.authorId !== 'user-student-demo' || work.story?.authorizationNote || work.story?.editorialNote || work.story?.allowDocumentDownload) throw new Error('Private case metadata is not allowed in the public bundle');
     workIds.add(work.id);
     for (const asset of work.assets) {
       if (!asset.id || assetIds.has(asset.id) || !allowedHash.test(asset.sha256) || !allowedMime.test(asset.mimeType)) throw new Error('Invalid showcase image metadata');

@@ -1,0 +1,77 @@
+// Authorized browser QA: creates login sessions only; never modifies cases or reactions.
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { mkdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+const require = createRequire(path.join(process.env.ARTEDU_PLAYWRIGHT_ROOT, 'package.json'));
+const { chromium } = require('playwright');
+const output = path.resolve('apps/api/data/qa/cvpr-art/implementation');
+await mkdir(output, { recursive: true });
+const { id, title, originalUrl } = JSON.parse(await readFile('apps/api/data/qa/cvpr-art/published-work.json', 'utf8'));
+const browser = await chromium.launch({ headless: true, channel: 'msedge' });
+const errors = [];
+try {
+  const context = await browser.newContext();
+  const response = await context.request.post('http://localhost:4173/api/auth/login', { data: { username: 'student.demo', password: process.env.ARTEDU_DEMO_PASSWORD } });
+  assert.ok(response.ok());
+  const page = await context.newPage();
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('http://localhost:4173/community', { waitUntil: 'networkidle' });
+  await page.getByRole('textbox', { name: '搜索案例', exact: true }).fill(title);
+  const card = page.locator('.work-grid > .work-card').filter({ hasText: title });
+  assert.equal(await card.count(), 1);
+  await card.getByRole('button', { name: /查看案例/ }).click();
+  await page.locator('.community-detail--exhibition').waitFor();
+  assert.match(await page.locator('.community-detail__body > header').innerText(), /Pindar Van Arman/);
+  assert.equal(await page.getByRole('link', { name: /查看原作/ }).getAttribute('href'), originalUrl);
+  assert.equal(await page.getByRole('link', { name: /查看原作/ }).getAttribute('rel'), 'noopener noreferrer');
+  assert.match(await page.locator('.case-source-footer').innerText(), /CVPR Art Gallery · 2025/);
+  // One local image: the exhibition's hero must not be repeated in the process gallery.
+  assert.equal(await page.locator('.community-detail img').count(), 1);
+  assert.ok(await page.locator('.community-detail__hero img').evaluate(img => img.complete && img.naturalWidth > 0));
+  const data = await context.request.get(`http://localhost:4173/api/works/${id}`);
+  assert.equal((await data.json()).story.displayStyle, 'exhibition');
+  for (const [width, height, name] of [[1440, 1000, 'desktop'], [768, 1024, 'tablet'], [390, 844, 'mobile']]) {
+    await page.setViewportSize({ width, height });
+    await page.evaluate(async () => { await document.fonts.ready; });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${name}: no page overflow`);
+    const frame = await page.locator('.community-detail--exhibition').boundingBox();
+    const footer = await page.locator('.case-source-footer').boundingBox();
+    assert.ok(footer.x >= frame.x - 1 && footer.x + footer.width <= frame.x + frame.width + 1);
+    assert.ok(await page.getByRole('link', { name: /查看原作/ }).evaluate(el => el.getBoundingClientRect().height >= 44));
+    await page.locator('.community-detail--exhibition').screenshot({ path: path.join(output, `${name}.png`) });
+    console.log(`${name}: image loaded, source/footer intact, no overflow`);
+  }
+  await page.getByRole('link', { name: /查看原作/ }).focus();
+  assert.ok(await page.getByRole('link', { name: /查看原作/ }).evaluate(el => el === document.activeElement));
+  const opened = context.waitForEvent('page');
+  await page.getByRole('link', { name: /查看原作/ }).click();
+  const original = await opened;
+  await original.waitForLoadState('domcontentloaded');
+  await original.locator('.project-artist').waitFor();
+  assert.equal(await original.locator('.project-artist').innerText(), title);
+  await original.close();
+  await page.getByRole('button', { name: /返回案例社区/ }).click();
+  await page.getByRole('textbox', { name: '搜索案例', exact: true }).fill('云格新序');
+  await page.locator('.work-grid > .work-card').first().getByRole('button', { name: /查看案例/ }).click();
+  await page.locator('.community-detail').waitFor();
+  assert.equal(await page.locator('.community-detail--exhibition').count(), 0, 'legacy case keeps its teaching layout');
+  await page.getByRole('button', { name: /返回案例社区/ }).click();
+  await page.getByRole('button', { name: /新建案例草稿/ }).click();
+  const form = page.getByRole('form', { name: '案例草稿编辑' });
+  await form.getByRole('combobox', { name: /^来源/ }).first().selectOption('collected');
+  await form.getByLabel('作品展示方式', { exact: true }).selectOption('exhibition');
+  for (const label of ['来源网站名称', '来源网站地址', '原作页面地址', '展览名称', '展览年份']) assert.ok(await form.getByLabel(label, { exact: true }).isVisible());
+  await form.screenshot({ path: path.join(output, 'editor.png') });
+  await form.getByRole('button', { name: '关闭案例编辑', exact: true }).click();
+  assert.deepEqual(errors, []);
+  await page.goto(`http://localhost:4173/community?work=${encodeURIComponent(id)}`, { waitUntil: 'networkidle' });
+  await page.locator('.community-detail--exhibition').waitFor();
+  assert.equal(await page.locator('.community-detail__body > header h2').innerText(), title);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('.community-detail--exhibition').waitFor();
+  await page.getByRole('button', { name: /返回案例社区/ }).click();
+  assert.equal(new URL(page.url()).searchParams.has('work'), false);
+  assert.deepEqual(errors, []);
+  console.log('PASS: authorized artwork visible, source links and exhibition data, three viewport sizes, keyboard focus, old cases preserved, editor fields, no page errors');
+} finally { await browser.close(); }

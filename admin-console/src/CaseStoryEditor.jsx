@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createWork, getWork, updateWork, uploadWorkAsset, getWorkUploadPolicy } from "./services/adminApi.js";
 import { caseUploadError, emptyStep, emptyStory, splitCaseLabels } from "./caseStory.js";
+import { findCaseEditorialIssues } from "./caseEditorial.js";
 
 export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice }) {
   const [form, setForm] = useState(() => ({ title: initial?.title ?? "", summary: initial?.summary ?? "", discipline: initial?.discipline ?? "视觉传达", tags: initial?.tags?.map(t => t.name).join("，") ?? "", workflowId: initial?.workflows?.[0]?.id ?? "", story: { ...emptyStory(), ...initial?.story } }));
@@ -49,6 +50,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
   const change = (key, value) => setForm(current => ({ ...current, [key]: value }));
   const storyChange = (key, value) => setForm(current => ({ ...current, story: { ...current.story, [key]: value } }));
   const stepChange = (index, key, value) => storyChange("steps", form.story.steps.map((step, i) => i === index ? { ...step, [key]: value } : step));
+  const editorialIssues = findCaseEditorialIssues({ ...form, story: { ...form.story, creators: splitCaseLabels(labelFields.creators) } });
   const save = async event => {
     event.preventDefault();
     if (busy) return;
@@ -89,9 +91,18 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
       <p>先保存和预览，确认后再单独提交审核。提示词只作为教学文字展示，不会自动执行。</p>
       <fieldset disabled={busy}>
         <label>案例名称<input required minLength={2} maxLength={160} value={form.title} onChange={e => change("title", e.target.value)} /></label>
-        <label>项目简介<textarea required minLength={2} maxLength={3000} value={form.summary} onChange={e => change("summary", e.target.value)} /></label>
+        <label>项目简介<textarea required minLength={2} maxLength={3000} value={form.summary} onChange={e => change("summary", e.target.value)} /><small>描述作品主题、创作理念与成果；不在正文中填写上传、导入、服务状态或缺失文件说明。</small></label>
         <div className="publish-form__row"><label>学科<input required maxLength={100} value={form.discipline} onChange={e => change("discipline", e.target.value)} /></label><label>来源<select value={form.story.origin} onChange={e => storyChange("origin", e.target.value)}><option value="unspecified">请选择来源</option><option value="collected">收集案例／外部创作</option><option value="platform">在 ArtEdu 创作</option></select><small>提交审核前需明确来源；外部案例还需填写作者与授权说明。</small></label></div>
         <label>原作者／团队（多人用逗号分隔）<input maxLength={960} value={labelFields.creators} onChange={e => setLabelFields({...labelFields,creators:e.target.value})} placeholder="支持匿名作者；上传者不会替代原作者署名" /></label>
+        {form.story.origin === "collected" && <section className="case-editor-step" aria-label="作品来源与展览信息">
+          <h3>作品来源与展览信息</h3>
+          <small>在作品正文下方展示；来源链接不代表转载授权，仍需单独确认图片、视频的展示权限。</small>
+          <label>作品展示方式<select aria-label="作品展示方式" value={form.story.displayStyle} onChange={e => storyChange("displayStyle", e.target.value)}><option value="case-study">教学案例（成果与创作步骤）</option><option value="exhibition">艺术展览（封面、介绍与媒体）</option></select></label>
+          <label>来源网站名称<input maxLength={160} value={form.story.sourceName} onChange={e => storyChange("sourceName", e.target.value)} placeholder="CVPR Art" /></label>
+          <label>来源网站地址<input type="url" maxLength={2048} value={form.story.sourceUrl} onChange={e => storyChange("sourceUrl", e.target.value)} placeholder="https://thecvf-art.com/" /></label>
+          <label>原作页面地址<input type="url" maxLength={2048} value={form.story.originalUrl} onChange={e => storyChange("originalUrl", e.target.value)} placeholder="作品的官方展示页面，用于“查看原作”" /></label>
+          <div className="publish-form__row"><label>展览名称<input maxLength={200} value={form.story.exhibitionName} onChange={e => storyChange("exhibitionName", e.target.value)} placeholder="CVPR Art Gallery" /></label><label>展览年份<input inputMode="numeric" pattern="[0-9]{4}" maxLength={4} value={form.story.exhibitionYear} onChange={e => storyChange("exhibitionYear", e.target.value)} placeholder="2025" /></label></div>
+        </section>}
         <label>使用工具<input maxLength={960} value={labelFields.tools} onChange={e => setLabelFields({...labelFields,tools:e.target.value})} placeholder="按作者提供的信息填写，未提供则留空" /></label>
         <label>创作方式<input maxLength={720} value={labelFields.methods} onChange={e => setLabelFields({...labelFields,methods:e.target.value})} placeholder="概念探索，品牌设计，图像生成" /></label>
         <label>主题标签<input value={form.tags} maxLength={480} onChange={e => change("tags", e.target.value)} placeholder="咖啡，传统文化，材料实验" /></label>
@@ -108,6 +119,8 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
         </section>)}
         <button type="button" disabled={form.story.steps.length >= 20} onClick={() => storyChange("steps",[...form.story.steps,emptyStep()])}>＋ 添加创作步骤</button>
         <label>经验与反思<textarea maxLength={4000} value={form.story.reflection} onChange={e => storyChange("reflection",e.target.value)} /></label>
+        <label>编辑备注（仅上传者与审核人员可见）<textarea maxLength={8000} value={form.story.editorialNote} onChange={e => storyChange("editorialNote", e.target.value)} placeholder="资料整理说明、尚缺素材、核对情况等写在这里，不混入作者的创作反思。" /></label>
+        {!!editorialIssues.length && <aside className="case-editorial-warning" role="status"><strong>公开文案需要调整</strong>{editorialIssues.map((issue, index) => <p key={`${issue.field}-${index}`}>{issue.message}</p>)}<small>可以先保存草稿，调整后再提交审核；平台不会自动删除或改写作者文字。</small></aside>}
         <h3>发布与附件权限</h3>
         <label>展示授权<select value={form.story.authorization} onChange={e => storyChange("authorization",e.target.value)}><option value="pending">待确认（仅保存草稿）</option><option value="confirmed">已获得作者展示授权</option></select></label>
         <label>授权说明（仅上传者与审核人员可见）<textarea maxLength={1000} value={form.story.authorizationNote} onChange={e => storyChange("authorizationNote",e.target.value)} placeholder="记录授权渠道、范围与时间，不填写私人联系方式" /></label>

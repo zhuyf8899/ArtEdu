@@ -33,6 +33,14 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
     finally { if (showLoading) setCatalogLoading(false); }
   };
   useEffect(() => { refresh(true).catch(error => onNotice(error.message)); }, []);
+  useEffect(() => {
+    // 分享同一社区页面的作品链接；仅请求指定作品，权限仍由 API 检查。
+    const workId = new URLSearchParams(window.location.search).get("work");
+    if (!workId) return;
+    let active = true;
+    getWork(encodeURIComponent(workId)).then(work => { if (active) setSelected(work); }).catch(error => { if (active) onNotice(error.message); });
+    return () => { active = false; };
+  }, []);
   const openWork = async work => {
     setLoading(true);
     try { setSelected(await getWork(work.id)); }
@@ -74,19 +82,20 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载案例社区</strong></section>;
   if (catalogError && !works.length && !myWorks.length) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} /><strong>案例社区暂时无法加载</strong><p>{catalogError}</p><button onClick={() => refresh(true).catch(error => onNotice(error.message))}>重新加载</button></section>;
   if (selected) {
+    const exhibition = selected.story?.origin === "collected" && selected.story?.displayStyle === "exhibition";
     const heroAsset = selected.assets?.find(asset => asset.asset_type === "image" && asset.url === selected.previewUrl) ?? selected.assets?.find(asset => asset.asset_type === "image");
-    return <><section className="community-detail">
-    <button className="learning-back" onClick={() => setSelected(null)}><ArrowLeft size={16} /> 返回案例社区</button>
+    return <><section className={`community-detail${exhibition ? " community-detail--exhibition" : ""}`}>
+    <button className="learning-back" onClick={() => { setSelected(null); const url = new URL(window.location.href); url.searchParams.delete("work"); window.history.replaceState(window.history.state, "", url); }}><ArrowLeft size={16} /> 返回案例社区</button>
     <div className="community-detail__hero">{selected.previewUrl ? <button className="case-image-button case-image-button--hero" onClick={() => setActiveImage({ url: selected.previewUrl, fileName: heroAsset?.file_name ?? selected.title, alt: selected.title })} aria-label={`查看并下载图片：${selected.title}`}><img src={selected.previewUrl} alt={selected.title} /></button> : <WorkVisualFallback work={selected} />}</div>
     <div className="community-detail__body">
-      <header><div><span>{selected.discipline} · {statusName(selected.status)}</span><h2>{selected.title}</h2><p>{selected.creators?.join("、") || selected.author} · {selected.tags?.map(tag => tag.name).join(" / ") || "未添加标签"}</p></div>
+      <header><div><span>{selected.discipline} · {exhibition ? "外部艺术案例" : statusName(selected.status)}</span><h2>{selected.title}</h2><p>{exhibition ? "原作者：" : ""}{selected.creators?.join("、") || selected.author}{!exhibition && ` · ${selected.tags?.map(tag => tag.name).join(" / ") || "未添加标签"}`}</p>{exhibition && <div className="case-labels">{selected.tags?.map(tag => <span key={tag.id ?? tag.name}>{tag.name}</span>)}</div>}</div>
         {selected.status === "approved" && <div><button aria-label="点赞案例" onClick={() => react("like")}><Heart weight={selected.liked ? "fill" : "bold"} /> {selected.likeCount}</button><button aria-label="收藏案例" onClick={() => react("favorite")}><BookmarkSimple weight={selected.favorited ? "fill" : "bold"} /> {selected.favoriteCount}</button></div>}
       </header>
       {editable && <div className="case-draft-actions"><button disabled={loading} onClick={() => setEditing(selected)}>编辑草稿／关联步骤图片</button><button disabled={loading} onClick={submit}>提交管理员审核</button><small>收集案例需先确认原作者和展示授权；保存不会自动发布。</small></div>}
       {selected.status === "rejected" && selected.latestRejection?.reason && <section className="case-review-feedback"><strong>审核意见 · {formatReviewDate(selected.latestRejection.createdAt)}</strong><p>{selected.latestRejection.reason}</p><small>修改并保存后，可再次提交审核；历史审核记录会保留。</small></section>}
       {selected.reviewHistory?.length > 0 && <details className="case-review-history"><summary>查看审核历史（{selected.reviewHistory.length}）</summary>{selected.reviewHistory.map((event, index) => <article key={`${event.action}-${event.createdAt}-${index}`}><strong>{reviewActionName(event.action)}</strong><time>{formatReviewDate(event.createdAt)}</time>{event.reason && <p>{event.reason}</p>}</article>)}</details>}
       <p className="community-summary">{selected.summary}</p>
-      <CaseStoryView work={selected} onOpenImage={setActiveImage} />
+      <CaseStoryView work={selected} onOpenImage={setActiveImage} exhibition={exhibition} />
       {!!selected.workflows?.length && <div className="same-workflow"><span>关联的教学工作流</span>{selected.workflows.map(workflow => <button key={workflow.id} onClick={() => onOpenWorkflow?.(workflow.id)}>查看「{workflow.name}」<ArrowRight size={15} /></button>)}</div>}
       {selected.status === "approved" && <><div className="community-report-row"><button onClick={() => setReportTarget({ type: "work", id: selected.id, label: selected.title })}><Flag size={16} /> 举报作品</button></div><section className="comment-section"><h3><ChatCircle size={20} /> 创作讨论</h3>{selected.comments?.map(item => <article key={item.id}><div><strong>{item.author}</strong><button className="comment-report" onClick={() => setReportTarget({ type: "comment", id: item.id, label: "这条评论" })}>举报</button></div><p>{item.content}</p></article>)}<form onSubmit={sendComment}><input maxLength={2000} value={comment} onChange={e => setComment(e.target.value)} aria-label="发表创作讨论" placeholder="写下你的建议或问题……" /><button aria-label="发表讨论"><PaperPlaneTilt /></button></form></section></>}
     </div>
