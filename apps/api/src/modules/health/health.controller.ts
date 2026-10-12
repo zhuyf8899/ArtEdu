@@ -21,7 +21,21 @@ export class HealthController {
     const environment = getEnvironment();
     let database = false, uploads = !environment.fileUploadsEnabled;
     try {
-      const result = await this.database.query("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='works' AND column_name='story_json' AND table_schema='public') AND to_regclass('public.content_reports') IS NOT NULL AS ready");
+      // A running API is not ready when a code update has left knowledge migrations pending.
+      const result = await this.database.query(`SELECT
+        EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='works' AND column_name='story_json' AND table_schema='public')
+        AND to_regclass('public.content_reports') IS NOT NULL
+        AND to_regclass('public.knowledge_nodes') IS NOT NULL
+        AND to_regclass('public.knowledge_edges') IS NOT NULL
+        AND to_regclass('public.knowledge_bindings') IS NOT NULL
+        AND to_regclass('public.ability_goals') IS NOT NULL
+        AND to_regclass('public.knowledge_ability_goals') IS NOT NULL
+        AND to_regclass('public.knowledge_activity_events') IS NOT NULL
+        AND to_regclass('public.tool_usage_events') IS NOT NULL
+        AND to_regclass('public.knowledge_learning_paths') IS NOT NULL
+        AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='knowledge_nodes' AND column_name='source')
+        AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='knowledge_bindings' AND column_name='source')
+        AND to_regprocedure('public.refresh_knowledge_labels_trigger()') IS NOT NULL AS ready`);
       database = result.rows[0]?.ready === true;
     } catch { /* Never leak database addresses or connection errors. */ }
     if (environment.fileUploadsEnabled) {
