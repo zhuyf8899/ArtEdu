@@ -15,10 +15,17 @@ export function decorateCourse(course) {
       : "UI 创作";
   return {
     ...course,
-    method: course.method ?? profile.method ?? inferredMethod,
-    author: course.author ?? course.creatorName ?? profile.author ?? "ArtEdu 教学团队",
-    tools: course.tools?.length ? course.tools : profile.tools ?? ["GPT-4o"],
+    method: course.method ?? course.catalog?.method ?? profile.method ?? inferredMethod,
+    author: course.author || course.catalog?.authorLabel || course.creatorName || profile.author || "作者待确认",
+    tools: Array.isArray(course.tools) ? course.tools : course.catalog?.tools ?? profile.tools ?? [],
   };
+}
+
+export function courseReadiness(course) {
+  if (course.archived || course.status === 'archived') return '已下架 · 保留记录';
+  if (course.availability === 'coming_soon') return '筹备中';
+  if (course.availability === 'trial') return '试学 · 待教研审核';
+  return '';
 }
 
 export function difficultyName(value) {

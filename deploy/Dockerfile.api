@@ -12,6 +12,8 @@ RUN cd apps/api && npm ci
 COPY apps/api ./apps/api
 COPY migrations ./migrations
 COPY seed ./seed
+# Content installer verifies the same public covers served by the web image.
+COPY admin-console/public/morph-v17 ./admin-console/public/morph-v17
 
 WORKDIR /app/apps/api
 RUN npm run build

@@ -11,6 +11,8 @@ import type {
 } from "./learning.contracts";
 
 interface LearningCourseRow extends QueryResultRow {
+  catalog_json?: Record<string, any>;
+  course_status?: string;
   knowledge_points: string[];
   id: string;
   title: string;
@@ -196,7 +198,7 @@ export class LearningService {
   private async listCourses(userId: string) {
     const result = await this.database.query<LearningCourseRow>(`
       SELECT c.id, c.title, c.summary, c.category, c.difficulty, c.estimated_minutes,
-        c.cover_url, c.cover_asset_key, c.cover_mime_type, c.knowledge_points,
+        c.cover_url, c.cover_asset_key, c.cover_mime_type, c.knowledge_points, c.catalog_json, c.status AS course_status,
         creator.display_name AS creator_name, e.status AS enrollment_status,
         COUNT(DISTINCT l.id)::int AS lesson_count,
         COUNT(DISTINCT l.id) FILTER (WHERE p.progress_percent = 100)::int AS completed_lessons,
@@ -208,12 +210,19 @@ export class LearningService {
       LEFT JOIN users creator ON creator.id = c.created_by
       LEFT JOIN course_lessons l ON l.course_id = c.id AND l.status = 'published'
       LEFT JOIN learning_progress p ON p.lesson_id = l.id AND p.user_id = e.user_id
-      WHERE e.user_id = $1 AND e.status <> 'withdrawn' AND c.status = 'published'
+      WHERE e.user_id = $1 AND e.status <> 'withdrawn' AND c.status IN ('published', 'archived')
       GROUP BY c.id, creator.display_name, e.status, e.updated_at
       ORDER BY MAX(p.updated_at) DESC NULLS LAST, e.updated_at DESC
     `, [userId]);
     return result.rows.map((row) => ({
       knowledgePoints: row.knowledge_points ?? [],
+      status: row.course_status ?? 'published',
+      archived: row.course_status === 'archived',
+      catalog: row.catalog_json ?? null,
+      availability: row.catalog_json?.availability ?? 'available',
+      author: row.catalog_json?.authorLabel || row.creator_name || '作者待确认',
+      method: row.catalog_json?.method,
+      tools: row.catalog_json?.tools,
       id: row.id,
       title: row.title,
       summary: row.summary ?? "",

@@ -5,6 +5,7 @@ const courseArtwork = {
   'course-vibe-gallery': '/assets/learning/vibe-coding.jpg',
 };
 export const morphCourseCover = course => course.coverImageUrl || course.coverUrl || courseArtwork[course.id] || '';
+export const morphCourseLevel = course => ({beginner:'入门',intermediate:'进阶',advanced:course.catalog?.bundleId==='morph-catalog-v1'?'专家':'高级'}[course.difficulty] || '入门');
 export const morphModuleLabel = (label, variant) => variant === 'morph' ? ({'AI 讲堂':'原子课程','设计工具':'技能工具'}[label] ?? label) : label;
 export function dailyQuotaLabel(quota = {}) {
   if (quota.dailyLimit == null) return '未设日上限';

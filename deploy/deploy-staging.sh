@@ -156,6 +156,9 @@ echo "[11/14] 应用数据库迁移"
 echo "[11b/14] 校验并安装公开案例展示包"
 # 只含已获展示授权的九个案例和图片；重复部署不会覆盖用户上传文件或案例内容。
 "${COMPOSE[@]}" run --rm api npm run showcase:install
+
+echo "[11c/14] 校验并安装 MORPH 课程与工具目录"
+"${COMPOSE[@]}" run --rm api npm run catalog:install
 echo "[12/14] 重建 embedding、应用与 RAG Worker"
 "${COMPOSE[@]}" up -d embedding api rag-worker web
 echo "[13/14] 容器状态与健康检查"

@@ -59,34 +59,11 @@
 .morph-v17 .morph-tool-catalog .tool-directory { display: block; }
 .morph-v17 .morph-tool-catalog .tool-directory__editor { margin-bottom: 24px; }
 .morph-v17 .morph-tool-catalog .tool-directory__list { margin-top: 0!important; }
-.morph-v17 .morph-tool-card { position: relative; min-width: 0; background: #ffffffed; border: 1px solid #fff; border-radius: 18px; box-shadow: 0 5px 18px #55449708; transition: transform .18s,box-shadow .18s; }
 .morph-v17 .morph-tool-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px #55449716; }
-.morph-v17 .morph-tool-card__launch { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 20px; width: 100%; height: 100%; min-height: 300px; padding: 24px; box-sizing: border-box; border: 0; border-radius: inherit; background: transparent; color: #171a2f; font-family: inherit; font-weight: 400; text-align: left; text-decoration: none; cursor: pointer; }
-.morph-v17 .morph-tool-card__head { display: flex; align-items: center; gap: 14px; min-height: 52px; padding-right: 20px; }
-.morph-v17 .morph-tool-card__head>div { flex: 1; min-width: 0; }
-.morph-v17 .morph-tool-card__icon { display: grid; place-items: center; flex: 0 0 52px; width: 52px; height: 52px; border: 1px solid #e5e3f0; border-radius: 13px; background: #fff; color: #7864ce; }
-.morph-v17 .morph-tool-card__icon img { width: 28px; height: 28px; object-fit: contain; }
 .morph-v17 .morph-tool-site-icon { position: relative; display: grid; place-items: center; width: 28px; height: 28px; }
 .morph-v17 .morph-tool-site-icon img { position: absolute; inset: 0; background: #fff; }
-.morph-v17 .morph-tool-card h2 { font-family: inherit; color: #171a2f; font-size: 20px; line-height: 28px; font-weight: 700; letter-spacing: 0; margin: 0 0 3px; word-break: normal; overflow-wrap: anywhere; }
-.morph-v17 .morph-tool-card__kind { display: block; color: #737a91; font-size: 12px; line-height: 19px; }
-.morph-v17 .morph-tool-card__featured { position: absolute; top: 19px; right: 20px; background: #e9edc8; color: #535d26; border-radius: 4px; padding: 2px 6px; font-size: 10px; line-height: 16px; }
-.morph-v17 .morph-tool-card__description { margin: 0; color: #626b85; font-size: 14px; line-height: 23px; font-weight: 400; min-height: 46px; }
-.morph-v17 .morph-tool-card__labels { display: flex; flex-wrap: wrap; gap: 6px; }
-.morph-v17 .morph-tool-card__labels span { display: inline-flex; padding: 3px 8px; border: 1px solid #e4def6; border-radius: 5px; background: #f1eefb; color: #7669b0; font-size: 12px; line-height: 18px; }
-.morph-v17 .morph-tool-card__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: auto; padding-top: 16px; border-top: 1px solid #ebe8f4; }
-.morph-v17 .morph-tool-card__footer>small { color: #727a90; font: 11px/18px ui-monospace,monospace; overflow-wrap: anywhere; }
-.morph-v17 .morph-tool-card__open { display: inline-flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 7px; background: #171a2f; color: #fff; font-size: 12px; line-height: 20px; white-space: nowrap; }
-.morph-v17 .morph-tool-card__edit { position: absolute; top: 52px; right: 14px; display: grid; place-items: center; width: 28px; height: 28px; padding: 5px; border: 1px solid #dddff0; border-radius: 7px; background: #fff; color: #6554e8; }
-.morph-v17 .tool-directory__list--list .morph-tool-card__launch { display: grid; grid-template-columns: minmax(220px,1fr) minmax(0,1fr) 220px; align-items: center; min-height: 140px; gap: 12px 24px; }
-.morph-v17 .tool-directory__list--list .morph-tool-card__head { grid-column: 1; grid-row: 1/3; }
-.morph-v17 .tool-directory__list--list .morph-tool-card__description { grid-column: 2; grid-row: 1; min-height: 0; }
-.morph-v17 .tool-directory__list--list .morph-tool-card__labels { grid-column: 2; grid-row: 2; }
-.morph-v17 .tool-directory__list--list .morph-tool-card__footer { grid-column: 3; grid-row: 1/3; flex-direction: column; align-items: flex-end; padding-top: 0; border: 0; margin: 0; }
 @media (max-width:1199px) {
   .morph-v17 .morph-discovery__main { grid-template-columns: minmax(0,1fr); }
   .morph-v17 .morph-tool-catalog .tool-directory__list--grid { grid-template-columns: repeat(2,minmax(0,1fr))!important; }
-  .morph-v17 .tool-directory__list--list .morph-tool-card__launch { grid-template-columns: minmax(190px,1fr) minmax(0,1fr); }
-  .morph-v17 .tool-directory__list--list .morph-tool-card__footer { grid-column: 1/-1; grid-row: 3; flex-direction: row; align-items: center; border-top: 1px solid #ebe8f4; padding-top: 14px; }
 }
 @media (prefers-reduced-motion:reduce) { .morph-v17 .morph-tool-card { transition: none; }.morph-v17 .morph-tool-card:hover { transform: none; } }
