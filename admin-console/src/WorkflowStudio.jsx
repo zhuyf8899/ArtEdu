@@ -134,7 +134,8 @@ function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder, variant, on
   const [editingId, setEditingId] = useState(null);
   const [category, setCategory] = useState("全部");
   const [viewMode, setViewMode] = useState("grid");
-  const [toolQuery,setToolQuery] = useState('');
+  const [toolQuery,setToolQuery] = useState(()=>new URLSearchParams(window.location.search).get('toolQuery')||'');
+  useEffect(()=>{setToolQuery(new URLSearchParams(window.location.search).get('toolQuery')||'');setCategory('全部');},[window.location.search]);
   const [toolState,setToolState] = useState('loading');
   const [toolError,setToolError] = useState('');
 
@@ -147,7 +148,7 @@ function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder, variant, on
   const categories = useMemo(() => ["全部", ...new Set(links.filter((item) => item.status === "active").map((item) => item.category).filter(Boolean))], [links]);
   // 皮影与其它工具同属一份清单：早前它单独占一张大卡，其余工具在下面另起一段；
   // 现在全部按同一行式呈现，管理员也能像别的工具一样编辑它。
-  const visibleLinks = useMemo(() => links.filter((item) => item.status === "active" && (category === "全部" || item.category === category) && morphQueryMatches([item.name,item.detail,item.category],toolQuery)), [category, links, toolQuery]);
+  const visibleLinks = useMemo(() => links.filter((item) => item.status === "active" && (category === "全部" || item.category === category) && morphQueryMatches([item.name,item.detail,item.category,...(item.catalog?.tags||[])],toolQuery)), [category, links, toolQuery]);
   const openNew = () => { setEditingId(null); setForm(emptyToolForm()); setEditorOpen(true); };
   const edit = (item) => { setEditingId(item.id); setForm({ category: item.category, name: item.name, detail: item.detail, href: item.href, coverImageUrl: item.coverImageUrl || "", iconKey: item.iconKey, launchMode: item.launchMode, featured: item.featured, status: item.status }); setEditorOpen(true); };
   const submit = async (event) => {
@@ -161,7 +162,10 @@ function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder, variant, on
       loading={toolState==='loading'} resultLabel={`${visibleLinks.length} / ${links.filter(item=>item.status==='active').length} 个工具`}
       selected={[toolQuery&&{label:`搜索：${toolQuery}`,onRemove:()=>setToolQuery('')},category!=='全部'&&{label:category,onRemove:()=>setCategory('全部')}].filter(Boolean)}
       onClear={()=>{setCategory('全部');setToolQuery('');}} actions={<div className="tool-directory__actions"><div className="tool-directory__view-switch" role="group" aria-label="切换工具浏览方式"><button type="button" className={viewMode === "grid" ? "is-active" : ""} aria-label="卡片浏览" aria-pressed={viewMode === "grid"} title="卡片浏览" onClick={() => setViewMode("grid")}><SquaresFour size={17} weight="bold" /></button><button type="button" className={viewMode === "list" ? "is-active" : ""} aria-label="列表浏览" aria-pressed={viewMode === "list"} title="列表浏览" onClick={() => setViewMode("list")}><ListBullets size={18} weight="bold" /></button></div>{canManage && <button className="outline-button tool-directory__manage" onClick={openNew}><Plus size={16} weight="bold" /> 添加工具</button>}</div>}
-    />}{variant === 'morph' && toolState === 'error' && <div className="empty" role="alert"><p>{toolError}</p><button className="button secondary" onClick={load}>重新加载工具</button></div>}{variant !== 'morph' && <div className="tool-directory__toolbar" aria-label="工具分类"><span>按用途浏览</span><div>{categories.map((item) => <button type="button" className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><em>{visibleLinks.length} 个入口</em></div>}<div className={`tool-directory__list tool-directory__list--${viewMode}`}>{visibleLinks.map((tool) => <ToolDirectoryCard variant={variant} key={tool.id} tool={tool} canManage={canManage} onEdit={edit} onNavigate={onNavigate} onOpenWorkflowBuilder={onOpenWorkflowBuilder} />)}</div>{variant === 'morph' && toolState === 'ready' && !visibleLinks.length && <div className="empty"><h2>没有匹配的工具</h2><p>试试其他名称或用途分类。</p><button className="button secondary" onClick={()=>{setCategory('全部');setToolQuery('');}}>清除工具筛选</button></div>}</section>;
+    />}{variant === 'morph' && toolState === 'error' && <div className="empty" role="alert"><p>{toolError}</p><button className="button secondary" onClick={load}>重新加载工具</button></div>}{variant !== 'morph' && <div className="tool-directory__toolbar" aria-label="工具分类"><span>按用途浏览</span><div>{categories.map((item) => <button type="button" className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><em>{visibleLinks.length} 个入口</em></div>}
+    <div className={`tool-directory__list tool-directory__list--${viewMode}`}>{visibleLinks.map((tool) => <ToolDirectoryCard variant={variant} key={tool.id} tool={tool} canManage={canManage} onEdit={edit} onNavigate={onNavigate} onOpenWorkflowBuilder={onOpenWorkflowBuilder} />)}</div>
+    {variant === 'morph' && <p className="morph-tool-directory-note">外部工具入口仅跳转官方网站，不代表已接入平台 API；账号、费用及访问政策以官网为准。</p>}
+    {variant === 'morph' && toolState === 'ready' && !visibleLinks.length && <div className="empty"><h2>没有匹配的工具</h2><p>试试其他名称或用途分类。</p><button className="button secondary" onClick={()=>{setCategory('全部');setToolQuery('');}}>清除工具筛选</button></div>}</section>;
 }
 
 /**

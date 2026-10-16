@@ -1,7 +1,45 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
-import { dailyQuotaLabel, morphCourseCover, morphQueryMatches, morphModuleLabel, toolPresentation } from '../src/morph/morphPresentation.js';
+import { dailyQuotaLabel, morphCourseCover, morphQueryMatches, morphModuleLabel, toolPresentation, morphCourseLevel } from '../src/morph/morphPresentation.js';
+import { toolCardMetadata } from '../src/morph/toolCardMetadata.js';
+
+test('tool cards use catalog tags, neutral source subtitles and semantic category colors',()=>{
+  const meta=toolCardMetadata({id:'morph-tool-blender',category:'3D 与动态',catalog:{bundleId:'morph-catalog-v1',subtitle:'开源三维创作平台',tags:['3D','Rendering','3D','  ',' Animation ',null],linkReview:{result:'not_confirmed'}}});
+  assert.deepEqual(meta,{subtitle:'开源三维创作平台',tone:'three',tags:['3D','Rendering','Animation'],unconfirmed:true});
+  assert.equal(toolCardMetadata({category:'AI 创作与生成'}).tone,'ai');
+  assert.equal(toolCardMetadata({category:'实时与交互'}).tone,'live');
+  assert.equal(toolCardMetadata({category:'灵感与资源'}).tone,'resource');
+  assert.deepEqual(toolCardMetadata({}),{subtitle:'',tone:'default',tags:[],unconfirmed:false});
+  assert.equal(toolCardMetadata({id:'morph-tool-blender'}).subtitle,'');
+  assert.equal(toolCardMetadata({catalog:{subtitle:'管理员提供的说明'}}).subtitle,'管理员提供的说明');
+});
+
+test('compact tool logo cannot stretch into a hero and related courses stay collapsed',async()=>{
+  const card=await readFile(new URL('../src/morph/MorphToolCard.jsx',import.meta.url),'utf8');
+  const css=await readFile(new URL('../src/morph/tool-cards.css',import.meta.url),'utf8');
+  assert.doesNotMatch(card,/morph-tool-card__preview|showAllCourses/);
+  assert.match(card,/useState\(false\)/);assert.match(card,/hidden=\{!showCourses\}/);
+  assert.match(card,/aria-controls=\{coursesId\}/);assert.match(card,/related\.map/);
+  assert.match(card,/onError=\{\(\) => setLogoFailed\(true\)\}/);
+  assert.match(css,/morph-tool-card__icon>img\{[^}]*width:36px;[^}]*height:36px;[^}]*object-fit:contain/);
+  assert.match(css,/morph-tool-card__courses\[hidden\]\{display:none\}/);
+  assert.match(css,/morph-tool-card__title>p\{[^}]*min-height:0/);
+  assert.match(css,/tool-directory__list--grid\{align-items:stretch\}/);
+  assert.match(css,/workflow-card>button\{[^}]*background:#171a2f;color:#fff/);
+  assert.match(css,/justify-content:space-between;align-items:center;padding-top:14px/);
+});
+
+test('tool actions remain separate from course disclosures and preserve safe launch semantics',async()=>{
+  const card=await readFile(new URL('../src/morph/MorphToolCard.jsx',import.meta.url),'utf8');
+  assert.match(card,/aria-labelledby=\{titleId\}/);
+  assert.match(card,/href=\{tool.href\}/);assert.match(card,/target=\{info.newTab/);
+  assert.match(card,/noopener noreferrer/);assert.match(card,/referrerPolicy="no-referrer"/);
+  assert.match(card,/onNavigate\(`\/learning\?course=\$\{encodeURIComponent\(id\)\}`\)/);
+  assert.match(card,/info.workflow \? <button[^>]*onClick=\{onOpenWorkflowBuilder\}/);
+  assert.match(card,/canManage && <button/);
+  assert.doesNotMatch(card,/localStorage|MORPH_DATA|免费增值|LAB PICK/);
+});
 test('search module labels follow MORPH navigation without changing classic taxonomy or IDs',()=>{
   assert.equal(morphModuleLabel('AI 讲堂','morph'),'原子课程');
   assert.equal(morphModuleLabel('设计工具','morph'),'技能工具');
@@ -92,6 +130,15 @@ test('desktop tool grid and readable shared filters have focus and reduced-motio
   assert.match(css,/:focus-visible/);assert.match(css,/prefers-reduced-motion:reduce/);
   assert.match(css,/height: 44px/);assert.match(css,/min-height: 38px/);
   const card=await readFile(new URL('../src/morph/MorphToolCard.jsx',import.meta.url),'utf8');
-  assert.match(card,/noopener noreferrer/);assert.match(card,/打开官网/);assert.match(card,/onOpenWorkflowBuilder/);
+  assert.match(card,/noopener noreferrer/);assert.match(card,/`打开 \$\{info.name\}`/);assert.match(card,/onOpenWorkflowBuilder/);
   assert.doesNotMatch(card,/免费增值|收藏 WorkBuddy|浏览量|price|rating/);
+});
+
+test('final handoff course labels and preview use stable course codes, not array order',async()=>{
+  assert.equal(morphCourseLevel({difficulty:'advanced',catalog:{bundleId:'morph-catalog-v1'}}),'专家');
+  assert.equal(morphCourseLevel({difficulty:'advanced'}),'高级');
+  const source=await readFile(new URL('../src/morph/MorphCatalog.jsx',import.meta.url),'utf8');
+  assert.match(source,/code==='DTH-10'/);assert.match(source,/POS-11/);assert.match(source,/PRD-12/);assert.match(source,/INF-13/);
+  assert.doesNotMatch(source,/onOpen\(courses\[0\]\.id\)/);
+  assert.match(source,/查看详情/);assert.match(source,/耗时/);assert.match(source,/c\.catalog\.code/);
 });

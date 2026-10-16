@@ -26,6 +26,7 @@ import type {
 } from "./courses.contracts";
 
 interface CourseRow extends QueryResultRow {
+  catalog_json?: Record<string, any>;
   knowledge_points: string[];
   id: string;
   slug: string;
@@ -51,6 +52,7 @@ interface CourseRow extends QueryResultRow {
 }
 
 interface LessonRow extends QueryResultRow {
+  teaching_json?: Record<string, any>;
   knowledge_points: string[];
   id: string;
   title: string;
@@ -158,7 +160,7 @@ export class CoursesService {
       SELECT c.*, u.display_name AS creator_name,
         COUNT(DISTINCT l.id)::int AS lesson_count,
         COUNT(DISTINCT all_e.id)::int AS enrollment_count,
-        COALESCE(ROUND(AVG(p.progress_percent)), 0)::int AS progress_percent,
+        COALESCE(ROUND(AVG(COALESCE(p.progress_percent, 0))), 0)::int AS progress_percent,
         MAX(my_e.status) AS enrollment_status
       FROM courses c
       LEFT JOIN users u ON u.id = c.created_by
@@ -179,7 +181,7 @@ export class CoursesService {
       SELECT c.*, u.display_name AS creator_name,
         COUNT(DISTINCT l.id)::int AS lesson_count,
         COUNT(DISTINCT all_e.id)::int AS enrollment_count,
-        COALESCE(ROUND(AVG(p.progress_percent)), 0)::int AS progress_percent,
+        COALESCE(ROUND(AVG(COALESCE(p.progress_percent, 0))), 0)::int AS progress_percent,
         MAX(my_e.status) AS enrollment_status
       FROM courses c
       LEFT JOIN users u ON u.id = c.created_by
@@ -191,7 +193,10 @@ export class CoursesService {
       GROUP BY c.id, u.display_name
     `, [actor.id, courseId]);
     const course = courseResult.rows[0];
-    if (!course) throw new NotFoundException("课程不存在或尚未发布");
+    if (!course) {
+      const legacy = await this.database.query("SELECT status FROM courses WHERE id=$1", [courseId]);
+      throw new NotFoundException(legacy.rows[0]?.status === 'archived' ? "课程已下架，历史学习记录与笔记仍然保留，请前往原子课程选择新内容" : "课程不存在或尚未发布");
+    }
     // 课件预览面向课程创建教师/管理员与已选课学生。
     const isManager = actor.roles.includes("admin") || (actor.roles.includes("teacher") && course.created_by === actor.id);
     const canViewMaterials = isManager || ["in_progress", "completed"].includes(course.enrollment_status ?? "");
@@ -200,7 +205,7 @@ export class CoursesService {
       this.database.query<LessonRow>(`
         SELECT l.id, l.title, l.summary, l.lesson_type, l.sort_order, l.estimated_minutes,
           l.workflow_id, l.model_config_ids, l.knowledge_points, l.learning_steps, l.practice_task,
-          l.completion_criteria, l.requires_work_submission,
+          l.completion_criteria, l.requires_work_submission, l.teaching_json,
           COALESCE(p.progress_percent, 0)::int AS progress_percent,
           COALESCE(p.status, 'not_started') AS progress_status,
           submission.work_id AS submitted_work_id, submission.note AS submission_note
@@ -225,6 +230,7 @@ export class CoursesService {
         id: lesson.id,
         title: lesson.title,
         summary: lesson.summary ?? "",
+        teaching: lesson.teaching_json ?? null,
         lessonType: lesson.lesson_type,
         sortOrder: lesson.sort_order,
         estimatedMinutes: lesson.estimated_minutes ?? 0,
@@ -269,8 +275,9 @@ export class CoursesService {
 
   // 选课入口：先确认课程可读，再记录当前用户的选课关系。
   async enroll(actor: Actor, courseId: string) {
-    const published = await this.database.query("SELECT id FROM courses WHERE id = $1 AND status = 'published'", [courseId]);
+    const published = await this.database.query("SELECT id,catalog_json FROM courses WHERE id = $1 AND status = 'published'", [courseId]);
     if (!published.rows[0]) throw new NotFoundException("课程不存在或尚未发布");
+    if (published.rows[0].catalog_json?.availability === 'coming_soon') throw new BadRequestException("课程筹备中，暂不开放选课或记录完成进度");
     await this.database.query(`
       INSERT INTO course_enrollments (id, user_id, course_id)
       VALUES ($1, $2, $3)
@@ -417,7 +424,7 @@ export class CoursesService {
     const [lessons, resources] = await Promise.all([
       this.database.query<LessonRow>(`
         SELECT id,title,summary,lesson_type,sort_order,estimated_minutes,workflow_id,model_config_ids,
-          knowledge_points,learning_steps,practice_task,completion_criteria,requires_work_submission,
+          knowledge_points,learning_steps,practice_task,completion_criteria,requires_work_submission,teaching_json,
           0::int AS progress_percent,'not_started'::text AS progress_status
         FROM course_lessons WHERE course_id=$1 ORDER BY sort_order,created_at
       `, [courseId]),
@@ -430,6 +437,7 @@ export class CoursesService {
       ...course,
       lessons: lessons.rows.map((lesson) => ({
         id: lesson.id, title: lesson.title, summary: lesson.summary ?? "", lessonType: lesson.lesson_type,
+        teaching: lesson.teaching_json ?? null,
         estimatedMinutes: lesson.estimated_minutes ?? 0, workflowId: lesson.workflow_id,
         modelConfigIds: lesson.model_config_ids ?? [],
         knowledgePoints: lesson.knowledge_points ?? [],
@@ -850,6 +858,11 @@ export class CoursesService {
 
   private mapCourse(row: CourseRow) {
     return {
+      catalog: row.catalog_json ?? null,
+      availability: row.catalog_json?.availability ?? 'available',
+      author: row.catalog_json?.authorLabel || row.creator_name || '',
+      method: row.catalog_json?.method,
+      tools: row.catalog_json?.tools,
       knowledgePoints: row.knowledge_points ?? [],
       id: row.id,
       slug: row.slug,

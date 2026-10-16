@@ -1,0 +1,1238 @@
+{
+  "id": "morph-catalog-v1",
+  "version": 1,
+  "source": "MORPH LAB v17 用户提供交接包",
+  "notice": "目录依据交接稿；试学讲义为新编待教研审核内容。工具仅为第三方导航，不代表 API 接入、免费或可在所有地区使用。",
+  "archiveCourseIds": [
+    "course-ai-design-foundation",
+    "course-traditional-pattern",
+    "course-vibe-gallery"
+  ],
+  "archiveToolIds": [
+    "tool-directory-figma",
+    "tool-directory-canva",
+    "tool-directory-photopea",
+    "tool-directory-behance",
+    "tool-directory-unsplash"
+  ],
+  "courses": [
+    {
+      "id": "morph-course-col-01",
+      "legacyId": "257:605",
+      "code": "COL-01",
+      "title": "色彩构成基础",
+      "summary": "从色彩原理到实际应用，建立系统的色彩认知与搭配能力，掌握设计中的色彩表达方法。",
+      "category": "设计基础",
+      "difficulty": "beginner",
+      "estimatedMinutes": 45,
+      "coverUrl": "/morph-v17/assets/48f75777-9e36-4092-a4a1-e571b1e97c3e.svg",
+      "availability": "trial",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-figma",
+        "morph-tool-pinterest"
+      ],
+      "tools": [
+        "Figma",
+        "Pinterest"
+      ],
+      "lessons": [
+        {
+          "id": "observe",
+          "title": "认识色相、明度与饱和度",
+          "estimatedMinutes": 15,
+          "knowledgePoints": [
+            "色相",
+            "明度",
+            "饱和度"
+          ],
+          "summary": "能用三个维度描述颜色，而不是只说“这个颜色好看”。准备纸笔或任意支持取色的设计工具。",
+          "learningSteps": [
+            "选取一张自己拍摄的照片，提取三个主要颜色。",
+            "分别用色相、明度、饱和度描述颜色，记录各自的作用。",
+            "将照片临时转为灰度，检查明暗关系是否符合原先判断。"
+          ],
+          "practiceTask": "制作一张三色观察卡，每个颜色写一句描述；比较彩色和灰度版本。",
+          "completionCriteria": "包含三个色块及其色值；能分别描述三个维度，并说明一次判断修正。",
+          "requiresWorkSubmission": false,
+          "teaching": {
+            "reviewStatus": "pending",
+            "notice": "新编试学讲义 · 待教研审核；完成记录仅表示自主练习，不代表能力认证。",
+            "sections": [
+              {
+                "heading": "学习目标",
+                "text": "能用三个维度描述颜色，而不是只说“这个颜色好看”。准备纸笔或任意支持取色的设计工具。"
+              },
+              {
+                "heading": "三个维度",
+                "text": "色相帮助区分红、黄、蓝等颜色倾向；明度描述明暗；饱和度描述颜色的鲜艳程度。同一色相可以通过明度与饱和度变化形成丰富层次。屏幕、环境光和印刷材料会改变观感。"
+              },
+              {
+                "heading": "观察示范",
+                "text": "以蓝色为例：将中间蓝与较浅蓝比较，先判断明暗，再判断鲜艳程度。不要把“浅”简单等同于“低饱和”。下面色块仅用于视觉观察，色值不代表唯一正确答案。"
+              }
+            ],
+            "visual": "color"
+          }
+        },
+        {
+          "id": "palette",
+          "title": "建立主色、辅助色与强调色",
+          "estimatedMinutes": 15,
+          "knowledgePoints": [
+            "配色角色",
+            "视觉层级"
+          ],
+          "summary": "将颜色分配给不同的信息角色，建立一组服务于主题的配色。",
+          "learningSteps": [
+            "写下主题和希望观众先看到的信息。",
+            "制作两个不同强调色的方案，其他条件保持一致。",
+            "用灰度与缩略图比较层级，记录取舍理由。"
+          ],
+          "practiceTask": "使用同一组内容制作两张配色小样，可以用手绘或设计软件完成。",
+          "completionCriteria": "两个方案均标出主色、辅助色与强调色；说明选择依据，不仅评价“好看”。",
+          "requiresWorkSubmission": false,
+          "teaching": {
+            "reviewStatus": "pending",
+            "notice": "新编试学讲义 · 待教研审核；完成记录仅表示自主练习，不代表能力认证。",
+            "sections": [
+              {
+                "heading": "学习目标",
+                "text": "将颜色分配给不同的信息角色，建立一组服务于主题的配色。"
+              },
+              {
+                "heading": "操作示范",
+                "text": "为“安静的校园展览”先选择低刺激的背景和正文颜色，再选择少量强调色标记日期与入口。主色不必占固定比例；颜色用量应服务于阅读层级，不要机械套用比例口诀。"
+              },
+              {
+                "heading": "检查方法",
+                "text": "将方案缩小查看：标题、正文和行动入口应仍能分辨。不能只靠红绿区别状态，应同时使用文字或图标。涉及正式界面交付时，还需按适用的可访问性标准检查对比度。"
+              }
+            ],
+            "visual": "color"
+          }
+        },
+        {
+          "id": "deliver",
+          "title": "完成配色海报与自评",
+          "estimatedMinutes": 15,
+          "knowledgePoints": [
+            "配色应用",
+            "设计复盘"
+          ],
+          "summary": "把颜色观察和配色角色应用到一张完整的小海报，并形成可复查的作品记录。",
+          "learningSteps": [
+            "完成海报并保留灰度对照。",
+            "写出三个颜色的角色，以及一次修改前后的变化。",
+            "保存自己的作品草稿并在本课时关联，逐项检查完成标准。"
+          ],
+          "practiceTask": "提交一张展览海报、灰度对照及不少于三句的设计自评。",
+          "completionCriteria": "必需信息齐全；颜色角色清楚；有灰度检查与修改说明；已关联本人作品。",
+          "requiresWorkSubmission": true,
+          "teaching": {
+            "reviewStatus": "pending",
+            "notice": "新编试学讲义 · 待教研审核；完成记录仅表示自主练习，不代表能力认证。",
+            "sections": [
+              {
+                "heading": "学习目标",
+                "text": "把颜色观察和配色角色应用到一张完整的小海报，并形成可复查的作品记录。"
+              },
+              {
+                "heading": "任务示范",
+                "text": "海报包含展览名称、时间、地点及一个入口提示。先以灰度排出信息，再应用上一课选定的配色。若用 AI 生成背景，记录所用工具、提示词和人工修改，检查生成内容的使用许可。"
+              },
+              {
+                "heading": "提交方式",
+                "text": "导出图片，在案例社区保存自己的作品草稿；回到本课时选择该作品。提交包含配色方案与自评，不能把参考作品当作自己的成果。"
+              }
+            ],
+            "visual": "color"
+          }
+        }
+      ]
+    },
+    {
+      "id": "morph-course-typ-02",
+      "legacyId": "257:633",
+      "code": "TYP-02",
+      "title": "字体认知",
+      "summary": "理解衬线、无衬线与字重层级，掌握中文与西文混排的基本判断与选用方法。",
+      "category": "设计基础",
+      "difficulty": "beginner",
+      "estimatedMinutes": 30,
+      "coverUrl": "/morph-v17/assets/cdc8870b-5500-47f7-aedf-4d2a5db4c15e.svg",
+      "availability": "trial",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-figma"
+      ],
+      "tools": [
+        "Figma"
+      ],
+      "lessons": [
+        {
+          "id": "observe",
+          "title": "识别字体特征与使用条件",
+          "estimatedMinutes": 10,
+          "knowledgePoints": [
+            "字体分类",
+            "字体授权"
+          ],
+          "summary": "观察字体形态，并能说明选用字体的场景与授权条件。",
+          "learningSteps": [
+            "选择两种有明确授权说明的字体。",
+            "排出同样的中英文与数字样句。",
+            "记录形态区别、适用场景与授权来源。"
+          ],
+          "practiceTask": "制作字体对照页，至少列出三处具体形态差异。",
+          "completionCriteria": "样句一致；包含中文、英文、数字和标点；记录授权来源而非笼统写“免费”。",
+          "requiresWorkSubmission": false,
+          "teaching": {
+            "reviewStatus": "pending",
+            "notice": "新编试学讲义 · 待教研审核；完成记录仅表示自主练习，不代表能力认证。",
+            "sections": [
+              {
+                "heading": "学习目标",
+                "text": "观察字体形态，并能说明选用字体的场景与授权条件。"
+              },
+              {
+                "heading": "观察示范",
+                "text": "比较衬线与无衬线字体：关注笔画末端、粗细变化、字面大小和内白。中文宋体与黑体可作为观察起点，但不能仅凭分类判断一款字体是否适合某个任务。"
+              },
+              {
+                "heading": "实际选用",
+                "text": "用同一段标题与正文比较两种字体，检查标点、数字、中英文混排和缺字。下载字体不等于获得商业使用权，应阅读字体文件附带或发行方提供的授权。"
+              }
+            ],
+            "visual": "type"
+          }
+        },
+        {
+          "id": "hierarchy",
+          "title": "用字号与字重建立阅读顺序",
+          "estimatedMinutes": 10,
+          "knowledgePoints": [
+            "字阶",
+            "中西文混排"
+          ],
+          "summary": "在不增加装饰的前提下，通过排版形成标题、辅助信息与正文层级。",
+          "learningSteps": [
+            "为展览名称、日期与介绍设置三档文字层级。",
+            "对齐混排中的数字、标点与基线，记录手动调整。",
+            "请他人说出首先注意到的信息，或自行缩略检查。"
+          ],
+          "practiceTask": "用相同内容制作两个字阶方案，说明最终选择。",
+          "completionCriteria": "三档层级可辨；没有缺字和异常逐字换行；写出字号、字重及间距的设置依据。",
+          "requiresWorkSubmission": false,
+          "teaching": {
+            "reviewStatus": "pending",
+            "notice": "新编试学讲义 · 待教研审核；完成记录仅表示自主练习，不代表能力认证。",
+            "sections": [
+              {
+                "heading": "学习目标",
+                "text": "在不增加装饰的前提下，通过排版形成标题、辅助信息与正文层级。"
+              },
+              {
+                "heading": "操作示范",
+                "text": "先限定一至两种字体，建立三档字阶。用大小、字重和间距中的少量变量区分层级；中英文的视觉大小可能不同，需要按实际字形观察，而不是机械使用相同字号。"
+              },
+              {
+                "heading": "检查方法",
+                "text": "以正常阅读距离观察，并缩小检查首要信息是否突出。避免为了放大标题而逐字断行；长标题应按词组和语义换行。"
+              }
+            ],
+            "visual": "type"
+          }
+        },
+        {
+          "id": "deliver",
+          "title": "完成展览文字版面",
+          "estimatedMinutes": 10,
+          "knowledgePoints": [
+            "字体应用",
+            "设计说明"
+          ],
+          "summary": "将字体选择与阅读层级整合为一张以文字为主的展览海报。",
+          "learningSteps": [
+            "完成版面，检查缺字、标点和长标题。",
+            "写出字体选择、层级和混排处理的依据。",
+            "关联本人作品，确认完成标准。"
+          ],
+          "practiceTask": "提交一张文字海报及字体授权/选用说明。",
+          "completionCriteria": "信息完整；层级清晰；中英文和标点经过检查；已关联本人作品并注明字体来源。",
+          "requiresWorkSubmission": true,
+          "teaching": {
+            "reviewStatus": "pending",
+            "notice": "新编试学讲义 · 待教研审核；完成记录仅表示自主练习，不代表能力认证。",
+            "sections": [
+              {
+                "heading": "学习目标",
+                "text": "将字体选择与阅读层级整合为一张以文字为主的展览海报。"
+              },
+              {
+                "heading": "制作要求",
+                "text": "版面包括中英文展览名、时间、地点与简短介绍。先明确阅读顺序，再调整行宽、段落间距和边缘留白。字体不是越多越好，每一次变化都应有信息目的。"
+              },
+              {
+                "heading": "复盘与提交",
+                "text": "在案例社区保存自己的作品草稿，附字体名称、授权来源和排版说明，再回到课时关联作品。保留至少一次修改记录，区分借鉴与原创。"
+              }
+            ],
+            "visual": "type"
+          }
+        }
+      ]
+    },
+    {
+      "id": "morph-course-grd-03",
+      "legacyId": "257:666",
+      "code": "GRD-03",
+      "title": "版式网格入门",
+      "summary": "学习 12 栏响应式网格的搭建方法，完成海报与界面的版面规范与秩序训练。",
+      "category": "设计基础",
+      "difficulty": "beginner",
+      "estimatedMinutes": 60,
+      "coverUrl": "/morph-v17/assets/fca3b7b1-1ecd-4c5b-ad2b-c926314635e6.svg",
+      "availability": "trial",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-figma"
+      ],
+      "tools": [
+        "Figma"
+      ],
+      "lessons": [
+        {
+          "id": "structure",
+          "title": "认识栏、栏间距与外边距",
+          "estimatedMinutes": 20,
+          "knowledgePoints": [
+            "网格",
+            "留白"
+          ],
+          "summary": "用网格解释版面秩序，区分内容宽度、栏间距与外边距。",
+          "learningSteps": [
+            "按示例计算并建立网格，可用设计软件或方格纸。",
+            "摆放一张图片、标题和正文，标出各占几栏。",
+            "隐藏辅助线检查，再显示辅助线核对对齐。"
+          ],
+          "practiceTask": "制作一张带网格标注的版面草图。",
+          "completionCriteria": "外边距、栏数、栏间距和栏宽计算相符；至少三类元素有明确对齐线。",
+          "requiresWorkSubmission": false,
+          "teaching": {
+            "reviewStatus": "pending",
+            "notice": "新编试学讲义 · 待教研审核；完成记录仅表示自主练习，不代表能力认证。",
+            "sections": [
+              {
+                "heading": "学习目标",
+                "text": "用网格解释版面秩序，区分内容宽度、栏间距与外边距。"
+              },
+              {
+                "heading": "操作示范",
+                "text": "以 1200 像素宽的练习画布为例，左右各留 60 像素，设置 12 栏、栏间距 24 像素。单栏宽度为（1200−120−11×24）÷12＝68 像素。12 栏是一种练习选择，不是所有设计的固定规则。"
+              },
+              {
+                "heading": "观察方法",
+                "text": "先画辅助线，再让标题、图片和正文沿同一组边界对齐。网格可以隐藏，但应能解释对齐关系。避免为了填满画布而压缩留白。"
+              }
+            ],
+            "visual": "grid"
+          }
+        },
+        {
+          "id": "layout",
+          "title": "使用跨栏与节奏组织内容",
+          "estimatedMinutes": 20,
+          "knowledgePoints": [
+            "跨栏",
+            "信息节奏"
+          ],
+          "summary": "保持统一网格，同时通过跨栏与留白形成主次变化。",
+          "learningSteps": [
+            "基于同一网格制作 8/4 与 6/6 两个版面。",
+            "给长标题、短介绍和一张竖图分别找合理位置。",
+            "比较阅读顺序与留白，注明取舍。"
+          ],
+          "practiceTask": "提交两个带跨栏标注的布局方案。",
+          "completionCriteria": "两版内容相同；跨栏宽度计算正确；图文不重叠；有基于阅读目的的取舍说明。",
+          "requiresWorkSubmission": false,
+          "teaching": {
+            "reviewStatus": "pending",
+            "notice": "新编试学讲义 · 待教研审核；完成记录仅表示自主练习，不代表能力认证。",
+            "sections": [
+              {
+                "heading": "学习目标",
+                "text": "保持统一网格，同时通过跨栏与留白形成主次变化。"
+              },
+              {
+                "heading": "操作示范",
+                "text": "将主要图片设为 8 栏、辅助信息设为 4 栏；再尝试图片 6 栏、正文 6 栏。比较图片比例、行宽及阅读顺序，不能只比较哪个方案更满。"
+              },
+              {
+                "heading": "边界检查",
+                "text": "跨 n 栏的宽度应包含 n 个栏宽和 n−1 个栏间距。检查卡片边界、图片裁切和长标题换行，不让单个元素破坏整排节奏。"
+              }
+            ],
+            "visual": "grid"
+          }
+        },
+        {
+          "id": "deliver",
+          "title": "完成规整的课程展示版面",
+          "estimatedMinutes": 20,
+          "knowledgePoints": [
+            "卡片布局",
+            "版面自检"
+          ],
+          "summary": "完成一张包含三张课程卡片的桌面版面，检验网格在重复信息中的作用。",
+          "learningSteps": [
+            "基于网格完成三张等宽卡片的桌面排版。",
+            "用长标题与不同长度简介检查边界及操作区对齐。",
+            "关联本人作品，写出自检结果和一次修改。"
+          ],
+          "practiceTask": "提交三卡片桌面版面、网格对照和边界自检说明。",
+          "completionCriteria": "卡片等宽、间隔统一；封面比例一致；文字无溢出或逐字异常换行；操作区对齐；已关联本人作品。",
+          "requiresWorkSubmission": true,
+          "teaching": {
+            "reviewStatus": "pending",
+            "notice": "新编试学讲义 · 待教研审核；完成记录仅表示自主练习，不代表能力认证。",
+            "sections": [
+              {
+                "heading": "学习目标",
+                "text": "完成一张包含三张课程卡片的桌面版面，检验网格在重复信息中的作用。"
+              },
+              {
+                "heading": "制作要求",
+                "text": "三张卡片统一封面比例、内边距、标题区域及底部操作位置。加入一个长标题和一个较短简介作为边界样例；图片区可以统一裁切，但完整图片应有独立查看方式。"
+              },
+              {
+                "heading": "提交与检查",
+                "text": "导出正常版和显示网格的对照版，在案例社区保存本人草稿后关联课时。此练习只评价桌面布局，不声称完成手机端适配。"
+              }
+            ],
+            "visual": "grid"
+          }
+        }
+      ]
+    },
+    {
+      "id": "morph-course-brd-04",
+      "legacyId": "257:703",
+      "code": "BRD-04",
+      "title": "品牌标志推导",
+      "summary": "从关键词与结构出发推导几何标志，建立一套可复用的品牌视觉生成方法。",
+      "category": "设计方法",
+      "difficulty": "intermediate",
+      "estimatedMinutes": 90,
+      "coverUrl": "/morph-v17/assets/974b8392-64c9-4262-8055-6864c3a722a8.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-figma",
+        "morph-tool-lovart"
+      ],
+      "tools": [
+        "Figma",
+        "Lovart"
+      ],
+      "lessons": []
+    },
+    {
+      "id": "morph-course-cmf-05",
+      "legacyId": "257:740",
+      "code": "CMF-05",
+      "title": "材质与表面基础",
+      "summary": "认识 CMF 与表面处理工艺，理解材质质感在真实产品中的表达逻辑与取舍。",
+      "category": "设计基础",
+      "difficulty": "intermediate",
+      "estimatedMinutes": 75,
+      "coverUrl": "/morph-v17/assets/2c9bc537-3896-4817-8e1d-7a0fd2160ddf.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-blender"
+      ],
+      "tools": [
+        "Blender"
+      ],
+      "lessons": []
+    },
+    {
+      "id": "morph-course-mot-06",
+      "legacyId": "257:782",
+      "code": "MOT-06",
+      "title": "动态字体入门",
+      "summary": "掌握可变字体与动态排版基础，让文字在时间与节奏维度中完成叙事表达。",
+      "category": "软件实操",
+      "difficulty": "intermediate",
+      "estimatedMinutes": 85,
+      "coverUrl": "/morph-v17/assets/88486de6-2276-427b-8a3b-ea3bab8ef9b4.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "工具实践",
+      "toolIds": [
+        "morph-tool-figma",
+        "morph-tool-touchdesigner"
+      ],
+      "tools": [
+        "Figma",
+        "TouchDesigner"
+      ],
+      "lessons": []
+    },
+    {
+      "id": "morph-course-hud-07",
+      "legacyId": "257:822",
+      "code": "HUD-07",
+      "title": "HUD 信息层级",
+      "summary": "面向透明显示屏的视觉版式与信息层级规范，完成一套可读性优先的 HUD 界面练习。",
+      "category": "设计基础",
+      "difficulty": "advanced",
+      "estimatedMinutes": 110,
+      "coverUrl": "/morph-v17/assets/3f516469-6d80-4cc4-90e8-bcf075674d0d.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-figma",
+        "morph-tool-unity"
+      ],
+      "tools": [
+        "Figma",
+        "Unity"
+      ],
+      "lessons": []
+    },
+    {
+      "id": "morph-course-tok-08",
+      "legacyId": "257:859",
+      "code": "TOK-08",
+      "title": "设计系统 Tokens 基础",
+      "summary": "用 Design Tokens 统一颜色、间距与字阶，搭建设计系统可扩展的规范底座。",
+      "category": "设计基础",
+      "difficulty": "intermediate",
+      "estimatedMinutes": 60,
+      "coverUrl": "/morph-v17/assets/fa71da79-2385-4adc-a098-09ce04e1b2f8.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-figma"
+      ],
+      "tools": [
+        "Figma"
+      ],
+      "lessons": []
+    },
+    {
+      "id": "morph-course-par-09",
+      "legacyId": "257:895",
+      "code": "PAR-09",
+      "title": "参数化图形入门",
+      "summary": "由标量场公式驱动的连续图形，掌握参数化视觉的生成逻辑与可控变量。",
+      "category": "软件实操",
+      "difficulty": "advanced",
+      "estimatedMinutes": 120,
+      "coverUrl": "/morph-v17/assets/3871eaad-8a90-4f44-98e5-2af60b4fb349.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "工具实践",
+      "toolIds": [
+        "morph-tool-blender",
+        "morph-tool-touchdesigner"
+      ],
+      "tools": [
+        "Blender",
+        "TouchDesigner"
+      ],
+      "lessons": []
+    },
+    {
+      "id": "morph-course-dth-10",
+      "legacyId": "course-thinking",
+      "code": "DTH-10",
+      "title": "设计思维方法",
+      "summary": "从用户观察到问题定义，建立跨专业的设计思考与方案验证方法。",
+      "category": "设计方法",
+      "difficulty": "beginner",
+      "estimatedMinutes": 60,
+      "coverUrl": "/morph-v17/assets/974b8392-64c9-4262-8055-6864c3a722a8.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-workbuddy",
+        "morph-tool-pinterest"
+      ],
+      "tools": [
+        "WorkBuddy",
+        "Pinterest"
+      ],
+      "lessons": []
+    },
+    {
+      "id": "morph-course-pos-11",
+      "legacyId": "course-poster",
+      "code": "POS-11",
+      "title": "海报设计",
+      "summary": "结合色彩、字体与版式网格，将设计概念转化为清晰的视觉传达。",
+      "category": "设计基础",
+      "difficulty": "beginner",
+      "estimatedMinutes": 90,
+      "coverUrl": "/morph-v17/assets/fca3b7b1-1ecd-4c5b-ad2b-c926314635e6.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-figma",
+        "morph-tool-lovart"
+      ],
+      "tools": [
+        "Figma",
+        "Lovart"
+      ],
+      "lessons": []
+    },
+    {
+      "id": "morph-course-prd-12",
+      "legacyId": "course-product",
+      "code": "PRD-12",
+      "title": "产品设计",
+      "summary": "从使用情境与需求出发，探索产品形态、材质与原型验证。",
+      "category": "设计方法",
+      "difficulty": "beginner",
+      "estimatedMinutes": 120,
+      "coverUrl": "/morph-v17/assets/2c9bc537-3896-4817-8e1d-7a0fd2160ddf.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-blender",
+        "morph-tool-tripo"
+      ],
+      "tools": [
+        "Blender",
+        "Tripo"
+      ],
+      "lessons": []
+    },
+    {
+      "id": "morph-course-inf-13",
+      "legacyId": "course-infographic",
+      "code": "INF-13",
+      "title": "信息图表设计",
+      "summary": "组织数据与叙事，选择合适的图表，用视觉层级表达复杂信息。",
+      "category": "设计方法",
+      "difficulty": "beginner",
+      "estimatedMinutes": 90,
+      "coverUrl": "/morph-v17/assets/fa71da79-2385-4adc-a098-09ce04e1b2f8.svg",
+      "availability": "coming_soon",
+      "reviewStatus": "pending",
+      "authorLabel": "作者待确认",
+      "method": "设计练习",
+      "toolIds": [
+        "morph-tool-figma",
+        "morph-tool-codex"
+      ],
+      "tools": [
+        "Figma",
+        "Codex"
+      ],
+      "lessons": []
+    }
+  ],
+  "tools": [
+    {
+      "id": "morph-tool-workbuddy",
+      "legacyId": "249:932",
+      "name": "WorkBuddy",
+      "category": "智能体工作台",
+      "detail": "用自然语言组织工作任务与协作流程。",
+      "href": "https://workbuddy.cn/",
+      "coverUrl": "/morph-v17/assets/c0696866-ec6b-4acc-bf54-507401433a93.png",
+      "tags": [
+        "Agent",
+        "多模态",
+        "自动化"
+      ],
+      "stage": "全流程",
+      "relatedCourseIds": [
+        "morph-course-dth-10"
+      ],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {
+        "morph-course-dth-10": "设计思维方法"
+      }
+    },
+    {
+      "id": "morph-tool-codex",
+      "legacyId": "249:983",
+      "name": "Codex",
+      "category": "智能体工作台",
+      "detail": "以编程任务为入口的 AI 辅助开发工具。",
+      "href": "https://openai.com/codex/",
+      "coverUrl": "/morph-v17/assets/b52df106-aebe-4fd6-95c4-33a105fbb857.png",
+      "tags": [
+        "编程 Agent",
+        "整库理解",
+        "并行任务"
+      ],
+      "stage": "全流程",
+      "relatedCourseIds": [
+        "morph-course-inf-13"
+      ],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {
+        "morph-course-inf-13": "信息图表设计"
+      }
+    },
+    {
+      "id": "morph-tool-figma",
+      "legacyId": "249:1032",
+      "name": "Figma",
+      "category": "界面与原型",
+      "detail": "设计界面、版式与交互原型。",
+      "href": "https://figma.com/",
+      "coverUrl": "/morph-v17/assets/bda4d531-ddf0-4e21-a75b-e6fa06b8818f.png",
+      "tags": [
+        "UI",
+        "原型",
+        "设计系统"
+      ],
+      "stage": "原型与交付",
+      "relatedCourseIds": [
+        "morph-course-col-01",
+        "morph-course-typ-02",
+        "morph-course-grd-03",
+        "morph-course-brd-04",
+        "morph-course-mot-06",
+        "morph-course-hud-07",
+        "morph-course-tok-08",
+        "morph-course-pos-11",
+        "morph-course-inf-13"
+      ],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {
+        "morph-course-col-01": "色彩构成基础",
+        "morph-course-typ-02": "字体认知",
+        "morph-course-grd-03": "版式网格入门",
+        "morph-course-brd-04": "品牌标志推导",
+        "morph-course-mot-06": "动态字体入门",
+        "morph-course-hud-07": "HUD 信息层级",
+        "morph-course-tok-08": "设计系统 Tokens 基础",
+        "morph-course-pos-11": "海报设计",
+        "morph-course-inf-13": "信息图表设计"
+      }
+    },
+    {
+      "id": "morph-tool-cursor",
+      "legacyId": "249:1083",
+      "name": "Cursor",
+      "category": "界面与原型",
+      "detail": "在代码编辑环境中辅助开发与修改。",
+      "href": "https://cursor.com/",
+      "coverUrl": "/morph-v17/assets/e4535a55-4332-4c3f-bc2b-467898e16975.png",
+      "tags": [
+        "AI 编程",
+        "整库上下文",
+        "前端落地"
+      ],
+      "stage": "原型与交付",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {}
+    },
+    {
+      "id": "morph-tool-lovart",
+      "legacyId": "249:1132",
+      "name": "Lovart",
+      "category": "AI 创作与生成",
+      "detail": "探索 AI 辅助的视觉设计方案。",
+      "href": "https://lovart.ai/",
+      "coverUrl": "/morph-v17/assets/dc218f1b-49c3-494d-8bfa-3160e80e40dc.png",
+      "tags": [
+        "Agent",
+        "品牌",
+        "Campaign"
+      ],
+      "stage": "概念与制作",
+      "relatedCourseIds": [
+        "morph-course-brd-04",
+        "morph-course-pos-11"
+      ],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {
+        "morph-course-brd-04": "品牌标志推导",
+        "morph-course-pos-11": "海报设计"
+      }
+    },
+    {
+      "id": "morph-tool-midjourney",
+      "legacyId": "249:1181",
+      "name": "Midjourney",
+      "category": "AI 创作与生成",
+      "detail": "通过提示词探索图像方案。",
+      "href": "https://midjourney.com/",
+      "coverUrl": "/morph-v17/assets/5b11d50e-30af-4ff6-8a11-9ce8e9d08b2f.png",
+      "tags": [
+        "AI Image",
+        "Concept",
+        "Prompt"
+      ],
+      "stage": "概念与探索",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {}
+    },
+    {
+      "id": "morph-tool-jimeng",
+      "legacyId": "249:1232",
+      "name": "即梦 Jimeng",
+      "category": "AI 创作与生成",
+      "detail": "探索图像与视频创作。",
+      "href": "https://jimeng.jianying.com/",
+      "coverUrl": "/morph-v17/assets/40f430e2-b389-4447-b398-619432cc3256.png",
+      "tags": [
+        "AI 图像",
+        "AI 视频",
+        "智能画布"
+      ],
+      "stage": "概念与制作",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {}
+    },
+    {
+      "id": "morph-tool-kling",
+      "legacyId": "249:1281",
+      "name": "可灵 Kling",
+      "category": "AI 创作与生成",
+      "detail": "探索 AI 视频创作。",
+      "href": "https://klingai.com/",
+      "coverUrl": "/morph-v17/assets/511ff362-91c9-441d-b879-44aa436c4781.png",
+      "tags": [
+        "AI Video",
+        "运动控制",
+        "分镜"
+      ],
+      "stage": "分镜与动态",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "not_confirmed"
+      },
+      "relatedCourseTitles": {}
+    },
+    {
+      "id": "morph-tool-liblib",
+      "legacyId": "249:1330",
+      "name": "LibLib 哩布",
+      "category": "AI 创作与生成",
+      "detail": "浏览图像生成模型与创作流程。",
+      "href": "https://liblib.art/",
+      "coverUrl": "/morph-v17/assets/83b97d5e-6d01-4b04-a888-50b501d86dd0.png",
+      "tags": [
+        "模型社区",
+        "在线 ComfyUI",
+        "模型训练"
+      ],
+      "stage": "制作与精修",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {}
+    },
+    {
+      "id": "morph-tool-libtv",
+      "legacyId": "249:1379",
+      "name": "LibTV 哩布 TV",
+      "category": "AI 创作与生成",
+      "detail": "探索视频创作与制作流程。",
+      "href": "https://liblib.tv/",
+      "coverUrl": "/morph-v17/assets/6c8e0e5c-b70a-4a07-91bd-5cb20f045e17.png",
+      "tags": [
+        "AI 短片",
+        "无限画布",
+        "节点工作流"
+      ],
+      "stage": "分镜与成片",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "not_confirmed"
+      },
+      "relatedCourseTitles": {}
+    },
+    {
+      "id": "morph-tool-nano-banana",
+      "legacyId": "249:1428",
+      "name": "Nano Banana",
+      "category": "AI 创作与生成",
+      "detail": "在 Gemini 产品中探索图像生成与编辑。",
+      "href": "https://gemini.google.com/",
+      "coverUrl": "/morph-v17/assets/a423a54e-b48b-4dd8-86a0-15eec3c87631.png",
+      "tags": [
+        "图像编辑",
+        "风格迁移",
+        "多图融合"
+      ],
+      "stage": "生成与精修",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {}
+    },
+    {
+      "id": "morph-tool-blender",
+      "legacyId": "249:1477",
+      "name": "Blender",
+      "category": "3D 与动态",
+      "detail": "学习三维建模、材质、渲染与动画。",
+      "href": "https://blender.org/",
+      "coverUrl": "/morph-v17/assets/6dd3a159-8a42-4d0f-bd78-12391e2c5f97.png",
+      "tags": [
+        "3D",
+        "Rendering",
+        "Animation"
+      ],
+      "stage": "制作与交付",
+      "relatedCourseIds": [
+        "morph-course-cmf-05",
+        "morph-course-par-09",
+        "morph-course-prd-12"
+      ],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "not_confirmed"
+      },
+      "relatedCourseTitles": {
+        "morph-course-cmf-05": "材质与表面基础",
+        "morph-course-par-09": "参数化图形入门",
+        "morph-course-prd-12": "产品设计"
+      }
+    },
+    {
+      "id": "morph-tool-spline",
+      "legacyId": "249:1528",
+      "name": "Spline",
+      "category": "3D 与动态",
+      "detail": "探索浏览器中的三维场景与交互。",
+      "href": "https://spline.design/",
+      "coverUrl": "/morph-v17/assets/ce4da8c7-f8cf-4d93-b6f2-a78f0d9eca8e.png",
+      "tags": [
+        "Web 3D",
+        "Interactive",
+        "Embed"
+      ],
+      "stage": "原型与发布",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {}
+    },
+    {
+      "id": "morph-tool-tripo",
+      "legacyId": "249:1577",
+      "name": "Tripo",
+      "category": "3D 与动态",
+      "detail": "探索文字或图片到三维模型的创作流程。",
+      "href": "https://tripo3d.ai/",
+      "coverUrl": "/morph-v17/assets/28ca63ca-1a80-4a08-aa5a-c3186051a90a.png",
+      "tags": [
+        "Text to 3D",
+        "干净拓扑",
+        "Blender 兼容"
+      ],
+      "stage": "概念与制作",
+      "relatedCourseIds": [
+        "morph-course-prd-12"
+      ],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {
+        "morph-course-prd-12": "产品设计"
+      }
+    },
+    {
+      "id": "morph-tool-hunyuan",
+      "legacyId": "249:1626",
+      "name": "混元 3D",
+      "category": "3D 与动态",
+      "detail": "探索三维模型与纹理生成。",
+      "href": "https://3d.hunyuan.tencent.com/",
+      "coverUrl": "/morph-v17/assets/4c884c03-60b6-4034-93b0-d937305c6594.png",
+      "tags": [
+        "文生 3D",
+        "纹理生成",
+        "3D 动画"
+      ],
+      "stage": "概念与制作",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {}
+    },
+    {
+      "id": "morph-tool-touchdesigner",
+      "legacyId": "249:1675",
+      "name": "TouchDesigner",
+      "category": "实时与交互",
+      "detail": "学习节点式实时视觉与交互。",
+      "href": "https://derivative.ca/",
+      "coverUrl": "/morph-v17/assets/01b686dd-31d1-4300-90c1-afce4d497def.png",
+      "tags": [
+        "实时图形",
+        "互动装置",
+        "投影映射"
+      ],
+      "stage": "交互与呈现",
+      "relatedCourseIds": [
+        "morph-course-mot-06",
+        "morph-course-par-09"
+      ],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {
+        "morph-course-mot-06": "动态字体入门",
+        "morph-course-par-09": "参数化图形入门"
+      }
+    },
+    {
+      "id": "morph-tool-unity",
+      "legacyId": "249:1724",
+      "name": "Unity",
+      "category": "实时与交互",
+      "detail": "制作实时场景与交互原型。",
+      "href": "https://unity.com/",
+      "coverUrl": "/morph-v17/assets/3dc32a69-fa99-4157-b5f9-4b409686846e.png",
+      "tags": [
+        "实时渲染",
+        "交互原型",
+        "跨平台"
+      ],
+      "stage": "交互与呈现",
+      "relatedCourseIds": [
+        "morph-course-hud-07"
+      ],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "reference_checked"
+      },
+      "relatedCourseTitles": {
+        "morph-course-hud-07": "HUD 信息层级"
+      }
+    },
+    {
+      "id": "morph-tool-pinterest",
+      "legacyId": "249:1773",
+      "name": "Pinterest",
+      "category": "灵感与资源",
+      "detail": "收集视觉参考与情绪板。",
+      "href": "https://pinterest.com/",
+      "coverUrl": "/morph-v17/assets/9082b129-d371-473f-90ca-5445471a6157.png",
+      "tags": [
+        "Moodboard",
+        "趋势",
+        "图像检索"
+      ],
+      "stage": "研究与定调",
+      "relatedCourseIds": [
+        "morph-course-col-01",
+        "morph-course-dth-10"
+      ],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "not_confirmed"
+      },
+      "relatedCourseTitles": {
+        "morph-course-col-01": "色彩构成基础",
+        "morph-course-dth-10": "设计思维方法"
+      }
+    },
+    {
+      "id": "morph-tool-behance",
+      "legacyId": "249:1822",
+      "name": "Behance",
+      "category": "灵感与资源",
+      "detail": "浏览项目展示与作品集参考。",
+      "href": "https://behance.net/",
+      "coverUrl": "/morph-v17/assets/b612bfd0-e404-4711-acd3-cab844d98d28.png",
+      "tags": [
+        "Portfolio",
+        "Branding",
+        "Editorial"
+      ],
+      "stage": "案例与展示",
+      "relatedCourseIds": [],
+      "linkReview": {
+        "checkedAt": "2026-10-16",
+        "result": "not_confirmed"
+      },
+      "relatedCourseTitles": {}
+    }
+  ],
+  "assets": [
+    {
+      "url": "/morph-v17/assets/48f75777-9e36-4092-a4a1-e571b1e97c3e.svg",
+      "sha256": "2cdb9b4a8c61fd4ede28e7e655969123576145cf44b8d3597dc2244d5d82ba35"
+    },
+    {
+      "url": "/morph-v17/assets/cdc8870b-5500-47f7-aedf-4d2a5db4c15e.svg",
+      "sha256": "bd41622c9c2ca6d455790b0d23cf677c512f87d79cdf8fa085c8363ec0d37742"
+    },
+    {
+      "url": "/morph-v17/assets/fca3b7b1-1ecd-4c5b-ad2b-c926314635e6.svg",
+      "sha256": "947908b517547c18d4a3b081139c3cf2687169631ddd11b0b9ee461c61fb9a94"
+    },
+    {
+      "url": "/morph-v17/assets/974b8392-64c9-4262-8055-6864c3a722a8.svg",
+      "sha256": "dc6d3d55930d8a95cb9df7ce2f603f5183256bd549fa15f3bd4a9b97d10d9529"
+    },
+    {
+      "url": "/morph-v17/assets/2c9bc537-3896-4817-8e1d-7a0fd2160ddf.svg",
+      "sha256": "a7ea17b0fa2308e1af39e6be7527fbf0ad73ae5a81544818cf7a0527372ba3d6"
+    },
+    {
+      "url": "/morph-v17/assets/88486de6-2276-427b-8a3b-ea3bab8ef9b4.svg",
+      "sha256": "d400bc8cd232d773ac389e4d4a3b338f89d0bf857c4f8ccd99784c6ade820513"
+    },
+    {
+      "url": "/morph-v17/assets/3f516469-6d80-4cc4-90e8-bcf075674d0d.svg",
+      "sha256": "1715828e691691c4fd22cb605c654d55f0d43f0c299811cc16d24e6b7a4745ad"
+    },
+    {
+      "url": "/morph-v17/assets/fa71da79-2385-4adc-a098-09ce04e1b2f8.svg",
+      "sha256": "1af684da8a79f6387c926cb7cf222cf120cd3b8b5d3bb4377993e8b8ef51d56d"
+    },
+    {
+      "url": "/morph-v17/assets/3871eaad-8a90-4f44-98e5-2af60b4fb349.svg",
+      "sha256": "7656dbc7541c3e5072581ea0fcc9a3ab5bb08ccbc833c1e4d04c778540cb572b"
+    },
+    {
+      "url": "/morph-v17/assets/c0696866-ec6b-4acc-bf54-507401433a93.png",
+      "sha256": "73b16c1ec162994487a69a73c04a099b4752a37007cfc96bd588cb01c89ae69e"
+    },
+    {
+      "url": "/morph-v17/assets/b52df106-aebe-4fd6-95c4-33a105fbb857.png",
+      "sha256": "b430bcdc86a481d183cfcf5a2cfaa6de2a6e26035eed791038410a16e16cfa99"
+    },
+    {
+      "url": "/morph-v17/assets/bda4d531-ddf0-4e21-a75b-e6fa06b8818f.png",
+      "sha256": "b64480b0232453d2390d4b82623a852dce299d85ccfcda14ac5a1988e7f4e90f"
+    },
+    {
+      "url": "/morph-v17/assets/e4535a55-4332-4c3f-bc2b-467898e16975.png",
+      "sha256": "de7342f8375828d30c8a9874ee17fe68e99aceeb4ef55a636a7dce05606707e7"
+    },
+    {
+      "url": "/morph-v17/assets/dc218f1b-49c3-494d-8bfa-3160e80e40dc.png",
+      "sha256": "244a3ccd0869f0a819363803a2c571589c8e51cdf56a912f379bf011722314c6"
+    },
+    {
+      "url": "/morph-v17/assets/5b11d50e-30af-4ff6-8a11-9ce8e9d08b2f.png",
+      "sha256": "656800919fdc72d9da84276e7b8fc19363d2552031997ae55183ee51543c9cee"
+    },
+    {
+      "url": "/morph-v17/assets/40f430e2-b389-4447-b398-619432cc3256.png",
+      "sha256": "bc51055bdbb2ea76f83b5298f7e75efe58a56b547b8277d91adf3065d7f97f34"
+    },
+    {
+      "url": "/morph-v17/assets/511ff362-91c9-441d-b879-44aa436c4781.png",
+      "sha256": "e4f16bfb4dd3dcbd7f1071539fe118b661cd92ca8fe1463f4a4e8ef72cd36e04"
+    },
+    {
+      "url": "/morph-v17/assets/83b97d5e-6d01-4b04-a888-50b501d86dd0.png",
+      "sha256": "d876dcb7b93001d5357e7ea3f453ce01e34d0ed11e8c8d2a3f966a73ecbb3669"
+    },
+    {
+      "url": "/morph-v17/assets/6c8e0e5c-b70a-4a07-91bd-5cb20f045e17.png",
+      "sha256": "6acd3ac7de2a3d3710281f1d9a28d3f786accf9be55f807cff1b2faff41179aa"
+    },
+    {
+      "url": "/morph-v17/assets/a423a54e-b48b-4dd8-86a0-15eec3c87631.png",
+      "sha256": "218eb46e92f56150c7efcb9139422657cbacf4ec1c9d5019b12b434761f78ac8"
+    },
+    {
+      "url": "/morph-v17/assets/6dd3a159-8a42-4d0f-bd78-12391e2c5f97.png",
+      "sha256": "0fd5ef68aeb3efbb6b950708d1557c292253a48cf3d6a44841f9aa3ea8999ca0"
+    },
+    {
+      "url": "/morph-v17/assets/ce4da8c7-f8cf-4d93-b6f2-a78f0d9eca8e.png",
+      "sha256": "b6acfe83e54ed1275a0ae3db25a42e94bdd380dd36796554458e6da5731b640d"
+    },
+    {
+      "url": "/morph-v17/assets/28ca63ca-1a80-4a08-aa5a-c3186051a90a.png",
+      "sha256": "eff481199603cd50e81ccd15a1352a825efa9c4c4fc31dcfa1ab0cd191bbe6de"
+    },
+    {
+      "url": "/morph-v17/assets/4c884c03-60b6-4034-93b0-d937305c6594.png",
+      "sha256": "6e8d9f0dcbc16e5c4da496e5fe00a5726d9192a02d8472fb9039cf0e3d9db03d"
+    },
+    {
+      "url": "/morph-v17/assets/01b686dd-31d1-4300-90c1-afce4d497def.png",
+      "sha256": "fa35f62ae3ba040ba3b7b0647d4443774580a56282d14992ef8f1ae575779297"
+    },
+    {
+      "url": "/morph-v17/assets/3dc32a69-fa99-4157-b5f9-4b409686846e.png",
+      "sha256": "e1fb847865eedfdafec55aedaa05e197e3a101ee7c54b8e3c153f97f39d9ceef"
+    },
+    {
+      "url": "/morph-v17/assets/9082b129-d371-473f-90ca-5445471a6157.png",
+      "sha256": "4c5d5b6c33885e8d9a3ee7407bebc9a7af4cddf457dd983c4a8e41c344ede23e"
+    },
+    {
+      "url": "/morph-v17/assets/b612bfd0-e404-4711-acd3-cab844d98d28.png",
+      "sha256": "6789a3f47f0689b5e4bf30c712801b42e4224291752b726120d31101e7388058"
+    }
+  ]
+}

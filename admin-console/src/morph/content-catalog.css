@@ -1,0 +1,38 @@
+.catalog-notice{padding:14px 18px;border:1px solid #ded8ed;background:#f7f5fc;border-radius:12px;color:#575268;font-size:14px;line-height:1.8}
+.trial-lesson{margin:20px 0;border:1px solid #e4e5e9;border-radius:16px;background:#fff;padding:22px;min-width:0}
+.trial-lesson-sections{display:grid;gap:18px}.trial-lesson h4{margin:0 0 8px;font-size:17px;color:#222}.trial-lesson section>p{margin:0;font-size:16px;line-height:1.95;color:#555;white-space:normal;overflow-wrap:anywhere}
+.trial-example{margin:22px 0 0;padding:18px;background:#fafafa;border:1px solid #e5e5eb;border-radius:12px}.trial-example figcaption{margin-top:12px;font-size:13px;line-height:1.7;color:#6b6775}
+.trial-swatches{display:flex;min-height:100px;border-radius:8px;overflow:hidden}.trial-swatches>span{flex:1;display:flex;align-items:flex-end;padding:12px}.trial-swatches code{padding:3px 6px;background:#fff;color:#333;border-radius:4px;font-size:13px}
+.trial-type-example strong{font-size:30px;display:block}.trial-type-example span{display:block;margin:10px 0;font-size:18px}.trial-type-example p{font-size:15px;line-height:1.8}
+.trial-grid-example{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;min-height:120px}.trial-grid-example>span{background:#eee8f9;color:#66558c;text-align:center;padding-top:12px;font-size:12px}
+.morph-v17 .course-cover .status.is-readiness{background:#fff4df;color:#775a25;border:1px solid #e8d4ad;font-size:12px;max-width:calc(100% - 24px)}
+.morph-v17 .course-card.is-archived{opacity:.8}.morph-v17 .course-card.is-archived .course-cover{filter:grayscale(1)}
+.morph-v17 .catalog-bundle-note{margin:0 0 18px}
+.morph-v17 .morph-course-card .classification{flex-wrap:wrap;gap:6px 12px}
+.morph-v17 .morph-course-card .classification>span:first-child{color:#6554e8}
+.morph-v17 .morph-course-card .course-cover{width:30.24%;flex-basis:30.24%}
+.morph-v17 .morph-course-card .course-body{padding:24px}
+.morph-v17 .morph-course-card .morph-course-code{margin-left:auto;color:#858aa0;font:11px/18px ui-monospace,monospace}
+.morph-v17 .morph-course-card .small-meta{justify-content:space-between;flex-wrap:wrap;gap:6px 16px;margin-top:auto;padding-top:10px}
+.morph-v17 .morph-course-card .small-meta>span{display:inline-flex;align-items:center;gap:5px;margin-left:0}
+.morph-v17 .morph-course-card .card-actions{flex-direction:column;gap:12px;align-items:flex-start}
+.morph-v17 .morph-course-card .card-actions>.buttons{display:flex;flex-wrap:wrap;gap:8px;margin-left:0;max-width:100%}
+.morph-v17 .morph-course-card .card-actions .button{background:#171a2f;border-color:#171a2f;color:#fff;font-size:14px;white-space:nowrap}
+.morph-v17 .morph-course-card .card-actions .button.secondary{background:#fff;border-color:#dddff0;color:#171a2f}
+.morph-v17 .morph-course-card .course-body>p:not(.course-teacher){display:block;-webkit-line-clamp:unset;overflow:visible}
+@media(min-width:1200px){.morph-v17:has(.morph-catalog) .container,.morph-v17:has(.morph-tool-catalog) .container{width:80%;max-width:1536px}.morph-v17 .morph-catalog .atom-map{grid-template-columns:1fr 3fr}.morph-v17 .morph-catalog .atom-branches{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.morph-v17 .course-tools-links{display:flex;gap:8px;flex-wrap:wrap}.morph-v17 .course-tools-links button{padding:8px 12px;border:1px solid #ddd5eb;border-radius:8px;background:#f7f4fc;color:#62517a}
+.morph-v17 .course-history-note{padding:14px 18px;margin:0 0 18px;border:1px solid #e1dbea;border-radius:12px;font-size:14px;color:#666;background:#faf8fc}
+.morph-v17 .learning-detail__hero aside>strong{font-size:32px;white-space:nowrap}
+.morph-v17 .morph-course-card .course-cover>.status{right:auto;bottom:auto;height:auto;min-height:0;max-height:none;line-height:1.6;max-width:calc(100% - 24px)}
+@media(min-width:769px) and (max-width:1100px){.morph-v17 .morph-catalog .course-grid,.morph-v17 .morph-space-course-grid{grid-template-columns:minmax(0,1fr)}.morph-v17 .home-course-strip .morph-course-card{flex-basis:90%}}
+.morph-v17 .learning-detail__hero{color:#272338;background:#fff;border:1px solid #e0d9ec;border-radius:18px;box-shadow:0 6px 24px #51416a06;grid-template-columns:minmax(0,1fr) 210px;padding:30px;min-height:230px}
+.morph-v17 .learning-detail__hero h2{font-size:30px;line-height:1.4;letter-spacing:-.02em;margin:10px 0 12px;height:auto;overflow-wrap:break-word}
+.morph-v17 .learning-detail__hero>div>span{font-size:13px;line-height:1.7;color:#75618f}.morph-v17 .learning-detail__hero p{font-size:15px;line-height:1.9;color:#696273;margin:0 0 14px}
+.morph-v17 .learning-detail__hero>div>div{font-size:13px;line-height:1.8;color:#746d80;flex-wrap:wrap}.morph-v17 .learning-detail__hero aside{background:#f7f4fc;border:1px solid #e4dded;border-radius:12px;gap:10px}
+.morph-v17 .learning-detail__hero aside>strong{line-height:1.3;color:#6554b0}.morph-v17 .learning-detail__hero aside>span{font-size:13px;color:#746d80}.morph-v17 .learning-detail__hero aside i{margin:0;border:0;background:#e5dff0;border-radius:8px;overflow:hidden}.morph-v17 .learning-detail__hero aside i b{background:#8b79d7}
+.morph-v17 .learning-detail__hero aside button,.morph-v17 .learning-detail__hero aside em{font-size:14px;line-height:1.5;color:#fff;background:#7661cc;border:0;border-radius:8px;padding:9px}.morph-v17 .learning-detail__hero aside button:disabled{background:#eae5f1;color:#81788e}
+.morph-v17 .learning-back{font-size:14px;line-height:1.7;color:#65547a;border-color:#cfc5df}.morph-v17 .lesson-list{border:0;display:grid;gap:22px}
+.morph-v17 .lesson-list .lesson-card{display:block;padding:24px;border:1px solid #e4deec;border-radius:16px}.morph-v17 .lesson-card__heading strong{font-size:21px;line-height:1.5}.morph-v17 .lesson-card__heading small,.morph-v17 .lesson-card__heading em{font-size:13px;line-height:1.6}
+.morph-v17 .lesson-list p,.morph-v17 .lesson-card__section li{font-size:15px;line-height:1.95;color:#625d69}.morph-v17 .lesson-card__section>strong{font-size:16px;line-height:1.7;margin:16px 0 8px}.morph-v17 .lesson-card__footer{margin-top:20px;padding-top:16px;border-top:1px solid #e7e1ef}.morph-v17 .lesson-card__footer button{font-size:14px;line-height:1.6;padding:9px 15px;border:1px solid #d9cfee;border-radius:8px;background:#f7f4fc;color:#6d598e}
+.morph-v17 .lesson-card__footer button:disabled{opacity:.5}.morph-v17 .lesson-card__submission select{font-size:14px;padding:10px;border:1px solid #ded6e9;border-radius:8px;background:#fff;width:100%}.morph-v17 .lesson-card__submission small{font-size:13px;line-height:1.7}

@@ -1,0 +1,121 @@
+{
+  "id": "morph-tool-copy-v2",
+  "version": 2,
+  "source": "MORPH LAB v17 用户交接包原文；按用户要求恢复完整简介，不含价格、排名标记或演示数据",
+  "tools": [
+    {
+      "id": "morph-tool-workbuddy",
+      "name": "WorkBuddy",
+      "subtitle": "AI Agent 全场景工作台",
+      "detail": "用自然语言描述需求，自主规划并交付多模态结果。调研、文档、数据分析与设计创意可以放在同一个工作空间里完成。"
+    },
+    {
+      "id": "morph-tool-codex",
+      "name": "Codex",
+      "subtitle": "OpenAI 编程 Agent",
+      "detail": "OpenAI 的编程智能体，有桌面端、命令行与云端三种入口。能读取整个仓库、并行跑任务，把需求直接落成代码。"
+    },
+    {
+      "id": "morph-tool-figma",
+      "name": "Figma",
+      "subtitle": "协作式产品设计平台",
+      "detail": "界面设计、原型与设计系统都在同一块画布上完成。多人实时协作，组件与变量体系是团队交付的通用语言。"
+    },
+    {
+      "id": "morph-tool-cursor",
+      "name": "Cursor",
+      "subtitle": "AI 编程编辑器",
+      "detail": "用自然语言生成、重构和解释代码，能理解整个项目上下文。把设计稿落成可运行页面时比手写快很多。"
+    },
+    {
+      "id": "morph-tool-lovart",
+      "name": "Lovart",
+      "subtitle": "AI 设计 Agent 画布",
+      "detail": "给一段 brief 就能产出成套品牌与 Campaign 视觉，适合在正式制作前快速试多个方向再收敛。"
+    },
+    {
+      "id": "morph-tool-midjourney",
+      "name": "Midjourney",
+      "subtitle": "高质量概念视觉生成",
+      "detail": "提示词驱动的概念视觉生成，风格与氛围控制力强。适合在正式制作前把整组视觉调性先定下来。"
+    },
+    {
+      "id": "morph-tool-jimeng",
+      "name": "即梦 Jimeng",
+      "subtitle": "一站式 AI 图像视频创作",
+      "detail": "文生图、图生视频、局部重绘与智能扩图都在同一块画布上完成。国内访问稳定，免费额度对日常练习友好。"
+    },
+    {
+      "id": "morph-tool-kling",
+      "name": "可灵 Kling",
+      "subtitle": "国内头部 AI 视频生成",
+      "detail": "文生视频与图生视频的画质和运动自然度在国产工具里领先，支持首尾帧控制，适合做动态分镜与短片。"
+    },
+    {
+      "id": "morph-tool-liblib",
+      "name": "LibLib 哩布",
+      "subtitle": "国内 AI 图像创作社区",
+      "detail": "十万级模型社区，加上在线 ComfyUI 与 WebUI，不用本地部署就能跑完整生成管线，也能在线训练模型。"
+    },
+    {
+      "id": "morph-tool-libtv",
+      "name": "LibTV 哩布 TV",
+      "subtitle": "AI 视频创作平台",
+      "detail": "无限画布加节点工作流，面向 AI 短片、广告与短剧。从剧本拆解到成片的链路比单点生成工具完整。"
+    },
+    {
+      "id": "morph-tool-nano-banana",
+      "name": "Nano Banana",
+      "subtitle": "Google 图像编辑模型",
+      "detail": "局部编辑、风格迁移与多图融合都很稳，改图时能保住原图结构。目前图像编辑类模型里体验最顺的之一。"
+    },
+    {
+      "id": "morph-tool-blender",
+      "name": "Blender",
+      "subtitle": "开源三维创作平台",
+      "detail": "建模、材质、渲染、动画与合成的完整开源方案，免费且社区生态庞大，工业级项目也在使用。"
+    },
+    {
+      "id": "morph-tool-spline",
+      "name": "Spline",
+      "subtitle": "浏览器协作式 3D 设计",
+      "detail": "在浏览器里搭 3D 场景并直接嵌入网页，适合做轻量交互原型，不用碰复杂的渲染管线。"
+    },
+    {
+      "id": "morph-tool-tripo",
+      "name": "Tripo",
+      "subtitle": "AI 生成可用 3D 资产",
+      "detail": "文生 3D 与图生 3D，输出的是拓扑相对干净的模型，可以直接导入 Blender 继续修，省掉从零建模的时间。"
+    },
+    {
+      "id": "morph-tool-hunyuan",
+      "name": "混元 3D",
+      "subtitle": "腾讯一站式 3D 生成平台",
+      "detail": "支持文生 3D、图生 3D、纹理生成与 3D 动画，也能从草图起模。国产工具里少数覆盖完整 3D 链路的。"
+    },
+    {
+      "id": "morph-tool-touchdesigner",
+      "name": "TouchDesigner",
+      "subtitle": "实时视觉与交互装置",
+      "detail": "节点式实时图形环境，做投影映射、互动装置与生成视觉的标配。新媒体艺术方向基本都在用它。"
+    },
+    {
+      "id": "morph-tool-unity",
+      "name": "Unity",
+      "subtitle": "实时交互内容引擎",
+      "detail": "做实时渲染、交互装置与可玩原型的通用引擎，URP 管线也能做出不错的实时视觉，学习资源很充足。"
+    },
+    {
+      "id": "morph-tool-pinterest",
+      "name": "Pinterest",
+      "subtitle": "视觉灵感与情绪板",
+      "detail": "按关键词采集图片并整理成情绪板，用来定调、找配色和参考构图，是灵感阶段最常用的起点。"
+    },
+    {
+      "id": "morph-tool-behance",
+      "name": "Behance",
+      "subtitle": "全球创意作品平台",
+      "detail": "看别人的完整项目推导过程而不只是成品，适合找作品集排版与项目叙事的参考。"
+    }
+  ]
+}

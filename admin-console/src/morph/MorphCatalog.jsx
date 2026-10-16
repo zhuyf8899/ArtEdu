@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Clock, CaretUp, CaretDown, ImageSquare, BookOpenText, Heart, BookmarkSimple } from '@phosphor-icons/react';
 import { coverImageFor } from '../coverImages.js';
-import { decorateCourse, difficultyName } from '../coursePresentation.js';
+import { decorateCourse, courseReadiness } from '../coursePresentation.js';
+import './content-catalog.css';
 import { mountAtomic } from './atomicEffect.js';
 import { mountNetwork } from './networkEffect.js';
 import { mountFloating } from './floatingEffect.js';
-import { morphCourseCover, morphQueryMatches } from './morphPresentation.js';
+import { morphCourseCover, morphQueryMatches, morphCourseLevel } from './morphPresentation.js';
 import { CatalogControls } from './CatalogControls.jsx';
 
 export function MorphPageBanner({title,eyebrow,children}) {
@@ -14,8 +15,9 @@ export function MorphPageBanner({title,eyebrow,children}) {
   return <header className="page-banner morph-page-banner" ref={root}><div className="container banner-copy"><div className="eyebrow">{eyebrow}</div><h1>{title}</h1></div>{children&&<div className="morph-banner-action">{children}</div>}<div className="banner-art" id="effect-stage"><canvas id="effect-canvas" aria-hidden="true"/></div></header>;
 }
 export function MorphCourseCard({course,onOpen}) {
-  const c=decorateCourse(course),progress=Math.max(0,Math.min(100,Number(c.progressPercent)||0));
-  return <article className="course-card morph-course-card"><div className="course-cover"><img src={coverImageFor({...c,coverImageUrl:morphCourseCover(c)},240,400)} alt={`${c.title}封面`} loading="lazy"/><span className="status">{progress>=100?'已完成':progress>0?'进行中':'未开始'}</span></div><div className="course-body"><div className="classification"><span>{c.category}</span><span>{difficultyName(c.difficulty)}</span></div><h2><button className="title-button" onClick={()=>onOpen(c.id)}>{c.title}</button></h2><p>{c.summary}</p><p className="course-teacher">授课作者：{c.author}</p><div className="chips morph-course-tools">{c.tools?.map(tool=><span className="chip" key={tool}>{tool}</span>)}</div><progress className="progress" aria-label={`${c.title}学习进度`} max="100" value={progress}/><div className="small-meta"><Clock size={14}/> {c.estimatedMinutes||0} 分钟 <span>{progress}%</span></div><div className="card-actions"><small>{c.lessonCount??0} 个课时 · {c.method}</small><button className="button" onClick={()=>onOpen(c.id)}>{progress>0?'继续学习':'查看课程'}<ArrowUpRight size={15}/></button></div></div></article>;
+  const c=decorateCourse(course),progress=Math.max(0,Math.min(100,Number(c.progressPercent)||0)),readiness=courseReadiness(c),archived=Boolean(c.archived||c.status==='archived'),soon=c.availability==='coming_soon';
+  const open=()=>onOpen(archived?'':c.id);
+  return <article className={`course-card morph-course-card${archived?' is-archived':''}`}><div className="course-cover"><img src={coverImageFor({...c,coverImageUrl:morphCourseCover(c)},240,400)} alt={`${c.title}封面`} loading="lazy"/><span className={`status${readiness?' is-readiness':''}`}>{readiness||(progress>=100?'已完成':progress>0?'进行中':'未开始')}</span></div><div className="course-body"><div className="classification"><span>{c.category}</span><span>难度：{morphCourseLevel(c)}</span>{c.catalog?.code&&<small className="morph-course-code">{c.catalog.code}</small>}</div><h2><button className="title-button" onClick={open}>{c.title}</button></h2><p>{c.summary}</p><p className="course-teacher">老师：{c.author}</p><div className="chips morph-course-tools">{c.tools?.map(tool=><span className="chip" key={tool}>{tool}</span>)}</div>{!soon&&<progress className="progress" aria-label={`${c.title}学习进度`} max="100" value={progress}/>}<div className="small-meta"><span><Clock size={14}/> 耗时 {c.estimatedMinutes||0} 分钟{soon?' · 规划时长':''}</span>{!soon&&<span>{progress>0?`${progress}%`:'未开始'}</span>}</div><div className="card-actions"><small>{soon?'课时筹备中':`${c.lessonCount??0} 个课时`} · {c.method}</small><div className="buttons"><button className="button secondary" onClick={open}>查看详情</button><button className="button" onClick={open}>{archived?'发现新课程':soon?'查看规划':progress>=100?'回顾课程':progress>0?'继续学习':c.availability==='trial'?'开始试学':'开始学习'}<ArrowUpRight size={15}/></button></div></div></div></article>;
 }
 export function MorphCourseCatalog({courses,onOpen,onNavigate}) {
   const [category,setCategory]=useState('全部'),[query,setQuery]=useState(''),[method,setMethod]=useState(''),[author,setAuthor]=useState(''),[tool,setTool]=useState('');
@@ -30,7 +32,7 @@ export function MorphCourseCatalog({courses,onOpen,onNavigate}) {
     tool && {label:tool,onRemove:()=>setTool('')},
   ].filter(Boolean);
   return <><MorphPageBanner title="原子课程" eyebrow="ATOMIC COURSES"/>
-    <div className="container morph-catalog"><MorphCourseConnections courses={decorated} onOpen={onOpen} onNavigate={onNavigate}/>
+    <div className="container morph-catalog">{courses.some(c=>c.catalog?.bundleId)&&<p className="catalog-notice catalog-bundle-note">13 门课程规划 · 3 门试学样板 · 10 门筹备中。试学讲义待教研审核，不代表已完成正式课程评审；学习进度只来自你的实际记录。</p>}<MorphCourseConnections courses={decorated} onOpen={onOpen} onNavigate={onNavigate}/>
       <CatalogControls label="课程筛选" options={categories.map(c=>({value:c,label:c,count:c==='全部'?courses.length:decorated.filter(x=>x.category===c).length}))}
         value={category} onChange={setCategory} query={query} onQueryChange={setQuery} searchLabel="搜索原子课程" placeholder="搜索课程、老师、工具"
         resultLabel={`${visible.length} / ${courses.length} 门课程`} selected={selected} onClear={reset}
@@ -45,14 +47,17 @@ export function MorphCourseCatalog({courses,onOpen,onNavigate}) {
 }
 function MorphCourseConnections({courses,onOpen,onNavigate}) {
   const [expanded,setExpanded]=useState(true);
+  const core=courses.find(c=>c.catalog?.code==='DTH-10');
+  const branchSpecs=[['POS-11','视觉传达','概念转译 · 色彩与版式'],['PRD-12','工业设计','需求洞察 · 形态与材质'],['INF-13','跨专业应用','问题定义 · 数据与叙事']];
+  const branches=branchSpecs.map(([code,direction,hint])=>({course:courses.find(c=>c.catalog?.code===code),direction,hint})).filter(item=>item.course);
   return <section className={`atom-connections${expanded?'':' atom-connections--collapsed'}`}>
     <div className="connection-heading"><div><span className="eyebrow">CONNECTED LEARNING</span><h2>让课程原子相互连接</h2></div>
       <div className="morph-connections-actions"><button type="button" className="morph-connections-toggle" aria-expanded={expanded} aria-controls="course-connection-preview" onClick={()=>setExpanded(!expanded)}>{expanded?'收起预览':'展开预览'}{expanded?<CaretUp size={15}/>:<CaretDown size={15}/>}</button>
         <div className="curriculum-entry"><button className="button" onClick={()=>onNavigate('/my-learning?view=portrait')}>我的专业画像 <ArrowUpRight size={17}/></button></div>
       </div>
     </div>
-    <div id="course-connection-preview" hidden={!expanded}>{courses.length>0&&<div className="atom-map"><button className="atom-core" onClick={()=>onOpen(courses[0].id)}><span>从方法出发</span><strong>{courses[0].title}</strong><small>{courses[0].category} · {courses[0].method}</small></button><div className="atom-branches">{courses.slice(1,4).map(c=><button key={c.id} onClick={()=>onOpen(c.id)}><span>{c.category}</span><strong>{c.title}</strong><small>{c.method} · {c.lessonCount??0} 个课时</small></button>)}</div></div>}
-      <p className="morph-connections-note">按主题探索课程；此处连线不代表先修要求，具体知识关系可在图谱中查看。</p>
+    <div id="course-connection-preview" hidden={!expanded}>{core&&<div className="atom-map"><button className="atom-core" onClick={()=>onOpen(core.id)}><span>共同基础 · 方法原子</span><strong>{core.title}</strong><small>观察 → 定义 → 构想 → 验证</small></button><div className="atom-branches">{branches.map(({course:c,direction,hint})=><button key={c.id} onClick={()=>onOpen(c.id)}><span>{direction}</span><strong>{c.title}</strong><small>{hint}</small></button>)}</div></div>}
+      <p className="morph-connections-note">按主题探索课程；此处连线仅为探索入口，不代表已经审核的先修要求。筹备课程可查看规划，试学课程可开始自主练习。</p>
     </div>
   </section>;
 }

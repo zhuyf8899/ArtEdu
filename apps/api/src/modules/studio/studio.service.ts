@@ -62,7 +62,7 @@ export class StudioService {
 
   async listToolDirectoryLinks() {
     const result = await this.database.query(
-      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links WHERE status='active' ORDER BY category,sort_order,created_at",
+      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status,catalog_json FROM tool_directory_links WHERE status='active' ORDER BY CASE WHEN category='平台工具' THEN 1 ELSE 0 END,category,sort_order,created_at",
     );
     return { items: result.rows.map((row) => this.mapToolDirectoryLink(row)) };
   }
@@ -70,7 +70,7 @@ export class StudioService {
   async listManagedToolDirectoryLinks(actor: Actor) {
     if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可以管理设计工具目录");
     const result = await this.database.query(
-      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links ORDER BY category,sort_order,created_at",
+      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status,catalog_json FROM tool_directory_links ORDER BY category,sort_order,created_at",
     );
     return { items: result.rows.map((row) => this.mapToolDirectoryLink(row)) };
   }
@@ -89,7 +89,7 @@ export class StudioService {
   async updateToolDirectoryLink(actor: Actor, toolLinkId: string, input: ToolDirectoryLinkUpdateInput) {
     if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可以管理设计工具目录");
     const result = await this.database.query(
-      "UPDATE tool_directory_links SET category=$2,name=$3,detail=$4,href=$5,cover_image_url=$6,icon_key=$7,launch_mode=$8,is_featured=$9,status=$10,updated_by=$11,updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status",
+      "UPDATE tool_directory_links SET category=$2,name=$3,detail=$4,href=$5,cover_image_url=$6,icon_key=$7,launch_mode=$8,is_featured=$9,status=$10,updated_by=$11,updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status,catalog_json",
       [toolLinkId, input.category, input.name, input.detail, input.href, input.coverImageUrl || null, input.iconKey, input.launchMode, input.featured, input.status, actor.id],
     );
     if (!result.rowCount) throw new NotFoundException("设计工具条目不存在");
@@ -962,6 +962,7 @@ export class StudioService {
   // 对外只暴露目录展示所需字段；不返回维护者身份，避免把后台账号信息带到学生端。
   private mapToolDirectoryLink(row: Record<string, any>) {
     return {
+      catalog: row.catalog_json ?? null,
       id: row.id,
       category: row.category,
       name: row.name,

@@ -180,6 +180,10 @@ if ($SeedDemo) {
 Invoke-Npm -WorkingDir (Join-Path $root 'apps/api') -NpmArgs @('run', 'showcase:install')
 Ok '九个案例及展示图片已核对/补齐'
 
+# 明确版本化的 MORPH 内容部署；内置预检、备份和幂等保护，不重建个人学习记录。
+Invoke-Npm -WorkingDir (Join-Path $root 'apps/api') -NpmArgs @('run', 'catalog:install')
+Ok 'MORPH 原子课程与技能工具内容包已核对/安装'
+
 # ------------------------------------------------------------------ 5. 演示账号
 Step 6 '确保 4 个演示账号可以登录'
 $identityCount = 0

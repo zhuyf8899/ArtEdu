@@ -5,8 +5,8 @@ import {
 } from "@phosphor-icons/react";
 import { searchPortal } from "./services/adminApi.js";
 import { coverImageFor, titleCoverDataUrl } from "./coverImages.js";
-import { decorateCourse, difficultyName } from "./coursePresentation.js";
-import { morphModuleLabel, morphCourseCover } from './morph/morphPresentation.js';
+import { decorateCourse, difficultyName, courseReadiness } from "./coursePresentation.js";
+import { morphModuleLabel, morphCourseCover, morphCourseLevel } from './morph/morphPresentation.js';
 
 const TYPE_FILTERS = [
   ["all", "全部"],
@@ -154,15 +154,15 @@ function SearchCard({ item, index, onOpen, variant }) {
   const { Icon, label: originalLabel } = TYPE_META[item.type];
   const label = morphModuleLabel(originalLabel,variant);
   // 无上传封面的课程生成与卡片同宽高的标题图，避免 object-fit 裁掉中英文标题。
-  const visual = item.type === "course" ? (variant === 'morph' ? coverImageFor({...item,coverImageUrl:morphCourseCover(item)}, 220, 230) : coverImageFor(item, 220, 230)) : item.type === "work" ? item.previewUrl : null;
+  const visual = item.type === "course" ? (variant === 'morph' ? coverImageFor({...item,coverImageUrl:morphCourseCover(item)}, 220, 230) : coverImageFor(item, 220, 230)) : item.type === "work" ? item.previewUrl : item.coverUrl || null;
   const visibleTags = [...new Set([item.category, ...(item.methods ?? []), ...(item.tags ?? [])].filter((value) => value && !MODULE_LABELS.has(value)))].slice(0, 4);
   return <article className={`search-card search-card--${index % 3}`}>
     <div className={`search-card__visual ${visual ? "has-image" : ""}`}>{visual ? <img src={visual} alt={`${item.title}封面`} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = titleCoverDataUrl(item.title, 220, 230); }} /> : <div className="search-card__placeholder"><Icon size={34} weight="light" /><span>{item.title}</span></div>}</div>
     <div className="search-card__body">
-      <div className="search-card__type"><b>{label}</b><span>{item.type === "course" ? `${item.lessonCount ?? 0} 个课时 · ${difficultyName(item.difficulty)}` : item.category}</span></div>
-      <h3>{item.title}</h3><p>{item.summary || "该内容暂未填写简介。"}</p>
+      <div className="search-card__type"><b>{label}</b><span>{item.type === "course" ? item.availability==='coming_soon'?`课时筹备中 · ${(variant === 'morph' ? morphCourseLevel(item) : difficultyName(item.difficulty))}`:`${item.lessonCount ?? 0} 个课时 · ${(variant === 'morph' ? morphCourseLevel(item) : difficultyName(item.difficulty))}` : item.category}</span></div>
+      <h3>{item.title}</h3>{item.type==='course'&&courseReadiness(item)&&<span className="catalog-notice">{courseReadiness(item)}</span>}<p>{item.summary || "该内容暂未填写简介。"}</p>
       <div className="search-card__tags">{visibleTags.map((itemTag) => <span key={itemTag}>{itemTag}</span>)}</div>
-      <div className="search-card__details"><span><strong>{item.type === "course" ? "授课作者" : "创作者"}</strong>{item.author}</span>{item.tools?.length > 0 && <span><strong>创作工具</strong>{item.tools.slice(0, 3).join(" · ")}{item.tools.length > 3 ? ` 等 ${item.tools.length} 种` : ""}</span>}</div>
+      <div className="search-card__details"><span><strong>{item.type === "course" ? "授课作者" : item.catalog?.bundleId?'条目来源':"创作者"}</strong>{item.author}</span>{item.tools?.length > 0 && <span><strong>创作工具</strong>{item.tools.slice(0, 3).join(" · ")}{item.tools.length > 3 ? ` 等 ${item.tools.length} 种` : ""}</span>}</div>
       <footer><button onClick={onOpen}>{item.type === "course" ? "查看课程" : item.type === "work" ? "查看案例" : (variant === 'morph' ? '查看技能工具' : '查看设计工具')} <ArrowRight size={16} weight="bold" /></button></footer>
     </div>
   </article>;
@@ -171,7 +171,7 @@ function SearchCard({ item, index, onOpen, variant }) {
 function fallbackSearch(query, data) {
   const keyword = query.trim().toLowerCase();
   const candidates = [
-    ...(data.courses ?? []).map((item) => ({ id: item.id, type: "course", title: item.title, summary: item.summary, category: item.category ?? "课程", author: item.author ?? item.creatorName, methods: [item.method].filter(Boolean), tools: item.tools ?? [], coverUrl: item.coverUrl, coverImageUrl: item.coverImageUrl, difficulty: item.difficulty, lessonCount: item.lessonCount, updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["AI 讲堂", item.method, item.category, ...(item.tools ?? [])].filter(Boolean), route: `/learning?course=${encodeURIComponent(item.id)}` })),
+    ...(data.courses ?? []).map((item) => ({ id: item.id, type: "course", title: item.title, summary: item.summary, category: item.category ?? "课程", catalog:item.catalog, availability:item.availability, author: item.author ?? item.creatorName, methods: [item.method].filter(Boolean), tools: item.tools ?? [], coverUrl: item.coverUrl, coverImageUrl: item.coverImageUrl, difficulty: item.difficulty, lessonCount: item.lessonCount, updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["AI 讲堂", item.method, item.category, ...(item.tools ?? [])].filter(Boolean), route: `/learning?course=${encodeURIComponent(item.id)}` })),
     ...(data.workflows ?? []).map((item) => ({ id: item.id, type: "workflow", title: item.name, summary: item.description, category: item.category ?? "工作流", author: "ArtEdu 教学团队", methods: item.methods ?? [], tools: item.tools ?? [], updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["设计工具", item.category].filter(Boolean), route: "/studio" })),
     ...(data.works ?? []).map((item) => ({ id: item.id, type: "work", title: item.title, summary: item.summary, category: item.discipline ?? "案例", author: item.author ?? "ArtEdu 用户", methods: item.methods ?? [], tools: item.tools ?? [], previewUrl: item.previewUrl, updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["案例社区", item.discipline].filter(Boolean), route: "/community" })),
   ];

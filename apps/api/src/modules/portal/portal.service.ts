@@ -48,6 +48,9 @@ interface ModelRow {
 }
 
 interface SearchRow {
+  directory_name?: string;
+  directory_cover?: string | null;
+  catalog_json?: Record<string, any>;
   id: string;
   title: string;
   summary: string | null;
@@ -195,9 +198,9 @@ export class PortalService {
     const limit = 60;
     const include = (type: PortalSearchQuery["type"]) => query.type === "all" || query.type === type;
 
-    const [courses, workflows, works] = await Promise.all([
+    const [courses, workflows, works, directory] = await Promise.all([
       include("course") ? this.database.query<SearchRow>(`
-        SELECT c.id, c.title, c.summary, c.category, creator.display_name AS author,
+        SELECT c.id, c.title, c.summary, c.category, creator.display_name AS author, c.catalog_json,
           c.difficulty AS metadata,
           c.cover_url, c.cover_asset_key, c.cover_mime_type,
           (SELECT COUNT(*)::int FROM course_lessons lesson WHERE lesson.course_id = c.id AND lesson.status = 'published') AS lesson_count,
@@ -299,17 +302,30 @@ export class PortalService {
         ORDER BY work.is_featured DESC, work.featured_rank NULLS LAST, work.updated_at DESC
         LIMIT $3
       `, [patterns, tag, limit]) : Promise.resolve({ rows: [] as SearchRow[] }),
+      include('workflow') ? this.database.query<SearchRow>(`
+        SELECT id,name AS title,name AS directory_name,detail AS summary,category,
+          '第三方工具导航'::text AS author,'external_tool'::text AS metadata,
+          cover_image_url AS directory_cover,catalog_json,updated_at,
+          ARRAY(SELECT jsonb_array_elements_text(COALESCE(catalog_json->'tags','[]'::jsonb))) AS tags,
+          COUNT(*) OVER()::int AS match_count
+        FROM tool_directory_links
+        WHERE status='active' AND catalog_json->>'bundleId'='morph-catalog-v1'
+          AND (name ILIKE ANY($1::text[]) OR detail ILIKE ANY($1::text[]) OR category ILIKE ANY($1::text[]) OR COALESCE(catalog_json->'tags','[]'::jsonb)::text ILIKE ANY($1::text[]))
+          AND ($2::text IS NULL OR category=$2 OR COALESCE(catalog_json->'tags','[]'::jsonb) ? $2)
+        ORDER BY sort_order LIMIT $3
+      `,[patterns,tag,limit]) : Promise.resolve({rows:[] as SearchRow[]}),
     ]);
 
     const items = [
       ...courses.rows.map((row) => this.mapSearchResult("course", row)),
       ...workflows.rows.map((row) => this.mapSearchResult("workflow", row)),
       ...works.rows.map((row) => this.mapSearchResult("work", row)),
+      ...directory.rows.map((row) => this.mapSearchResult("workflow", row)),
     ].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     const counts = {
       all: items.length,
       course: Number(courses.rows[0]?.match_count ?? 0),
-      workflow: Number(workflows.rows[0]?.match_count ?? 0),
+      workflow: Number(workflows.rows[0]?.match_count ?? 0) + Number(directory.rows[0]?.match_count ?? 0),
       work: Number(works.rows[0]?.match_count ?? 0),
     };
     const availableTags = [...new Set(items.flatMap((item) => item.tags))].sort((left, right) => left.localeCompare(right, "zh-CN"));
@@ -328,21 +344,24 @@ export class PortalService {
     return {
       id: row.id,
       type,
+      catalog: row.catalog_json ?? null,
+      availability: type === 'course' ? row.catalog_json?.availability ?? 'available' : undefined,
+      method: type === 'course' ? row.catalog_json?.method : undefined,
       typeLabel,
       title: row.title,
       summary: row.summary ?? "",
       category: row.category ?? "未分类",
-      author: row.author ?? "ArtEdu 教学团队",
+      author: (type === 'course' ? row.catalog_json?.authorLabel : null) || row.author || "作者待确认",
       methods: [...new Set([...(row.methods ?? []), ...(row.tags ?? []).filter((value) => ["UI 创作", "图案生成", "Vibe Coding", "UI设计", "图案设计"].includes(value)), ...(type === "course" && /coding|网页|代码/i.test(row.title) ? ["Vibe Coding"] : type === "course" && /纹样|图案/.test(row.title) ? ["图案生成"] : [])])],
-      tools: [...new Set([...(row.tools ?? []), ...(type === "workflow" ? row.tags ?? [] : [])])],
+      tools: [...new Set([...(type === 'course' && Array.isArray(row.catalog_json?.tools) ? row.catalog_json.tools : row.tools ?? []), ...(type === "workflow" && !row.directory_name ? row.tags ?? [] : [])])],
       tags: [...new Set(tags)],
       // 搜索与对应页面使用同一封面来源；仅传 URL，不在 JSON 中内嵌二进制图片。
-      coverUrl: type === "course" ? row.cover_url ?? null : null,
+      coverUrl: row.directory_cover || (type === "course" ? row.cover_url ?? null : null),
       coverImageUrl: type === "course" && row.cover_asset_key && row.cover_mime_type ? `/api/courses/${encodeURIComponent(row.id)}/cover` : null,
       previewUrl: type === "work" ? row.preview_url ?? null : null,
       difficulty: type === "course" ? row.metadata : null,
       lessonCount: type === "course" ? Number(row.lesson_count ?? 0) : null,
-      route: { course: `/learning?course=${encodeURIComponent(row.id)}`, workflow: "/studio", work: "/community" }[type],
+      route: row.directory_name ? `/studio?toolQuery=${encodeURIComponent(row.directory_name)}` : { course: `/learning?course=${encodeURIComponent(row.id)}`, workflow: "/studio", work: "/community" }[type],
       updatedAt: row.updated_at.toISOString(),
     };
   }

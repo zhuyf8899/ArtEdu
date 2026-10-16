@@ -1,0 +1,52 @@
+/* Handoff anatomy. Explicit resets isolate compact logos and CTAs from classic tool styles. */
+.morph-v17 .morph-tool-card{position:relative;display:flex;flex-direction:column;gap:16px;min-width:0;min-height:370px;padding:24px;border:1px solid #fff;border-radius:20px;background:#ffffffd1;box-shadow:0 8px 32px -10px #44427712;transition:transform .2s,box-shadow .2s}
+.morph-v17 .morph-tool-card__head{display:flex;align-items:center;gap:12px;min-height:61px;padding:0}
+.morph-v17 .morph-tool-card__title{flex:1;min-width:0}
+.morph-v17 .morph-tool-card__icon{display:grid;place-items:center;flex:0 0 61px;width:61px;height:61px;border:1px solid #dddff0;border-radius:15px;background:#fff;color:#6554e8;overflow:hidden}
+.morph-v17 .morph-tool-card__icon>img{position:static;display:block;width:36px;height:36px;max-width:36px;max-height:36px;object-fit:contain;transform:none}
+.morph-v17 .morph-tool-card h2{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 4px;font-family:inherit;font-size:20px;line-height:28px;font-weight:650;letter-spacing:0;overflow-wrap:anywhere}
+.morph-v17 .morph-tool-card__title>p{margin:0;min-height:0;color:#606887;font-size:12px;line-height:18px;font-weight:400}
+.morph-v17 .morph-tool-card__featured{position:static;display:inline-block;padding:3px 5px;border-radius:4px;background:#171a2f;color:#d8f845;font:12px/18px ui-monospace,monospace}
+.morph-v17 .morph-tool-card__category{align-self:flex-start;margin:12px 0;padding:4px 7px;border:1px solid #6554e833;border-radius:6px;background:#6554e80d;color:#6554e8;font-size:12px;line-height:18px}
+.morph-v17 .morph-tool-card__category--ai{color:#a73370;background:#fce6f0;border-color:#f2b8d4}
+.morph-v17 .morph-tool-card__category--three{color:#99601f;background:#fff0e2;border-color:#fad5b7}
+.morph-v17 .morph-tool-card__category--live{color:#19796f;background:#e5f8f5;border-color:#aee4dd}
+.morph-v17 .morph-tool-card__category--resource{color:#287b9b;background:#e6f6fd;border-color:#b5e2f2}
+.morph-v17 .morph-tool-card__description{margin:0 0 10px;min-height:44px;color:#606887;font-size:14px;line-height:22px;font-weight:400;overflow-wrap:anywhere}
+.morph-v17 .morph-tool-card p.morph-tool-card__description{letter-spacing:normal;text-transform:none}
+.morph-v17 .morph-tool-card__labels{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.morph-v17 .morph-tool-card__labels>span{padding:4px 8px;border:1px solid #dddff0;border-radius:5px;background:#f7f6fe;color:#606887;font-size:12px;line-height:18px;overflow-wrap:anywhere}
+.morph-v17 .morph-tool-card__meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;color:#606887;font-size:12px;line-height:18px}
+.morph-v17 .morph-tool-card__meta>span{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.morph-v17 .morph-tool-card__destination{color:#737a91}
+.morph-v17 .morph-tool-card__learning{min-width:0}
+.morph-v17 .morph-tool-card__learning>button{display:inline-flex;align-items:center;justify-content:flex-start;gap:6px;min-height:28px;width:auto;padding:2px 0;border:0;border-radius:4px;background:transparent;color:#6554a2;font-family:inherit;font-size:12px;line-height:20px;font-weight:400;box-shadow:none}
+.morph-v17 .morph-tool-card__learning>button>span{color:#747b91}
+.morph-v17 .morph-tool-card__learning>button[aria-expanded=true]>svg:last-child{transform:rotate(180deg)}
+.morph-v17 .morph-tool-card__courses{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0 0}
+.morph-v17 .morph-tool-card__courses[hidden]{display:none}
+.morph-v17 .morph-tool-card__courses>button{display:inline-flex;align-items:center;gap:6px;max-width:100%;min-height:30px;width:auto;height:auto;padding:5px 8px;border:1px solid #dddff0;border-radius:6px;background:#f7f6fe;color:#535b78;font-family:inherit;font-size:12px;line-height:18px;font-weight:400;white-space:normal;text-align:left;box-shadow:none}
+.morph-v17 .morph-tool-card__verification{color:#7c704c;font-size:12px;line-height:18px;font-weight:400}
+.morph-v17 .tool-directory .morph-tool-directory-note{margin:32px 0 0;padding:16px 20px;min-height:0;border:1px solid #dddff0;border-radius:16px;background:#ffffff99;color:#606887;font-size:14px;line-height:22px;font-weight:400}
+.morph-v17 .morph-tool-catalog .workflow-card>button{display:inline-flex;align-items:center;justify-content:space-between;gap:12px;min-height:38px;padding:8px 12px;border:1px solid #171a2f;border-radius:8px;background:#171a2f;color:#fff;font-family:inherit;font-size:14px;line-height:20px;font-weight:400}
+.morph-v17 .morph-tool-catalog .workflow-card>button:focus-visible{outline:2px solid #7864ce;outline-offset:3px}
+.morph-v17 .morph-tool-card__footer{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-top:auto;padding-top:14px;border-top:1px solid #dddff0;width:100%}
+.morph-v17 .morph-tool-card__footer>small{min-width:0;color:#606887;font:12px/18px ui-monospace,monospace;overflow-wrap:anywhere}
+.morph-v17 .morph-tool-card .morph-tool-card__footer .morph-tool-card__launch{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.morph-v17 .morph-tool-card__launch>svg{flex-shrink:0}
+.morph-v17 .morph-tool-card .morph-tool-card__launch{position:static;display:inline-flex;flex-direction:row;align-items:center;justify-content:center;flex:none;gap:6px;width:auto;height:auto;min-height:38px;min-width:0;padding:8px 12px;border:1px solid #171a2f;border-radius:8px;background:#171a2f;color:#fff;font-family:inherit;font-size:14px;line-height:20px;font-weight:400;text-align:center;text-decoration:none;white-space:nowrap;box-shadow:none;cursor:pointer}
+.morph-v17 .morph-tool-card__edit{position:absolute;top:12px;right:12px;width:28px;height:28px;padding:5px;border:1px solid #dddff0;border-radius:7px;background:#fff;color:#6554e8}
+.morph-v17 .morph-tool-card:has(.morph-tool-card__edit) .morph-tool-card__head{padding-right:20px}
+.morph-v17 .morph-tool-card button:focus-visible,.morph-v17 .morph-tool-card a:focus-visible{outline:2px solid #7864ce;outline-offset:3px}
+.morph-v17 .tool-directory__list--grid{align-items:stretch}
+.morph-v17 .tool-directory__list--list .morph-tool-card{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,1.3fr) minmax(180px,.8fr);gap:12px 24px;align-items:start;min-height:0}
+.morph-v17 .tool-directory__list--list .morph-tool-card__head{grid-column:1;grid-row:1/5}
+.morph-v17 .tool-directory__list--list .morph-tool-card__category{grid-column:2;grid-row:1;justify-self:start;margin:0}
+.morph-v17 .tool-directory__list--list .morph-tool-card__description{grid-column:2;grid-row:2;margin:0;min-height:0}
+.morph-v17 .tool-directory__list--list .morph-tool-card__labels{grid-column:2;grid-row:3;margin:0}
+.morph-v17 .tool-directory__list--list .morph-tool-card__meta{grid-column:2;grid-row:4}
+.morph-v17 .tool-directory__list--list .morph-tool-card__learning,.morph-v17 .tool-directory__list--list .morph-tool-card__verification{grid-column:2}
+.morph-v17 .tool-directory__list--list .morph-tool-card__footer{grid-column:3;grid-row:1/6;flex-direction:column;justify-content:center;align-items:flex-end;align-self:center;margin:0;padding:0;border:0}
+.morph-v17 .tool-directory__list--list .morph-tool-card__launch{display:inline-flex;min-height:38px}
+@media(max-width:1199px){.morph-v17 .tool-directory__list--list .morph-tool-card{grid-template-columns:minmax(190px,.8fr) minmax(0,1.2fr)}.morph-v17 .tool-directory__list--list .morph-tool-card__footer{grid-column:1/-1;grid-row:auto;flex-direction:row;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid #dddff0}}
+@media(prefers-reduced-motion:reduce){.morph-v17 .morph-tool-card{transition:none}.morph-v17 .morph-tool-card:hover{transform:none}}
