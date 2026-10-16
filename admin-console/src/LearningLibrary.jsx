@@ -10,10 +10,11 @@ import { decorateCourse, difficultyName } from "./coursePresentation.js";
 import { learningLabels } from "./learningBindings.js";
 import { ZoomableImage } from "./ImageLightbox.jsx";
 import "./LearningBindings.css";
+import { MorphCourseCatalog } from './morph/MorphCatalog.jsx';
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
 
-export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", initialLessonId = "" }) {
+export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", initialLessonId = "", variant = 'classic' }) {
   const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -134,6 +135,7 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载 AI 讲堂</strong><p>正在同步课程、作者和工具标签。</p></section>;
   if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>AI 讲堂暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
 
+  if (variant === 'morph') return <MorphCourseCatalog courses={courses} onOpen={showCourse} onNavigate={onNavigate} />;
   return <>
     <section className="learning-library-intro" aria-labelledby="learning-library-title">
       <div className="learning-library-intro__copy">

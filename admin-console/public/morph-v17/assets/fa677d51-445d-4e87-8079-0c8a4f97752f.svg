@@ -1,0 +1,17 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="18.6667" height="18.6667" viewBox="0 0 18.6667 18.6667" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="AppToolIcon" clip-path="url(#clip0_0_211)">
+<path id="Vector" d="M14.7778 0H3.88889C1.74111 0 0 1.74111 0 3.88889V14.7778C0 16.9256 1.74111 18.6667 3.88889 18.6667H14.7778C16.9256 18.6667 18.6667 16.9256 18.6667 14.7778V3.88889C18.6667 1.74111 16.9256 0 14.7778 0Z" fill="#0B0F19"/>
+<path id="Vector_2" d="M4.66667 9.33333L9.33333 3.11111L14 9.33333L9.33333 15.5556L4.66667 9.33333Z" fill="url(#paint0_linear_0_211)"/>
+<path id="Vector_3" d="M9.33333 11.0444C10.2784 11.0444 11.0444 10.2784 11.0444 9.33333C11.0444 8.38831 10.2784 7.62222 9.33333 7.62222C8.38831 7.62222 7.62222 8.38831 7.62222 9.33333C7.62222 10.2784 8.38831 11.0444 9.33333 11.0444Z" fill="white"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_211" x1="4.66667" y1="3.11111" x2="14" y2="15.5556" gradientUnits="userSpaceOnUse">
+<stop stop-color="#38BDF8"/>
+<stop offset="0.5" stop-color="#818CF8"/>
+<stop offset="1" stop-color="#EC4899"/>
+</linearGradient>
+<clipPath id="clip0_0_211">
+<rect width="18.6667" height="18.6667" fill="white"/>
+</clipPath>
+</defs>
+</svg>
