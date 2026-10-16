@@ -1,77 +1,132 @@
-# CVPR 外部艺术案例展示核对（2026-10-12）
+# MORPH LAB v17 desktop integration — design QA
+
+Date: 2026-10-15
+
+First-batch result: **passed** for the initial desktop integration batch only. This is not an acceptance of all seven supplied pages or of paid AI/write workflows.
+
+## Scope and reference
+
+User-provided MORPH LAB v17 frontend is the visual source. Its local reference was served at `http://127.0.0.1:4381/`; implementation was checked at `http://localhost:4173/`. Screens reviewed: shared navigation/account menu, starfield home/composer, course catalog, case catalog and tool catalog. Existing learning atlas, course/case details, creation execution and admin were checked for integration regressions, not declared fully restyled.
+
+Reference and implementation captures used the same 1440 × 900 desktop viewport. PNG content dimensions were 1425 × 891 on both sides; side-by-side contact sheets resize both equally to 1000 px wide, without asymmetric scaling or cropping. Additional layout bounds were checked at 1280 × 800 and 1920 × 1080. Mobile is excluded at the user's request.
+
+Evidence is local and ignored by Git under `apps/api/data/qa/morph-v17/`:
+
+- `source-{home,courses,community,tools}.png`: original supplied pages.
+- `app-{home,courses,community,tools}.png`: integrated pages with actual ArtEdu data.
+- `compare-{home,courses,community,tools}.png`: paired source/implementation views.
+- `compare-header-focus.png`: focused navigation/heading comparison.
+- `full-check.log`: complete automated check output, exit code 0.
+
+## Visual assessment
+
+| Surface | Outcome | Evidence / deliberate differences |
+| --- | --- | --- |
+| Shared chrome | Passed | Dark navigation, bright brand, route highlighting and account menu; actual role/name/quota and search added instead of a static demo identity. |
+| Home | Passed | Original Canvas starfield, background assets, headline, tabs and translucent composer retained. Default chat, registered model and real attachment action replace demo defaults/unimplemented voice. Animation phase naturally varies between captures. |
+| Courses | Passed | Source header, category toolbar, cover/body cards, legible author/tools and real progress. Shows 3 existing courses, not 13 demo records. |
+| Cases | Passed | Source title/network atmosphere and restrained cards; retains the previously requested three-column equal grid and featured/community split, rather than the supplied four-column masonry. Actual 14 cases preserved. |
+| Tools | Passed | Source header/floating workflow decoration, compact filter/search row and three-column cards. Shows 8 real links; no fabricated pricing, descriptions or tags. Grid/list and empty-state recovery checked. |
+
+## Corrections made during comparison
+
+1. P2: legacy global CSS forced a single tool column. Added scoped grid rules and confirmed three columns plus list mode.
+2. P2: course cover cropping and toolbar wrapping reduced readability. Used actual uploaded covers first, known project artwork as fallback, and corrected fit/width behavior.
+3. P2: inherited glass/backdrop layers obscured filter text. Removed backdrop blur from catalog controls and rechecked readable labels.
+4. P2: legacy brand color reduced contrast on the dark navigation. Explicit scoped white brand styling verified in the focused header comparison.
+5. P1: standalone chat's old full-viewport height put the send control below the viewport after adding navigation. Deducted the 56 px navigation height; send control bottom was 874.2 px at 900 px viewport height and 774.2 px at 800 px height.
+6. P2: tool search/filter rows consumed excessive vertical space. Consolidated desktop controls into one grid row and rechecked the final tool comparison and absence of horizontal overflow.
+
+No unresolved P0/P1/P2 visual issue was observed in the accepted first-batch surfaces. Minor brand-symbol differences and live Canvas variation are acceptable; the account/search additions and real-data cardinality are intentional, not fidelity defects.
+
+## Functional and regression checks
+
+- Four demo roles authenticated and each read 14 published cases / 3 courses; authentication protections unchanged. Login/reload/logout checked through same-origin HTTP without exposing tokens.
+- Browser checked course search/clear/detail, case detail and media gallery/Escape, tool search/no-result recovery/grid-list, account menu/Escape, preserved learning atlas and creation entry.
+- Admin loaded without `.morph-v17` scope applied; existing admin layout retained.
+- Search UI module labels and course covers aligned with the new navigation/catalog while preserving classic mode.
+- Original Canvas code now cleans up animation frames, observers, timers and event listeners on unmount.
+- `npm run check`: API typecheck, frontend production build and **293 automated tests passed** (137 API, 6 Sites, 37 chat, 100 platform, 7 case import, 6 reliability).
+- An additional production build and whitespace check were run after the final CSS-only adjustment.
+
+## Explicit limitations / next batch
+
+No paid model generation, actual publishing, course completion or review decision was performed. No inference that these write flows are end-to-end accepted. No demo learning scores or records imported. Full curriculum planning, v17 personal space/portrait and full creation workspace layout remain subsequent batches. Existing knowledge graph and business data are intentionally preserved. No GitHub push or merge was requested or performed in this turn.
+
+## Follow-up: shared catalog controls and tool cards
+
+Scope: user-approved refinements from the three-page audit, not a new visual direction. Sources are the supplied MORPH v17 tool page plus the captured course/community/tool audit and accepted recommendations. Preserve real ArtEdu catalogs rather than importing the static demo's 19 tools or identity.
+
+Evidence root: `apps/api/data/qa/morph-v17/catalog-refinement/`.
+
+- Source: `source-tools-1440.png`; implementation: `tools-final-1440.png`; full-view paired evidence: `compare-tools-final.png`.
+- Both captures use 1440 × 900 CSS viewport and produce 1425 × 891 px PNGs. The paired view scales both equally to 1000 px width. No asymmetric scaling. Same default/all-category state; actual tool names/counts intentionally differ.
+- `courses-final-1440.png` (connection preview deliberately collapsed), `community-final-1440.png`, and `tools-final-1440.png` show each final desktop surface.
+- `shared-controls-comparison.png` contains focused crops in course/community/tool order, without rescaling, to assess label size, selected state, counters, search alignment and result rows. The different panel heights reflect real extra filters, not inconsistent button sizing.
+- `courses-selected.png`, `community-final-912.png`, `tools-final-912.png`, `tools-list-912.png` record additional narrow-desktop/interaction states; the first tool screenshots predate the font/icon refinements and are not final typography evidence.
+
+### Findings and fixes
+
+- P2: three unrelated filter styles. Replaced them with the shared `CatalogControls` component; all category buttons use 14 px type, 38 px height, the same dark selected state/counter and 44 px search field. Read-only card labels remain lighter and smaller.
+- P2: community hierarchy was crowded and “大类” ambiguous. Separated section jump links, dimension choices and actual categories; renamed dimensions to 作品领域 / 设计方法 / 创作工具 / 艺术方向. Long lists collapse after eight options while retaining any active option. Expanded/selected semantics are explicit.
+- P2: narrow-desktop tool cards forced titles to wrap. Added a dedicated source-informed tool card, 300 px minimum height, two columns below 1200 px and three on wider desktop. Domain/footer separator and actual open behavior are visible; icons use the established library or genuine favicon, not invented brand artwork.
+- P2: inherited 750-weight tool descriptions were too heavy. Set 400 explicitly; final browser computed style confirms 400. Retested with final wide screenshot.
+- P2: slow remote favicons left an empty icon box. The library icon now stays visible until the genuine favicon loads, with the existing source fallback order retained. Classic rendering remains unchanged. Updated the old exact-function-signature assertion to recognize the added optional progressive flag and assert the new loading behavior.
+- P2: the workflow shortcut is a button, while other tool cards are links; a legacy button rule centered its inner header/labels. Explicit stretch/start alignment now gives both element types the same left-aligned grid-card structure; the final captures were refreshed after this correction.
+- P2: course connection preview consumed too much space for users browsing the catalog. Added an accessible expand/collapse control without deleting the graph entry or claiming preview lines are prerequisites.
+
+### Required fidelity surfaces
+
+- Typography: original site font stack retained; category labels 14/20, tool titles 20/28, description 14/23 at weight 400. Narrow desktop titles no longer break into isolated words due to a forced three-column grid.
+- Spacing/layout: shared 20 px filter panel padding, 8 px category gaps, aligned search and consistent result/clear row; equal tool cards with 24 px padding and footer alignment. Source-inspired tool layout is intentionally shorter where the live directory has less metadata.
+- Colors/tokens: existing dark ink, lavender surfaces, muted purple and lime accents retained. Selected filters also expose programmatic pressed state, so color is not the only signal.
+- Image/assets: original page effects and supplied artwork unchanged. Genuine favicons overlay a visible library-icon fallback; no fabricated pricing, badges, logos or review counts introduced.
+- Copy/content: all counts reflect current API records (3 courses, 14 cases, 8 tools). “站内工具” describes destination, independently from same/new-tab launch mode. External links say 打开官网; workflow shortcut says 节点工作流 and retains the existing manager callback.
+
+### Interaction / regression evidence
+
+Browser verified course category + tool filtering (1/3), clear back to 3/3, empty-query recovery; case dimension switching, expanding a long list, selecting Midjourney (1/14), retaining it after collapse, search empty state and clear back to 14/14; tools category (2/8), Figma search (1/8), empty state, grid/list switching and Enter-key activation. External link target is `_blank`; station creation opens the existing chat workspace and the workflow card opens the existing manager without creating a run. Both course preview states work.
+
+Final automated `npm run check` exits 0: API typecheck/build and 296 tests (137 API, 6 Sites, 37 chat, 103 platform, 7 import, 6 reliability). One intermediate static signature assertion failed after adding progressive icons; it was updated with explicit loading/fallback assertions and the full suite reran successfully. Browser console contains a historical Vite hot-update import error while new files were being added, not an error on the final loaded page. No paid AI, publication, moderation, migration or database rewrite performed.
+
+No actionable P0/P1/P2 issue remains in the accepted three-page desktop refinement. Full mobile, screen-reader and exhaustive write-flow testing remain excluded. Fine-grained metadata enrichment and full v17 personal-space/curriculum integration remain subsequent work, not fabricated here.
+
+Catalog-refinement result: passed
+
+## 2026-10-16 · My space integration, first personal-space batch
+
+User confirmed removing the existing user-facing knowledge-graph page/entry while retaining the professional portrait and underlying records. The new MORPH space defaults to a personal overview. The graph components, historical model tests and administrative APIs are retained for data safety/classic rollback, not exposed as a graph entry in the new space. Legacy `atlas` links render the portrait instead of a blank page. This section is the latest acceptance scope; earlier batch descriptions are historical.
+
+### Visual truth and evidence
+
+Source: supplied v17 `frontend/profile.html` (its original cover asset, identity layout and dark portrait/light evidence composition). Implementation: `/my-learning`, `/my-learning?view=portrait` and retained management views. Current evidence root: `apps/api/data/qa/morph-v17/my-space-integration/`.
+
+- `source-profile.png` and `overview-final.png`: both 1440×900 CSS viewport; both PNGs 1425×891 px. `compare-full.png` scales both equally to 1000 px width, without asymmetric scaling.
+- `compare-identity.png`: equal, unscaled 1140×310 px crops (x140, y350) from source and implementation for identity/typography/credit/metadata review. Cover heights differ deliberately; the crop is not used to claim identical avatar position.
+- `portrait.png`, `notes.png`, `plan-final.png` record actual signed-in teacher views. `plan.png` is pre-fix evidence; its black task headings were rejected and replaced.
+
+### Required fidelity surfaces and deliberate differences
+
+Typography: same established platform font stack, 32 px name, 24 px section headings and 13–14 px body/management text. No demo identity or school information is imported. Spacing: source cover/identity/statistics composition retained; cover is deliberately shortened to 270 px to leave room for the horizontal management navigation. Detail tabs use a compact identity header rather than repeating the large cover. Colors: lavender/ink/purple/lime tokens retained, replacing old green/black management styling. Images: original supplied `digital-organism-cover-v1.png` is used directly with a clear default-cover alt; course images use the shared course component. Missing work imagery has an honest empty state rather than unrelated artwork. Copy/content: account, roles, courses, progress, quota, notes and personal submissions come from existing APIs. Collected cases remain separate from original creation records and preserve original authors.
+
+The professional portrait is explicitly a **real-record/evidence version**, not an assessed ability radar. The source's static radar scores, badges, followers and copy counts are not production facts and are not rendered. Actual completed lesson topics, course progress, workflow completion/configuration and growth records replace those unsupported values. Personal profile editing and avatar/cover upload remain a later account-profile API batch; no inert Edit button or browser-only profile persistence is exposed.
+
+### Iteration history
+
+- P2: old personal page shell/graph conflicted with the selected profile structure. Added the source-informed cover/identity header, overview and URL-addressable horizontal views; removed the conflicting graph entry in the new frontend. Underlying records/components were not deleted.
+- P2: old task-group black headers produced dark-on-dark headings in the new space. Replaced them with light lavender headers and explicit readable label/count colors; verified `plan-final.png` after the correction.
+- P2: legacy selected-filter child text could remain dark. Added an explicit scoped selected-label foreground and retained keyboard focus indication.
+- P2: learning aggregation can omit local-media cover URLs. Favorites are enriched from the canonical public catalog **only for IDs already favorited by this account**; no extra public works are inserted into a private list. Absent canonical covers remain an explicit empty state. Added a regression test.
+- Lifecycle: protected against stale asynchronous account responses and prevents rendering another account's learning payload; optional own-work load failures get a dedicated retry state instead of silently claiming zero works.
+
+### Functional verification and limits
+
+Browser checked overview/portrait/course/plan/note/works/favorites navigation, URL query state, browser Back, course complete filter (1/3), empty result (0/3), clear recovery (3/3), work-source selector, and authenticated legacy graph URL mapping (portrait selected, zero graph navigation buttons). Existing forms and delete confirmations remain wired to the original business methods; no save/delete/completion was submitted during this QA. Existing notes and tasks remained visible. No schema, model key, authentication protection, paid generation or published content changed.
+
+Final `npm run check`: exit 0; API typecheck, frontend production build and **302 tests passed** (137 API, 6 Sites, 37 chat, 109 platform, 7 case import, 6 reliability). Whitespace check passed. Initial Vite hot-update import errors occurred while the new stylesheet was not yet created; a fresh load after the successful build rendered the final components. A pre-existing session continuity problem was observed during direct navigation and required re-login; authenticated old-link rendering passed, but persistent sign-in is not claimed fixed or fully accepted by this visual batch.
+
+Mobile, full screen-reader certification, account-profile write APIs, ability scoring/radar assessment and live destructive/write workflows remain outside this batch. Existing administrative knowledge configuration remains untouched. No GitHub push/merge was performed.
+
+The five visual surfaces were reviewed using the paired full view, identity focus and actual portrait/management views. No unresolved actionable P0/P1/P2 visual issue remains within this desktop/real-record scope; authentication continuity is a separately disclosed pre-existing regression item, not hidden as a successful auth test.
 
 final result: passed
-
-## 对照范围与证据
-
-- Source: `apps/api/data/qa/cvpr-art/reference/desktop.png`, `mobile.png`，真实 CVPR 作品页。
-- Implementation: `apps/api/data/qa/cvpr-art/implementation/desktop.png`, `tablet.png`, `mobile.png`, `editor.png`，真实本地 ArtEdu 已登录页面。
-- Combined comparison: `apps/api/data/qa/cvpr-art/comparison-desktop.png`, `comparison-mobile.png`；已打开同一对照画布逐项核对，而非仅凭代码判断。
-- CSS viewport/density：1440×1000、390×844，deviceScaleFactor=1；另测 768×1024。源截图为 1440×1997、390×2010。桌面对照裁取源 836px 卡片与实现 836px 作品区；手机源卡片宽326px、实现366px，保留 ArtEdu 较窄页外边距，未将宽度差误判为溢出。实际截图尺寸以文件元数据为准。
-- State：同一作品、封面、展示详情；中文导读与原作者署名、社区互动、底部来源是本平台适配，不复制原站导航。原站视频404，故只核对可用封面和来源展示，不声称视频已恢复。
-
-## 必要视觉项
-
-- 字体：标题32px / 手机26px，正文16px、1.8行高；使用 ArtEdu 既有无衬线字体，而非原站英文字体。中英文没有竖排、裁切或单字挤压。
-- 间距：836px单列、桌面正文48px、手机24px、12px圆角；封面完整比例。底部来源有分隔线，手机原作按钮整行且44px高度。
-- 颜色：保留平台白底黑字与低饱和绿；将本详情原有亮绿讨论按钮调整为浅绿色，复测截图确认。
-- 素材：与原站相同的授权JPEG封面，由平台存储服务返回；详情不重复封面，无假视频、热链或替代插画。
-- 文案：明确原作者、外部案例、中文导读、展览名称和年份；来源页与查看原作分开，避免把上传者视作艺术家。
-- 重点区域：手机标题、署名、标签、来源两行与原作按钮在并排图中可读；来源链接键盘可聚焦。桌面标题、互动按钮无相互挤压。
-
-## 迭代记录
-
-1. 初次渲染发现本详情讨论发送按钮仍沿用旧亮绿色，与简约风格不一致。已改为低饱和浅绿，重拍三个视口并再次核对。
-2. 编辑器测试的精确名称定位超时：下拉标签包含选项文案。补充展示方式的明确 `aria-label`；复测编辑器来源字段可见、可切换，不保存测试草稿。
-3. 最终图中未发现待修复的P0/P1/P2布局问题；已有教学案例保留原来的展示方式。
-
-## 功能验证
-
-真实四个演示账号均可从社区列表读取新作品及来源字段；Playwright测试实际已发布页面封面加载、三个视口无横向溢出、底部链接与年份、键盘聚焦、查看原作新窗口、旧案例、表单字段、直达链接刷新及返回。未产生点赞、评论或测试作品，页面运行时错误为零。
-
-## 尚需素材
-
-原站视频GET/HEAD均404，需要原作者的视频文件或新的有效地址才能完成视频展示。素材状态仅作为内部编辑备注保存，不混入公开作者介绍；此项是外部素材缺失，不应标成已修复。
-
-## 2026-10-12 作者文案清理复测
-
-`apps/api/data/qa/editorial/ui/clean-case-desktop.png` 与 `clean-case-mobile.png` 是实际文案清理后的截图。公开正文已去除视频失效和编辑整理说明，原作者、作品介绍、展览来源及原作链接保留。四个账号均核对11个公开案例，普通非作者读者不能读取私有编辑备注。新草稿表单在简介混入整理说明时提示，移入内部备注后不再提示；没有保存测试草稿，页面运行时错误为零。
-
-## Implementation checklist
-
-- [x] 授权封面存储与展示、原作者署名。
-- [x] 兼容旧案例的展览详情和来源字段。
-- [x] 桌面/平板/手机及交互核对。
-- [ ] 收到可用视频后在原案例中补充，不重复导入。
-
-## 2026-10-12 全站媒体网格与大图预览
-
-final result: passed
-
-- Source visual truth：`F:/屏幕截图 2026-10-12 143015.png`（1175×642，图集裁图）、`F:/屏幕截图 2026-10-12 143142.png`（2430×1114，大图预览）。
-- Implementation：`apps/api/data/qa/case-image-viewer/reference-gallery-implementation.png`（738×370，实际图集元素），`reference-viewer-implementation.png`（2430×1114）。
-- Combined evidence：`comparison-gallery.png`、`comparison-viewer.png`，在同一1600×900画布中并排打开核对。大图采用与参考相同的2430×1114视口，deviceScaleFactor=1；图集按内容区域同比例展示，保留平台既有836px详情宽度，不把参考裁图宽度当作浏览器视口。手机390×844、平板768×1024及横屏844×390另测。
-- 状态：同一 Fertile Matrices 的五张过程图与第一张过程图的预览。素材直接复用已授权作品，不生成替代图片。公开社区与精选详情共用组件。
-
-### 视觉核对及明确适配
-
-- 字体/文案：图集与预览不再出现文件名，视频不显示名称；作品标题、作者、课程名、来源保留。辅助计数13px，操作说明11px；图像本身不混入UI文字。
-- 间距/布局：桌面三列、24px间隔、4:3预览、6px圆角，手机两列12px间隔。网格预览作居中裁切，完整原图只在预览层显示；不修改原件。
-- 颜色：由上一版白色画框改为深色遮罩，去除外围画框；白色低干扰图标。两侧切换、右上关闭与参考相同。额外保留底部缩放及下载操作是已有功能的有意适配。
-- 图像：与参考同一原作；适屏高度约56%视口，上限720px。原比例完整呈现，缩放、拖动与下载原图均保留。
-- 可访问性：44px操作按钮、键盘左右切换、Esc、Tab焦点限制、关闭恢复焦点和滚动位置；缩略图有序号与作品语义描述，而非文件名。
-
-### 迭代与验证
-
-1. 第一版预览的导航容器留在网格流中，将图片向下挤压（P2）。改为绝对定位两侧按钮，复测图片中心与视口中心误差小于24px。
-2. 课程媒体浏览器样例发现手机视频和文字并排造成横向溢出（P2）。改为单列播放器、下方折行操作区，复测390px页面无溢出。
-3. 最后对照调暗遮罩、将预览高度从64%调整为56%，重拍并排画布核对。没有未解决的P0/P1/P2视觉问题。
-
-完整回归 `npm run check` 通过；最终前端构建及87项平台测试通过。真实案例四种视口测试通过，两个实际展示模式检查无媒体文件名，真实视频播放通过；读取14条公开案例记录不改变数据。课程使用明确的浏览器内媒体样例核对桌面与手机，不写入课程或学习记录。测试期间批量刷新触发既有限流，未放宽限流；按读取节奏拆分后完成。页面运行时错误为零。AI/工作流/画布通过共享组件与源码回归验证，本轮未发起付费生成任务。
-
-### Implementation checklist
-
-- [x] 图片网格、深色适屏预览和文件名清理。
-- [x] 案例、课程、AI/工作流、画布共享预览；上传管理文件标识保留。
-- [x] 手机视频溢出整改、桌面/平板/手机/横屏及键盘交互。
-- [x] 原作品、作者、来源、下载权限与数据库内容不修改。

@@ -6,8 +6,10 @@ import { CaseStoryView } from "./CaseStoryView.jsx";
 import { ImageLightbox } from "./ImageLightbox.jsx";
 import { CASE_COLLECTIONS, splitCommunityCollections } from "./communityCollections.js";
 import "./case-story.css";
+import { MorphPageBanner, MorphCaseCard } from './morph/MorphCatalog.jsx';
+import { CatalogControls } from './morph/CatalogControls.jsx';
 
-export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
+export function CommunityLibrary({ account, onNotice, onOpenWorkflow, variant = 'classic' }) {
   const [works, setWorks] = useState([]);
   const [myWorks, setMyWorks] = useState([]);
   const [workflows, setWorkflows] = useState([]);
@@ -118,31 +120,42 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   </section>{activeImage && <ImageViewer image={activeImage} assets={selected.assets} onChange={setActiveImage} onClose={() => setActiveImage(null)} />}{reportTarget && <ReportDialog target={reportTarget} onClose={() => setReportTarget(null)} onSubmit={submitReport} />}{editor}</>;
   }
   return <>
-    <section className="learning-library-intro community-page-intro" aria-labelledby="community-page-title">
+    {variant === 'morph' && <MorphPageBanner title="案例社区" eyebrow="CASE COMMUNITY"><button type="button" className="button" onClick={()=>setEditing(null)}><Plus size={17}/> 新建案例草稿</button></MorphPageBanner>}
+    <div className={variant === 'morph' ? 'container morph-community-catalog' : undefined}>
+    {variant !== 'morph' && <section className="learning-library-intro community-page-intro" aria-labelledby="community-page-title">
       <div className="learning-library-intro__copy">
         <p className="learning-library-intro__eyebrow">ARTEDU · COMMUNITY</p>
         <div className="learning-library-intro__title-row"><h1 id="community-page-title">案例社区</h1><span>{works.length} 个案例</span></div>
         <p>从精选艺术中获得灵感，在社区案例中交流创作方法。</p>
       </div>
       <button type="button" className="community-create-draft" onClick={() => setEditing(null)}><Plus size={18} weight="bold" /> 新建案例草稿</button>
-    </section>
+    </section>}
     <nav className="community-module-links" aria-label="案例模块入口"><a href="#featured-art-cases">精选艺术案例<span>{collectionTotals["art-selection"].length}</span></a><a href="#community-cases">社区案例<span>{collectionTotals.community.length}</span></a></nav>
-    {!!recommendations.length && <section className="community-recommendations"><header><div><small>// FOR YOU</small><h3>为你推荐</h3><p>{recommendations.personalized ? "根据你已点赞或收藏案例的方向排序" : "先从社区互动较高、较新的案例开始探索"}</p></div></header><div>{recommendations.items.map(work => <button key={work.id} disabled={loading} onClick={() => openWork(work)}>{work.previewUrl ? <img src={work.previewUrl} alt="" /> : <ImageSquare size={23} />}<span><strong>{work.title}</strong><small>{work.discipline} · {work.reason}</small></span><ArrowRight size={16} /></button>)}</div></section>}
-    <section className="community-discovery" aria-label="搜索和筛选案例">
+    {variant !== 'morph' && !!recommendations.length && <section className="community-recommendations"><header><div><small>// FOR YOU</small><h3>为你推荐</h3><p>{recommendations.personalized ? "根据你已点赞或收藏案例的方向排序" : "先从社区互动较高、较新的案例开始探索"}</p></div></header><div>{recommendations.items.map(work => <button key={work.id} disabled={loading} onClick={() => openWork(work)}>{work.previewUrl ? <img src={work.previewUrl} alt="" /> : <ImageSquare size={23} />}<span><strong>{work.title}</strong><small>{work.discipline} · {work.reason}</small></span><ArrowRight size={16} /></button>)}</div></section>}
+    {variant === 'morph' ? <CatalogControls key={activeGroup} label="案例筛选"
+      dimensions={<><span>分类维度</span><div role="group" aria-label="案例分类维度">{Object.keys(EMPTY_LABEL_GROUPS).map(group=><button type="button" key={group} aria-pressed={activeGroup===group} onClick={()=>{setActiveGroup(group);setActiveTag('');}}>{({大类:'作品领域',设计类:'设计方法',使用工具类:'创作工具',艺术类:'艺术方向'})[group]}</button>)}</div></>}
+      options={[{value:'',label:'全部',count:works.length},...groupTags.map(tag=>({value:tag,label:tag,count:works.filter(work=>(workLabelGroups(work)[activeGroup]??[]).includes(tag)).length}))]}
+      value={activeTag} onChange={value=>setActiveTag(value===activeTag?'':value)} query={search} onQueryChange={setSearch}
+      searchLabel="搜索案例" placeholder="搜索案例、创作者、方法或工具"
+      resultLabel={`${visibleWorks.length} / ${works.length} 个案例`} onClear={clearFilters}
+      selected={[search&&{label:`搜索：${search}`,onRemove:()=>setSearch('')},activeTag&&{label:activeTag,onRemove:()=>setActiveTag('')}].filter(Boolean)}
+    /> : <section className="community-discovery" aria-label="搜索和筛选案例">
       <label className="community-search"><MagnifyingGlass size={19} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索案例名称、创作者、方法或工具" aria-label="搜索案例" />{search && <button onClick={() => setSearch("")} aria-label="清除搜索"><X size={17} /></button>}</label>
       <div className="community-filter-row"><span>分类</span><div className="community-filter-tabs" role="tablist" aria-label="案例标签大类">{Object.keys(EMPTY_LABEL_GROUPS).map(group => <button key={group} role="tab" aria-selected={activeGroup === group} className={activeGroup === group ? "is-active" : ""} onClick={() => { setActiveGroup(group); setActiveTag(""); }}>{group}</button>)}</div></div>
       <div className="community-filter-row community-filter-row--tags"><span>{activeGroup}标签</span><div className="community-filter-chips" aria-label={`${activeGroup}分类标签`}><button className={!activeTag ? "is-active" : ""} aria-pressed={!activeTag} onClick={() => setActiveTag("")}>全部</button>{groupTags.map(tag => <button key={tag} className={activeTag === tag ? "is-active" : ""} aria-pressed={activeTag === tag} onClick={() => setActiveTag(activeTag === tag ? "" : tag)}>{tag}</button>)}{!groupTags.length && <small className="community-no-tags">此类暂无标签</small>}</div></div>
       <div className="community-results" aria-live="polite">{search || activeTag ? `找到 ${visibleWorks.length} 个案例` : `共 ${works.length} 个案例`}<span> · 封面、创作者与分类标签一目了然</span></div>
-    </section>
-    <CommunityCaseModule id="featured-art-cases" title="精选艺术案例" description="平台精选的艺术作品，探索 AI 与艺术的多种表达。" works={collections["art-selection"]} total={collectionTotals["art-selection"].length} loading={loading} onOpen={openWork} hasFilters={hasFilters} onClear={clearFilters} />
-    <CommunityCaseModule id="community-cases" title="社区案例" description="发现学习者与创作者的实践，交流成果与创作过程。" works={collections.community} total={collectionTotals.community.length} loading={loading} onOpen={openWork} hasFilters={hasFilters} onClear={clearFilters} />
+    </section>}
+
+    <CommunityCaseModule variant={variant} id="featured-art-cases" title="精选艺术案例" description="平台精选的艺术作品，探索 AI 与艺术的多种表达。" works={collections["art-selection"]} total={collectionTotals["art-selection"].length} loading={loading} onOpen={openWork} hasFilters={hasFilters} onClear={clearFilters} />
+    <CommunityCaseModule variant={variant} id="community-cases" title="社区案例" description="发现学习者与创作者的实践，交流成果与创作过程。" works={collections.community} total={collectionTotals.community.length} loading={loading} onOpen={openWork} hasFilters={hasFilters} onClear={clearFilters} />
+    </div>
     {editor}
   </>;
 }
-function CommunityCaseModule({ id, title, description, works, total, loading, onOpen, hasFilters, onClear }) {
+function CommunityCaseModule({ id, title, description, works, total, loading, onOpen, hasFilters, onClear, variant }) {
   return <section id={id} className="community-case-module" aria-labelledby={`${id}-title`}>
     <header className="community-case-module__heading"><div><h2 id={`${id}-title`}>{title}<span>{hasFilters ? `${works.length} / ${total}` : total}</span></h2><p>{description}</p></div></header>
-    {works.length ? <div className={`work-grid${id === "featured-art-cases" ? " work-grid--art-selection" : ""}`} data-single-card={works.length === 1}>{works.map(work => <article className="work-card" key={work.id}><div className="work-preview">{work.previewUrl ? <img src={work.previewUrl} alt={`${work.title}封面`} loading="lazy" /> : <WorkVisualFallback work={work} compact />}</div><div className="work-card__body"><small>{work.creators?.join("、") || work.author || "匿名创作者"}</small><h3>{work.title}</h3><div className="case-labels">{workLabels(work).slice(0, 4).map(label => <span key={label}>{label}</span>)}</div><div className="work-card__footer"><div className="work-card__stats"><span><Heart /> {work.likeCount ?? 0}</span><span><BookmarkSimple /> {work.favoriteCount ?? 0}</span></div><button disabled={loading} onClick={() => onOpen(work)}>查看案例 <ArrowRight size={16} /></button></div></div></article>)}</div> : <div className="community-empty"><MagnifyingGlass size={26} /><strong>{hasFilters ? "此模块暂无匹配案例" : `暂无${title}`}</strong><p>{hasFilters ? "试试其他关键词或分类标签。" : "案例发布后将在这里展示。"}</p>{hasFilters && <button onClick={onClear}>清除筛选条件</button>}</div>}
+    {works.length ? variant === 'morph' ? <div className="morph-case-grid">{works.map(work=><MorphCaseCard key={work.id} work={work} onOpen={onOpen}/>)}</div> : <div className={`work-grid${id === "featured-art-cases" ? " work-grid--art-selection" : ""}`} data-single-card={works.length === 1}>{works.map(work => <article className="work-card" key={work.id}><div className="work-preview">{work.previewUrl ? <img src={work.previewUrl} alt={`${work.title}封面`} loading="lazy" /> : <WorkVisualFallback work={work} compact />}</div><div className="work-card__body"><small>{work.creators?.join("、") || work.author || "匿名创作者"}</small><h3>{work.title}</h3><div className="case-labels">{workLabels(work).slice(0, 4).map(label => <span key={label}>{label}</span>)}</div><div className="work-card__footer"><div className="work-card__stats"><span><Heart /> {work.likeCount ?? 0}</span><span><BookmarkSimple /> {work.favoriteCount ?? 0}</span></div><button disabled={loading} onClick={() => onOpen(work)}>查看案例 <ArrowRight size={16} /></button></div></div></article>)}</div> : <div className="community-empty"><MagnifyingGlass size={26} /><strong>{hasFilters ? "此模块暂无匹配案例" : `暂无${title}`}</strong><p>{hasFilters ? "试试其他关键词或分类标签。" : "案例发布后将在这里展示。"}</p>{hasFilters && <button onClick={onClear}>清除筛选条件</button>}</div>}
   </section>;
 }
 function statusName(status) { return { draft: "草稿", pending: "审核中", approved: "已发布", rejected: "已驳回", archived: "已归档" }[status] ?? status; }

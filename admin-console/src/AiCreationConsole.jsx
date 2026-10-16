@@ -10,10 +10,11 @@ import { supportsCreationMethod } from "./creation-capabilities.js";
 import { CREATION_METHODS, FALLBACK_MODELS, creationMethod, resolveCreationOperation, titleFromPrompt } from "./creationMethods.js";
 import { createConversation, listConversations, saveConversation } from "./conversationStore.js";
 import { uploadTemporaryCreationFile } from "./services/adminApi.js";
+import { MorphComposer } from './morph/MorphComposer.jsx';
 
 // 起始页只负责“说清需求 + 选定能力”，不再在这里渲染模型长回复：
 // 提交后立刻跳到 /create 专用阅读页，长文本与历次对话都在那里。
-export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () => {} }) {
+export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () => {}, variant = 'classic', onNavigate }) {
   const storedDraft = useMemo(() => readDraft(account.id), [account.id]);
   const [methodId, setMethodId] = useState(() => storedDraft?.methodId ?? CREATION_METHODS[0].id);
   const [modelId, setModelId] = useState(() => storedDraft?.modelId ?? FALLBACK_MODELS[0].id);
@@ -106,6 +107,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
     }
   };
 
+  if (variant === 'morph') return <MorphComposer {...{prompt,setPrompt,methodId,setMethodId,model,models,setModelId,searchEnabled,setSearchEnabled,sending,quotaBlocked,reference,setReference,referenceInput,promptInput,submit,onNotice,onNavigate}} />;
   return <section className="ai-creation ai-creation--launcher" aria-labelledby="ai-creation-title">
     <div className="ai-creation__intro">
       <span>{serviceReady ? "已配置模型服务 · 校内账号直接使用" : "本地演示模式 · 不调用外部模型"}</span>

@@ -7,11 +7,13 @@ import {
   Compass, GraduationCap, GridFour, House, ImageSquare, Lightbulb, LockKey,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
-import { createAgentRun, executeAgentRun, executeAgentRunStream, getApiHealth, getPortalHome, runGenerationJob } from "./services/adminApi.js";
+import { createAgentRun, executeAgentRun, executeAgentRunStream, getApiHealth, getPortalHome, getCourses, getWorks, runGenerationJob } from "./services/adminApi.js";
 import { AiCreationLauncher } from "./AiCreationConsole.jsx";
 import { AiCreationWorkspace } from "./CreationWorkspace.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
+import { MorphNav, MorphHero, MorphFooter } from './morph/MorphChrome.jsx';
+import { MorphHomeRecommendations } from './morph/MorphCatalog.jsx';
 
 const LearningLibrary = lazy(() => import("./LearningLibrary.jsx").then(({ LearningLibrary: component }) => ({ default: component })));
 const WorkflowStudio = lazy(() => import("./WorkflowStudio.jsx").then(({ WorkflowStudio: component }) => ({ default: component })));
@@ -66,9 +68,9 @@ export function LocalLogin({ onLogin, message = "" }) {
     finally { setSubmitting(false); }
   };
 
-  return <main className="test-login">
+  return <div className="morph-v17 morph-login"><main className="test-login">
     <section className="test-login__intro">
-      <div className="test-login__brand"><span>A</span><strong>ArtEdu</strong></div>
+      <div className="test-login__brand"><strong>MORPH LAB</strong><small>AI + Design 实验室 · ArtEdu</small></div>
       <p className="eyebrow">// WELCOME</p>
       <h1>登录后进入<br />学习与创作空间。</h1>
       <p>使用平台账号登录，课程进度、学习笔记与创作记录都会跟随账号保存。</p>
@@ -86,10 +88,10 @@ export function LocalLogin({ onLogin, message = "" }) {
         <button disabled={submitting || serviceStatus !== "online"}>{submitting ? "正在验证…" : serviceStatus === "checking" ? "正在连接…" : serviceStatus === "offline" ? "服务未连接" : "安全登录"} <ArrowRight size={16} weight="bold" /></button>
       </form>
     </section>
-  </main>;
+  </main></div>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", learningLessonId = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -102,11 +104,12 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     setPortalLoading(true);
     setPortalError("");
     try {
-      const [payload, health] = await Promise.all([getPortalHome(), getApiHealth()]);
+      // Home aggregation omits covers/authors. Use canonical catalogs shared with detail pages.
+      const [payload, health, courseCatalog, workCatalog] = await Promise.all([getPortalHome(), getApiHealth(), getCourses(), getWorks()]);
       setData({
-        courses: payload.courses ?? [],
+        courses: courseCatalog.items ?? [],
         workflows: payload.workflows ?? [],
-        works: payload.works ?? [],
+        works: workCatalog.items ?? [],
         creation: payload.creation ?? emptyPortalData.creation,
       });
       setIsLive(Boolean(health));
@@ -217,9 +220,19 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   // 顶栏原本是这里唯一的回首页入口，所以下面补了一条自带「返回首页」的工作台栏。
   const workbench = section === "studio";
   const chromeFree = standalone || workbench;
+  // Deployment can fall back without data migration. ?ui=classic affects this view only.
+  const morph = import.meta.env.VITE_PORTAL_UI !== 'classic' && new URLSearchParams(window.location.search).get('ui') !== 'classic';
+  const morphNav = <MorphNav account={account} section={section} creation={data.creation} onNavigate={onNavigate} onSwitchAccount={onSwitchAccount} onEnterAdmin={onEnterAdmin} />;
+  useEffect(() => {
+    const previous = document.title;
+    if (morph) document.title = `MORPH LAB · ${{home:'艺术与智能之间',courses:'原子课程',studio:'专项技能工具',community:'案例社区',myLearning:'我的空间',creation:'创作空间',search:'搜索'}[section] ?? 'ArtEdu'}`;
+    return () => { document.title = previous; };
+  }, [morph, section]);
 
-  return <div className={`portal-shell${standalone ? " portal-shell--standalone" : ""}${workbench ? " portal-shell--workbench" : ""}`} data-section={section} data-standalone={standalone ? "true" : undefined} data-chrome={chromeFree ? "none" : undefined}>
-    {!chromeFree && <header className="portal-topbar">
+  return <div className={`portal-shell${morph ? ' morph-v17' : ''}${standalone ? " portal-shell--standalone" : ""}${workbench ? " portal-shell--workbench" : ""}`} data-page={section === 'home' ? 'home' : section === 'courses' ? 'courses' : section === 'community' ? 'cases' : section === 'studio' ? 'tools' : section} data-section={section} data-standalone={standalone ? "true" : undefined} data-chrome={chromeFree ? "none" : undefined}>
+    {morph && section === 'home' && <MorphHero nav={morphNav}><AiCreationLauncher variant="morph" account={account} creation={data.creation} onNotice={showToast} onNavigate={onNavigate} onLaunch={id=>onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : '/create')} /></MorphHero>}
+    {morph && section !== 'home' && morphNav}
+    {!morph && !chromeFree && <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
       <nav className="portal-nav" aria-label="顶部主导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       <GlobalSearchForm value={searchQuery} onSearch={navigateSearch} />
@@ -230,7 +243,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}${workbench ? " portal-main--workbench" : ""}`}>
       <div key={`${section}:${searchQuery}`} className="route-transition">
       {/* 工作台自己带表头：站点顶栏被隐藏后，这里是唯一的「返回首页」入口。 */}
-      {workbench && <header className="portal-workbench-bar">
+      {!morph && workbench && <header className="portal-workbench-bar">
         <button className="portal-workbench-bar__home" onClick={() => navigateSection("home")}><House size={17} weight="bold" /> 返回首页</button>
         <div className="portal-workbench-bar__title"><p>// STUDIO</p><strong>{pageTitle}</strong></div>
         <span className="portal-workbench-bar__hint">课程负责学习，工作台负责动手。</span>
@@ -238,7 +251,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </header>}
       {section !== "home" && section !== "courses" && section !== "studio" && section !== "community" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
-      {section === "home" && <>
+      {morph && section === 'home' && <>{portalLoading ? <HomeDataState loading /> : portalError ? <HomeDataState error={portalError} onRetry={loadPortalData} /> : <MorphHomeRecommendations data={data} onNavigate={onNavigate} />}</>}
+      {!morph && section === "home" && <>
         <AiCreationLauncher account={account} creation={data.creation} onNotice={showToast} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />
         {portalLoading && <HomeDataState loading />}
         {!portalLoading && portalError && <HomeDataState error={portalError} onRetry={loadPortalData} />}
@@ -251,20 +265,21 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
-        {section === "courses" && <LearningLibrary initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNavigate={onNavigate} onNotice={showToast} />}
+        {section === "courses" && <LearningLibrary variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNavigate={onNavigate} onNotice={showToast} />}
 
-        {section === "studio" && <WorkflowStudio initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
+        {section === "studio" && <WorkflowStudio variant={morph ? 'morph' : 'classic'} initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
-        {section === "community" && <CommunityLibrary account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
+        {section === "community" && <CommunityLibrary variant={morph ? 'morph' : 'classic'} account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
 
-        {section === "myLearning" && <MyLearning account={account} learningAtlas={learningAtlas} learningAtlasCourse={learningAtlasCourse} onNavigate={onNavigate} onNotice={showToast} />}
+        {section === "myLearning" && <MyLearning variant={morph ? 'morph' : 'classic'} learningView={learningView} creation={data.creation} caseCatalog={data.works} account={account} learningAtlas={learningAtlas} learningAtlasCourse={learningAtlasCourse} onNavigate={onNavigate} onNotice={showToast} />}
 
-        {section === "search" && <SearchResults initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
+        {section === "search" && <SearchResults variant={morph ? 'morph' : 'classic'} initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
 
         {section === "creation" && <AiCreationWorkspace key={creationId || (creationStartNew ? "new" : "latest")} account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} onSuggest={suggestFollowups} creation={data.creation} onNotice={showToast} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
       </Suspense>
       </div>
     </main>
+    {morph && !standalone && <MorphFooter onNavigate={onNavigate}/>}
     {coachOpen && <TeachingCoach courses={data.courses} workflows={data.workflows} onClose={() => setCoachOpen(false)} onNavigate={(target) => { setCoachOpen(false); onNavigate(target); }} />}
   </div>;
 }
