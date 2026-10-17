@@ -35,7 +35,9 @@ test("所有工具（含皮影）逐行展示", async () => {
 
 test("外链工具用目标站点自己的页标，并按顺序回退到内置图标", async () => {
   const studio = await read("../src/WorkflowStudio.jsx");
-  assert.match(studio, /function ToolSiteIcon\(\{ href, fallback \}\)/);
+  assert.match(studio, /function ToolSiteIcon\(\{ href, fallback, progressive = false \}\)/);
+  assert.match(studio, /if \(progressive\) return <span className="morph-tool-site-icon">\{fallback\}/, "MORPH 页标加载期间也要显示内置图标，不能留白");
+  assert.match(studio, /onLoad=\{\(\)=>setLoaded\(true\)\}/, "页标成功加载后再显示，经典路径继续保留原回退行为");
   assert.match(studio, /const sources = useMemo\(\(\) => faviconSourcesFor\(href\), \[href\]\)/, "页标候选来自纯逻辑模块");
   assert.match(studio, /onError=\{\(\) => setIndex\(\(value\) => value \+ 1\)\}/, "失败要往下换一个来源");
   assert.match(studio, /if \(!sources\.length \|\| index >= sources\.length\) return fallback;/, "全部失败才用内置图标");

@@ -1,0 +1,69 @@
+/* Shared catalog controls. Scoped to the new frontend; classic and admin stay unchanged. */
+.morph-v17 .morph-connections-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.morph-v17 .morph-connections-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 0; border-radius: 7px; background: #ffffff80; color: #606887; font-size: 12px; line-height: 20px; }
+.morph-v17 .atom-connections--collapsed { min-height: 0; }
+.morph-v17 .atom-connections--collapsed .connection-heading { margin-bottom: 0; }
+.morph-v17 #course-connection-preview[hidden] { display: none; }
+.morph-v17 .morph-discovery {
+  position: relative; z-index: 3; margin: 0 0 28px; padding: 20px;
+  border: 1px solid #dddff0; border-radius: 16px; background: #faf9ffed;
+  color: #171a2f; box-shadow: 0 4px 16px #55449704;
+}
+.morph-v17 .morph-discovery__main { display: grid; grid-template-columns: minmax(0,1fr) 280px; align-items: start; gap: 16px 24px; }
+.morph-v17 .morph-category-list { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; align-content: start; }
+.morph-v17 .morph-category {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px;
+  padding: 8px 12px; border: 1px solid transparent; border-radius: 11px; background: #eeedf780;
+  color: #535b78; font-weight: 500; font-family: inherit; font-size: 14px; line-height: 20px;
+  box-shadow: none; white-space: nowrap; cursor: pointer;
+}
+.morph-v17 .morph-category:hover { background: #e7e3fa; color: #171a2f; }
+.morph-v17 .morph-category[aria-pressed="true"] { background: #171a2f; border-color: #171a2f; color: #fff; }
+.morph-v17 .morph-category small { display: inline-flex; justify-content: center; align-items: center; min-width: 21px; height: 20px; padding: 0 5px; background: #deddef85; color: inherit; border-radius: 5px; font-size: 11px; font-weight: 500; line-height: 20px; }
+.morph-v17 .morph-category[aria-pressed="true"] small { background: #ffffff24; color: #fff; }
+.morph-v17 .morph-category__dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: #8a7bca; }
+.morph-v17 .morph-category:nth-child(3n) .morph-category__dot { background: #b15d83; }
+.morph-v17 .morph-category:nth-child(4n) .morph-category__dot { background: #4f9288; }
+.morph-v17 .morph-category[aria-pressed="true"] .morph-category__dot { background: #d8f845; }
+.morph-v17 .morph-category-more { min-height: 38px; padding: 8px 10px; border: 1px dashed #cfc9e5; border-radius: 11px; background: transparent; color: #6554a2; font-size: 13px; line-height: 20px; }
+.morph-v17 .morph-catalog-search { display: flex; align-items: center; gap: 10px; height: 44px; min-width: 0; width: 100%; box-sizing: border-box; padding: 0 12px; margin: 0; border: 1px solid #d8daea; border-radius: 11px; background: #fff; color: #68708a; }
+.morph-v17 .morph-catalog-search>svg { flex: none; }
+.morph-v17 .morph-catalog-search input { width: 100%; min-width: 0; height: 100%; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; color: #171a2f; font-family: inherit; font-size: 14px; line-height: 22px; }
+.morph-v17 .morph-catalog-search input::-webkit-search-cancel-button { display: none; }
+.morph-v17 .morph-catalog-search:focus-within { outline: 2px solid #8e7ce3; outline-offset: 2px; }
+.morph-v17 .morph-catalog-search input:focus-visible { outline: 0; }
+.morph-v17 .morph-catalog-search button { display: grid; place-items: center; flex: none; min-width: 28px; height: 28px; border: 0; padding: 4px; border-radius: 7px; background: #f0eef9; color: #535b78; }
+.morph-v17 .morph-discovery__dimensions { display: flex; align-items: center; gap: 16px; padding: 0 0 16px; margin-bottom: 16px; border-bottom: 1px solid #e4e3ef; color: #737891; font-size: 12px; }
+.morph-v17 .morph-discovery__dimensions>span { flex: none; }
+.morph-v17 .morph-discovery__dimensions>div { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.morph-v17 .morph-discovery__dimensions button { padding: 4px 0 7px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: #626982; font-size: 14px; line-height: 20px; box-shadow: none; }
+.morph-v17 .morph-discovery__dimensions button[aria-pressed="true"] { border-bottom-color: #6554e8; color: #171a2f; font-weight: 700; }
+.morph-v17 .morph-discovery__extra { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 16px; }
+.morph-v17 .morph-discovery__extra label { display: flex; align-items: center; gap: 10px; color: #677087; font-size: 12px; line-height: 20px; }
+.morph-v17 .morph-discovery__extra select { min-height: 36px; max-width: 220px; padding: 6px 30px 6px 10px; border: 1px solid #dddff0; border-radius: 8px; background-color: #fff; color: #343b54; font-family: inherit; font-size: 13px; line-height: 20px; }
+.morph-v17 .morph-discovery__bottom { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #e4e3ef; min-height: 32px; }
+.morph-v17 .morph-discovery__result { flex: none; color: #676f88; font-size: 12px; line-height: 20px; }
+.morph-v17 .morph-selected-filters { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.morph-v17 .morph-selected-filters button { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; max-width: 100%; padding: 4px 8px; border: 1px solid #ded9f6; border-radius: 6px; background: #eeebfb; color: #5d4eb3; font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.morph-v17 .morph-selected-filters .morph-clear-filters { border: 0; background: transparent; text-decoration: underline; text-underline-offset: 3px; }
+.morph-v17 .morph-discovery__actions { margin-left: auto; display: flex; align-items: center; }
+.morph-v17 .morph-discovery .tool-directory__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.morph-v17 .morph-discovery .tool-directory__view-switch { display: flex; gap: 3px; padding: 3px; border: 1px solid #dddff0; border-radius: 9px; background: #eeedf7; }
+.morph-v17 .morph-discovery .tool-directory__view-switch button { display: grid; place-items: center; width: 30px; height: 28px; padding: 5px; border: 0; border-radius: 6px; color: #6d728c; background: transparent; }
+.morph-v17 .morph-discovery .tool-directory__view-switch button[aria-pressed="true"] { color: #171a2f; background: #fff; box-shadow: 0 1px 4px #171a2f12; }
+.morph-v17 .morph-discovery button:focus-visible,.morph-v17 .morph-discovery select:focus-visible,.morph-v17 .morph-tool-card__launch:focus-visible,.morph-v17 .morph-tool-card__edit:focus-visible { outline: 2px solid #7864ce; outline-offset: 3px; }
+.morph-v17 .community-module-links { gap: 28px; padding-bottom: 12px; border-bottom: 1px solid #dbd8eb; margin-bottom: 20px; }
+.morph-v17 .community-module-links a { display: inline-flex; align-items: center; gap: 8px; padding: 6px 0; border: 0; border-radius: 0; background: transparent; color: #343b54; font-weight: 650; font-size: 16px; }
+.morph-v17 .community-module-links a:hover { color: #6554e8; text-decoration: underline; text-underline-offset: 6px; }
+.morph-v17 .community-module-links span { font-size: 12px; line-height: 22px; min-width: 24px; background: #e8e3fa; color: #6554e8; border-radius: 6px; text-align: center; }
+.morph-v17 .morph-tool-catalog .tool-directory { display: block; }
+.morph-v17 .morph-tool-catalog .tool-directory__editor { margin-bottom: 24px; }
+.morph-v17 .morph-tool-catalog .tool-directory__list { margin-top: 0!important; }
+.morph-v17 .morph-tool-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px #55449716; }
+.morph-v17 .morph-tool-site-icon { position: relative; display: grid; place-items: center; width: 28px; height: 28px; }
+.morph-v17 .morph-tool-site-icon img { position: absolute; inset: 0; background: #fff; }
+@media (max-width:1199px) {
+  .morph-v17 .morph-discovery__main { grid-template-columns: minmax(0,1fr); }
+  .morph-v17 .morph-tool-catalog .tool-directory__list--grid { grid-template-columns: repeat(2,minmax(0,1fr))!important; }
+}
+@media (prefers-reduced-motion:reduce) { .morph-v17 .morph-tool-card { transition: none; }.morph-v17 .morph-tool-card:hover { transform: none; } }

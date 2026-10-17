@@ -127,11 +127,12 @@ test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条
   assert.ok(portal.includes("{ signal, onDelta }"));
 });
 
-test("创作对话页独立成屏：不显示站点导航，也不显示两侧装饰", async () => {
+test("经典创作页独立成屏，MORPH 版本按交接设计保留公共导航", async () => {
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   assert.ok(portal.includes('const standalone = section === "creation"'), "对话页要单独标记");
   assert.ok(portal.includes("const chromeFree = standalone || workbench"));
-  assert.ok(portal.includes('{!chromeFree && <header className="portal-topbar">'));
+  assert.ok(portal.includes('{!morph && !chromeFree && <header className="portal-topbar">'));
+  assert.ok(portal.includes("{morph && section !== 'home' && morphNav}"));
   assert.ok(!portal.includes("PortalArtRails"));
   assert.ok(portal.includes('["courses", "AI 讲堂", GraduationCap]'));
   assert.ok(portal.includes('["studio", "设计工具", Palette]'));

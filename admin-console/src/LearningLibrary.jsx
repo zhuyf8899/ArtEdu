@@ -6,18 +6,23 @@ import { createPortal } from "react-dom";
 import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowsOutSimple, BookOpenText, CheckCircle, Clock, Code, FilePdf, Funnel, ImageSquare, Lock, PlayCircle, Presentation, SpinnerGap, UserCircle, Wrench, X } from "@phosphor-icons/react";
 import { enrollCourse, getCourse, getCourses, getMyWorks, submitLessonWork, updateLessonProgress } from "./services/adminApi.js";
 import { coverImageFor } from "./coverImages.js";
-import { decorateCourse, difficultyName } from "./coursePresentation.js";
+import { decorateCourse, difficultyName, courseReadiness } from "./coursePresentation.js";
+import { TrialLesson } from './morph/TrialLesson.jsx';
 import { learningLabels } from "./learningBindings.js";
+import { ZoomableImage } from "./ImageLightbox.jsx";
 import "./LearningBindings.css";
+import { MorphCourseCatalog } from './morph/MorphCatalog.jsx';
+import { morphCourseLevel } from './morph/morphPresentation.js';
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
 
-export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", initialLessonId = "" }) {
+export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", initialLessonId = "", variant = 'classic' }) {
   const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
+  const [detailError, setDetailError] = useState('');
   const [methodFilter, setMethodFilter] = useState("全部");
   const [authorFilter, setAuthorFilter] = useState("全部作者");
   const [toolFilter, setToolFilter] = useState("全部工具");
@@ -62,13 +67,14 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
     // 请求编号防止快速切换课程时，较早请求的结果覆盖后来选中的课程。
     const requestId = ++courseRequest.current;
     setLoading(true);
+    setDetailError('');
     try {
       // 两个独立请求一起发出，等它们都成功再更新界面。
       const [course, works] = await Promise.all([getCourse(courseId), getMyWorks()]);
       if (requestId !== courseRequest.current) return;
       setSelected(decorateCourse(course)); setMyWorks(works.items ?? []); setCompletionChecks({});
     }
-    catch (error) { if (requestId === courseRequest.current) onNotice(error.message); }
+    catch (error) { if (requestId === courseRequest.current) {setDetailError(error.message);onNotice(error.message);} }
     finally { if (requestId === courseRequest.current) setLoading(false); }
   };
 
@@ -114,13 +120,16 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
 
   if (selected) return <section className="learning-detail">
     <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
-    <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟 · {selected.lessonCount} 个课时 · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div><aside><strong>{selected.progressPercent}%</strong><span>学习进度</span><i><b style={{ width: `${selected.progressPercent}%` }} /></i>{selected.enrollmentStatus ? <em>已加入学习</em> : <button disabled={loading} onClick={enroll}><PlayCircle size={18} weight="fill" /> 加入课程</button>}</aside></div>
+    <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {variant === 'morph' ? morphCourseLevel(selected) : difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟{selected.availability==='coming_soon'?'（规划时长）':` · ${selected.lessonCount} 个课时`} · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div><aside><strong>{selected.availability==='coming_soon'?'筹备中':`${selected.progressPercent}%`}</strong><span>{selected.availability==='coming_soon'?'暂未开放选课':'学习进度'}</span>{selected.availability!=='coming_soon'&&<i><b style={{ width: `${selected.progressPercent}%` }} /></i>}{selected.enrollmentStatus ? <em>已加入学习</em> : <button disabled={loading||selected.availability==='coming_soon'} onClick={enroll}><PlayCircle size={18} weight="fill" /> {selected.availability==='coming_soon'?'教学资料筹备中':selected.availability==='trial'?'加入试学':'加入课程'}</button>}</aside></div>
+    {courseReadiness(selected)&&<p className="catalog-notice">{courseReadiness(selected)}。{selected.availability==='coming_soon'?'当前仅展示课程方向与规划时长，教学资料准备好后再开放选课。':'以下为新编试学讲义与自主练习，尚未通过教研审核；不会自动生成学习完成记录或能力认证。'}</p>}
+    {selected.catalog?.tools?.length>0&&<section className="course-tools-links" aria-label="相关技能工具">{selected.catalog.tools.map(tool=><button key={tool} onClick={()=>onNavigate(`/studio?toolQuery=${encodeURIComponent(tool)}`)}>探索 {tool} ↗</button>)}</section>}
     {/* 课时卡把"分步学习 → 练习 → 完成标准 →（可选）关联作品 → 确认完成"整条闭环摆出来。 */}
-    {learningLabels(selected.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>这门课涉及的知识</strong><div>{learningLabels(selected.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div><small>课程知识范围；具体学习记录将在“我的学习”图谱中呈现。</small></section>}
+    {learningLabels(selected.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>这门课涉及的知识</strong><div>{learningLabels(selected.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div><small>课程知识范围；实际学习记录将在“我的空间”的专业画像中呈现。</small></section>}
     <div className="lesson-list">{selected.lessons.map((lesson, index) => <article className={`lesson-card ${lesson.id === initialLessonId ? "lesson-card--recommended" : ""}`} key={lesson.id} tabIndex={-1} ref={(node) => { if (node) lessonNodes.current.set(lesson.id, node); else lessonNodes.current.delete(lesson.id); }}>
       {lesson.id === initialLessonId && <span className="lesson-card__recommendation-label">本次推荐课时 · 从这里继续学习</span>}
       {learningLabels(lesson.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>本课时知识点</strong><div>{learningLabels(lesson.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div></section>}
       <div className="lesson-card__heading"><span>{String(index + 1).padStart(2, "0")}</span><div><small>{lesson.lessonType === "workflow" ? "AI 工作流实践" : lesson.lessonType === "practice" ? "动手练习" : lesson.lessonType === "assignment" ? "课时作业" : "课程课时"} · {lesson.estimatedMinutes} 分钟</small><strong>{lesson.title}</strong><p>{lesson.summary}</p></div><em>{lesson.progressPercent >= 100 ? "已完成" : `${lesson.progressPercent ?? 0}%`}</em></div>
+      <TrialLesson teaching={lesson.teaching}/>
       {!!lesson.learningSteps?.length && <section className="lesson-card__section"><strong>学习步骤</strong><ol>{lesson.learningSteps.map((step, stepIndex) => <li key={`${stepIndex}-${step}`}>{step}</li>)}</ol></section>}
       {lesson.practiceTask && <section className="lesson-card__section"><strong>练习任务</strong><p>{lesson.practiceTask}</p></section>}
       {lesson.completionCriteria && <section className="lesson-card__section"><strong>完成标准</strong><p>{lesson.completionCriteria}</p></section>}
@@ -133,6 +142,7 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载 AI 讲堂</strong><p>正在同步课程、作者和工具标签。</p></section>;
   if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>AI 讲堂暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
 
+  if (variant === 'morph') return <>{detailError&&initialCourseId&&<div className="catalog-notice" role="alert">{detailError}<button onClick={returnToCatalog}>返回原子课程</button></div>}<MorphCourseCatalog courses={courses} onOpen={showCourse} onNavigate={onNavigate} /></>;
   return <>
     <section className="learning-library-intro" aria-labelledby="learning-library-title">
       <div className="learning-library-intro__copy">
@@ -238,7 +248,7 @@ function VideoMaterial({ resource, source, cover, meta }) {
       <button type="button" className="course-material-lightbox__scrim" aria-label="关闭放大观看" onClick={() => setEnlarged(false)} />
       <div className="course-material-lightbox__panel">
         <header>
-          <strong>{resource.title}</strong>
+          <strong>视频预览</strong>
           <button type="button" onClick={() => setEnlarged(false)} aria-label="关闭放大观看"><X size={18} weight="bold" /></button>
         </header>
         <video controls autoPlay playsInline src={source} poster={cover} aria-label={`${resource.title}（放大）`} />
@@ -254,13 +264,12 @@ function CourseMaterial({ resource }) {
   const preview = resource.previewUrl || resource.externalUrl || "";
   const download = resource.downloadUrl || "";
   const source = preview || download;
-  const fileName = resource.fileName ? ` · ${resource.fileName}` : "";
-  // 封面优先用上传的图片；没上传时由标题生成白底黑字图，保证资料列表始终有可扫读的视觉。
-  const cover = coverImageFor(resource, 480, 270);
+  const isMedia = ["image", "video"].includes(resource.resourceType);
+  const fileName = !isMedia && resource.fileName ? ` · ${resource.fileName}` : "";
+  // 媒体不再生成带名称的文字海报；保留作者上传的封面，没封面的视频用原生首帧。
+  const cover = isMedia ? resource.coverImageUrl || resource.coverUrl || undefined : coverImageFor(resource, 480, 270);
   const meta = (note) => <span className="course-material__meta">
-    <img className="course-material-cover" src={cover} alt="" />
-    <strong>{resource.title}</strong>
-    <small>{kind.label}{fileName}</small>
+    {!isMedia && <><img className="course-material-cover" src={cover} alt="" /><strong>{resource.title}</strong><small>{kind.label}{fileName}</small></>}
     {note && <small>{note}</small>}
   </span>;
   // 下载是备选方案，统一做成弱化的小字链接；只有浏览器确实无法预览的 Office 才用按钮。
@@ -279,8 +288,7 @@ function CourseMaterial({ resource }) {
   if (resource.resourceType === "video") return <VideoMaterial resource={resource} source={source} cover={cover} meta={meta} />;
 
   if (resource.resourceType === "image") return <article className="course-material course-material--image">
-    <a href={source} target="_blank" rel="noreferrer"><img loading="lazy" src={source} alt={resource.title} /></a>
-    {meta("点击图片可查看原图。")}
+    <ZoomableImage src={source} alt="课程配图" fileName={resource.fileName || ""} />
     {downloadLink("下载原图")}
   </article>;
 

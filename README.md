@@ -63,6 +63,8 @@ Docker Compose 只负责 PostgreSQL 容器和数据卷；数据库结构必须�
 
 `db:prepare` 现在也会安装九个已获展示授权的公开案例及 53 张配图。其他本地/服务器启动方式同样会在迁移后校验并补齐它们；素材包内容与恢复说明见 [案例社区可重复部署](docs/community-showcase-deployment.md)。
 
+MORPH 内容包会在迁移后安装 **13 门原子课程规划（3 门试学、10 门筹备中）与 19 个外部工具导航**。指定的 3 门旧课程与 5 个旧外链只归档，个人进度、笔记和案例保留；皮影、创作助手和节点工作流不移除。已有版本再次部署不会覆盖管理员编辑。现有环境也可先运行 `npm run catalog:plan` 查看清单，再显式执行 `npm run catalog:install`。详见 [内容部署与回退](docs/morph-content-catalog.md)。
+
 `.env.example` 中只允许出现本地演示配置。真实数据库密码、模型密钥和学校认证凭据不得提交到 Git。本地联调时可设置 `ENABLE_LOCAL_AUTH=true`，再通过 `auth:provision-local` 为指定演示用户配置临时密码；生产环境会拒绝本地认证开关，必须接入学校 SSO/OIDC 或受管身份提供方。
 
 ## 启动

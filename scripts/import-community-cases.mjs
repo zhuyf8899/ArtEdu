@@ -50,7 +50,7 @@ async function main(){
  const manifest=await prepareManifest(path.resolve(manifestPath));
  const require=createRequire(import.meta.url);
  const {workInputSchema}=require('../apps/api/dist/modules/studio/studio.contracts.js');
- const payloadFor=(item,assetMap={})=>workInputSchema.parse({...item.payload,story:{...item.payload.story,coverAssetId:assetMap[item.coverFile]??'',steps:item.payload.story.steps.map(({imageFiles,...step})=>({...step,assetIds:(imageFiles??[]).map(f=>assetMap[f]).filter(Boolean)}))}});
+ const payloadFor=(item,assetMap={})=>{const {collection,...writableStory}=item.payload.story;return workInputSchema.parse({...item.payload,story:{...writableStory,coverAssetId:assetMap[item.coverFile]??'',steps:item.payload.story.steps.map(({imageFiles,...step})=>({...step,assetIds:(imageFiles??[]).map(f=>assetMap[f]).filter(Boolean)}))}});};
  for(const item of manifest.cases){payloadFor(item);if(args.includes('--submit')&&(item.payload.story.origin!=='collected'||item.payload.story.authorization!=='confirmed'||!item.payload.story.creators.length||!item.payload.story.authorizationNote))throw new Error('Submission requires confirmed attribution and exhibition permission');}
  console.log(JSON.stringify({origin,cases:manifest.cases.length,assets:manifest.cases.reduce((n,c)=>n+c.assets.length,0),mode:args.includes('--apply')?(args.includes('--submit')?'submit-for-review':'draft'):'dry-run'}));
  if(!args.includes('--apply'))return;
@@ -103,7 +103,8 @@ async function main(){
    if(work.assets.length+missing.length>10)throw new Error(`${item.key}: existing files conflict with import, inspect manually`);
    if(work.status==='pending'){
     const expected=payloadFor(item,map);
-    if(missing.length||JSON.stringify(work.story)!==JSON.stringify(expected.story))throw new Error(`${item.key}: pending case differs; cannot silently overwrite`);
+    const {collection,...writableStory}=work.story;
+    if(missing.length||JSON.stringify(writableStory)!==JSON.stringify(expected.story))throw new Error(`${item.key}: pending case differs; cannot silently overwrite`);
    }else{
     for(const asset of missing){
      const form=new FormData(),extension=asset.mime==='image/jpeg'?'.jpg':path.extname(asset.file);

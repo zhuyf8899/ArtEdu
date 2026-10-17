@@ -1,4 +1,12 @@
-export const emptyStory = () => ({ version: 1, origin: "unspecified", creators: [], tools: [], methods: [], authorization: "pending", authorizationNote: "", allowDocumentDownload: false, coverAssetId: "", reflection: "", steps: [] });
+export const emptyStory = () => ({ version: 1, origin: "unspecified", creators: [], tools: [], methods: [], sourceName: "", sourceUrl: "", originalUrl: "", exhibitionName: "", exhibitionYear: "", displayStyle: "case-study", authorization: "pending", authorizationNote: "", editorialNote: "", allowDocumentDownload: false, coverAssetId: "", reflection: "", steps: [] });
+// 展示端再次校验历史数据，来源仅作为用户主动点击的链接，不自动嵌入第三方页面。
+export function safeCaseSourceUrl(value) {
+  if (typeof value !== "string") return "";
+  const text = value.trim();
+  if (!/^https?:\/\//i.test(text) || text.length > 2048 || /[\u0000-\u0020\u007f]/.test(text)) return "";
+  try { const url = new URL(text); return url.username || url.password ? "" : url.href; }
+  catch { return ""; }
+}
 export const emptyStep = () => ({ title: "", description: "", prompt: "", tool: "", parameters: "", outcome: "", assetIds: [] });
 export const splitCaseLabels = text => [...new Set(text.split(/[，,、\n]/).map(item => item.trim()).filter(Boolean))];
 export function caseUploadError(files, existingCount = 0, policy = { videoBytes: 100 * 1024 * 1024, fileBytes: 10 * 1024 * 1024 }) {

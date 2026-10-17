@@ -60,8 +60,9 @@ export function AdminCourses({ showToast }) {
         {courses.map((course) => <div className="course-admin-row" key={course.id}>
           <div className="course-admin-icon"><BookOpenText size={22} weight="bold" /></div>
           <div><span>{course.category} · {course.lessonCount} 个课时 · {course.estimatedMinutes} 分钟</span><strong>{course.title}</strong><small>{course.creatorName || "平台课程"} · 版本 {course.versionNumber}</small></div>
-          <em className={`course-state course-state--${course.status}`}>{statusNames[course.status] ?? course.status}</em>
+          <em className={`course-state course-state--${course.status}`}>{course.catalog?.bundleId&&course.status==='published'?(course.availability==='trial'?'试学 · 教研待审':'目录 · 筹备中'):statusNames[course.status] ?? course.status}</em>
           <div className="course-admin-actions">
+            {course.catalog?.bundleId&&<a href={`/learning?course=${encodeURIComponent(course.id)}`} target="_blank" rel="noopener noreferrer">预览目录 / 试学讲义</a>}
             <button disabled={busy || !editable(course)} onClick={() => openCourse(course, "course")}>编辑课程</button>
             <button disabled={busy || !["draft", "rejected", "published"].includes(course.status)} onClick={() => openCourse(course, "bindings")}>图谱配置</button>
             <button disabled={busy} onClick={() => openCourse(course, "resources")}>管理资料</button>

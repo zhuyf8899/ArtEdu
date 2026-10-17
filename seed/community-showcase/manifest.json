@@ -5,7 +5,7 @@
       "id": "work-442627ce-0bc5-47c6-96ed-c80cd0015f4b",
       "authorId": "user-student-demo",
       "title": "MIST HILL COFFEE 咖啡品牌设计",
-      "summary": "面向年轻消费群体的咖啡品牌视觉与产品设计。以山、雾、咖啡豆与活力感为视觉来源，通过亮蓝、荧光绿、亮粉及黑白建立撞色体系，以粗体字标与拟人化咖啡豆 IP 形成品牌识别，并延展至包装、外带杯、手提袋、贴纸及毛绒 IP 周边。\n本案例根据作者提供的说明和效果图整理；图片为设计展示，不作为已量产或商业落地的证明。",
+      "summary": "面向年轻消费群体的咖啡品牌视觉与产品设计。以山、雾、咖啡豆与活力感为视觉来源，通过亮蓝、荧光绿、亮粉及黑白建立撞色体系，以粗体字标与拟人化咖啡豆 IP 形成品牌识别，并延展至包装、外带杯、手提袋、贴纸及毛绒 IP 周边。",
       "discipline": "视觉传达",
       "isFeatured": false,
       "featuredRank": null,
@@ -17,7 +17,7 @@
             "tool": "",
             "title": "品牌定位与视觉语言",
             "prompt": "我需要设计一个现代年轻化的精品咖啡品牌，请帮我建立品牌 Logo 与包装视觉系统。品牌需要具有较强的视觉冲击力和电商传播属性，避免传统、复古和低饱和的精品咖啡视觉。",
-            "outcome": "原文输出提出 MIST HILL COFFEE 品牌、粗体无衬线字标、拟人化咖啡豆 IP，以及亮蓝、荧光绿、亮粉、黑白配色。图1作为整体视觉展示。",
+            "outcome": "品牌方案包含 MIST HILL COFFEE 品牌、粗体无衬线字标、拟人化咖啡豆 IP，以及亮蓝、荧光绿、亮粉、黑白配色。图1作为整体视觉展示。",
             "assetIds": [
               "work-asset-931a7b27-58b0-4aaa-85c6-8a25bf58d3ec"
             ],
@@ -219,7 +219,7 @@
         "creators": [
           "王小月"
         ],
-        "reflection": "资料整理说明：工具列表按作者资料记录；未说明各步骤所用模型版本和参数，不作推断。效果图不作为量产或现场落地的证明。",
+        "reflection": "",
         "coverAssetId": "work-asset-d2972b97-fbaf-4935-822a-19b5c492a576",
         "authorization": "confirmed",
         "allowDocumentDownload": false
@@ -380,9 +380,9 @@
         ],
         "version": 1,
         "creators": [
-          "刘樾（其余团队成员署名待补充）"
+          "刘樾"
         ],
-        "reflection": "资料整理说明：原说明未提供具体工具名称、模型版本和原始提示词，相关字段留空。图片按研究、空间和视频阶段精选；MP4 为原 MOV 的完整时长压缩浏览副本，原始 MOV 保留在本地资料包。",
+        "reflection": "",
         "coverAssetId": "work-asset-b8133d43-3b0d-4eb7-a705-2f993978c747",
         "authorization": "confirmed",
         "allowDocumentDownload": false
@@ -586,7 +586,7 @@
         "creators": [
           "王小月"
         ],
-        "reflection": "资料整理说明：工具列表按作者资料记录；未说明各步骤所用模型版本和参数，不作推断。效果图不作为量产或现场落地的证明。",
+        "reflection": "",
         "coverAssetId": "work-asset-ab3befbc-01c3-427a-8633-4ce128077c6f",
         "authorization": "confirmed",
         "allowDocumentDownload": false
@@ -739,7 +739,7 @@
         "creators": [
           "匿名作者"
         ],
-        "reflection": "资料整理说明：图集涵盖形态探索、参考肌理、制作过程和展示效果；其余重复或补充图库保留在原始资料包。",
+        "reflection": "",
         "coverAssetId": "work-asset-4fcbdae8-edca-4beb-baf5-ade977ece61a",
         "authorization": "confirmed",
         "allowDocumentDownload": false
@@ -920,7 +920,7 @@
         "creators": [
           "王婧"
         ],
-        "reflection": "资料整理说明：工具列表按作者资料记录；未说明各步骤所用模型版本和参数，不作推断。效果图不作为量产或现场落地的证明。",
+        "reflection": "",
         "coverAssetId": "work-asset-a269f683-32d0-4970-b68d-4af421f918b6",
         "authorization": "confirmed",
         "allowDocumentDownload": false
@@ -1053,7 +1053,7 @@
         "creators": [
           "孙执政"
         ],
-        "reflection": "在ai创作的基础上，依旧需要用到Photoshop、Adobe Illustrator等进行修改和调整，保证出图的规范和准确。风格一致也需要很多时间去和ai调整对话逻辑。\n\n资料整理说明：工具列表按作者资料记录；未说明各步骤所用模型版本和参数，不作推断。效果图不作为量产或现场落地的证明。",
+        "reflection": "在ai创作的基础上，依旧需要用到Photoshop、Adobe Illustrator等进行修改和调整，保证出图的规范和准确。风格一致也需要很多时间去和ai调整对话逻辑。",
         "coverAssetId": "work-asset-8420db91-a5da-4384-a6d2-02c4d4609864",
         "authorization": "confirmed",
         "allowDocumentDownload": false
@@ -1242,7 +1242,7 @@
           "高璇",
           "梁煜昕"
         ],
-        "reflection": "资料整理说明：原文未提供具体 AI 工具和参数，相关字段留空；图片为方案展示，不代表装置已经制作或部署。",
+        "reflection": "",
         "coverAssetId": "work-asset-610eb286-8928-4008-9baa-59d8e4fa0eb4",
         "authorization": "confirmed",
         "allowDocumentDownload": false
@@ -1447,7 +1447,7 @@
           "傅宬博",
           "白昊灵"
         ],
-        "reflection": "通过镜中人项目，我们深刻体会到AI不仅是创作工具，更是设计过程的协作伙伴。在数据理解阶段，Claude帮助我们快速解析复杂的学术论文，Gemini在数据清洗方面表现出色。\n最重要的收获是：好的设计仍然依赖设计师对问题的深度理解。AI是放大器，而非替代者。\n这个项目本身就是一个悖论：我们使用AI工具来揭露AI的偏见。这提醒我们，技术永远不是中性的。\n镜非真，真在镜外。\n张瑞雯、傅宬博、白昊灵\n2026年9月\n\n资料整理说明：原包中的演示视频仅为 webloc 链接，并非视频文件；本次展示已有图片与步骤，视频待作者补充。文中数据规模及交付时间按作者说明保留，未在本次导入中独立复核。",
+        "reflection": "通过镜中人项目，我们深刻体会到AI不仅是创作工具，更是设计过程的协作伙伴。在数据理解阶段，Claude帮助我们快速解析复杂的学术论文，Gemini在数据清洗方面表现出色。\n最重要的收获是：好的设计仍然依赖设计师对问题的深度理解。AI是放大器，而非替代者。\n这个项目本身就是一个悖论：我们使用AI工具来揭露AI的偏见。这提醒我们，技术永远不是中性的。\n镜非真，真在镜外。\n张瑞雯、傅宬博、白昊灵\n2026年9月",
         "coverAssetId": "work-asset-562a3919-b03e-4d2b-994b-b1517084e892",
         "authorization": "confirmed",
         "allowDocumentDownload": false

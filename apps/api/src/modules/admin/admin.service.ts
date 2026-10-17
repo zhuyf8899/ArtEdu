@@ -13,6 +13,13 @@ export class AdminService {
     private readonly repository: AdminRepository,
   ) {}
 
+  async setWorkCollection(actor: Actor, workId: string, collection: "community" | "art-selection") {
+    this.authService.requireAnyRole(actor, ["admin", "operator"]);
+    const result = await this.database.transaction(client => this.repository.setWorkCollection(client, workId, actor.id, collection));
+    if (!result) throw new NotFoundException("案例不存在");
+    return result;
+  }
+
   async getDashboard(actor: Actor) {
     this.authService.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
     const [users, reviews, stats] = await Promise.all([

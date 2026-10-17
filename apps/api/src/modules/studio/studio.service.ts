@@ -15,7 +15,8 @@ import { CreationStorageService } from "../creation-storage/creation-storage.ser
 import { storePrivateUpload, workAssetMimeTypes } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { caseUploadPolicy } from "../../common/upload-policy";
-import { assertCaseCover, assertCasePublication, caseStorySchema, type CaseStory } from "./case-story";
+import { assertCaseCover, assertCasePublication, caseStorySchema, visibleCaseStory, type CaseStory } from "./case-story";
+import { assertCaseEditorial } from "./case-editorial";
 import { extractImageText, findOcrRiskKeywords } from "./content-moderation";
 import type {
   CatalogQuery,
@@ -61,7 +62,7 @@ export class StudioService {
 
   async listToolDirectoryLinks() {
     const result = await this.database.query(
-      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links WHERE status='active' ORDER BY category,sort_order,created_at",
+      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status,catalog_json FROM tool_directory_links WHERE status='active' ORDER BY CASE WHEN category='平台工具' THEN 1 ELSE 0 END,category,sort_order,created_at",
     );
     return { items: result.rows.map((row) => this.mapToolDirectoryLink(row)) };
   }
@@ -69,7 +70,7 @@ export class StudioService {
   async listManagedToolDirectoryLinks(actor: Actor) {
     if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可以管理设计工具目录");
     const result = await this.database.query(
-      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status FROM tool_directory_links ORDER BY category,sort_order,created_at",
+      "SELECT id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status,catalog_json FROM tool_directory_links ORDER BY category,sort_order,created_at",
     );
     return { items: result.rows.map((row) => this.mapToolDirectoryLink(row)) };
   }
@@ -88,7 +89,7 @@ export class StudioService {
   async updateToolDirectoryLink(actor: Actor, toolLinkId: string, input: ToolDirectoryLinkUpdateInput) {
     if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可以管理设计工具目录");
     const result = await this.database.query(
-      "UPDATE tool_directory_links SET category=$2,name=$3,detail=$4,href=$5,cover_image_url=$6,icon_key=$7,launch_mode=$8,is_featured=$9,status=$10,updated_by=$11,updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status",
+      "UPDATE tool_directory_links SET category=$2,name=$3,detail=$4,href=$5,cover_image_url=$6,icon_key=$7,launch_mode=$8,is_featured=$9,status=$10,updated_by=$11,updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING id,category,name,detail,href,cover_image_url,icon_key,launch_mode,is_featured,sort_order,status,catalog_json",
       [toolLinkId, input.category, input.name, input.detail, input.href, input.coverImageUrl || null, input.iconKey, input.launchMode, input.featured, input.status, actor.id],
     );
     if (!result.rowCount) throw new NotFoundException("设计工具条目不存在");
@@ -463,14 +464,14 @@ export class StudioService {
     }));
     const reviewHistory = reviewEvents.rows.map(event => ({ action: event.action, reason: event.reason ?? "", createdAt: event.created_at, reviewer: event.reviewer ?? "审核人员" }));
     const latestRejection = reviewHistory.find(event => event.action === "reject") ?? null;
-    return { ...this.mapWork(result.rows[0]), story: privileged ? story : { ...story, authorizationNote: "" }, assets: visibleAssets, tags: tags.rows, workflows: workflows.rows, comments: comments.rows, reviewHistory, latestRejection };
+    return { ...this.mapWork(result.rows[0]), story: visibleCaseStory(story, privileged), assets: visibleAssets, tags: tags.rows, workflows: workflows.rows, comments: comments.rows, reviewHistory, latestRejection };
   }
 
   async createWork(actor: Actor, input: WorkInput) {
     const id = `work-${randomUUID()}`;
     await this.database.transaction(async (client) => {
       if (input.story?.coverAssetId || input.story?.steps.some(step => step.assetIds.length)) throw new BadRequestException("请先保存草稿并上传文件，再关联案例图片");
-      await client.query("INSERT INTO works (id,author_id,title,summary,discipline,status,story_json) VALUES ($1,$2,$3,$4,$5,'draft',$6::jsonb)", [id, actor.id, input.title, input.summary, input.discipline, JSON.stringify(input.story ?? {})]);
+      await client.query("INSERT INTO works (id,author_id,title,summary,discipline,status,story_json) VALUES ($1,$2,$3,$4,$5,'draft',$6::jsonb)", [id, actor.id, input.title, input.summary, input.discipline, JSON.stringify({ ...input.story, collection: "community" })]);
       await this.replaceWorkRelations(client, id, input);
     });
     return this.getWork(actor, id);
@@ -478,11 +479,15 @@ export class StudioService {
 
   async submitWork(actor: Actor, workId: string) {
     const result = await this.database.transaction(async (client) => {
-      const work = await client.query<{ status: string; author_id: string; story_json: CaseStory }>("SELECT status,author_id,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
+      const work = await client.query<{ title: string; summary: string; status: string; author_id: string; story_json: CaseStory }>("SELECT title,summary,status,author_id,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
       if (!work.rows[0]) throw new NotFoundException("作品不存在");
       if (work.rows[0].author_id !== actor.id) throw new ForbiddenException("只能提交自己的作品");
       if (!["draft", "rejected"].includes(work.rows[0].status)) throw new ConflictException("当前作品不能重复提交");
-      try { assertCasePublication(caseStorySchema.parse(work.rows[0].story_json ?? {})); }
+      try {
+        const story = caseStorySchema.parse(work.rows[0].story_json ?? {});
+        assertCasePublication(story);
+        assertCaseEditorial({ title: work.rows[0].title, summary: work.rows[0].summary, story });
+      }
       catch (error) { throw new BadRequestException((error as Error).message); }
       // 提交审核要求至少一张图片作为封面：社区卡片没有封面就没有"所见即所得"的效果。
       const assets = await client.query<{ image_count: number }>("SELECT COUNT(*)::int AS image_count FROM work_assets WHERE work_id=$1 AND asset_type='image'", [workId]);
@@ -498,7 +503,7 @@ export class StudioService {
 
   async updateWork(actor: Actor, workId: string, input: WorkInput) {
     await this.database.transaction(async client => {
-      const result = await client.query("SELECT author_id,status FROM works WHERE id=$1 FOR UPDATE", [workId]);
+      const result = await client.query("SELECT author_id,status,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
       const work = result.rows[0];
       if (!work) throw new NotFoundException("作品不存在");
       if (work.author_id !== actor.id) throw new ForbiddenException("只能编辑自己的草稿");
@@ -509,7 +514,9 @@ export class StudioService {
         const referenced = [input.story.coverAssetId, ...input.story.steps.flatMap(step => step.assetIds)].filter(Boolean);
         if (referenced.some(id => !ids.has(id))) throw new BadRequestException("封面与步骤只能引用本案例的图片");
       }
-      await client.query("UPDATE works SET title=$2,summary=$3,discipline=$4,story_json=COALESCE($5::jsonb,story_json),updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId, input.title, input.summary, input.discipline, input.story ? JSON.stringify(input.story) : null]);
+      // 作者更新内容不能修改或清掉由管理员维护的模块归属。
+      const storyForUpdate = input.story ? { ...input.story, collection: work.story_json?.collection ?? "community" } : null;
+      await client.query("UPDATE works SET title=$2,summary=$3,discipline=$4,story_json=COALESCE($5::jsonb,story_json),updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId, input.title, input.summary, input.discipline, storyForUpdate ? JSON.stringify(storyForUpdate) : null]);
       await this.replaceWorkRelations(client, workId, input);
     });
     return this.getWork(actor, workId);
@@ -949,12 +956,13 @@ export class StudioService {
   }
 
   private mapWork(row: WorkRow) {
-    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], tags: row.tags ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
+    return { id: row.id, title: row.title, summary: row.summary ?? "", discipline: row.discipline ?? "未分类", status: row.status, collection: row.story_json?.collection ?? "community", authorId: row.author_id, author: row.author, creators: row.story_json?.creators ?? [], tools: row.story_json?.tools ?? [], methods: row.story_json?.methods ?? [], tags: row.tags ?? [], origin: row.story_json?.origin ?? "unspecified", likeCount: Number(row.like_count ?? 0), favoriteCount: Number(row.favorite_count ?? 0), liked: Boolean(row.liked), favorited: Boolean(row.favorited), previewUrl: row.preview_url, publishedAt: row.published_at, createdAt: row.created_at };
   }
 
   // 对外只暴露目录展示所需字段；不返回维护者身份，避免把后台账号信息带到学生端。
   private mapToolDirectoryLink(row: Record<string, any>) {
     return {
+      catalog: row.catalog_json ?? null,
       id: row.id,
       category: row.category,
       name: row.name,

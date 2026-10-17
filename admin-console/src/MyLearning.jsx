@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowClockwise, ArrowRight, BookOpenText, BookmarkSimple, CalendarCheck, Check,
   Clock, FileText, Heart, House, ImageSquare, NotePencil, Plus,
@@ -10,14 +10,16 @@ import {
   deleteLearningNote,
   deleteLearningTask,
   getLearningSpace,
+  getMyWorks,
   getRecentCourseResources,
   updateLearningTask,
 } from "./services/adminApi.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { coverImageFor } from "./coverImages.js";
 import { LearningGraph } from "./LearningGraph.jsx";
-import { KnowledgeMap } from "./KnowledgeMap.jsx";
 import { CurriculumAtlas } from "./CurriculumAtlas.jsx";
+import { MorphMySpace } from "./morph/MorphMySpace.jsx";
+import { mySpaceView, enrichFavoriteRecords } from "./morph/mySpaceModel.js";
 
 const COURSE_IMAGES = {
   "course-ai-design-foundation": "/assets/learning/ai-design-foundations.jpg",
@@ -43,7 +45,7 @@ const VIEWS = [
   ["works", "我的作品", ImageSquare],
 ];
 
-export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", learningAtlasCourse = "" }) {
+export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", learningAtlasCourse = "", learningView = "", creation, caseCatalog = [], variant = "classic" }) {
   const [data, setData] = useState(EMPTY_DATA);
   const [view, setView] = useState("graph");
   const [loading, setLoading] = useState(true);
@@ -59,16 +61,27 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
   // URL keeps the personal extension shareable; browser Back returns to the generic map.
   useEffect(() => { setView("graph"); }, [learningAtlas, learningAtlasCourse]);
 
+  const loadRequest = useRef(0);
   const load = async () => {
+    const requestId = ++loadRequest.current;
     setLoading(true);
     setLoadError("");
     // Recent files are optional. Their failure must not hide the personal learning record.
-    try { const [learning, recent] = await Promise.all([getLearningSpace(), getRecentCourseResources().catch(() => ({ items: [] }))]); setData(learning); setRecentResources(recent.items ?? []); }
-    catch (error) { setLoadError(error.message); }
-    finally { setLoading(false); }
+    try {
+      const [learning, recent, ownWorks] = await Promise.all([
+        getLearningSpace(),
+        getRecentCourseResources().catch(() => ({ items: [] })),
+        variant === 'morph' ? getMyWorks().catch(error => ({ items: [], error: error.message })) : Promise.resolve(null),
+      ]);
+      if(requestId !== loadRequest.current) return;
+      setData(ownWorks ? {...learning, works: ownWorks.items ?? [], workLoadError: ownWorks.error ?? ''} : learning);
+      setRecentResources(recent.items ?? []);
+    }
+    catch (error) { if(requestId === loadRequest.current) setLoadError(error.message); }
+    finally { if(requestId === loadRequest.current) setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [account.id]);
+  useEffect(() => { load(); return () => { loadRequest.current++; }; }, [account.id, variant]);
 
   const pendingTasks = useMemo(() => data.tasks.filter((task) => task.status === "pending"), [data.tasks]);
   const displayName = data.profile?.displayName || account.shortName;
@@ -133,6 +146,17 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
     } catch (error) { onNotice(error.message); }
   };
 
+  if (variant === 'morph') {
+    const currentView = mySpaceView(learningView, learningAtlas);
+    const onView = target => onNavigate('/my-learning' + (target === 'overview' ? '' : '?view=' + encodeURIComponent(target)));
+    const safeData = data.profile?.id === account.id ? data : EMPTY_DATA;
+    return <MorphMySpace account={account} data={{...safeData,favorites:enrichFavoriteRecords(safeData.favorites,caseCatalog)}} creation={creation} view={currentView} onView={onView} onNavigate={onNavigate}
+      loading={loading} error={loadError} onRetry={load}>
+      {currentView === 'plan' && <PlanView tasks={safeData.tasks} form={taskForm} setForm={setTaskForm} saving={saving} onSubmit={addTask} onToggle={toggleTask} onDelete={removeTask}/>}
+      {currentView === 'notes' && <NotesView notes={safeData.notes} courses={safeData.courses} form={noteForm} setForm={setNoteForm} saving={saving} onSubmit={addNote} onDelete={removeNote}/>}
+    </MorphMySpace>;
+  }
+
   return <section className={`my-learning-page my-learning-page--compact ${isGenericAtlas ? "my-learning-page--atlas" : ""}`}>
     <header className="my-learning-heading">
       <div><p className="eyebrow">// PERSONAL LEARNING SPACE</p><h1>我的学习</h1><p>回看学习路径，管理课程与创作，让每一次探索都有迹可循。</p></div>
@@ -148,7 +172,8 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
       </aside>
 
       <div id="learning-view-content" className="learning-content" aria-busy={!isGenericAtlas && loading}>
-        {isGenericAtlas && learningAtlas === "knowledge" ? <KnowledgeMap key={account.id} account={account} onNavigate={onNavigate} onNotice={onNotice} /> : isGenericAtlas ? <CurriculumAtlas courseId={learningAtlas === "course" ? learningAtlasCourse : ""} onNavigate={onNavigate} onPersonal={() => onNavigate("/my-learning?atlas=personal")} /> : <>
+        {/* 默认直接展示原有十门课程圆形图谱，不经过空知识库中间页。 */}
+        {isGenericAtlas ? <CurriculumAtlas courseId={learningAtlas === "course" ? learningAtlasCourse : ""} onNavigate={onNavigate} onPersonal={() => onNavigate("/my-learning?atlas=personal")} /> : <>
         {view === "graph" && <div className="personal-atlas-entry"><div><strong>个性化知识图谱</strong><p>依据我的课程、实践与成长记录展示；未配置知识点时不推断掌握度。</p></div><button onClick={() => onNavigate("/my-learning")}>返回课程总览 <ArrowRight size={17} /></button></div>}
         {loading ? <LearningLoading /> : loadError ? <LearningLoadError message={loadError} onRetry={load} /> : <>
           {view === "graph" && isPersonalAtlas && <LearningGraph key={account.id} accountId={account.id} data={data} onNavigate={onNavigate} onView={setView} />}

@@ -6,6 +6,17 @@ test('就绪检查失败返回 503，不将数据库秘密发送给客户端', a
   const controller = new HealthController({query:async()=>{throw new Error('secret-db-address');}} as any,{} as any);
   await assert.rejects(controller.getReadiness(), error => (error as any).getStatus() === 503 && !(error as Error).message.includes('secret'));
 });
+test('知识图谱迁移未完成时不能将 API 标记为就绪', async () => {
+  let sql = '';
+  const controller = new HealthController({query:async(statement: string)=>{sql=statement;return {rows:[{ready:false}]};}} as any,{} as any);
+  await assert.rejects(controller.getReadiness(), error => (error as any).getStatus() === 503);
+  for (const table of ['knowledge_nodes','knowledge_edges','knowledge_bindings','ability_goals','knowledge_ability_goals','knowledge_activity_events','tool_usage_events','knowledge_learning_paths']) {
+    assert.ok(sql.includes(`to_regclass('public.${table}') IS NOT NULL`));
+  }
+  assert.match(sql,/table_name='knowledge_nodes' AND column_name='source'/);
+  assert.match(sql,/table_name='knowledge_bindings' AND column_name='source'/);
+  assert.match(sql,/refresh_knowledge_labels_trigger/);
+});
 test('运行面板需管理角色，不返回数据库连接或密钥', async () => {
   const auth = {getActor:async()=>({roles:['student']})};
   const controller = new HealthController({query:async()=>({rows:[{ready:true}]})} as any,auth as any);

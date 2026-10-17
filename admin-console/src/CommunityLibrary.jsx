@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, Flag, Heart, ImageSquare, MagnifyingGlass, PaperPlaneTilt, Plus, SpinnerGap, X } from "@phosphor-icons/react";
-import { addWorkComment, getMyWorks, getWork, getWorkflows, getWorks, reportComment, reportWork, submitWork, toggleWorkReaction } from "./services/adminApi.js";
+import { addWorkComment, getMyWorks, getWork, getWorkflows, getWorks, reportComment, reportWork, submitWork, toggleWorkReaction, setWorkCollection } from "./services/adminApi.js";
 import { CaseStoryEditor } from "./CaseStoryEditor.jsx";
 import { CaseStoryView } from "./CaseStoryView.jsx";
+import { ImageLightbox } from "./ImageLightbox.jsx";
+import { CASE_COLLECTIONS, splitCommunityCollections } from "./communityCollections.js";
 import "./case-story.css";
+import { MorphPageBanner, MorphCaseCard } from './morph/MorphCatalog.jsx';
+import { CatalogControls } from './morph/CatalogControls.jsx';
 
-export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
+export function CommunityLibrary({ account, onNotice, onOpenWorkflow, variant = 'classic' }) {
   const [works, setWorks] = useState([]);
   const [myWorks, setMyWorks] = useState([]);
   const [workflows, setWorkflows] = useState([]);
@@ -15,6 +19,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
   const [reportTarget, setReportTarget] = useState(null);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [collectionBusy, setCollectionBusy] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
   const [search, setSearch] = useState("");
@@ -33,6 +38,14 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
     finally { if (showLoading) setCatalogLoading(false); }
   };
   useEffect(() => { refresh(true).catch(error => onNotice(error.message)); }, []);
+  useEffect(() => {
+    // 分享同一社区页面的作品链接；仅请求指定作品，权限仍由 API 检查。
+    const workId = new URLSearchParams(window.location.search).get("work");
+    if (!workId) return;
+    let active = true;
+    getWork(encodeURIComponent(workId)).then(work => { if (active) setSelected(work); }).catch(error => { if (active) onNotice(error.message); });
+    return () => { active = false; };
+  }, []);
   const openWork = async work => {
     setLoading(true);
     try { setSelected(await getWork(work.id)); }
@@ -63,6 +76,14 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
     finally { setLoading(false); }
   };
   const editable = selected && myWorks.some(work => work.id === selected.id) && ["draft", "rejected"].includes(selected.status);
+  const canCurate = account?.roles?.some(role => ["admin", "operator"].includes(role));
+  const changeCollection = async collection => {
+    if (collectionBusy || !selected || !canCurate) return;
+    setCollectionBusy(true);
+    try { await setWorkCollection(selected.id, collection); setSelected(await getWork(selected.id)); await refresh(); onNotice(`已移至${CASE_COLLECTIONS[collection]}`); }
+    catch (error) { onNotice(error.message); }
+    finally { setCollectionBusy(false); }
+  };
   const groupTags = [...new Set(works.flatMap(work => workLabelGroups(work)[activeGroup] ?? []))].sort((left, right) => left.localeCompare(right, "zh-CN"));
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const visibleWorks = works.filter(work => {
@@ -70,47 +91,72 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow }) {
     const text = [work.title, work.summary, work.author, ...(work.creators ?? []), ...labels].filter(Boolean).join(" ").toLocaleLowerCase();
     return (!normalizedSearch || text.includes(normalizedSearch)) && (!activeTag || labels.includes(activeTag));
   });
+  const collections = splitCommunityCollections(visibleWorks);
+  const collectionTotals = splitCommunityCollections(works);
+  const hasFilters = Boolean(search || activeTag);
+  const clearFilters = () => { setSearch(""); setActiveTag(""); };
   const editor = editing !== undefined && <CaseStoryEditor key={editing?.id ?? "new"} initial={editing} workflows={workflows} onNotice={onNotice} onClose={() => { setEditing(undefined); refresh().catch(error => onNotice(error.message)); }} onSaved={saved => { setEditing(undefined); setSelected(saved); refresh().catch(error => onNotice(error.message)); onNotice("草稿已保存，尚未提交审核或发布"); }} />;
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载案例社区</strong></section>;
   if (catalogError && !works.length && !myWorks.length) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} /><strong>案例社区暂时无法加载</strong><p>{catalogError}</p><button onClick={() => refresh(true).catch(error => onNotice(error.message))}>重新加载</button></section>;
   if (selected) {
+    const exhibition = selected.story?.origin === "collected" && selected.story?.displayStyle === "exhibition";
     const heroAsset = selected.assets?.find(asset => asset.asset_type === "image" && asset.url === selected.previewUrl) ?? selected.assets?.find(asset => asset.asset_type === "image");
-    return <><section className="community-detail">
-    <button className="learning-back" onClick={() => setSelected(null)}><ArrowLeft size={16} /> 返回案例社区</button>
+    return <><section className={`community-detail${exhibition ? " community-detail--exhibition" : ""}`}>
+    <button className="learning-back" onClick={() => { setSelected(null); const url = new URL(window.location.href); url.searchParams.delete("work"); window.history.replaceState(window.history.state, "", url); }}><ArrowLeft size={16} /> 返回案例社区</button>
     <div className="community-detail__hero">{selected.previewUrl ? <button className="case-image-button case-image-button--hero" onClick={() => setActiveImage({ url: selected.previewUrl, fileName: heroAsset?.file_name ?? selected.title, alt: selected.title })} aria-label={`查看并下载图片：${selected.title}`}><img src={selected.previewUrl} alt={selected.title} /></button> : <WorkVisualFallback work={selected} />}</div>
     <div className="community-detail__body">
-      <header><div><span>{selected.discipline} · {statusName(selected.status)}</span><h2>{selected.title}</h2><p>{selected.creators?.join("、") || selected.author} · {selected.tags?.map(tag => tag.name).join(" / ") || "未添加标签"}</p></div>
+      <header><div><span>{selected.discipline} · {exhibition ? "外部艺术案例" : statusName(selected.status)}</span><h2>{selected.title}</h2><p>{exhibition ? "原作者：" : ""}{selected.creators?.join("、") || selected.author}{!exhibition && ` · ${selected.tags?.map(tag => tag.name).join(" / ") || "未添加标签"}`}</p>{exhibition && <div className="case-labels">{selected.tags?.map(tag => <span key={tag.id ?? tag.name}>{tag.name}</span>)}</div>}</div>
         {selected.status === "approved" && <div><button aria-label="点赞案例" onClick={() => react("like")}><Heart weight={selected.liked ? "fill" : "bold"} /> {selected.likeCount}</button><button aria-label="收藏案例" onClick={() => react("favorite")}><BookmarkSimple weight={selected.favorited ? "fill" : "bold"} /> {selected.favoriteCount}</button></div>}
       </header>
+      {canCurate && selected.status === "approved" && <div className="case-collection-control"><label>案例所属模块<select aria-label="案例所属模块" disabled={collectionBusy} value={selected.collection ?? "community"} onChange={event => changeCollection(event.target.value)}>{Object.entries(CASE_COLLECTIONS).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>{collectionBusy && <span role="status">正在保存…</span>}</div>}
       {editable && <div className="case-draft-actions"><button disabled={loading} onClick={() => setEditing(selected)}>编辑草稿／关联步骤图片</button><button disabled={loading} onClick={submit}>提交管理员审核</button><small>收集案例需先确认原作者和展示授权；保存不会自动发布。</small></div>}
       {selected.status === "rejected" && selected.latestRejection?.reason && <section className="case-review-feedback"><strong>审核意见 · {formatReviewDate(selected.latestRejection.createdAt)}</strong><p>{selected.latestRejection.reason}</p><small>修改并保存后，可再次提交审核；历史审核记录会保留。</small></section>}
       {selected.reviewHistory?.length > 0 && <details className="case-review-history"><summary>查看审核历史（{selected.reviewHistory.length}）</summary>{selected.reviewHistory.map((event, index) => <article key={`${event.action}-${event.createdAt}-${index}`}><strong>{reviewActionName(event.action)}</strong><time>{formatReviewDate(event.createdAt)}</time>{event.reason && <p>{event.reason}</p>}</article>)}</details>}
       <p className="community-summary">{selected.summary}</p>
-      <CaseStoryView work={selected} onOpenImage={setActiveImage} />
+      <CaseStoryView work={selected} onOpenImage={setActiveImage} exhibition={exhibition} />
       {!!selected.workflows?.length && <div className="same-workflow"><span>关联的教学工作流</span>{selected.workflows.map(workflow => <button key={workflow.id} onClick={() => onOpenWorkflow?.(workflow.id)}>查看「{workflow.name}」<ArrowRight size={15} /></button>)}</div>}
       {selected.status === "approved" && <><div className="community-report-row"><button onClick={() => setReportTarget({ type: "work", id: selected.id, label: selected.title })}><Flag size={16} /> 举报作品</button></div><section className="comment-section"><h3><ChatCircle size={20} /> 创作讨论</h3>{selected.comments?.map(item => <article key={item.id}><div><strong>{item.author}</strong><button className="comment-report" onClick={() => setReportTarget({ type: "comment", id: item.id, label: "这条评论" })}>举报</button></div><p>{item.content}</p></article>)}<form onSubmit={sendComment}><input maxLength={2000} value={comment} onChange={e => setComment(e.target.value)} aria-label="发表创作讨论" placeholder="写下你的建议或问题……" /><button aria-label="发表讨论"><PaperPlaneTilt /></button></form></section></>}
     </div>
-  </section>{activeImage && <ImageViewer image={activeImage} onClose={() => setActiveImage(null)} />}{reportTarget && <ReportDialog target={reportTarget} onClose={() => setReportTarget(null)} onSubmit={submitReport} />}{editor}</>;
+  </section>{activeImage && <ImageViewer image={activeImage} assets={selected.assets} onChange={setActiveImage} onClose={() => setActiveImage(null)} />}{reportTarget && <ReportDialog target={reportTarget} onClose={() => setReportTarget(null)} onSubmit={submitReport} />}{editor}</>;
   }
   return <>
-    <section className="learning-library-intro community-page-intro" aria-labelledby="community-page-title">
+    {variant === 'morph' && <MorphPageBanner title="案例社区" eyebrow="CASE COMMUNITY"><button type="button" className="button" onClick={()=>setEditing(null)}><Plus size={17}/> 新建案例草稿</button></MorphPageBanner>}
+    <div className={variant === 'morph' ? 'container morph-community-catalog' : undefined}>
+    {variant !== 'morph' && <section className="learning-library-intro community-page-intro" aria-labelledby="community-page-title">
       <div className="learning-library-intro__copy">
         <p className="learning-library-intro__eyebrow">ARTEDU · COMMUNITY</p>
         <div className="learning-library-intro__title-row"><h1 id="community-page-title">案例社区</h1><span>{works.length} 个案例</span></div>
-        <p>发现创作灵感，按方向找到可借鉴、可复现的作品。</p>
+        <p>从精选艺术中获得灵感，在社区案例中交流创作方法。</p>
       </div>
       <button type="button" className="community-create-draft" onClick={() => setEditing(null)}><Plus size={18} weight="bold" /> 新建案例草稿</button>
-    </section>
-    {!!recommendations.length && <section className="community-recommendations"><header><div><small>// FOR YOU</small><h3>为你推荐</h3><p>{recommendations.personalized ? "根据你已点赞或收藏案例的方向排序" : "先从社区互动较高、较新的案例开始探索"}</p></div></header><div>{recommendations.items.map(work => <button key={work.id} disabled={loading} onClick={() => openWork(work)}>{work.previewUrl ? <img src={work.previewUrl} alt="" /> : <ImageSquare size={23} />}<span><strong>{work.title}</strong><small>{work.discipline} · {work.reason}</small></span><ArrowRight size={16} /></button>)}</div></section>}
-    <section className="community-discovery" aria-label="搜索和筛选案例">
+    </section>}
+    <nav className="community-module-links" aria-label="案例模块入口"><a href="#featured-art-cases">精选艺术案例<span>{collectionTotals["art-selection"].length}</span></a><a href="#community-cases">社区案例<span>{collectionTotals.community.length}</span></a></nav>
+    {variant !== 'morph' && !!recommendations.length && <section className="community-recommendations"><header><div><small>// FOR YOU</small><h3>为你推荐</h3><p>{recommendations.personalized ? "根据你已点赞或收藏案例的方向排序" : "先从社区互动较高、较新的案例开始探索"}</p></div></header><div>{recommendations.items.map(work => <button key={work.id} disabled={loading} onClick={() => openWork(work)}>{work.previewUrl ? <img src={work.previewUrl} alt="" /> : <ImageSquare size={23} />}<span><strong>{work.title}</strong><small>{work.discipline} · {work.reason}</small></span><ArrowRight size={16} /></button>)}</div></section>}
+    {variant === 'morph' ? <CatalogControls key={activeGroup} label="案例筛选"
+      dimensions={<><span>分类维度</span><div role="group" aria-label="案例分类维度">{Object.keys(EMPTY_LABEL_GROUPS).map(group=><button type="button" key={group} aria-pressed={activeGroup===group} onClick={()=>{setActiveGroup(group);setActiveTag('');}}>{({大类:'作品领域',设计类:'设计方法',使用工具类:'创作工具',艺术类:'艺术方向'})[group]}</button>)}</div></>}
+      options={[{value:'',label:'全部',count:works.length},...groupTags.map(tag=>({value:tag,label:tag,count:works.filter(work=>(workLabelGroups(work)[activeGroup]??[]).includes(tag)).length}))]}
+      value={activeTag} onChange={value=>setActiveTag(value===activeTag?'':value)} query={search} onQueryChange={setSearch}
+      searchLabel="搜索案例" placeholder="搜索案例、创作者、方法或工具"
+      resultLabel={`${visibleWorks.length} / ${works.length} 个案例`} onClear={clearFilters}
+      selected={[search&&{label:`搜索：${search}`,onRemove:()=>setSearch('')},activeTag&&{label:activeTag,onRemove:()=>setActiveTag('')}].filter(Boolean)}
+    /> : <section className="community-discovery" aria-label="搜索和筛选案例">
       <label className="community-search"><MagnifyingGlass size={19} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索案例名称、创作者、方法或工具" aria-label="搜索案例" />{search && <button onClick={() => setSearch("")} aria-label="清除搜索"><X size={17} /></button>}</label>
       <div className="community-filter-row"><span>分类</span><div className="community-filter-tabs" role="tablist" aria-label="案例标签大类">{Object.keys(EMPTY_LABEL_GROUPS).map(group => <button key={group} role="tab" aria-selected={activeGroup === group} className={activeGroup === group ? "is-active" : ""} onClick={() => { setActiveGroup(group); setActiveTag(""); }}>{group}</button>)}</div></div>
       <div className="community-filter-row community-filter-row--tags"><span>{activeGroup}标签</span><div className="community-filter-chips" aria-label={`${activeGroup}分类标签`}><button className={!activeTag ? "is-active" : ""} aria-pressed={!activeTag} onClick={() => setActiveTag("")}>全部</button>{groupTags.map(tag => <button key={tag} className={activeTag === tag ? "is-active" : ""} aria-pressed={activeTag === tag} onClick={() => setActiveTag(activeTag === tag ? "" : tag)}>{tag}</button>)}{!groupTags.length && <small className="community-no-tags">此类暂无标签</small>}</div></div>
       <div className="community-results" aria-live="polite">{search || activeTag ? `找到 ${visibleWorks.length} 个案例` : `共 ${works.length} 个案例`}<span> · 封面、创作者与分类标签一目了然</span></div>
-    </section>
-    {visibleWorks.length ? <section className="work-grid">{visibleWorks.map(work => <article className="work-card" key={work.id}><div className="work-preview">{work.previewUrl ? <img src={work.previewUrl} alt={`${work.title}封面`} loading="lazy" /> : <WorkVisualFallback work={work} compact />}</div><div className="work-card__body"><small>{work.creators?.join("、") || work.author || "匿名创作者"}</small><h3>{work.title}</h3><div className="case-labels">{workLabels(work).slice(0, 4).map(label => <span key={label}>{label}</span>)}</div><div className="work-card__footer"><div className="work-card__stats"><span><Heart /> {work.likeCount ?? 0}</span><span><BookmarkSimple /> {work.favoriteCount ?? 0}</span></div><button disabled={loading} onClick={() => openWork(work)}>查看案例 <ArrowRight size={16} /></button></div></div></article>)}</section> : <section className="community-empty"><MagnifyingGlass size={26} /><strong>{works.length ? "没有找到匹配的案例" : "暂时还没有已发布案例"}</strong><p>{works.length ? "试试其他关键词或分类标签。" : "可先创建草稿，补充成果与创作过程。"}</p>{(search || activeTag) && <button onClick={() => { setSearch(""); setActiveTag(""); }}>清除筛选条件</button>}</section>}
+    </section>}
+
+    <CommunityCaseModule variant={variant} id="featured-art-cases" title="精选艺术案例" description="平台精选的艺术作品，探索 AI 与艺术的多种表达。" works={collections["art-selection"]} total={collectionTotals["art-selection"].length} loading={loading} onOpen={openWork} hasFilters={hasFilters} onClear={clearFilters} />
+    <CommunityCaseModule variant={variant} id="community-cases" title="社区案例" description="发现学习者与创作者的实践，交流成果与创作过程。" works={collections.community} total={collectionTotals.community.length} loading={loading} onOpen={openWork} hasFilters={hasFilters} onClear={clearFilters} />
+    </div>
     {editor}
   </>;
+}
+function CommunityCaseModule({ id, title, description, works, total, loading, onOpen, hasFilters, onClear, variant }) {
+  return <section id={id} className="community-case-module" aria-labelledby={`${id}-title`}>
+    <header className="community-case-module__heading"><div><h2 id={`${id}-title`}>{title}<span>{hasFilters ? `${works.length} / ${total}` : total}</span></h2><p>{description}</p></div></header>
+    {works.length ? variant === 'morph' ? <div className="morph-case-grid">{works.map(work=><MorphCaseCard key={work.id} work={work} onOpen={onOpen}/>)}</div> : <div className={`work-grid${id === "featured-art-cases" ? " work-grid--art-selection" : ""}`} data-single-card={works.length === 1}>{works.map(work => <article className="work-card" key={work.id}><div className="work-preview">{work.previewUrl ? <img src={work.previewUrl} alt={`${work.title}封面`} loading="lazy" /> : <WorkVisualFallback work={work} compact />}</div><div className="work-card__body"><small>{work.creators?.join("、") || work.author || "匿名创作者"}</small><h3>{work.title}</h3><div className="case-labels">{workLabels(work).slice(0, 4).map(label => <span key={label}>{label}</span>)}</div><div className="work-card__footer"><div className="work-card__stats"><span><Heart /> {work.likeCount ?? 0}</span><span><BookmarkSimple /> {work.favoriteCount ?? 0}</span></div><button disabled={loading} onClick={() => onOpen(work)}>查看案例 <ArrowRight size={16} /></button></div></div></article>)}</div> : <div className="community-empty"><MagnifyingGlass size={26} /><strong>{hasFilters ? "此模块暂无匹配案例" : `暂无${title}`}</strong><p>{hasFilters ? "试试其他关键词或分类标签。" : "案例发布后将在这里展示。"}</p>{hasFilters && <button onClick={onClear}>清除筛选条件</button>}</div>}
+  </section>;
 }
 function statusName(status) { return { draft: "草稿", pending: "审核中", approved: "已发布", rejected: "已驳回", archived: "已归档" }[status] ?? status; }
 function reviewActionName(action) { return { submit: "提交审核", approve: "审核通过", reject: "驳回修改" }[action] ?? action; }
@@ -134,11 +180,13 @@ function recommendWorks(works) {
   }).sort((left, right) => right.score - left.score || String(right.publishedAt).localeCompare(String(left.publishedAt))).slice(0, 3);
   return { items, personalized };
 }
-function ImageViewer({ image, onClose }) {
-  return <div className="case-image-viewer" role="dialog" aria-modal="true" aria-label="图片预览">
-    <button className="case-image-viewer__backdrop" onClick={onClose} aria-label="关闭图片预览" />
-    <div className="case-image-viewer__content"><img src={image.url} alt={image.alt || image.fileName} /><div><span>{image.fileName}</span><a href={image.url} download>下载原图</a><button onClick={onClose}>关闭</button></div></div>
-  </div>;
+function ImageViewer({ image, assets = [], onChange, onClose }) {
+  const images = assets.filter(asset => asset.asset_type === "image").map(asset => ({ url: asset.url, fileName: asset.file_name, alt: asset.alt_text }));
+  if (!images.some(item => item.url === image.url)) images.unshift(image);
+  const index = images.findIndex(item => item.url === image.url);
+  // 共用 body Portal 看图器，避免固定定位被 route-transition 的 transform 限制。
+  return <ImageLightbox src={image.url} fileName={image.fileName} alt={image.alt} variant="gallery"
+    gallery={{ index, count: images.length, onPrevious: index > 0 ? () => onChange(images[index - 1]) : null, onNext: index < images.length - 1 ? () => onChange(images[index + 1]) : null }} onClose={onClose} />;
 }
 function ReportDialog({ target, onClose, onSubmit }) {
   const [reason, setReason] = useState("other");

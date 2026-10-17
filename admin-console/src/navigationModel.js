@@ -1,4 +1,4 @@
-export const portalRoutes = { home: '/', courses: '/learning', studio: '/studio', community: '/community', myLearning: '/my-learning', search: '/search', creation: '/create' };
+export const portalRoutes = { home: '/', courses: '/learning', curriculum: '/curriculum', studio: '/studio', community: '/community', myLearning: '/my-learning', search: '/search', creation: '/create' };
 export const adminRoutes = { overview: '/admin', users: '/admin/users', courses: '/admin/courses', workflows: '/admin/workflows', reviews: '/admin/reviews', reports: '/admin/reports', bridges: '/admin/bridges', knowledge: '/admin/knowledge' };
 export const normalizePath = (pathname) => pathname.replace(/\/+$/, '') || '/';
 export const sectionFromPath = (pathname) => Object.entries(portalRoutes).find(([,route]) => route === normalizePath(pathname))?.[0] ?? null;

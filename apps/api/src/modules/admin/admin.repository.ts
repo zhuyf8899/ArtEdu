@@ -1,9 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
 import { DatabaseService } from "../database/database.service";
 import type { QuotaInput, ReportDecisionInput, ReviewDecisionInput } from "./admin.contracts";
+import { assertCaseEditorial, findCaseEditorialIssues } from "../studio/case-editorial";
+import { caseStorySchema } from "../studio/case-story";
 
 export interface AdminUser {
   id: string;
@@ -38,9 +40,9 @@ export interface AdminReview {
   status: "pending" | "approved" | "rejected";
 }
 
-type ReviewStory = { origin?: unknown; creators?: unknown; authorization?: unknown; authorizationNote?: unknown } | null | undefined;
+type ReviewStory = { origin?: unknown; creators?: unknown; authorization?: unknown; authorizationNote?: unknown; reflection?: unknown; steps?: unknown; editorialNote?: unknown } | null | undefined;
 
-export function getEditorialIssues(story: ReviewStory, tagCount: number, imageCount: number): string[] {
+export function getEditorialIssues(story: ReviewStory, tagCount: number, imageCount: number, summary = "", title = ""): string[] {
   const issues: string[] = [];
   if (!story || (story.origin !== "platform" && story.origin !== "collected")) issues.push("未标明案例来源");
   if (story?.origin === "collected") {
@@ -52,6 +54,8 @@ export function getEditorialIssues(story: ReviewStory, tagCount: number, imageCo
   }
   if (tagCount < 1) issues.push("未添加检索标签");
   if (imageCount < 1) issues.push("缺少图片封面");
+  const parsed = caseStorySchema.safeParse(story ?? {});
+  if (parsed.success) issues.push(...findCaseEditorialIssues({ title, summary, story: parsed.data }).map(issue => issue.message));
   return issues;
 }
 
@@ -87,6 +91,7 @@ interface UserRow {
 interface ReviewRow {
   id: string;
   title: string;
+  summary: string;
   author: string;
   department: string | null;
   kind: string | null;
@@ -105,6 +110,17 @@ interface ReviewRow {
 @Injectable()
 export class AdminRepository {
   constructor(private readonly database: DatabaseService) {}
+
+  async setWorkCollection(client: PoolClient, workId: string, actorId: string, collection: "community" | "art-selection") {
+    const current = await client.query("SELECT status,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
+    if (!current.rowCount) return null;
+    if (current.rows[0].status !== "approved") throw new BadRequestException("只能调整已发布案例的模块归属");
+    const previous = current.rows[0].story_json?.collection ?? "community";
+    if (previous === collection) return { id: workId, collection };
+    await client.query("UPDATE works SET story_json=jsonb_set(COALESCE(story_json,'{}'::jsonb),'{collection}',to_jsonb($2::text),true),updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId, collection]);
+    await client.query("INSERT INTO audit_records(id,target_type,target_id,reviewer_id,action,reason) VALUES($1,'work',$2,$3,'publish',$4)", [randomUUID(), workId, actorId, `案例模块调整：${previous} → ${collection}`]);
+    return { id: workId, collection };
+  }
 
   async listUsers(): Promise<AdminUser[]> {
     const result = await this.database.query<UserRow>(`
@@ -240,6 +256,7 @@ export class AdminRepository {
       SELECT
         w.id,
         w.title,
+        w.summary,
         author.display_name AS author,
         department.name AS department,
         COALESCE(w.discipline, '案例投稿') AS kind,
@@ -315,7 +332,7 @@ export class AdminRepository {
       prompt: row.prompt ?? "未记录生成提示词",
       assets: Number(row.assets ?? 0),
       assetLinks: row.asset_links ?? [],
-      editorialIssues: getEditorialIssues(row.story_json, Number(row.tags ?? 0), Number(row.image_assets ?? 0)),
+      editorialIssues: getEditorialIssues(row.story_json, Number(row.tags ?? 0), Number(row.image_assets ?? 0), row.summary, row.title),
       status: row.status,
     }));
   }
@@ -326,6 +343,13 @@ export class AdminRepository {
     reviewerId: string,
     decision: ReviewDecisionInput,
   ): Promise<boolean> {
+    if (decision.status === "approved") {
+      // 审核也校验旧的待审记录，不能仅依赖投稿入口的检查。
+      const pending = await client.query("SELECT title,summary,story_json FROM works WHERE id=$1 AND status='pending' FOR UPDATE", [workId]);
+      if (!pending.rowCount) return false;
+      try { assertCaseEditorial({ title: pending.rows[0].title, summary: pending.rows[0].summary, story: caseStorySchema.parse(pending.rows[0].story_json ?? {}) }); }
+      catch (error) { throw new BadRequestException((error as Error).message); }
+    }
     const update = await client.query(`
       UPDATE works
       SET
