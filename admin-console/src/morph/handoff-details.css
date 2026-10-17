@@ -1,0 +1,62 @@
+/* Six handoff corrections. Scoped so classic pages and the admin console are untouched. */
+.morph-v17 .morph-discovery--compact{padding:0;border:0;background:transparent;box-shadow:none;margin-bottom:24px}
+.morph-v17 .morph-discovery--compact .morph-discovery__main{grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:stretch}
+.morph-v17 .morph-discovery--compact .morph-category-list{padding:3px;background:#ffffff55;border:1px solid #fff5;border-radius:16px}
+.morph-v17 .morph-discovery--compact .morph-category{padding:8px 12px;min-height:38px;background:transparent;font-weight:400}
+.morph-v17 .morph-discovery--compact .morph-category[aria-pressed=true]{background:var(--ink);color:#fff}
+.morph-v17 .morph-discovery--compact .morph-category__dot{background:#374151}
+.morph-v17 .morph-discovery--compact .morph-category:nth-child(3) .morph-category__dot{background:#6c63ff}
+.morph-v17 .morph-discovery--compact .morph-category:nth-child(4) .morph-category__dot{background:#e0447c}
+.morph-v17 .morph-discovery--compact .morph-category:nth-child(5) .morph-category__dot{background:#e07a1f}
+.morph-v17 .morph-discovery--compact .morph-category:nth-child(6) .morph-category__dot{background:#0e9e8e}
+.morph-v17 .morph-discovery--compact .morph-category:nth-child(7) .morph-category__dot{background:#0284c7}
+.morph-v17 .morph-discovery--compact .morph-catalog-search{height:auto;min-height:40px;background:#ffffffb8}
+.morph-v17 .morph-discovery--compact .morph-discovery__bottom:not(.sr-only){padding-top:12px;margin-top:12px}
+.morph-v17 .course-card.morph-course-card .course-cover>.status{top:15px;left:15px;padding:8px 12px;background:var(--ink);color:white;border:0;border-radius:8px;font-size:12px;line-height:18px;height:auto;min-height:0;max-width:calc(100% - 30px)}
+.morph-v17 .course-card.morph-course-card .course-cover>.status.done{background:var(--lime);color:var(--ink)}
+.morph-v17 .course-card.morph-course-card .course-cover>.status.new{background:white;color:var(--muted)}
+.morph-v17 .course-card.morph-course-card .small-meta{margin:8px 0 12px;padding:0;gap:8px}
+.morph-v17 .course-card.morph-course-card .card-actions{flex-direction:row;justify-content:flex-end;margin-top:16px;gap:8px}
+.morph-v17 .course-card.morph-course-card .card-actions>.buttons{margin-left:auto;gap:8px}
+.morph-v17 .course-card.morph-course-card .card-actions .button{font-size:14px;line-height:22px;padding:8px 12px;min-height:38px}
+.morph-v17 .course-card.morph-course-card .course-readiness{display:block;color:#606887;font-size:12px;line-height:18px;margin-top:4px}
+.morph-v17 .morph-catalog-footnote{font-size:12px;line-height:22px;color:var(--muted);margin:24px 0 0}
+.morph-v17 .morph-page-banner:has(.morph-recommend-trigger) .morph-banner-action{top:auto;bottom:24px;right:10%}
+.morph-v17 .button.morph-recommend-trigger{background:var(--ink);border-color:var(--ink);color:#fff}
+.portal-shell.morph-v17:has(.morph-curriculum){background:#eceaf7}
+.morph-v17:has(.morph-curriculum) .portal-main{min-height:0}
+.morph-v17 .morph-curriculum{padding-top:40px;padding-bottom:64px;background:transparent;min-height:0}
+.morph-v17 .morph-curriculum .curriculum-back{display:inline-flex;align-items:center;gap:5px;padding:0;background:none;border:0;border-radius:0;color:var(--muted);font-size:14px;line-height:22px}
+.morph-v17 .morph-curriculum>header{margin:28px 0 32px}
+.morph-v17 .morph-curriculum h1{font-size:36px;line-height:44px;margin:8px 0 16px;font-weight:700;letter-spacing:0;color:var(--ink)}
+.morph-v17 .morph-curriculum .eyebrow{position:static;color:var(--purple);font:400 12px/18px ui-monospace,monospace;letter-spacing:.12em}
+.morph-v17 .morph-curriculum p{font-size:14px;line-height:22px;color:var(--muted)}
+.morph-v17 .morph-curriculum .curriculum-conversation{box-sizing:border-box;max-width:960px;padding:32px;margin:auto;background:#ffffffb8;border:1px solid white;border-radius:24px}
+.morph-v17 .morph-curriculum .composer-welcome{padding:32px 0 48px;text-align:center}
+.morph-v17 .morph-curriculum .composer-symbol{display:block;color:var(--purple);margin:0 auto 24px;width:48px;height:56px}
+.morph-v17 .morph-curriculum .composer-welcome h2{font-size:24px;line-height:32px;margin:8px 0;font-weight:700}
+.morph-v17 .morph-curriculum .curriculum-suggestions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:24px}
+.morph-v17 .morph-curriculum .curriculum-suggestions button{display:inline-flex;gap:5px;align-items:center;padding:10px 16px;border:1px solid var(--border);border-radius:10px;color:var(--purple);background:#f7f6fe;font-size:14px;line-height:22px}
+.morph-v17 .morph-curriculum .curriculum-input{display:flex;gap:12px;padding:12px;border:1px solid var(--border);background:#f4f3fc;border-radius:16px}
+.morph-v17 .morph-curriculum .curriculum-input input{flex:1;min-width:0;width:100%;height:auto;border:0;box-shadow:none;background:transparent;padding:8px;font-size:14px;line-height:22px;color:var(--ink)}
+.morph-v17 .morph-curriculum .button{background:var(--ink);border-color:var(--ink);color:#fff}
+.morph-v17 .morph-curriculum .button.secondary{background:#fff;border-color:var(--border);color:var(--ink)}
+.morph-v17 .morph-curriculum #curriculum-form{display:block;margin:0}
+.morph-v17 .morph-curriculum #curriculum-form>small{display:block;margin-top:12px;font-size:12px;line-height:18px;color:var(--muted)}
+.morph-v17 .morph-curriculum .path-result footer{flex-wrap:wrap}
+.morph-v17 .morph-curriculum .path-result footer>div{display:flex;gap:8px;flex-wrap:wrap}
+.morph-v17 .morph-curriculum .path-list .title-button{display:inline-flex;align-items:center;gap:8px}
+.morph-v17 .morph-curriculum .path-list>li>div{min-width:0}
+.morph-v17 .morph-curriculum .path-list h3{font-size:20px;line-height:28px}
+.morph-v17 .dialog.morph-tool-recommendation{position:fixed;inset:0;margin:auto;padding:24px;max-height:88dvh;width:min(820px,92vw);overflow:auto;background:#faf9ff;color:var(--ink)}
+.morph-v17 .morph-tool-recommendation .dialog-content{padding:36px}
+.morph-v17 .morph-tool-recommendation .dialog-close{display:grid;place-items:center;padding:0;position:sticky;top:0;margin:0 0 0 auto;float:right;color:var(--ink);background:#fff}
+.morph-v17 .morph-tool-recommendation .eyebrow{position:static;color:var(--purple)}
+.morph-v17 .morph-tool-recommendation h2{margin:0 0 16px;font-size:24px;line-height:32px}
+.morph-v17 .morph-tool-recommendation .button{background:var(--ink);border-color:var(--ink);color:#fff}
+.morph-v17 :is(.morph-curriculum,.morph-tool-recommendation) :is(button,input,textarea):focus-visible{outline:2px solid var(--purple);outline-offset:3px}
+@media(max-width:1199px){.morph-v17 .morph-discovery--compact .morph-discovery__main{grid-template-columns:1fr}.morph-v17 .morph-curriculum .curriculum-conversation{box-sizing:border-box}}
+.morph-v17 .morph-catalog .atom-connections{backdrop-filter:blur(28px)!important;-webkit-backdrop-filter:blur(28px)!important}
+.morph-v17 .morph-catalog .atom-connections .eyebrow{font-weight:400}
+.morph-v17 .curriculum-entry .button{font-weight:400}
+.morph-v17:has(.morph-curriculum) .unified-footer{background:#ffffffb8;border-top:1px solid var(--border)}

@@ -11,6 +11,7 @@ import './source-gallery.css';
 import './source-curriculum.css';
 import './integration.css';
 import './catalog-controls.css';
+import './handoff-details.css';
 
 const items = [['courses','原子课程','/learning'],['community','案例社区','/community'],['studio','技能工具','/studio'],['creation','创作空间','/create']];
 export function MorphLink({ href, onNavigate, children, ...props }) {

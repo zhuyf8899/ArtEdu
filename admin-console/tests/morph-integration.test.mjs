@@ -140,5 +140,5 @@ test('final handoff course labels and preview use stable course codes, not array
   const source=await readFile(new URL('../src/morph/MorphCatalog.jsx',import.meta.url),'utf8');
   assert.match(source,/code==='DTH-10'/);assert.match(source,/POS-11/);assert.match(source,/PRD-12/);assert.match(source,/INF-13/);
   assert.doesNotMatch(source,/onOpen\(courses\[0\]\.id\)/);
-  assert.match(source,/查看详情/);assert.match(source,/耗时/);assert.match(source,/c\.catalog\.code/);
+  assert.match(source,/查看详情/);assert.match(source,/耗时/);assert.match(source,/courseCardState\(c\)/);
 });

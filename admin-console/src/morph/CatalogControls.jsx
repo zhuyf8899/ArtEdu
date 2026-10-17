@@ -2,11 +2,11 @@ import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 /** A single desktop filter language; callers retain their own taxonomy and query state. */
-export function CatalogControls({ label, options, value, onChange, query, onQueryChange, searchLabel, placeholder, resultLabel, selected = [], onClear, dimensions, extra, actions, loading = false }) {
+export function CatalogControls({ label, options, value, onChange, query, onQueryChange, searchLabel, placeholder, resultLabel, selected = [], onClear, dimensions, extra, actions, loading = false, compact = false }) {
   const [expanded, setExpanded] = useState(false);
   // Keep an active category visible even after collapsing a long taxonomy.
   const shownOptions = expanded ? options : options.filter((option, index) => index < 8 || option.value === value);
-  return <section className="morph-discovery" aria-label={label} aria-busy={loading || undefined}>
+  return <section className={`morph-discovery${compact ? ' morph-discovery--compact' : ''}`} aria-label={label} aria-busy={loading || undefined}>
     {dimensions && <div className="morph-discovery__dimensions">{dimensions}</div>}
     <div className="morph-discovery__main">
       <div className="morph-category-list" role="group" aria-label={`${label}分类`}>
@@ -22,7 +22,7 @@ export function CatalogControls({ label, options, value, onChange, query, onQuer
       </label>
     </div>
     {extra && <div className="morph-discovery__extra">{extra}</div>}
-    <div className="morph-discovery__bottom">
+    <div className={`morph-discovery__bottom${compact && !selected.length && !actions ? ' sr-only' : ''}`}>
       <span className="morph-discovery__result" role="status" aria-live="polite">{loading ? '正在加载…' : resultLabel}</span>
       <div className="morph-selected-filters">{selected.map((item, index) => <button type="button" key={`${item.label}-${index}`} onClick={item.onRemove} aria-label={`移除筛选：${item.label}`}>{item.label}<X size={13} aria-hidden="true"/></button>)}
         {selected.length > 0 && <button type="button" className="morph-clear-filters" onClick={onClear}>清除筛选</button>}

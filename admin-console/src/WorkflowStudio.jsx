@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, MagnifyingGlass, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, MagnifyingGlass, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
 import { ComfyCanvas } from './ComfyCanvas.jsx';
 import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflowRun, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 import { studioUrl } from "./navigationModel.js";
@@ -8,6 +8,7 @@ import { MorphPageBanner } from './morph/MorphCatalog.jsx';
 import { morphQueryMatches } from './morph/morphPresentation.js';
 import { CatalogControls } from './morph/CatalogControls.jsx';
 import { MorphToolCard } from './morph/MorphToolCard.jsx';
+import { ToolRecommendationDialog } from './morph/ToolRecommendationDialog.jsx';
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
 const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ WorkflowRunner: component }) => ({ default: component })));
@@ -22,7 +23,8 @@ const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https:
 const PROMPT_NODE_TYPES = ["prompt", "text_encode", "skill"];
 const nodesCarryPrompt = (nodes = []) => nodes.some((node) => PROMPT_NODE_TYPES.includes(node.type) && String(node.data?.value ?? "").trim());
 
-export function WorkflowStudio({ initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", onNavigate, onNotice, canPublish = false, canManageToolDirectory = false, variant = 'classic' }) {
+export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", onNavigate, onNotice, canPublish = false, canManageToolDirectory = false, variant = 'classic' }) {
+  const [recommendOpen,setRecommendOpen]=useState(false);
   const [workflows, setWorkflows] = useState([]);
   const [selected, setSelected] = useState(null);
   const [run, setRun] = useState(null);
@@ -101,7 +103,8 @@ export function WorkflowStudio({ initialWorkflowId, initialRunId = "", builderOp
     </Suspense>
   </div>;
   return <section className="workflow-catalog" id="workflow-catalog">
-    {variant === 'morph' && <MorphPageBanner title="专项技能工具" eyebrow="SKILL TOOLS"/>}
+    {variant === 'morph' && <MorphPageBanner title="专项技能工具" eyebrow="SKILL TOOLS"><button className="button morph-recommend-trigger" onClick={()=>setRecommendOpen(true)}>推荐一个工具<ArrowUpRight size={16}/></button></MorphPageBanner>}
+    {variant === 'morph' && recommendOpen && <ToolRecommendationDialog accountId={accountId} onClose={()=>setRecommendOpen(false)} onNotice={onNotice}/>}
     <div className={variant === 'morph' ? 'container morph-tool-catalog' : undefined}>
     <ToolDirectory variant={variant} canManage={canManageToolDirectory} onNotice={onNotice} onNavigate={onNavigate} onOpenWorkflowBuilder={openBuilder} />
     {/* 工具入口之后必须有节点工作流列表：之前这一块被工具目录挤掉了，学生根本点不进工作流。 */}
