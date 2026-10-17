@@ -20,6 +20,7 @@ const WorkflowStudio = lazy(() => import("./WorkflowStudio.jsx").then(({ Workflo
 const CommunityLibrary = lazy(() => import("./CommunityLibrary.jsx").then(({ CommunityLibrary: component }) => ({ default: component })));
 const MyLearning = lazy(() => import("./MyLearning.jsx").then(({ MyLearning: component }) => ({ default: component })));
 const SearchResults = lazy(() => import("./SearchResults.jsx").then(({ SearchResults: component }) => ({ default: component })));
+const CurriculumComposer = lazy(() => import('./morph/CurriculumComposer.jsx').then(({ CurriculumComposer: component }) => ({ default: component })));
 
 const emptyPortalData = {
   courses: [], workflows: [], works: [],
@@ -91,7 +92,7 @@ export function LocalLogin({ onLogin, message = "" }) {
   </main></div>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", curriculumTopic = "", learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -222,10 +223,10 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const chromeFree = standalone || workbench;
   // Deployment can fall back without data migration. ?ui=classic affects this view only.
   const morph = import.meta.env.VITE_PORTAL_UI !== 'classic' && new URLSearchParams(window.location.search).get('ui') !== 'classic';
-  const morphNav = <MorphNav account={account} section={section} creation={data.creation} onNavigate={onNavigate} onSwitchAccount={onSwitchAccount} onEnterAdmin={onEnterAdmin} />;
+  const morphNav = <MorphNav account={account} section={section==='curriculum'?'courses':section} creation={data.creation} onNavigate={onNavigate} onSwitchAccount={onSwitchAccount} onEnterAdmin={onEnterAdmin} />;
   useEffect(() => {
     const previous = document.title;
-    if (morph) document.title = `MORPH LAB · ${{home:'艺术与智能之间',courses:'原子课程',studio:'专项技能工具',community:'案例社区',myLearning:'我的空间',creation:'创作空间',search:'搜索'}[section] ?? 'ArtEdu'}`;
+    if (morph) document.title = `MORPH LAB · ${{home:'艺术与智能之间',courses:'原子课程',curriculum:'AI 编排课程体系',studio:'专项技能工具',community:'案例社区',myLearning:'我的空间',creation:'创作空间',search:'搜索'}[section] ?? 'ArtEdu'}`;
     return () => { document.title = previous; };
   }, [morph, section]);
 
@@ -249,7 +250,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         <span className="portal-workbench-bar__hint">课程负责学习，工作台负责动手。</span>
         {canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}
       </header>}
-      {section !== "home" && section !== "courses" && section !== "studio" && section !== "community" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
+      {section !== "home" && section !== "courses" && section !== "studio" && section !== "curriculum" && section !== "community" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
       {morph && section === 'home' && <>{portalLoading ? <HomeDataState loading /> : portalError ? <HomeDataState error={portalError} onRetry={loadPortalData} /> : <MorphHomeRecommendations data={data} onNavigate={onNavigate} />}</>}
       {!morph && section === "home" && <>
@@ -266,8 +267,9 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
         {section === "courses" && <LearningLibrary variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNavigate={onNavigate} onNotice={showToast} />}
+        {section === 'curriculum' && <CurriculumComposer courses={data.courses} topic={curriculumTopic} loading={portalLoading} error={portalError} onRetry={loadPortalData} onNavigate={onNavigate} onNotice={showToast}/>}
 
-        {section === "studio" && <WorkflowStudio variant={morph ? 'morph' : 'classic'} initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
+        {section === "studio" && <WorkflowStudio accountId={account.id} variant={morph ? 'morph' : 'classic'} initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
         {section === "community" && <CommunityLibrary variant={morph ? 'morph' : 'classic'} account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
 

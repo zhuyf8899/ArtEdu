@@ -232,3 +232,56 @@ No remaining actionable P0/P1/P2 in the agreed desktop source-copy/card scope. M
 Implementation checklist: restore exact editorial copy; keep versioned backup/idempotence/rollback; named launch controls; course metadata and preview; fix spacing/proportions; compare final source/implementation; exercise real read-only flows; preserve history; run full regression — complete.
 
 final result: passed
+
+## 2026-10-17 — Six supplied handoff differences
+
+### Comparison target and evidence
+
+Scope: the six screenshots supplied on 2026-10-17: curriculum entry, course status pill, course filter rows, course footer actions, tool recommendation entry, and curriculum composer. This is not a claim that every screen and every production integration is identical to the standalone demo.
+
+Source truth: `C:/Users/64502/Documents/Codex/morph-v17-reference-20261015/MORPH-LAB-完整前端-v17-开发交接-20261015/frontend/` — `atomic-courses-particles.html`, `skill-tools.html`, `curriculum.html`, their scripts and styles. Original source assets, text, font stack and design tokens were inspected directly. No new image assets were needed.
+
+Evidence directory: `design-qa-assets/handoff-six-details-20261017/`. Captured in the in-app browser at a 1440 × 1000 CSS desktop viewport, reported devicePixelRatio approximately 1. The browser returns JPEG bytes; the evidence files use `.jpg` extensions. Source and implementation were emitted together in each comparison input, not judged from code alone.
+
+- Course full views: `courses-source-final.jpg` / `courses-final.jpg`, both 1425 × 990 raster pixels. Equal raster size; no resampling needed. `course-card-source.jpg` / `course-card-app.jpg` are focused first-card crops, 558 × 352 / 558 × 354 pixels. The 2px height difference is the live card border, not content clipping.
+- Composer full views: `composer-source-final.jpg` / `composer-final.jpg`, both 1440 × 1000 pixels. Both show the empty welcome state, three topic suggestions and the goal form. The final saved file was reopened to confirm it shows the composer, not the previous route's compositor frame.
+- Tool full views: `tools-source-final.jpg` / `tools-final.jpg`, both 1425 × 990 pixels. Focus is the restored dark recommendation CTA in the banner. Actual tool data, order, 22 real entries and existing browse controls remain intentionally API-owned; the source has 19 demo entries. No source popularity, pricing, endorsement or fake bookmarks were imported.
+- Recommendation dialog: `tool-form-source-final.jpg` (1425 × 990) / `tool-form-final.jpg` (1440 × 1000); `tool-form-normalized.jpg` is a 1425 × 990 density-normalized comparison copy. Both show the native modal open; the implementation additionally shows the saved draft's non-sensitive Figma fields. The explanatory local-draft notice is intentionally explicit. Close-control contrast and focus are visible in the final capture.
+- Interaction evidence: `composer-result.jpg`, `saved-path-note.jpg`. Intermediate `*-before` and `*-v1` captures are iteration records, not accepted final delivery images. In particular `tools-before.jpg` was caught during loading and was not used to judge final fidelity.
+
+### Findings and iteration history
+
+1. [P1 resolved — navigation/copy] The lime course connection CTA incorrectly opened the professional portrait. Restored “AI 编排课程体系” and a dedicated `/curriculum` route with refreshable `?topic=` goals. The unrelated retired graph entry remains removed.
+2. [P2 resolved — status hierarchy] Long readiness labels overrode the source-style progress pill. Restored dark in-progress, lime completed and light not-started treatments. Text derives from real progress; coming-soon and archived states retain truthful labels. Trial readiness moved to concise secondary metadata. Source sample 60%/100% records and demo teachers are deliberately not copied.
+3. [P2 resolved — layout density] The course catalog added three dropdown filters, an always-visible count row and a large wrapper absent from the handoff. Removed the dropdowns; restored the compact category/search layout and seven source directions, including empty categories. Counts remain accessible; selected/empty states still expose clear-filter controls. Moved the truthful trial/course-readiness explanation below the grid instead of above the connection preview.
+4. [P2 resolved — card footer] Extra lesson/method and tool/code metadata disrupted the source anatomy and pushed buttons out of alignment. Simplified the card and restored paired detail/study buttons aligned at the end of the footer. Trial entry uses the source “开始学习” label but still opens the real trial detail and does not silently enrol or complete a lesson. Coming-soon cards use “查看规划”. No fictitious view/favourite metrics replace the removed metadata.
+5. [P1 resolved — missing action] Restored “推荐一个工具” in the tool banner. Implemented the handoff's local draft form using an account-scoped storage key, http(s) URL validation, length limits, visible errors and an honest not-submitted/not-published notice. This is not an admin publishing API.
+6. [P1 resolved — missing page] Restored the composer hierarchy, lavender surface, 960px welcome panel, three topic shortcuts, goal input and dark submit button. Recommendations use the handoff's editorial course-code order resolved against live API IDs. They neither call a paid model nor fabricate course readiness or learning progress. Paths can open their real course details and save to the existing personal learning-note service.
+7. [P2 resolved in second comparison — spacing/contrast] First composer comparison showed an overly wide content-box panel, gradient background and disabled grey primary CTA. Corrected the panel to border-box 960px, source lavender background, source-like header spacing and dark native-required submit control. The first dialog comparison exposed a white-on-white close icon; it now explicitly uses ink color and retains a focus ring. Post-fix evidence is in the final composer/dialog pairs.
+8. [P2 resolved — preview surface] Restored the source's 28px backdrop blur on the connection preview and normal-weight eyebrow. Removed the substituted portrait CTA and extra expand/note rows to match the handoff preview composition.
+
+### Required fidelity surfaces
+
+- Fonts/typography: supplied PingFang SC / Microsoft YaHei / Inter system stack; 36/44 page heading, 24/32 section heading, 20/28 course title, 14/22 body and 12/18 metadata. Full descriptions remain readable, with no word-by-word vertical wrapping. Focus outlines are retained.
+- Spacing/layout: same 80% desktop content width, one-plus-three preview arrangement, compact filter/search row, 30.24% course cover, 24px card padding and paired footer actions. Composer retains a 960px centered panel with clearly separated suggestions/input/notice. Native modal remains viewport-bounded and scrollable.
+- Colors/tokens: source ink `#171a2f`, purple `#6554e8`, lime `#d8f845`, lavender `#eceaf7` and border `#dddff0`; state colours reflect real state, not source demo progress. Primary controls and close icon have explicit foreground/background contrast.
+- Image/asset fidelity: existing original course covers and source banner effects remain; no new div artwork or generated placeholder imagery. Final course DOM check: 13 cards and zero completed broken images. Library Sparkle/Arrow/Spinner icons replace the source's UI glyphs; no custom SVG artwork was authored.
+- Copy/content: the requested CTA names, composer headings, supporting copy, goal suggestions and model-service notice follow the handoff. Real author-confirmation, trial/coming-soon state, absent popularity and local-draft disclosures are intentional product constraints. Course/tool data, IDs, backend permissions and case records were not replaced with demo data.
+
+### Functional and regression checks
+
+- Catalog: empty “美术史” category shows an empty state; clear filters restores all 13 courses. “开始学习” opens 色彩构成基础 with three real trial lessons, “加入试学” and disabled completion gates; no enrolment or completion was performed.
+- Composer: information-chart path produces five current course IDs and 285 planned minutes; product path produces four current IDs and 375 planned minutes. Unknown “音乐编曲” offers supported-direction recovery. Refresh preserves the selected topic. Stable-code resolution, partial/empty catalogs, archived exclusion and genuine status are covered by added unit tests.
+- Personal save: saved one “产品设计 · 学习路径” note to the current student account and opened the existing notes view to verify its four real course references. This is an ordinary learning note, not a completed course, task or inferred capability.
+- Tool draft: saved a Figma recommendation locally, reopened and verified name/URL/reason restored. Escape and close both close the modal and return focus to the recommendation trigger. Account isolation, corrupt/blocked storage handling, unsafe protocols/credential-bearing URLs and length validation are covered by tests. No recommendation was published or transmitted to an administrator.
+- Final `npm run check`: exit 0; API typecheck, production frontend build and **324 tests passed** (137 API, 6 Sites, 37 chat, 119 platform, 19 import/deployment, 6 reliability). Log: `apps/api/data/qa/local-20261017/handoff-check-final.log`. `git diff --check` passed.
+- Browser console inspection found two earlier Vite hot-reload failures while referenced new files were being created (03:09 / 03:12 UTC). Subsequent module loading, full-route refresh, normal interactions and final production build succeeded; no later runtime error was observed in this verification. This is not a claim to have fixed the previously known session-continuity issue.
+- Temporary viewport reset was requested and the reference tab was closed; the live platform tab is retained on `/curriculum`. Final checked desktop document had no horizontal overflow. No mobile certification, paid AI integration, admin recommendation workflow, GitHub push or merge was performed in this task.
+
+### Follow-up polish / intentional differences
+
+[P3] The Phosphor Spinner has fewer rays than the handoff's Unicode welcome star; it preserves the compact purple visual role using the existing icon system. Small panel-height/footer and native form-control rendering differences remain within the source hierarchy. No P0/P1/P2 issue remains in the six requested correction areas. Other module-specific filters, real directory counts/order and admin/classic interfaces were not redesigned as part of these six screenshots.
+
+Implementation checklist: source inspection; six corrections; truthful state; working curriculum and draft flows; paired full/focused screenshots; contrast repair; regression checks; retain local preview — complete.
+
+final result: passed
