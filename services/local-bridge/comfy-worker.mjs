@@ -1,7 +1,8 @@
 // Outbound-only GPU worker. Run against a dedicated, loopback ComfyUI instance.
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-export const CORE_NODES = ['CheckpointLoaderSimple', 'CLIPTextEncode', 'EmptyLatentImage', 'KSampler', 'VAEDecode', 'SaveImage', 'PreviewImage', 'LoadImage', 'LoraLoader', 'ControlNetLoader', 'ControlNetApplyAdvanced', 'UpscaleModelLoader', 'ImageUpscaleWithModel'];
+import { CORE_NODES } from '../../shared/comfyNodes.mjs';
+export { CORE_NODES } from '../../shared/comfyNodes.mjs';
 export function endpoint(raw) {
     const u = new URL(raw);
     if (!['http:', 'https:'].includes(u.protocol) || !['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) || u.username || u.password || u.pathname !== '/')

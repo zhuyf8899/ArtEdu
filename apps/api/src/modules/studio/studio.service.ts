@@ -239,9 +239,13 @@ export class StudioService {
     if (!actor.roles.includes("admin") && workflow.rows[0].created_by !== actor.id) throw new ForbiddenException("只能编辑自己创建的工作流");
     if (input.publish) this.auth.requireAnyRole(actor, WORKFLOW_PUBLISH_ROLES);
     const definition = input.definition ?? this.legacyStepsToDefinition(input.steps ?? []);
-    if (definition.engine === 'comfyui') {
+    if (definition.engine === 'comfyui' && input.publish) {
       if (!this.comfy) throw new BadRequestException('缺少原生工作流执行服务');
       definition.comfyPrompt = await this.comfy.validateGraph(actor, definition);
+    } else if (definition.engine === 'comfyui') {
+      // A draft may have missing models or disconnected inputs. Never retain a
+      // client-supplied executable prompt; publication and execution recompile.
+      delete definition.comfyPrompt;
     } else if (input.publish) this.assertExecutableDefinition(definition);
     const version = await this.database.transaction(async (client) => {
       const next = await client.query<{ number: number }>("SELECT COALESCE(MAX(version_number), 0)::int + 1 AS number FROM workflow_versions WHERE workflow_id = $1", [workflowId]);
@@ -459,8 +463,8 @@ export class StudioService {
     const privileged = result.rows[0].author_id === actor.id || this.canReview(actor);
     const story = caseStorySchema.parse(result.rows[0].story_json ?? {});
     const visibleAssets = assets.rows.map(asset => ({ ...asset,
-      url: `/api/works/${encodeURIComponent(workId)}/assets/${encodeURIComponent(asset.id)}/download`,
-      canDownload: asset.asset_type !== "document" || privileged || story.allowDocumentDownload,
+      url: asset.external_url && /^https?:\/\//i.test(asset.external_url) ? asset.external_url : `/api/works/${encodeURIComponent(workId)}/assets/${encodeURIComponent(asset.id)}/download`,
+      canDownload: !asset.external_url && (asset.asset_type !== "document" || privileged || story.allowDocumentDownload),
     }));
     const reviewHistory = reviewEvents.rows.map(event => ({ action: event.action, reason: event.reason ?? "", createdAt: event.created_at, reviewer: event.reviewer ?? "审核人员" }));
     const latestRejection = reviewHistory.find(event => event.action === "reject") ?? null;

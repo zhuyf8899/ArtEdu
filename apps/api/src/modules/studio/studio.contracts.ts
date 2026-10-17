@@ -100,6 +100,26 @@ export const workflowDefinitionSchema = z.object({
     if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "连线必须连接到已有节点" });
     if (edge.source === edge.target) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "节点不能连接到自身" });
   }
+  if (definition.engine === 'comfyui') {
+    for (const node of definition.nodes) {
+      if (typeof node.data.classType !== 'string' || !node.data.classType || !node.data.widgets || typeof node.data.widgets !== 'object' || Array.isArray(node.data.widgets)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['nodes'], message: 'ComfyUI 节点参数无效' });
+    }
+    const connected = new Set<string>();
+    for (const edge of definition.edges) {
+      const key = JSON.stringify([edge.target, edge.targetHandle]);
+      if (!/^\d+$/.test(edge.sourceHandle ?? '') || !edge.targetHandle || connected.has(key)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: 'ComfyUI 连线端口无效或输入重复连接' });
+      connected.add(key);
+    }
+    const active = new Set<string>(), visited = new Set<string>();
+    const visit = (id: string): boolean => {
+      if (active.has(id)) return true;
+      if (visited.has(id)) return false;
+      active.add(id);
+      if (definition.edges.filter(e => e.target === id).some(e => visit(e.source))) return true;
+      active.delete(id); visited.add(id); return false;
+    };
+    if ([...nodeIds].some(visit)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: 'ComfyUI 工作流不能包含循环连接' });
+  }
   const groupIds = new Set<string>();
   for (const group of definition.groups) {
     if (groupIds.has(group.id)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["groups"], message: "分组 ID 不能重复" });

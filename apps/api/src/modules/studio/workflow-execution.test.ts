@@ -12,6 +12,23 @@ test("工作流读取、预览和执行保留版本知识绑定，旧版本不�
 
 const actor = { id: "student-a", username: "student-a", displayName: "学生", roles: ["student"], accountStatus: "active" } as any;
 
+test('原生未连接草稿可离线保存，发布仍强制真实Worker校验并移除客户端prompt', async () => {
+ const saved:any[]=[];
+ const query=async(sql:string,values:any[]=[])=>{
+   if(sql.includes('SELECT created_by'))return {rows:[{created_by:actor.id}]};
+   if(sql.includes('MAX(version_number)'))return {rows:[{number:1}]};
+   if(sql.includes('INSERT INTO workflow_versions'))saved.push(JSON.parse(values[3]));
+   return {rows:[]};
+ };
+ const database={query,transaction:async(fn:any)=>fn({query})};
+ const service=new StudioService(database as any,{requireAnyRole:()=>{}} as any);
+ const definition:any={engine:'comfyui',schemaVersion:2,nodes:[{id:'n',type:'comfy',position:{x:0,y:0},data:{label:'采样',classType:'KSampler',widgets:{seed:1}}}],edges:[],comfyPrompt:{fake:{class_type:'Injected',inputs:{}}}};
+ await service.createWorkflowVersion(actor,'flow-a',{definition:structuredClone(definition),publish:false});
+ assert.equal(saved.length,1);assert.equal(saved[0].comfyPrompt,undefined);
+ await assert.rejects(()=>service.createWorkflowVersion(actor,'flow-a',{definition:structuredClone(definition),publish:true}),/执行服务/);
+ assert.equal(saved.length,1);
+});
+
 test("连接的节点调用文本模型，结果持久化并可继续查看", async () => {
   const calls: Array<Record<string, any>> = [];
   const definition = {

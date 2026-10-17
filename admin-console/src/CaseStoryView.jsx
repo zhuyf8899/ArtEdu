@@ -28,9 +28,9 @@ export function CaseStoryView({ work, onOpenImage, exhibition = false, showMeta 
     </article>)}</section>}
     {story.reflection && <section><h3>经验与反思</h3><p>{story.reflection}</p></section>}
     {!!relatedAssets.length && <section><h3>相关内容</h3><div className="case-related-assets">{relatedAssets.map(asset => <article key={asset.id}>
-      {asset.asset_type !== "video" && <header className="case-attachment__header"><strong>{asset.file_name}</strong><span>附件</span></header>}
+      {asset.asset_type !== "video" && <header className="case-attachment__header"><strong>{asset.file_name}</strong><span>{asset.external_url ? "原作资料" : "附件"}</span></header>}
       {asset.asset_type === "video" && <video controls preload="metadata" className="case-attachment__video" playsInline poster={exhibition ? work.previewUrl : undefined} src={asset.url} aria-label={`${work.title} · 作品视频`} />}
-      <footer className="case-attachment__actions">{asset.canDownload ? <a href={asset.url} download>下载文件</a> : <em>作者未开放下载</em>}</footer>
+      <footer className="case-attachment__actions">{asset.canDownload ? <a href={asset.url} download>下载文件</a> : asset.external_url ? <a href={asset.url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">查看原始资料</a> : <em>作者未开放下载</em>}</footer>
     </article>)}</div></section>}
     {preview && <ImageLightbox src={preview.url} fileName={preview.fileName} alt={preview.alt} variant="gallery" onClose={() => setPreview(null)} gallery={{ index: previewIndex, count: galleryImages.length, onPrevious: previewIndex > 0 ? () => previewAsset(galleryImages[previewIndex - 1]) : null, onNext: previewIndex + 1 < galleryImages.length ? () => previewAsset(galleryImages[previewIndex + 1]) : null }} />}
     {showSource && <CaseSourceFooter story={story} />}

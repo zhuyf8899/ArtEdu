@@ -7,9 +7,10 @@ export function compileGraph(definition: {
     nodes: Array<Record<string, any>>;
     edges: Array<Record<string, any>>;
 }, catalog: Record<string, any>) {
-    const prompt: Record<string, any> = {};
+    const prompt: Record<string, any> = Object.create(null);
     for (const node of definition.nodes) {
-        if (typeof node.data?.classType !== 'string' || !node.data.widgets || typeof node.data.widgets !== 'object')
+        if (Object.hasOwn(prompt, node.id)) throw new BadRequestException('ComfyUI 节点 ID 重复');
+        if (typeof node.data?.classType !== 'string' || !node.data.widgets || typeof node.data.widgets !== 'object' || Array.isArray(node.data.widgets))
             throw new BadRequestException('ComfyUI 节点参数无效');
         prompt[node.id] = { class_type: node.data.classType, inputs: { ...node.data.widgets }, _meta: { title: node.data.label } };
     }
@@ -55,9 +56,12 @@ export function validatePrompt(prompt: Record<string, any>, catalog: Record<stri
             const [type, options = {}] = spec;
             if (Array.isArray(value) && value.length === 2 && typeof value[0] === 'string' && Number.isInteger(value[1]) && prompt[value[0]]) {
                 const parent = prompt[value[0]], source = catalog[parent.class_type]?.output?.[value[1]];
-                if (!source || Array.isArray(type) || (type !== source && type !== '*' && source !== '*'))
+                if (!source || Array.isArray(type) || (type !== '*' && source !== '*' && !String(source).split(',').some(part => String(type).split(',').map(t => t.trim()).includes(part.trim()))))
                     throw new BadRequestException(`端口类型不匹配 ${id}.${name}`);
                 visit(value[0]);
+            }
+            else if (options.forceInput) {
+                throw new BadRequestException(`输入 ${id}.${name} 必须连接 ${type} 端口`);
             }
             else if (Array.isArray(type)) {
                 if (!type.includes(value))
