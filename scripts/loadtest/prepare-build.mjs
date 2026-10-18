@@ -1,0 +1,10 @@
+import {mkdir,cp,writeFile} from 'node:fs/promises';
+const out='local-artifacts/loadtest/build';
+await mkdir(`${out}/api`,{recursive:true});
+await mkdir(`${out}/web`,{recursive:true});
+for (const name of ['package.json','package-lock.json','vendor','dist']) await cp(`apps/api/${name}`,`${out}/api/${name}`,{recursive:true});
+await cp('admin-console/dist/client',`${out}/web/site`,{recursive:true});
+await writeFile(`${out}/api/Dockerfile`, `FROM node:22-alpine\nWORKDIR /app/apps/api\nCOPY package.json package-lock.json ./\nCOPY vendor ./vendor\nRUN npm ci --omit=dev --no-audit --no-fund\nCOPY dist ./dist\nCMD ["node","dist/main.js"]\n`);
+await writeFile(`${out}/web/Dockerfile`, 'FROM nginx:1.27-alpine\nCOPY site /usr/share/nginx/html\nCOPY nginx.conf /etc/nginx/conf.d/default.conf\n');
+await writeFile(`${out}/web/nginx.conf`, 'server { listen 80; root /usr/share/nginx/html; location /api/ { proxy_pass http://api:4000; proxy_http_version 1.1; proxy_set_header Host $http_host; proxy_set_header X-Forwarded-For $remote_addr; proxy_buffering off; } location / { try_files $uri $uri/ /index.html; } }\n');
+console.log('Isolated production-build contexts prepared; no .env, uploads or model credentials copied.');

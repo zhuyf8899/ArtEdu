@@ -207,11 +207,14 @@ export const uploadTemporaryCreationFile = (file, conversationLocalId) => {
 /**
  * 工作流目录。设计工作台会带上 includeDrafts：作者能看到自己的草稿去试运行，
  * 草稿可见性由服务端权限控制；该业务接口要求登录，不能作为匿名公开目录使用。
+ * page/pageSize 由目录自己控制，配合后端返回的 total 决定要不要显示「加载更多」。
  */
 export const getWorkflows = (query = "", options = {}) => {
   const params = new URLSearchParams();
   if (query) params.set("query", query);
   if (options.includeDrafts) params.set("includeDrafts", "1");
+  if (options.page) params.set("page", String(options.page));
+  if (options.pageSize) params.set("pageSize", String(options.pageSize));
   const search = params.toString();
   return request(`/workflows${search ? `?${search}` : ""}`);
 };
@@ -220,14 +223,21 @@ export const getToolDirectoryLinks = () => request("/tool-directory-links");
 export const getManagedToolDirectoryLinks = () => request("/admin/tool-directory-links");
 export const createToolDirectoryLink = (input) => request("/admin/tool-directory-links", { method: "POST", body: JSON.stringify(input) });
 export const updateToolDirectoryLink = (toolLinkId, input) => request(`/admin/tool-directory-links/${encodeURIComponent(toolLinkId)}`, { method: "PATCH", body: JSON.stringify(input) });
-export const getAdminWorkflows = (query = "") => request(`/admin/workflows${query ? `?query=${encodeURIComponent(query)}` : ""}`);
+export const getAdminWorkflows = (query = "", options = {}) => {
+  const params = new URLSearchParams();
+  if (query) params.set("query", query);
+  if (options.page) params.set("page", String(options.page));
+  if (options.pageSize) params.set("pageSize", String(options.pageSize));
+  const search = params.toString();
+  return request(`/admin/workflows${search ? `?${search}` : ""}`);
+};
 export const getAdminWorkflow = (workflowId) => request(`/admin/workflows/${workflowId}`);
 export const createWorkflow = (input) => request("/workflows", { method: "POST", body: JSON.stringify(input) });
 export const updateWorkflow = (workflowId, input) => request(`/admin/workflows/${workflowId}`, { method: "PUT", body: JSON.stringify(input) });
 export const createWorkflowVersion = (workflowId, input) => request(`/workflows/${workflowId}/versions`, { method: "POST", body: JSON.stringify(input) });
-export const startWorkflowRun = (workflowId, context = {}) => request(`/workflows/${workflowId}/runs`, {
+export const startWorkflowRun = (workflowId, context = {}, versionId) => request(`/workflows/${workflowId}/runs`, {
   method: "POST",
-  body: JSON.stringify({ context }),
+  body: JSON.stringify({ context, versionId }),
 });
 export const getMyWorkflowRuns = () => request("/me/workflow-runs");
 export const getWorkflowRun = (runId) => request(`/workflow-runs/${encodeURIComponent(runId)}`);

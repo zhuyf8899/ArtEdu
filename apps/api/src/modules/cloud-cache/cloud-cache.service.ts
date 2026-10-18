@@ -36,8 +36,8 @@ export class CloudCacheService implements OnModuleInit,OnModuleDestroy {
    await this.db.query(`DELETE FROM agent_runs WHERE id IN (SELECT id FROM agent_runs WHERE created_at<=CURRENT_TIMESTAMP-INTERVAL '20 minutes' ORDER BY created_at LIMIT 500)`);
    await this.db.query(`DELETE FROM conversation_messages WHERE created_at<=CURRENT_TIMESTAMP-INTERVAL '20 minutes'`);
    await this.db.query(`UPDATE conversations SET title=NULL WHERE created_at<=CURRENT_TIMESTAMP-INTERVAL '20 minutes' AND title IS NOT NULL`);
-   await this.db.query(`UPDATE workflow_runs SET context_json='{}'::jsonb WHERE started_at<=CURRENT_TIMESTAMP-INTERVAL '20 minutes' AND context_json<>'{}'::jsonb`);
-   await this.db.query(`UPDATE comfy_jobs SET prompt_json='{}'::jsonb,progress_json='{}'::jsonb,error=NULL WHERE created_at<=CURRENT_TIMESTAMP-INTERVAL '20 minutes' AND (prompt_json<>'{}'::jsonb OR progress_json<>'{}'::jsonb OR error IS NOT NULL)`);
+   await this.db.query(`UPDATE workflow_runs SET context_json='{}'::jsonb,status=CASE WHEN status='in_progress' THEN 'cancelled' ELSE status END WHERE started_at<=CURRENT_TIMESTAMP-INTERVAL '20 minutes' AND (context_json<>'{}'::jsonb OR status='in_progress')`);
+   await this.db.query(`UPDATE comfy_jobs SET prompt_json='{}'::jsonb,progress_json='{}'::jsonb,error=NULL,lease_until=NULL,status=CASE WHEN status IN ('queued','running','cancelling') THEN 'cancelled' ELSE status END WHERE created_at<=CURRENT_TIMESTAMP-INTERVAL '20 minutes' AND (prompt_json<>'{}'::jsonb OR progress_json<>'{}'::jsonb OR error IS NOT NULL OR status IN ('queued','running','cancelling'))`);
    await this.db.query(`UPDATE workflow_run_events SET note=NULL WHERE created_at<=CURRENT_TIMESTAMP-INTERVAL '20 minutes' AND note IS NOT NULL`);
    const saved=await this.db.query<{storage_key:string}>(`SELECT o.storage_key FROM generation_outputs o WHERE EXISTS(SELECT 1 FROM work_generation_jobs w WHERE w.generation_job_id=o.job_id) OR EXISTS(SELECT 1 FROM learning_generation_outputs l WHERE l.generation_output_id=o.id)`);
    await purgeCacheFiles(getEnvironment().uploadRoot,new Set(saved.rows.map(r=>r.storage_key)));

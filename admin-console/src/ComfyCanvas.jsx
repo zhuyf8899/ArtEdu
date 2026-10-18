@@ -202,9 +202,9 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
         setError('');
         try {
             const prompt = compilePrompt(graph, catalog);
-            if (!readOnly && !await onSave(false, { ...graph, comfyPrompt: prompt }))
-                return;
-            const result = await startWorkflowRun(selected.id);
+            const saved = readOnly ? null : await onSave(false, { ...graph, comfyPrompt: prompt });
+            if (!readOnly && !saved) return;
+            const result = await startWorkflowRun(selected.id, {}, saved?.id ?? selected.versionId);
             setJob(await getComfyJob(result.id));
         }
         catch (e) {

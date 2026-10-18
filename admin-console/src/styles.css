@@ -3015,3 +3015,17 @@ body.workflow-runner-open .workflow-graph-runner__wait { color: #cfd3da; }
 .local-artifact-preview{width:min(1200px,94vw);height:min(900px,90vh);padding:0;border:1px solid #ded8ea;border-radius:16px;overflow:hidden;background:#fff}.local-artifact-preview::backdrop{background:rgba(18,15,30,.65)}.local-artifact-preview header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #ded8ea}.local-artifact-preview iframe{width:100%;height:calc(100% - 60px);border:0}.local-artifact-preview>img{display:block;max-width:100%;max-height:calc(100% - 60px);margin:auto;object-fit:contain}
 
 .local-artifact-image{border:0;background:none;padding:0;cursor:zoom-in}.local-artifact-image img{max-width:100%;max-height:420px;object-fit:contain}.conversation-saved-artifacts{max-height:35vh;overflow:auto;padding:10px 20px;border-top:1px solid #ded8ea}.conversation-saved-artifacts>summary{cursor:pointer;font-size:13px}
+
+/* 节点工作流目录：检索 + 分页。第 21 条之后的工作流也必须能在目录里点开。 */
+.workflow-catalog__toolbar{margin-bottom:14px;padding-bottom:12px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:1.5px solid var(--ink)}
+.workflow-catalog__toolbar p{margin:0 0 4px;color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.12em}
+.workflow-catalog__toolbar h2{margin:0;font-size:22px;letter-spacing:-.04em}
+.workflow-catalog__toolbar>div>span{margin-top:4px;display:block;color:var(--muted);font-size:9px}
+.workflow-catalog__actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.workflow-catalog__search{display:flex;align-items:stretch}
+.workflow-catalog__search input{min-width:210px;height:36px;padding:0 10px;color:var(--ink);background:#fff;border:1.5px solid var(--ink);border-right:0;font-size:10px}
+.workflow-catalog__search button{height:36px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;color:var(--ink);background:var(--lime);border:1.5px solid var(--ink);font-size:9px;font-weight:700;cursor:pointer}
+.workflow-catalog__pager,.workflow-admin-pager{margin-top:14px;padding-top:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid rgba(0,0,0,.14)}
+.workflow-catalog__pager span,.workflow-admin-pager span{color:var(--muted);font-size:9px;font-weight:700}
+.workflow-catalog__pager button,.workflow-admin-pager button{min-height:34px;padding:0 12px;font-size:9px;font-weight:700}
+@media (max-width:560px){.workflow-catalog__actions{width:100%}.workflow-catalog__search{flex:1 1 100%}.workflow-catalog__search input{min-width:0;width:100%;flex:1}}

@@ -1,0 +1,11 @@
+FROM pgvector/pgvector:pg16
+WORKDIR /app/apps/api
+COPY node.tar.xz /tmp/node.tar.xz
+RUN mkdir -p /opt/node && tar -xJf /tmp/node.tar.xz -C /opt/node --strip-components=1 && rm /tmp/node.tar.xz
+ENV PATH="/opt/node/bin:${PATH}"
+COPY package.json package-lock.json ./
+COPY vendor ./vendor
+COPY node_modules ./node_modules
+COPY dist ./dist
+ENTRYPOINT ["node"]
+CMD ["--require","/loadtest/preload.cjs","dist/main.js"]

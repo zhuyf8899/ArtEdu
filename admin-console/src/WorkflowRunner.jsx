@@ -6,13 +6,14 @@ import { uploadTemporaryCreationFile } from "./services/adminApi.js";
 import { ZoomableImage } from "./ImageLightbox.jsx";
 import { isImageArtifact } from "./imageSources.js";
 import "@xyflow/react/dist/style.css";
+import { additionalPlatformNodes, platformInputPorts } from "./platformNodeCatalog.js";
 
-const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", negative_prompt: "#a15e8c", text_encode: "#b268ff", skill: "#b268ff", text_generate: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b" };
+const nodeStyle = { input: "#4b87ff", load_image: "#4b87ff", prompt: "#b268ff", negative_prompt: "#a15e8c", prompt_merge: "#b268ff", text_encode: "#b268ff", skill: "#b268ff", text_generate: "#b268ff", load_checkpoint: "#ff8b4b", lora: "#ff8b4b", controlnet: "#ff8b4b", model: "#ff8b4b", empty_latent: "#d6b335", ksampler: "#d6b335", vae_decode: "#d6b335", upscale: "#d6b335", preview: "#42b883", save_image: "#42b883", note: "#78859b", ...Object.fromEntries(Object.entries(additionalPlatformNodes).map(([type, node]) => [type, node.color])) };
 const fitViewOptions = { padding: 0.18, maxZoom: 1.1 };
 
 function GraphNode({ data }) {
   const color = nodeStyle[data.nodeType] || nodeStyle.note;
-  return <div className={`workflow-run-node ${data.isActive ? "is-active" : ""} ${data.isComplete ? "is-complete" : ""}`} style={{ "--node-color": color }}><Handle id="input" type="target" position={Position.Left} className="workflow-flow-handle" /><div><FlowArrow size={14} weight="bold" /><span>{data.nodeType === "input" ? "输入" : data.nodeType === "prompt" ? "正向提示词" : data.nodeType === "negative_prompt" ? "负向提示词" : data.nodeType === "skill" ? "内置 Skill" : data.nodeType === "model" ? "模型" : data.nodeType === "preview" ? "输出" : "说明"}</span></div><strong>{data.label}</strong><small>{data.description}</small><Handle id="output" type="source" position={Position.Right} className="workflow-flow-handle" /></div>;
+  return <div className={`workflow-run-node ${data.isActive ? "is-active" : ""} ${data.isComplete ? "is-complete" : ""}`} style={{ "--node-color": color }}>{platformInputPorts(data.nodeType).map(([id], index, ports) => <Handle key={id} id={id} type="target" position={Position.Left} style={{ top: `${(index + 1) * 100 / (ports.length + 1)}%` }} className="workflow-flow-handle" />)}<div><FlowArrow size={14} weight="bold" /><span>{additionalPlatformNodes[data.nodeType]?.title || (data.nodeType === "input" ? "输入" : data.nodeType === "prompt" ? "正向提示词" : data.nodeType === "negative_prompt" ? "负向提示词" : data.nodeType === "prompt_merge" ? "提示词合并" : data.nodeType === "skill" ? "内置 Skill" : data.nodeType === "model" ? "模型" : data.nodeType === "preview" ? "输出" : "说明")}</span></div><strong>{data.label}</strong><small>{data.description}</small><Handle id="output" type="source" position={Position.Right} className="workflow-flow-handle" /></div>;
 }
 const nodeTypes = Object.fromEntries(Object.keys(nodeStyle).map((type) => [type, GraphNode]));
 
@@ -106,7 +107,7 @@ function NodeExecutionPanel({ step, node, output, loading, onExecute }) {
       setUploading(true);
       const reference = needsReference ? await uploadTemporaryCreationFile(referenceFile) : null;
       setUploadError("");
-      onExecute({ ...(needsPrompt && prompt.trim() ? { prompt: prompt.trim() } : {}), ...(needsNegativePrompt ? { negativePrompt: negativePrompt.trim() } : {}), ...(reference ? { referenceFileId: reference.id } : {}) });
+      await onExecute({ ...(needsPrompt && prompt.trim() ? { prompt: prompt.trim() } : {}), ...(needsNegativePrompt ? { negativePrompt: negativePrompt.trim() } : {}), ...(reference ? { referenceFileId: reference.id } : {}) });
     } catch (error) { setUploadError(error instanceof Error ? error.message : "参考图片上传失败"); }
     finally { setUploading(false); }
   };
