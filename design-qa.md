@@ -285,3 +285,92 @@ Evidence directory: `design-qa-assets/handoff-six-details-20261017/`. Captured i
 Implementation checklist: source inspection; six corrections; truthful state; working curriculum and draft flows; paired full/focused screenshots; contrast repair; regression checks; retain local preview — complete.
 
 final result: passed
+
+## 2026-10-18 — course progress synchronization and handoff states
+
+Scope: the reported 67% detail / “未开始” catalog inconsistency, and the handoff's progress badge, bar and action. This is not a new whole-platform or mobile acceptance.
+
+### Evidence and comparison
+
+- User problem screenshots: `F:/屏幕截图 2026-10-18 120008.png` and `F:/屏幕截图 2026-10-18 120012.png`.
+- Visual truth: supplied `frontend/atomic-courses-particles.html`, `platform.js` and `platform.css` under `C:/Users/64502/Documents/Codex/morph-v17-reference-20261015/MORPH-LAB-完整前端-v17-开发交接-20261015/`; opened read-only on port 4381. The reference's own local demo control was used to show its 100% color-course state; it does not contact ArtEdu.
+- Local evidence directory: `apps/api/data/qa/course-progress-20261018/` (ignored). `catalog-67.jpg` and `detail-67.jpg` show the actual account's unchanged 67%, two completed lessons out of three, “进行中” and “继续学习”.
+- `source-complete-card.jpg` and `fixture-100-card.jpg` were opened together for the focused source/implementation comparison. Both use the same course, source cover, completed state and 1280×720 CSS viewport, DPR 1.25. Source card CSS bounds: 493.91×352; implementation: 494×353.6. Resulting clips: 493×352 / 494×353 pixels; compared without asymmetric rescaling. The approx. 1px border/rounding difference is intentional browser/rendering variance.
+- Full implementation views: `fixture-0.jpg`, `fixture-67.jpg`, `fixture-100.jpg`; the fixture reuses the real component and immutable save-response merge, never an API or account record. Real page captures are 815×777 pixels from an 830×792 CSS viewport, DPR 1.25; their browser viewport is narrower than the reference, so global page proportions are not claimed as a same-size comparison.
+
+### Findings and fixes
+
+1. [P1 resolved — stale state] The API had retained 67%; a fresh catalog request already showed it. Completing a lesson only replaced the selected detail, leaving the mounted catalog and parent/home data stale. All successful enroll/progress/submission responses now update the detail, the corresponding existing catalog item and the parent's course record. Returning via the back button or browser history revalidates the catalog. Request IDs prevent an older catalog fetch from overwriting a successful save.
+2. [P2 resolved — completion style] The card did not apply the source's complete progress treatment. One shared progress interpretation now drives the badge, numeric bar and button; purple indicates in-progress, green `#388a47` indicates completed, and the source lime badge accompanies “已完成 / 回顾课程”. Native progress elements have names and value text, so color is not the only signal. The paired post-fix focused captures verify this treatment.
+3. [P2 resolved — detail feedback] Detail now displays “2 / 3 课时已完成”, a native named progress bar, and “进行中” rather than only “已加入学习”. Completed detail uses the same green bar/lime status. Trial copy now correctly says progress is saved, without implying teacher-reviewed or professional certification.
+4. [P2 resolved — aggregation consistency] The courses service's personal-enrollment query ignored lessons with no progress row. It now includes zero for those lessons, matching catalog/detail and the learning-space query. No schema, stored progress, lesson requirements or completion authorization was changed.
+
+### Required fidelity surfaces
+
+- Typography: existing system Chinese font stack, 20/28 course titles, 14/22 descriptions and 12px metadata/badges retained. Percentages use tabular numerals. No vertical word wrapping or truncation introduced.
+- Spacing/layout: original cover/body proportions, card padding, rounded boundary and paired actions retained. Compared full scenes and focused card states; the actual 67% page has no horizontal overflow. No new progress dashboard or extra filter row was added.
+- Colors/tokens: handoff ink, purple, lime badge and exact complete-bar green are reused. Zero, partial and completed states are also expressed in words and button labels.
+- Images/assets: original supplied SVG course cover retained; no new images, placeholder artwork or decorative SVG were generated. The fixture's initial fallback cover was replaced with the real asset before final focused QA.
+- Copy/content: actual authors and review readiness remain API-owned. Reference popularity metrics and fictitious teacher identity are deliberately absent. The progress bar sits lower because those demo metrics are not inserted; this is an intentional product constraint, not progress-style drift.
+
+### Verification and boundaries
+
+- Actual UI: detail at 67%, return to catalog, filtered card at 67%, refresh and “继续学习” opening the same three lessons. The third work-submission requirement and disabled completion gate remain intact.
+- Isolated browser fixture: 0→67→100 updates the real card's label, bar, percentage and CTA immediately, without real enrollment/progress writes. A development-only duplicate-root warning during fixture hot edits was corrected with HMR unmount cleanup; no production root code was changed.
+- Regression: shared normalization, 0/67/100 labels/actions, invalid/negative/non-finite input, 99.9% not completed, immutable metadata-preserving merge, unknown ID exclusion, synchronization wiring and real React server-rendered card markup tested. Backend query checks include current-user scoping, published lessons and zero-valued unrecorded lessons.
+- Final `npm run check`: exit 0; API typecheck, frontend production build and **329 tests passed** (138 API, 6 Sites, 37 chat, 123 platform, 19 import/deployment, 6 reliability). Log: `apps/api/data/qa/course-progress-20261018/check.log`. `git diff --check` passed.
+- Local API was rebuilt and restarted only to load the query correction; original database/volume/uploads were preserved, no seed/migration, progress completion, submitted work, model request, GitHub push or merge performed. Normal demo-account sign-in was used after observed session invalidation; this task does not claim to resolve the previously known session-continuity issue.
+- Real 100% completion was not forced on this user's 67% course. Completed rendering is proven by the isolated actual-component fixture and automated tests, not by modifying the user's remaining lesson or bypassing its work-submission gate.
+
+Implementation checklist: repair state synchronization; unify progress state/styles; preserve genuine records and completion gates; compare source/implementation; run regression suite — complete.
+
+final result: passed
+
+## 2026-10-18 · Post-integration functional polish
+
+- Scope: first-pass audit of major user routes, seven personal-space views and eight admin modules. Current-run screenshots and per-page findings are indexed in `docs/integration-audit-2026-10-18.md`; media is under `apps/api/data/qa/integration-audit-20261018/`.
+- Preserved the handoff visual system. Repaired desktop search card compression, canonical author attribution and case/workflow deep links, personal-space first-use empty state/zero-progress classification, compact quota header, form legibility, truthful demo-mode copy and available-course launch from curriculum results. Public gallery auxiliary-load resilience and interaction synchronization have automated coverage.
+- Actual browser checks: creator search returns Fertile Matrices by Robin Champenois; result opens the exact work, reload retains it, return restores 4 curated and 10 community cases, and an invalid work has retry/back recovery. At 830px search body is about 340px wide and at 1440px about 475px, without page horizontal overflow. My-courses first-use CTA and quota header visually confirmed. Curriculum reports 3 available/2 planned and opens the color course without enrollment.
+- Final full regression: `npm run check` exit 0; 336 tests pass (139 API, 12 Sites/integration, 37 chat, 123 platform, 19 content/deployment, 6 reliability). Production frontend build and API typecheck pass. `git diff --check` passes. Final browser console error query was empty.
+- API rebuilt/restarted with model execution disabled; database, cases, files and existing progress retained. No migration/seed, review/publish/report decision, Bridge token creation, paid generation or GitHub mutation.
+- Not a complete write-path, mobile or WCAG certification. Remaining admin readability/filtering, unsaved-edit guards, server pagination and content-verification recommendations are explicitly recorded rather than claimed repaired.
+
+Functional-polish verification result: passed within the stated scope.
+
+## 2026-10-18 · MORPH v17 platform UI unification
+
+### Scope and method
+
+- User requested implementation of the integration audit recommendations and removal of reachable legacy UI styling. Extended the existing handoff system, not a new visual direction. Current-run source and implementation captures were inspected before and after changes. No new imagery, visual variants, source instruction execution or delegated asset work was necessary.
+- Reference: supplied v17 frontend `platform.css`, `ui-system.css`, `workspace-native.css` and actual `chat.html` / skill-tools pages, temporarily served locally. Implementation: existing ArtEdu components plus `admin-console/src/morph/platform-unified.css`, not replacement static pages.
+- Full numbered browser pass, findings, screenshot index, accepted differences and limits: `docs/ui-unification-2026-10-18.md`. Evidence is local-only in ignored `apps/api/data/qa/ui-unification-20261018/` to avoid automatically publishing account screenshots.
+- Compared source `57-handoff-creation-1280.jpg` and implementation `58-creation-final-1280.jpg` together in the same visual inspection call. Requested CSS viewport 1280×720; capture outputs are respectively 1265×712 and 1280×720, an approximately 1.2% capture scaling difference. This is a style/fidelity extension pass, not a claim of pixel-identical screenshots. Additional desktop views: 1024×768 and 1440×900. No image editing or artificial viewport cropping to hide problems.
+
+### Findings and iteration
+
+1. [P1 resolved] Quota drawer initialized from an absent user and could offer hard-coded limits instead of actual values. Model now resets on selected account/current limits, preserves zero versus unlimited, prohibits incomplete/unchanged submissions and confirms before writing. Actual student daily 20/month and concurrency unlimited, then teacher unlimited values were verified; no save occurred. Final `54-quota-final-theme.jpg`.
+2. [P2 resolved] Admin old thick black/beige, tiny type and duplicate main offset replaced by navy/lavender/white tokens; sidebar independently scrolls. All eight modules inspected. Course filters, real canonical author labels, archive-last ordering, no-result reset and below-list empty review area verified. Final `52-admin-courses-final.jpg`, narrow `51-admin-courses-1024.jpg`.
+3. [P2 resolved] Creative workspace old palette and empty-thread bottom scrolling clipped the initial icon on a short screen. Reused source two-column glass panels; empty thread starts at top and genuine composer stays visible. Rejected v1/v2 captures retained for traceability; final `58-creation-final-1280.jpg` and `50-creation-1024.jpg` show fixes.
+4. [P2 resolved] Body-level editors/feedback missed shell styling; note empty state and course/case controls retained old borders/colors. Shared body scope now covers these surfaces, without recoloring artwork. Unsaved course, case and note inputs tested through cancel-leave/reopen with exact text retained, then cleared without saving. Confirmation Escape/Tab focus support added. Proof `11-unsaved-course-dialog.jpg`.
+5. [P2 resolved] Knowledge sidebar crowded the form, login heading stranded its last character, 404 was top-left, and image-canvas header text was dark on dark. Layout/typography scoped fixes verified with `20-admin-knowledge-final.jpg`, `41-login-final.jpg`, `47-not-found-final.jpg`, `56-canvas-final-1024.jpg`.
+6. [P2 resolved] Workflow preview focused only the first node; edit node widths overlapped existing coordinates. Preview now fits all nodes until execution; edit cards 250px fit existing spacing without changing positions. React Flow dragHandle now belongs to mapped nodes, not a forwarded DOM prop. Reopened real three-node editor without new warning. Proof `43-workflow-preview-final.jpg`, `48-workflow-editor-final.jpg`.
+
+### Required fidelity surfaces
+
+- Typography: Chinese system font stack; operational body/forms 14px, readable 12–13px metadata, non-fragmenting headings, 32px login introduction. No artwork text/cover asset modification. Confirmation, forms and controls keep accessible names and visible focus treatment.
+- Spacing/layout: source rounded panel boundaries and thin separators retained; wider real tables, 246px dark navigation, 250px knowledge/creation sidebars; filters wrap below 1199px. At 1280×720 the actual creative composer lies within viewport (bottom about 667px) and body scroll width equals viewport. No mobile layout claim.
+- Colors/tokens: ink `#111838`, purple `#6554e8`, lime `#d8f845`, border `#e2e0f6`, page `#eceaf7`; specialized graphs stay navy with semantic node accents and lightbox stays black. Warnings retain a restrained semantic amber instead of being recolored misleadingly.
+- Images/assets: existing handoff cover and gallery assets reused. No generated bitmap, rewritten artwork, fake branding or placeholder assets. Backend has no supplied screen to clone, so it intentionally extends reference tokens rather than inventing a claimed reference match.
+- Content: real courses, tools, account limits, authors, provenance and permissions remain authoritative. Actual workspace modes/model/file controls preserved instead of static source demo copy. Account images and private draft are not submitted to external services. “Trial” is not relabeled as reviewed certification.
+
+### Verification and limits
+
+- Final `npm run check` exit 0, API typecheck and production frontend build pass; **343 tests passed**: 139 API, 19 Sites/integration/UI, 37 chat, 123 platform, 19 deployment/content, 6 reliability. New UI suite has seven tests. Log `apps/api/data/qa/ui-unification-20261018/check-final.log`. `git diff --check` passes.
+- User routes, seven space views, eight admin modules, editors, case/media viewer, image canvas, workflow preview/editor and isolated actual login component inspected. Current admin's empty course/note records were not mistaken for the teacher's missing progress. Existing teacher 67% record was not changed.
+- Previous dragHandle console entry remains in browser history, but revisiting corrected editor produced no new entry; temporary audit tab error query was empty. No erasure of errors or fabricated clean log history.
+- No database switch/reset/seed/migration, quota save, role or status change, review/publish/report decision, Bridge token, paid model call, workflow save/run or GitHub mutation. Existing private workflow draft preserved; unsaved test text cleared locally.
+- Browser history Back/Forward edge cases, actual quota/write/review/publish flows, real paid generation, mobile and full WCAG verification remain explicitly untested. Server-side pagination/complete author facets and content-review/professional-portrait evidence are subsequent feature work, not silently claimed completed.
+
+Implementation checklist: inspect reference and current screens; extend tokens to reachable old surfaces; fix verified interaction defects; inspect desktop iterations; run full regression; preserve data and document boundaries — complete.
+
+final result: passed within the documented desktop and non-destructive verification scope.

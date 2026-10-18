@@ -5,6 +5,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.jsx";
 import "./styles.css";
+import "./morph/platform-unified.css";
 
 // createRoot 连接网页容器，render 把组件显示进去；<App /> 表示使用 App 组件。
 // StrictMode 在开发环境辅助发现问题，可能重复执行 Effect 的检查周期。

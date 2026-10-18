@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { ArrowRight, ArrowClockwise, BookOpenText, BookmarkSimple, CalendarCheck, ChartPolar, Check, House, ImageSquare, NotePencil, Sparkle } from '@phosphor-icons/react';
 import { MorphCourseCard } from './MorphCatalog.jsx';
 import { CatalogControls } from './CatalogControls.jsx';
-import { dailyQuotaLabel } from './morphPresentation.js';
-import { isCollectedWork, spaceEvidence } from './mySpaceModel.js';
+import { dailyQuotaLabel, creationModeDescription } from './morphPresentation.js';
+import { isCollectedWork, spaceEvidence, spaceCourseForCard, spaceCourseStatus } from './mySpaceModel.js';
 import './my-space.css';
 
 const VIEWS=[['overview','空间总览',House],['portrait','我的专业画像',ChartPolar],['courses','我的课程',BookOpenText],['plan','学习计划',CalendarCheck],['notes','学习笔记',NotePencil],['works','我的作品',ImageSquare],['favorites','收藏案例',BookmarkSimple]];
 const statusName=value=>({draft:'草稿',pending:'审核中',approved:'已发布',rejected:'待修改',archived:'已归档'}[value]||'作品记录');
-const courseForCard=course=>({...course,author:course.creatorName||course.author,tools:course.tools||[]});
+const courseForCard=spaceCourseForCard;
 
 export function MorphMySpace({account,data,creation,view,onView,onNavigate,loading,error,onRetry,children}) {
   const evidence=spaceEvidence(data), full=view==='overview';
@@ -20,7 +20,7 @@ export function MorphMySpace({account,data,creation,view,onView,onNavigate,loadi
         <div className="morph-space-name"><span>MY SPACE / 我的空间</span><h1>{name}</h1><p>{account.roleLabel} · 学习与创作空间</p>{full&&<p className="morph-space-bio">把学习、实践与作品，连接成自己的创作路径。</p>}
           {full&&<div className="morph-space-directions">{evidence.directions.map(value=><span key={value}>{value}</span>)}</div>}
         </div>
-        <aside className="morph-space-quota"><span>生成额度 / 今日</span><strong>{dailyQuotaLabel(creation?.quota)}</strong><small>{creation?.enabled?'以当前模型配置及生成规则为准':'模型尚未配置，可先学习课程与案例'}</small><button type="button" disabled={loading} onClick={onRetry}><ArrowClockwise size={15}/>{loading?'正在同步…':'刷新学习记录'}</button></aside>
+        <aside className="morph-space-quota"><span>生成额度 / 今日</span><strong>{dailyQuotaLabel(creation?.quota)}</strong><small>{creationModeDescription(creation)}</small><button type="button" disabled={loading} onClick={onRetry}><ArrowClockwise size={15}/>{loading?'正在同步…':'刷新学习记录'}</button></aside>
       </div>
       {full&&<div className="morph-space-statistics" aria-label="个人学习统计">
         {[[data.courses?.length||0,'已加入课程'],[data.summary?.completedLessons||0,'已完成课时'],[evidence.originals.length,'创作记录'],[data.notes?.length||0,'学习笔记']].map(([value,label])=><span key={label}><strong>{loading||error||label==='创作记录'&&data.workLoadError?'—':value}</strong>{label}</span>)}
@@ -60,9 +60,12 @@ function ProfessionalPortrait({data,onNavigate,onView,compact=false}) {
 function CourseRecords({courses,onNavigate}) {return courses.length?<div className="morph-space-course-grid">{courses.map(course=><MorphCourseCard key={course.id} course={courseForCard(course)} onOpen={id=>onNavigate(`/learning?course=${encodeURIComponent(id)}`)}/>)}</div>:<div className="morph-space-empty"><BookOpenText size={30}/><h3>还没有加入课程</h3><button onClick={()=>onNavigate('/learning')}>发现原子课程<ArrowRight size={16}/></button></div>;}
 function SpaceCourses({courses,onNavigate}) {
   const [status,setStatus]=useState('all'),[query,setQuery]=useState('');
-  const state=course=>course.archived?'archived':Number(course.progressPercent)>=100?'complete':'progress';
-  const visible=courses.filter(course=>(status==='all'||state(course)===status)&&`${course.title} ${course.creatorName||''}`.toLowerCase().includes(query.trim().toLowerCase()));
-  return <><SpaceHeading eyebrow="MY COURSES" title="我的课程" action="发现课程" onAction={()=>onNavigate('/learning')}/>{courses.some(c=>c.archived)&&<p className="course-history-note">旧课程已下架，历史进度、笔记与作品关联仍然保留；新课程需要重新选择，不会自动继承完成状态。</p>}<CatalogControls label="我的课程筛选" options={[['all','全部'],['progress','进行中'],['complete','已完成'],['archived','历史课程']].map(([value,label])=>({value,label,count:courses.filter(c=>value==='all'||state(c)===value).length}))} value={status} onChange={setStatus} query={query} onQueryChange={setQuery} searchLabel="搜索我的课程" placeholder="搜索课程、授课作者" resultLabel={`${visible.length} / ${courses.length} 门课程`} selected={[query&&{label:query,onRemove:()=>setQuery('')},status!=='all'&&{label:status==='archived'?'历史课程':status==='complete'?'已完成':'进行中',onRemove:()=>setStatus('all')}].filter(Boolean)} onClear={()=>{setQuery('');setStatus('all');}}/>{visible.length?<CourseRecords courses={visible} onNavigate={onNavigate}/>:<div className="morph-space-empty"><h3>没有匹配的课程</h3><button onClick={()=>{setQuery('');setStatus('all');}}>清除筛选</button></div>}</>;
+  const state=spaceCourseStatus;
+  const visible=courses.filter(course=>(status==='all'||state(course)===status)&&[course.title,course.author,course.catalog?.authorLabel,course.creatorName].filter(Boolean).join(' ').toLowerCase().includes(query.trim().toLowerCase()));
+  const filters=[['all','全部'],['new','未开始'],['progress','进行中'],['complete','已完成'],['archived','历史课程']];
+  return <><SpaceHeading eyebrow="MY COURSES" title="我的课程" action="发现课程" onAction={()=>onNavigate('/learning')}/>{courses.some(c=>c.archived)&&<p className="course-history-note">旧课程已下架，历史进度、笔记与作品关联仍然保留；新课程需要重新选择，不会自动继承完成状态。</p>}
+    {courses.length>0&&<CatalogControls label="我的课程筛选" options={filters.map(([value,label])=>({value,label,count:courses.filter(c=>value==='all'||state(c)===value).length}))} value={status} onChange={setStatus} query={query} onQueryChange={setQuery} searchLabel="搜索我的课程" placeholder="搜索课程、授课作者" resultLabel={`${visible.length} / ${courses.length} 门课程`} selected={[query&&{label:query,onRemove:()=>setQuery('')},status!=='all'&&{label:filters.find(([value])=>value===status)?.[1],onRemove:()=>setStatus('all')}].filter(Boolean)} onClear={()=>{setQuery('');setStatus('all');}}/>}
+    {!courses.length?<CourseRecords courses={[]} onNavigate={onNavigate}/>:visible.length?<CourseRecords courses={visible} onNavigate={onNavigate}/>:<div className="morph-space-empty"><h3>没有匹配的课程</h3><button onClick={()=>{setQuery('');setStatus('all');}}>清除筛选</button></div>}</>;
 }
 function WorkRecords({items,onNavigate,error,onRetry,favorite=false}) {
   if(error)return <div className="morph-space-empty" role="alert"><p>作品记录暂时无法加载：{error}</p><button onClick={onRetry}>重新加载作品</button></div>;

@@ -370,7 +370,7 @@ export class CoursesService {
       SELECT c.*, u.display_name AS creator_name,
         COUNT(DISTINCT l.id)::int AS lesson_count,
         0::int AS enrollment_count,
-        COALESCE(ROUND(AVG(p.progress_percent)), 0)::int AS progress_percent,
+        COALESCE(ROUND(AVG(COALESCE(p.progress_percent, 0))), 0)::int AS progress_percent,
         e.status AS enrollment_status
       FROM course_enrollments e
       JOIN courses c ON c.id = e.course_id

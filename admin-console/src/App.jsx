@@ -24,6 +24,11 @@ const AdminDashboard = lazy(() => import("./AdminDashboard.jsx").then(({ AdminDa
 const ImageCanvas = lazy(() => import("./ImageCanvas.jsx").then(({ ImageCanvas: component }) => ({ default: component })));
 
 export function App() {
+  useEffect(() => {
+    // Body portals (editors, review dialogs and feedback) share the handoff tokens too.
+    document.body.classList.add('morph-platform');
+    return () => document.body.classList.remove('morph-platform');
+  }, []);
   // Provider 为内部页面提供统一的操作提示、确认等反馈能力。
   return <FeedbackProvider><AppContent /></FeedbackProvider>;
 }
@@ -81,7 +86,7 @@ function AppContent() {
   const query = new URLSearchParams(search);
   // Curriculum queries stay in the URL, so refresh and browser history restore the selected goal.
   const curriculumProps = { curriculumTopic: (query.get('topic') ?? '').slice(0,200) };
-  return <UserPortal {...curriculumProps} account={account} section={sectionFromPath(pathname)} searchQuery={query.get("query") ?? ""} learningCourseId={query.get("course") ?? ""} learningLessonId={query.get("lesson") ?? ""} learningView={query.get("view") ?? ""} learningAtlas={query.get("atlas") ?? ""} learningAtlasCourse={query.get("atlasCourse") ?? ""} studioWorkflowId={query.get("workflow") ?? ""} studioRunId={query.get("run") ?? ""} studioBuilder={query.get("builder") === "1"} studioEditId={query.get("edit") ?? ""} creationStartNew={query.get("new") === "1"} creationId={query.get("id") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
+  return <UserPortal {...curriculumProps} account={account} section={sectionFromPath(pathname)} communityWorkId={query.get('work') ?? ''} searchQuery={query.get("query") ?? ""} learningCourseId={query.get("course") ?? ""} learningLessonId={query.get("lesson") ?? ""} learningView={query.get("view") ?? ""} learningAtlas={query.get("atlas") ?? ""} learningAtlasCourse={query.get("atlasCourse") ?? ""} studioWorkflowId={query.get("workflow") ?? ""} studioRunId={query.get("run") ?? ""} studioBuilder={query.get("builder") === "1"} studioEditId={query.get("edit") ?? ""} creationStartNew={query.get("new") === "1"} creationId={query.get("id") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
 }
 
 function toPortalAccount(actor) {

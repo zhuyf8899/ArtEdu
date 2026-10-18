@@ -6,7 +6,7 @@ import { ReviewDialog } from "./ReviewDialog.jsx";
 import { reviewDate, reviewStatusLabels } from "./reviewPresentation.js";
 import { RuntimeStatus } from "./RuntimeStatus.jsx";
 import {
-  ArrowRight, Bell, CaretDown, ChartBar, Check, Clock, Coins, Eye,
+  Asterisk, ArrowRight, Bell, CaretDown, ChartBar, Check, Clock, Coins, Eye,
   BookOpenText, CirclesThreePlus, FileImage, Gauge, List, MagnifyingGlass, Robot, ShieldCheck,
   Flag, PlugsConnected, SlidersHorizontal, Sparkle, Users, Warning, X,
 } from "@phosphor-icons/react";
@@ -26,6 +26,7 @@ import { WorkflowAdmin } from "./WorkflowAdmin.jsx";
 import { KnowledgeAdmin } from "./KnowledgeAdmin.jsx";
 import { BridgeDevices } from "./BridgeDevices.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
+import { quotaDraft, quotaDraftChanges, quotaInputValue, validQuotaDraft } from './adminQuotaModel.js';
 
 const navItems = [
   { id: "overview", label: "总览", icon: ChartBar },
@@ -52,7 +53,7 @@ function formatLastActive(value) {
 }
 
 function AppLogo() {
-  return <div className="brand"><div className="brand__mark">A</div><div><strong>ArtEdu 管理台</strong><span>清华美院 AI 艺术教育平台</span></div></div>;
+  return <div className="brand"><div className="brand__mark"><Asterisk size={23} weight="bold" aria-hidden="true" /></div><div><strong>MORPH LAB</strong><span>AI + Design 实验室 · ArtEdu 管理台</span></div></div>;
 }
 
 function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items, actor, onBack, dashboard }) {
@@ -219,11 +220,28 @@ function ReportsPage({ reports, onDecision }) {
 }
 
 function QuotaDrawer({ user, onClose, onSave }) {
-  const [daily, setDaily] = useState(user?.dailyLimit ?? 30); const [monthly, setMonthly] = useState(user?.monthlyLimit ?? 600); const [concurrent, setConcurrent] = useState(user?.concurrentLimit ?? 2);
+  const [draft,setDraft]=useState(()=>quotaDraft(user));
+  useEffect(()=>setDraft(quotaDraft(user)),[user?.id,user?.dailyLimit,user?.monthlyLimit,user?.concurrentLimit]);
   if (!user) return null;
-  const usedPercent = monthly ? Math.min(100, Math.round(user.monthlyUsed / monthly * 100)) : 0;
-  const changes = [["每日", user.dailyLimit, Number(daily)], ["每月", user.monthlyLimit, Number(monthly)], ["并发", user.concurrentLimit, Number(concurrent)]].filter(([, before, after]) => before !== after);
-  return <div className="drawer-layer" role="presentation"><button className="drawer-scrim" onClick={onClose} aria-label="关闭额度设置" /><aside className="drawer" aria-label={`${user.name}的 API 额度设置`}><div className="drawer__header"><div><p>// QUOTA POLICY</p><h2>调整 API 额度</h2></div><button className="icon-button" onClick={onClose}><X size={21} weight="bold" /></button></div><div className="drawer__user"><div className="avatar avatar--outline">{user.initials}</div><div><strong>{user.name}</strong><span>{user.id} · {user.department} · {user.identity}</span></div></div><div className="current-usage"><div><span>本月当前使用</span><strong>{user.monthlyUsed} <small>/ {monthly}</small></strong></div><em>{usedPercent}%</em><div className="wide-meter"><i style={{ width: `${usedPercent}%` }} /></div></div><form onSubmit={(event) => { event.preventDefault(); onSave(user.id, { dailyLimit: Number(daily), monthlyLimit: Number(monthly), concurrentLimit: Number(concurrent) }); }}><div className="field-group"><label htmlFor="daily">每日额度上限</label><p>用户每天最多可消耗的积分额度。</p><div className="number-field"><input id="daily" type="number" min="0" value={daily} onChange={(e) => setDaily(e.target.value)} /><span>额度 / 日</span></div></div><div className="field-group"><label htmlFor="monthly">每月额度上限</label><p>每月 1 日自动重置，不影响账户中的历史记录。</p><div className="number-field"><input id="monthly" type="number" min="0" value={monthly} onChange={(e) => setMonthly(e.target.value)} /><span>额度 / 月</span></div></div><div className="field-group"><label htmlFor="concurrent">并发任务数</label><p>限制用户同时运行的 AI 生成任务数量。</p><div className="number-field"><input id="concurrent" type="number" min="0" max="10" value={concurrent} onChange={(e) => setConcurrent(e.target.value)} /><span>个任务</span></div></div><div className="quota-change-summary"><strong>{changes.length ? "即将应用的调整" : "额度尚未修改"}</strong>{changes.map(([label, before, after]) => <span key={label}>{label}：{before} → <b>{after}</b></span>)}</div><div className="policy-note"><Warning size={20} weight="fill" /><p><strong>设置为 0 将立即停止新任务</strong><span>已运行的任务不受影响，调整记录会写入管理员审计日志。</span></p></div><div className="drawer__actions"><button type="button" className="outline-button" onClick={onClose}>取消</button><button type="submit" className="primary-button" disabled={!changes.length}>保存额度策略 <ArrowRight size={17} weight="bold" /></button></div></form></aside></div>;
+  const monthly=quotaInputValue(draft.monthlyLimit);
+  const usedPercent=monthly?Math.min(100,Math.round(user.monthlyUsed/monthly*100)):0;
+  const changes=quotaDraftChanges(user,draft),valid=validQuotaDraft(draft);
+  const label=value=>value==null?'未设上限':value;
+  return <div className="drawer-layer" role="presentation">
+    <button className="drawer-scrim" onClick={onClose} aria-label="关闭额度设置"/>
+    <aside className="drawer" aria-label={`${user.name}的 API 额度设置`}>
+      <div className="drawer__header"><div><p>// QUOTA POLICY</p><h2>调整 API 额度</h2></div><button className="icon-button" aria-label="关闭额度设置窗口" onClick={onClose}><X size={21}/></button></div>
+      <div className="drawer__user"><div className="avatar avatar--outline">{user.initials}</div><div><strong>{user.name}</strong><span>{user.id} · {user.department} · {user.identity}</span></div></div>
+      <div className="current-usage"><div><span>本月当前使用</span><strong>{user.monthlyUsed}<small> / {label(monthly)}</small></strong></div><em>{monthly===null?'—':`${usedPercent}%`}</em><div className="wide-meter"><i style={{width:`${usedPercent}%`}}/></div></div>
+      <form onSubmit={event=>{event.preventDefault();if(!valid||!changes.length)return;onSave(user.id,Object.fromEntries(Object.entries(draft).map(([key,value])=>[key,quotaInputValue(value)])));}}>
+        <p className="quota-input-help">空白表示当前未设上限，不会自动套用默认值。当前调整接口要求明确填写全部上限后才可保存。</p>
+        {[["dailyLimit","daily","每日额度上限","额度 / 日",100000],["monthlyLimit","monthly","每月额度上限","额度 / 月",1000000],["concurrentLimit","concurrent","并发任务数","个任务",100]].map(([key,id,title,unit,max])=><div className="field-group" key={key}><label htmlFor={id}>{title}</label><div className="number-field"><input id={id} required type="number" min="0" max={max} step="1" value={draft[key]} placeholder="当前未设上限" onChange={event=>setDraft(current=>({...current,[key]:event.target.value}))}/><span>{unit}</span></div></div>)}
+        <div className="quota-change-summary"><strong>{changes.length?'即将应用的调整':'额度尚未修改'}</strong>{changes.map(([title,before,after])=><span key={title}>{title}：{label(before)} → <b>{label(after)}</b></span>)}</div>
+        <div className="policy-note"><Warning size={20}/><p><strong>设置为 0 将立即停止新任务</strong><span>保存前仍需确认，调整记录会写入管理员审计日志。</span></p></div>
+        <div className="drawer__actions"><button type="button" className="outline-button" onClick={onClose}>取消</button><button type="submit" className="primary-button" disabled={!valid||!changes.length}>保存额度策略<ArrowRight size={17}/></button></div>
+      </form>
+    </aside>
+  </div>;
 }
 
 export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSection = "overview", workflowEditId = "", onWorkflowNavigate }) {
@@ -247,7 +265,11 @@ export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSe
     setAdminLoading(false);
   }, [operatorOnly, showToast]);
   useEffect(() => { void loadAdminData(); }, [loadAdminData]);
-  const saveQuota = async (id, values) => { try { const updated = await updateUserQuota(id, values); setUsers((current) => current.map((user) => user.id === id ? updated : user)); setQuotaUser(null); showToast("API 额度策略已更新"); } catch (error) { showToast(error.message); } };
+  const saveQuota = async (id, values) => {
+    const confirmed = await confirmAction({ title: "确认调整 API 额度", message: `将每日上限设为 ${values.dailyLimit}、每月上限设为 ${values.monthlyLimit}、并发任务上限设为 ${values.concurrentLimit}。设置为 0 会停止对应的新任务，确认应用吗？`, confirmLabel: "确认应用" });
+    if (!confirmed) return;
+    try { const updated = await updateUserQuota(id, values); setUsers((current) => current.map((user) => user.id === id ? updated : user)); setQuotaUser(null); showToast("API 额度策略已更新"); } catch (error) { showToast(error.message, "error"); }
+  };
   const saveBulkQuota = async (values) => {
     const userIds = [...selectedUserIds];
     if (!userIds.length) return;

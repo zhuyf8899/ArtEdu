@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, Flag, Heart, ImageSquare, MagnifyingGlass, PaperPlaneTilt, Plus, SpinnerGap, X } from "@phosphor-icons/react";
 import { addWorkComment, getMyWorks, getWork, getWorkflows, getWorks, reportComment, reportWork, submitWork, toggleWorkReaction, setWorkCollection } from "./services/adminApi.js";
 import { CaseStoryEditor } from "./CaseStoryEditor.jsx";
@@ -8,8 +8,9 @@ import { CASE_COLLECTIONS, splitCommunityCollections } from "./communityCollecti
 import "./case-story.css";
 import { MorphPageBanner, MorphCaseCard } from './morph/MorphCatalog.jsx';
 import { CatalogControls } from './morph/CatalogControls.jsx';
+import { loadCommunityCatalog, mergeWorkRecord } from './communityData.js';
 
-export function CommunityLibrary({ account, onNotice, onOpenWorkflow, variant = 'classic' }) {
+export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate, initialWorkId = '', variant = 'classic' }) {
   const [works, setWorks] = useState([]);
   const [myWorks, setMyWorks] = useState([]);
   const [workflows, setWorkflows] = useState([]);
@@ -19,9 +20,14 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, variant = 
   const [reportTarget, setReportTarget] = useState(null);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const [detailRetry, setDetailRetry] = useState(0);
+  const [interactionBusy, setInteractionBusy] = useState(false);
   const [collectionBusy, setCollectionBusy] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
+  const [supportError, setSupportError] = useState('');
+  const catalogRequest = useRef(0);
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState("");
   const [activeGroup, setActiveGroup] = useState("大类");
@@ -29,38 +35,54 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, variant = 
   // 新用户则退化为社区互动与发布时间，不需要画像上传或外部追踪。
   const recommendations = useMemo(() => recommendWorks(works), [works]);
   const refresh = async (showLoading = false) => {
+    const requestId=++catalogRequest.current;
     if (showLoading) setCatalogLoading(true);
     setCatalogError("");
     try {
-      const [catalog, mine, workflowCatalog] = await Promise.all([getWorks(), getMyWorks(), getWorkflows()]);
-      setWorks(catalog.items ?? []); setMyWorks(mine.items ?? []); setWorkflows(workflowCatalog.items ?? []);
-    } catch (error) { setCatalogError(error.message); throw error; }
-    finally { if (showLoading) setCatalogLoading(false); }
+      const data=await loadCommunityCatalog({catalog:getWorks,mine:getMyWorks,workflows:getWorkflows});
+      if(requestId!==catalogRequest.current) return;
+      setWorks(data.works); setMyWorks(data.myWorks); setWorkflows(data.workflows); setSupportError(data.supportError);
+    } catch (error) { if(requestId===catalogRequest.current) {setCatalogError(error.message); throw error;} }
+    finally { if(requestId===catalogRequest.current) setCatalogLoading(false); }
   };
-  useEffect(() => { refresh(true).catch(error => onNotice(error.message)); }, []);
+  useEffect(() => { refresh(true).catch(error => onNotice(error.message)); return()=>{catalogRequest.current++;}; }, []);
   useEffect(() => {
     // 分享同一社区页面的作品链接；仅请求指定作品，权限仍由 API 检查。
-    const workId = new URLSearchParams(window.location.search).get("work");
-    if (!workId) return;
+    setSelected(null); setActiveImage(null); setReportTarget(null); setComment(''); setDetailError('');
+    if (!initialWorkId) { setLoading(false); return; }
     let active = true;
-    getWork(encodeURIComponent(workId)).then(work => { if (active) setSelected(work); }).catch(error => { if (active) onNotice(error.message); });
+    setLoading(true);
+    getWork(encodeURIComponent(initialWorkId)).then(work => { if (active) setSelected(work); }).catch(error => { if (active) { setDetailError(error.message); onNotice(error.message); } }).finally(() => { if(active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [initialWorkId, detailRetry]);
+  const returnToCatalog = () => { setSelected(null); setActiveImage(null); setDetailError(''); onNavigate?.('/community'); };
+  // Refresh matching records only; a delayed interaction cannot reopen a different work.
+  const syncWork = work => {
+    setSelected(current => current?.id === work.id ? work : current);
+    setWorks(current => mergeWorkRecord(current, work));
+    setMyWorks(current => mergeWorkRecord(current, work));
+  };
   const openWork = async work => {
+    if(onNavigate) { onNavigate('/community?work='+encodeURIComponent(work.id)); return; }
     setLoading(true);
     try { setSelected(await getWork(work.id)); }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
   const react = async reaction => {
-    try { await toggleWorkReaction(selected.id, reaction); setSelected(await getWork(selected.id)); }
+    if(interactionBusy) return;
+    const workId=selected.id; setInteractionBusy(true);
+    try { await toggleWorkReaction(workId, reaction); syncWork(await getWork(workId)); }
     catch (error) { onNotice(error.message); }
+    finally { setInteractionBusy(false); }
   };
   const sendComment = async event => {
     event.preventDefault();
-    if (!comment.trim()) return;
-    try { await addWorkComment(selected.id, comment); setComment(""); setSelected(await getWork(selected.id)); }
+    if (!comment.trim() || interactionBusy) return;
+    const workId=selected.id,content=comment; setInteractionBusy(true);
+    try { await addWorkComment(workId, content); setComment(current => current === content ? '' : current); syncWork(await getWork(workId)); }
     catch (error) { onNotice(error.message); }
+    finally { setInteractionBusy(false); }
   };
   const submitReport = async input => {
     try {
@@ -95,18 +117,20 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, variant = 
   const collectionTotals = splitCommunityCollections(works);
   const hasFilters = Boolean(search || activeTag);
   const clearFilters = () => { setSearch(""); setActiveTag(""); };
-  const editor = editing !== undefined && <CaseStoryEditor key={editing?.id ?? "new"} initial={editing} workflows={workflows} onNotice={onNotice} onClose={() => { setEditing(undefined); refresh().catch(error => onNotice(error.message)); }} onSaved={saved => { setEditing(undefined); setSelected(saved); refresh().catch(error => onNotice(error.message)); onNotice("草稿已保存，尚未提交审核或发布"); }} />;
+  const editor = editing !== undefined && <CaseStoryEditor key={editing?.id ?? "new"} initial={editing} workflows={workflows} onNotice={onNotice} onClose={() => { setEditing(undefined); refresh().catch(error => onNotice(error.message)); }} onSaved={saved => { setEditing(undefined); if(onNavigate) void openWork(saved); else setSelected(saved); refresh().catch(error => onNotice(error.message)); onNotice("草稿已保存，尚未提交审核或发布"); }} />;
+  if (initialWorkId && !selected) return <section className="resource-load-state" aria-busy={loading||!detailError}><strong>{detailError?'案例暂时无法打开':'正在打开案例…'}</strong>{detailError&&<><p role="alert">{detailError}</p><button onClick={()=>setDetailRetry(value=>value+1)}>重新加载案例</button></>}<button onClick={returnToCatalog}>返回案例社区</button></section>;
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载案例社区</strong></section>;
   if (catalogError && !works.length && !myWorks.length) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} /><strong>案例社区暂时无法加载</strong><p>{catalogError}</p><button onClick={() => refresh(true).catch(error => onNotice(error.message))}>重新加载</button></section>;
   if (selected) {
     const exhibition = selected.story?.origin === "collected" && selected.story?.displayStyle === "exhibition";
     const heroAsset = selected.assets?.find(asset => asset.asset_type === "image" && asset.url === selected.previewUrl) ?? selected.assets?.find(asset => asset.asset_type === "image");
     return <><section className={`community-detail${exhibition ? " community-detail--exhibition" : ""}`}>
-    <button className="learning-back" onClick={() => { setSelected(null); const url = new URL(window.location.href); url.searchParams.delete("work"); window.history.replaceState(window.history.state, "", url); }}><ArrowLeft size={16} /> 返回案例社区</button>
+    <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} /> 返回案例社区</button>
+    {supportError&&<p className="catalog-inline-warning" role="status">{supportError}。<button onClick={()=>refresh().catch(error=>onNotice(error.message))}>重新同步</button></p>}
     <div className="community-detail__hero">{selected.previewUrl ? <button className="case-image-button case-image-button--hero" onClick={() => setActiveImage({ url: selected.previewUrl, fileName: heroAsset?.file_name ?? selected.title, alt: selected.title })} aria-label={`查看并下载图片：${selected.title}`}><img src={selected.previewUrl} alt={selected.title} /></button> : <WorkVisualFallback work={selected} />}</div>
     <div className="community-detail__body">
       <header><div><span>{selected.discipline} · {exhibition ? "外部艺术案例" : statusName(selected.status)}</span><h2>{selected.title}</h2><p>{exhibition ? "原作者：" : ""}{selected.creators?.join("、") || selected.author}{!exhibition && ` · ${selected.tags?.map(tag => tag.name).join(" / ") || "未添加标签"}`}</p>{exhibition && <div className="case-labels">{selected.tags?.map(tag => <span key={tag.id ?? tag.name}>{tag.name}</span>)}</div>}</div>
-        {selected.status === "approved" && <div><button aria-label="点赞案例" onClick={() => react("like")}><Heart weight={selected.liked ? "fill" : "bold"} /> {selected.likeCount}</button><button aria-label="收藏案例" onClick={() => react("favorite")}><BookmarkSimple weight={selected.favorited ? "fill" : "bold"} /> {selected.favoriteCount}</button></div>}
+        {selected.status === "approved" && <div aria-busy={interactionBusy}><button aria-label="点赞案例" aria-pressed={selected.liked} disabled={interactionBusy} onClick={() => react("like")}><Heart weight={selected.liked ? "fill" : "bold"} /> {selected.likeCount}</button><button aria-label="收藏案例" aria-pressed={selected.favorited} disabled={interactionBusy} onClick={() => react("favorite")}><BookmarkSimple weight={selected.favorited ? "fill" : "bold"} /> {selected.favoriteCount}</button></div>}
       </header>
       {canCurate && selected.status === "approved" && <div className="case-collection-control"><label>案例所属模块<select aria-label="案例所属模块" disabled={collectionBusy} value={selected.collection ?? "community"} onChange={event => changeCollection(event.target.value)}>{Object.entries(CASE_COLLECTIONS).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>{collectionBusy && <span role="status">正在保存…</span>}</div>}
       {editable && <div className="case-draft-actions"><button disabled={loading} onClick={() => setEditing(selected)}>编辑草稿／关联步骤图片</button><button disabled={loading} onClick={submit}>提交管理员审核</button><small>收集案例需先确认原作者和展示授权；保存不会自动发布。</small></div>}
@@ -122,6 +146,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, variant = 
   return <>
     {variant === 'morph' && <MorphPageBanner title="案例社区" eyebrow="CASE COMMUNITY"><button type="button" className="button" onClick={()=>setEditing(null)}><Plus size={17}/> 新建案例草稿</button></MorphPageBanner>}
     <div className={variant === 'morph' ? 'container morph-community-catalog' : undefined}>
+    {(supportError||catalogError)&&<p className="catalog-inline-warning" role="status">{catalogError||supportError}。可重试同步，不影响已加载案例的浏览。<button onClick={()=>refresh().catch(error=>onNotice(error.message))}>重新同步</button></p>}
     {variant !== 'morph' && <section className="learning-library-intro community-page-intro" aria-labelledby="community-page-title">
       <div className="learning-library-intro__copy">
         <p className="learning-library-intro__eyebrow">ARTEDU · COMMUNITY</p>

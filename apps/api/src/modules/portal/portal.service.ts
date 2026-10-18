@@ -48,6 +48,7 @@ interface ModelRow {
 }
 
 interface SearchRow {
+  creators?: string[] | null;
   directory_name?: string;
   directory_cover?: string | null;
   catalog_json?: Record<string, any>;
@@ -82,7 +83,7 @@ export class PortalService {
           c.summary,
           c.category,
           COUNT(DISTINCT lesson.id)::int AS lesson_count,
-          COALESCE(MAX(progress.progress_percent), 0)::int AS progress_percent
+          COALESCE(ROUND(AVG(COALESCE(progress.progress_percent, 0))), 0)::int AS progress_percent
         FROM courses c
         LEFT JOIN course_lessons lesson ON lesson.course_id = c.id AND lesson.status = 'published'
         LEFT JOIN learning_progress progress ON progress.lesson_id = lesson.id AND progress.user_id = $1
@@ -266,6 +267,7 @@ export class PortalService {
       include("work") ? this.database.query<SearchRow>(`
         SELECT work.id, work.title, work.summary, work.discipline AS category,
           author.display_name AS author, NULL::text AS metadata,
+          ARRAY(SELECT jsonb_array_elements_text(COALESCE(work.story_json->'creators', '[]'::jsonb))) AS creators,
           COUNT(*) OVER()::int AS match_count,
           ARRAY_REMOVE(ARRAY_AGG(DISTINCT tag.name), NULL) AS tags,
           ARRAY(SELECT jsonb_array_elements_text(COALESCE(work.story_json->'methods', '[]'::jsonb))) AS methods,
@@ -287,6 +289,9 @@ export class PortalService {
           AND (
             work.title ILIKE ANY($1::text[]) OR COALESCE(work.summary, '') ILIKE ANY($1::text[]) OR
             COALESCE(work.discipline, '') ILIKE ANY($1::text[]) OR author.display_name ILIKE ANY($1::text[]) OR
+            COALESCE(work.story_json->'creators', '[]'::jsonb)::text ILIKE ANY($1::text[]) OR
+            COALESCE(work.story_json->'methods', '[]'::jsonb)::text ILIKE ANY($1::text[]) OR
+            COALESCE(work.story_json->'tools', '[]'::jsonb)::text ILIKE ANY($1::text[]) OR
             EXISTS (
               SELECT 1 FROM work_tags search_relation
               JOIN tags search_tag ON search_tag.id = search_relation.tag_id
@@ -309,7 +314,7 @@ export class PortalService {
           ARRAY(SELECT jsonb_array_elements_text(COALESCE(catalog_json->'tags','[]'::jsonb))) AS tags,
           COUNT(*) OVER()::int AS match_count
         FROM tool_directory_links
-        WHERE status='active' AND catalog_json->>'bundleId'='morph-catalog-v1'
+        WHERE status='active'
           AND (name ILIKE ANY($1::text[]) OR detail ILIKE ANY($1::text[]) OR category ILIKE ANY($1::text[]) OR COALESCE(catalog_json->'tags','[]'::jsonb)::text ILIKE ANY($1::text[]))
           AND ($2::text IS NULL OR category=$2 OR COALESCE(catalog_json->'tags','[]'::jsonb) ? $2)
         ORDER BY sort_order LIMIT $3
@@ -323,7 +328,7 @@ export class PortalService {
       ...directory.rows.map((row) => this.mapSearchResult("workflow", row)),
     ].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     const counts = {
-      all: items.length,
+      all: Number(courses.rows[0]?.match_count ?? 0) + Number(workflows.rows[0]?.match_count ?? 0) + Number(directory.rows[0]?.match_count ?? 0) + Number(works.rows[0]?.match_count ?? 0),
       course: Number(courses.rows[0]?.match_count ?? 0),
       workflow: Number(workflows.rows[0]?.match_count ?? 0) + Number(directory.rows[0]?.match_count ?? 0),
       work: Number(works.rows[0]?.match_count ?? 0),
@@ -351,7 +356,9 @@ export class PortalService {
       title: row.title,
       summary: row.summary ?? "",
       category: row.category ?? "未分类",
-      author: (type === 'course' ? row.catalog_json?.authorLabel : null) || row.author || "作者待确认",
+      author: (type === 'work' ? row.creators?.filter(name => typeof name === 'string' && name.trim()).join('、') : type === 'course' ? row.catalog_json?.authorLabel : null) || row.author || "作者待确认",
+      creators: type === 'work' ? row.creators ?? [] : undefined,
+      directoryName: row.directory_name ?? null,
       methods: [...new Set([...(row.methods ?? []), ...(row.tags ?? []).filter((value) => ["UI 创作", "图案生成", "Vibe Coding", "UI设计", "图案设计"].includes(value)), ...(type === "course" && /coding|网页|代码/i.test(row.title) ? ["Vibe Coding"] : type === "course" && /纹样|图案/.test(row.title) ? ["图案生成"] : [])])],
       tools: [...new Set([...(type === 'course' && Array.isArray(row.catalog_json?.tools) ? row.catalog_json.tools : row.tools ?? []), ...(type === "workflow" && !row.directory_name ? row.tags ?? [] : [])])],
       tags: [...new Set(tags)],
@@ -361,7 +368,7 @@ export class PortalService {
       previewUrl: type === "work" ? row.preview_url ?? null : null,
       difficulty: type === "course" ? row.metadata : null,
       lessonCount: type === "course" ? Number(row.lesson_count ?? 0) : null,
-      route: row.directory_name ? `/studio?toolQuery=${encodeURIComponent(row.directory_name)}` : { course: `/learning?course=${encodeURIComponent(row.id)}`, workflow: "/studio", work: "/community" }[type],
+      route: row.directory_name ? `/studio?toolQuery=${encodeURIComponent(row.directory_name)}` : { course: `/learning?course=${encodeURIComponent(row.id)}`, workflow: `/studio?workflow=${encodeURIComponent(row.id)}`, work: `/community?work=${encodeURIComponent(row.id)}` }[type],
       updatedAt: row.updated_at.toISOString(),
     };
   }

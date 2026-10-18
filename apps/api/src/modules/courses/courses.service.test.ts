@@ -7,6 +7,27 @@ import type { RagService } from "../rag/rag.service";
 import { CoursesService } from "./courses.service";
 import type { Actor } from "../auth/auth.service";
 
+test("目录、详情与我的课程均将未记录课时计为零，不将三节中的两节算成全部完成", async () => {
+  const queries: Array<{sql:string;values:unknown[]}> = [];
+  const database = { query: async (sql:string,values:unknown[]) => {
+    queries.push({sql,values});
+    if(sql.includes('SELECT c.*')) return {rows:[{id:'color',title:'色彩构成基础',status:'published',created_by:'teacher',lesson_count:3,progress_percent:67,enrollment_status:'in_progress'}]};
+    return {rows:[]};
+  }} as unknown as DatabaseService;
+  const service = new CoursesService(database, {} as AuthService, {} as RagService);
+  const actor = {id:'learner-a',roles:['student']} as Actor;
+  assert.equal((await service.listPublished(actor,{})).items[0].progressPercent,67);
+  assert.equal((await service.getPublished(actor,'color')).progressPercent,67);
+  assert.equal((await service.getMyLearning(actor)).items[0].progressPercent,67);
+  const aggregates=queries.filter(query=>query.sql.includes('SELECT c.*'));
+  assert.equal(aggregates.length,3);
+  for(const query of aggregates) {
+    assert.match(query.sql,/AVG\(COALESCE\(p.progress_percent, 0\)\)/);
+    assert.match(query.sql,/l.status = 'published'/);
+    assert.equal(query.values[0],actor.id);
+  }
+});
+
 test("图谱配置锁定课程并拒绝跨课程课时、非所有者及审核中课程", async () => {
   const writes: string[] = [];
   let status = "published";

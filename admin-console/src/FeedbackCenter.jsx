@@ -9,6 +9,7 @@ export function FeedbackProvider({ children }) {
   const [notices, setNotices] = useState([]);
   const [dialog, setDialog] = useState(null);
   const timers = useRef(new Map());
+  const dialogElement=useRef(null);
 
   const dismiss = useCallback((id) => {
     setNotices((current) => current.filter((notice) => notice.id !== id));
@@ -44,6 +45,22 @@ export function FeedbackProvider({ children }) {
     });
   }, []);
 
+  useEffect(()=>{
+    if(!dialog)return;
+    const previous=document.activeElement;
+    const element=dialogElement.current;
+    element?.querySelector('button')?.focus();
+    const key=event=>{
+      if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();settleDialog(false);}
+      if(event.key!=='Tab')return;
+      const buttons=[...element.querySelectorAll('button:not(:disabled)')],first=buttons[0],last=buttons.at(-1);
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+    };
+    document.addEventListener('keydown',key,true);
+    return()=>{document.removeEventListener('keydown',key,true);if(previous?.isConnected)previous.focus();};
+  },[dialog,settleDialog]);
+
   useEffect(() => () => {
     timers.current.forEach((timer) => window.clearTimeout(timer));
     dialog?.resolve(false);
@@ -62,7 +79,7 @@ export function FeedbackProvider({ children }) {
     </div>
     {dialog && <div className="feedback-dialog-layer" role="presentation">
       <button className="feedback-dialog-scrim" onClick={() => settleDialog(false)} aria-label="取消操作" />
-      <section className="feedback-dialog" role="alertdialog" aria-modal="true" aria-labelledby="feedback-dialog-title" aria-describedby="feedback-dialog-message">
+      <section ref={dialogElement} className="feedback-dialog" role="alertdialog" aria-modal="true" aria-labelledby="feedback-dialog-title" aria-describedby="feedback-dialog-message">
         <span className={dialog.danger ? "is-danger" : ""}><WarningCircle size={24} weight="fill" /></span>
         <h2 id="feedback-dialog-title">{dialog.title}</h2>
         <p id="feedback-dialog-message">{dialog.message}</p>

@@ -11,6 +11,12 @@ export function dailyQuotaLabel(quota = {}) {
   if (quota.dailyLimit == null) return '未设日上限';
   return `${Math.max(0, quota.dailyLimit - (quota.dailyUsed ?? 0))} 次 / 今日`;
 }
+
+// Configuration and execution availability are different; do not claim no model exists.
+export function creationModeDescription(creation) {
+  return creation?.enabled ? '模型服务已开启，具体能力以当前配置及生成规则为准。' : '当前为本地演示模式，可先学习课程与案例。';
+}
+export const toolCategoryName = category => ({'灵感与素材':'灵感与资源'}[category] ?? category);
 export function morphQueryMatches(values, query) {
   const terms = String(query).trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
   const text = values.filter(Boolean).join(' ').toLocaleLowerCase();

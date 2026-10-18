@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {sectionFromPath} from '../src/navigationModel.js';
 import {composeCurriculum,courseCardState,courseDirections} from '../src/morph/curriculumModel.js';
 import {emptyToolDraft,readToolDraft,toolDraftKey,validateToolDraft} from '../src/morph/toolRecommendation.js';
+import {courseProgress,mergeCourseRecord} from '../src/courseProgress.js';
 const read=name=>readFile(new URL('../src/'+name,import.meta.url),'utf8');
 const codes=['DTH-10','COL-01','TYP-02','GRD-03','INF-13','POS-11','CMF-05','PAR-09','PRD-12'];
 const catalog=codes.map((code,i)=>({id:'real-'+i,title:code,estimatedMinutes:30,availability:code==='COL-01'?'trial':'coming_soon',catalog:{code}}));
@@ -44,6 +45,54 @@ test('course state uses genuine progress, keeps unopened courses unopened and re
   assert.equal(courseCardState({progressPercent:100,availability:'coming_soon'}).label,'筹备中');
   assert.equal(courseCardState({archived:true,progressPercent:100}).action,'发现新课程');
   assert.equal(courseCardState({progressPercent:'invalid'}).label,'未开始');
+});
+
+test('course progress has the same 0 / 67 / 100 states everywhere without premature completion',()=>{
+  for(const [value,label,action,tone] of [[0,'未开始','开始学习','new'],[67,'进行中','继续学习',''],[100,'已完成','回顾课程','done']]) {
+    assert.equal(courseProgress({progressPercent:value}),value);
+    assert.deepEqual(courseCardState({progressPercent:value}),{label,action,tone});
+  }
+  assert.equal(courseCardState({progressPercent:99.9}).label,'进行中');
+  for(const value of [NaN,Infinity,-Infinity,'invalid',null,undefined,-5]) assert.equal(courseProgress({progressPercent:value}),0);
+  assert.equal(courseProgress({progressPercent:'67'}),67);
+  assert.equal(courseProgress({progressPercent:110}),100);
+});
+
+test('save response updates the existing card without losing metadata or inventing enrollments',()=>{
+  const list=[{id:'color',coverImageUrl:'/cover',catalog:{code:'COL-01'},progressPercent:0},{id:'type',progressPercent:0}];
+  const updated=mergeCourseRecord(list,{id:'color',progressPercent:67,enrollmentStatus:'in_progress'});
+  assert.equal(updated[0].progressPercent,67);assert.equal(updated[0].coverImageUrl,'/cover');
+  assert.equal(updated[0].catalog.code,'COL-01');assert.equal(updated[1],list[1]);assert.equal(list[0].progressPercent,0);
+  assert.equal(mergeCourseRecord(updated,{id:'color',progressPercent:100})[0].progressPercent,100);
+  assert.deepEqual(mergeCourseRecord(list,{id:'unknown',progressPercent:100}),list);
+});
+
+test('course mutations synchronize detail, catalog and home, and return navigation reloads authoritative data',async()=>{
+  const source=await read('LearningLibrary.jsx'),portal=await read('Portal.jsx'),card=await read('morph/MorphCatalog.jsx'),css=await read('morph/handoff-details.css');
+  assert.match(source,/setCourses\(current => mergeCourseRecord\(current, course\)\)/);
+  assert.match(source,/onCourseChange\?\.\(course\)/);
+  assert.match(source,/requestId === catalogRequest.current/);
+  assert.match(source,/loadCatalog\(\).*catalogRequest.current\+\+.*\[initialCourseId\]/);
+  for(const fn of ['enrollCourse','updateLessonProgress','submitLessonWork']) assert.match(source,new RegExp(`acceptCourse\\(await ${fn}[^\\n]+true\\)`));
+  assert.match(portal,/onCourseChange=\{syncCourse\}/);assert.match(portal,/courses: mergeCourseRecord\(current.courses, course\)/);
+  assert.match(card,/courseProgress\(c\)/);assert.match(card,/progress>=100\?' complete'/);assert.match(card,/aria-valuetext=/);
+  assert.match(css,/progress.complete::-webkit-progress-value\{background:#388a47\}/);
+  assert.match(css,/progress.complete::-moz-progress-bar\{background:#388a47\}/);
+});
+
+test('real course card markup renders progress, badge and action from the same saved response',async()=>{
+  const [{createServer},React,{renderToStaticMarkup}]=await Promise.all([import('vite'),import('react'),import('react-dom/server')]);
+  const server=await createServer({server:{middlewareMode:true,hmr:false},appType:'custom'});
+  try {
+    const {MorphCourseCard}=await server.ssrLoadModule('/src/morph/MorphCatalog.jsx');
+    for(const [progress,label,action] of [[0,'未开始','开始学习'],[67,'进行中','继续学习'],[100,'已完成','回顾课程']]) {
+      const html=renderToStaticMarkup(React.createElement(MorphCourseCard,{course:{id:'qa',title:'测试课程',progressPercent:progress,tools:[]},onOpen:()=>{}}));
+      assert.match(html,new RegExp(`value="${progress}"`));
+      assert.ok(html.includes(label));assert.ok(html.includes(action));
+      assert.equal(html.includes('class="progress complete"'),progress===100);
+      if(progress>0)assert.ok(!html.includes('未开始'));
+    }
+  } finally {await server.close();}
 });
 test('tool recommendation drafts are local, account-isolated and validate safe public URLs',()=>{
   assert.notEqual(toolDraftKey('student'),toolDraftKey('teacher'));

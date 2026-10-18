@@ -6,7 +6,7 @@ import {
 import { searchPortal } from "./services/adminApi.js";
 import { coverImageFor, titleCoverDataUrl } from "./coverImages.js";
 import { decorateCourse, difficultyName, courseReadiness } from "./coursePresentation.js";
-import { morphModuleLabel, morphCourseCover, morphCourseLevel } from './morph/morphPresentation.js';
+import { morphModuleLabel, morphCourseCover, morphCourseLevel, toolCategoryName } from './morph/morphPresentation.js';
 
 const TYPE_FILTERS = [
   ["all", "全部"],
@@ -28,9 +28,9 @@ function currentLabel(value) {
 
 function normalizePayload(result) {
   const items = (result.items ?? []).map((item) => {
-    const tags = [...new Set((item.tags ?? []).map(currentLabel))];
+    const tags = [...new Set((item.tags ?? []).map(value=>currentLabel(item.directoryName?toolCategoryName(value):value)))];
     const methods = [...new Set((item.methods ?? []).map(currentLabel))];
-    if (item.type !== "course") return { ...item, tags, methods };
+    if (item.type !== "course") return { ...item, category:item.directoryName?toolCategoryName(item.category):item.category, tags, methods, author: item.type === 'work' && item.creators?.length ? item.creators.join('、') : item.author };
     const course = decorateCourse({ ...item, tags, methods });
     return { ...course, methods: [...new Set([...(course.methods ?? []), course.method].filter(Boolean))] };
   });
@@ -57,6 +57,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
     setAuthor(""); setMethod(""); setTool(""); setSort("relevance");
     if (!initialQuery.trim()) {
       setPayload(normalizePayload(fallbackSearch("", fallbackData)));
+      setLoading(false);setOffline(false);
       return;
     }
     let active = true;
@@ -162,7 +163,7 @@ function SearchCard({ item, index, onOpen, variant }) {
       <div className="search-card__type"><b>{label}</b><span>{item.type === "course" ? item.availability==='coming_soon'?`课时筹备中 · ${(variant === 'morph' ? morphCourseLevel(item) : difficultyName(item.difficulty))}`:`${item.lessonCount ?? 0} 个课时 · ${(variant === 'morph' ? morphCourseLevel(item) : difficultyName(item.difficulty))}` : item.category}</span></div>
       <h3>{item.title}</h3>{item.type==='course'&&courseReadiness(item)&&<span className="catalog-notice">{courseReadiness(item)}</span>}<p>{item.summary || "该内容暂未填写简介。"}</p>
       <div className="search-card__tags">{visibleTags.map((itemTag) => <span key={itemTag}>{itemTag}</span>)}</div>
-      <div className="search-card__details"><span><strong>{item.type === "course" ? "授课作者" : item.catalog?.bundleId?'条目来源':"创作者"}</strong>{item.author}</span>{item.tools?.length > 0 && <span><strong>创作工具</strong>{item.tools.slice(0, 3).join(" · ")}{item.tools.length > 3 ? ` 等 ${item.tools.length} 种` : ""}</span>}</div>
+      <div className="search-card__details"><span><strong>{item.type === "course" ? "授课作者" : item.directoryName || item.catalog?.bundleId?'条目来源':"创作者"}</strong>{item.author}</span>{item.tools?.length > 0 && <span><strong>创作工具</strong>{item.tools.slice(0, 3).join(" · ")}{item.tools.length > 3 ? ` 等 ${item.tools.length} 种` : ""}</span>}</div>
       <footer><button onClick={onOpen}>{item.type === "course" ? "查看课程" : item.type === "work" ? "查看案例" : (variant === 'morph' ? '查看技能工具' : '查看设计工具')} <ArrowRight size={16} weight="bold" /></button></footer>
     </div>
   </article>;
@@ -172,8 +173,8 @@ function fallbackSearch(query, data) {
   const keyword = query.trim().toLowerCase();
   const candidates = [
     ...(data.courses ?? []).map((item) => ({ id: item.id, type: "course", title: item.title, summary: item.summary, category: item.category ?? "课程", catalog:item.catalog, availability:item.availability, author: item.author ?? item.creatorName, methods: [item.method].filter(Boolean), tools: item.tools ?? [], coverUrl: item.coverUrl, coverImageUrl: item.coverImageUrl, difficulty: item.difficulty, lessonCount: item.lessonCount, updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["AI 讲堂", item.method, item.category, ...(item.tools ?? [])].filter(Boolean), route: `/learning?course=${encodeURIComponent(item.id)}` })),
-    ...(data.workflows ?? []).map((item) => ({ id: item.id, type: "workflow", title: item.name, summary: item.description, category: item.category ?? "工作流", author: "ArtEdu 教学团队", methods: item.methods ?? [], tools: item.tools ?? [], updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["设计工具", item.category].filter(Boolean), route: "/studio" })),
-    ...(data.works ?? []).map((item) => ({ id: item.id, type: "work", title: item.title, summary: item.summary, category: item.discipline ?? "案例", author: item.author ?? "ArtEdu 用户", methods: item.methods ?? [], tools: item.tools ?? [], previewUrl: item.previewUrl, updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["案例社区", item.discipline].filter(Boolean), route: "/community" })),
+    ...(data.workflows ?? []).map((item) => ({ id: item.id, type: "workflow", title: item.name, summary: item.description, category: item.category ?? "工作流", author: item.author || "作者待确认", methods: item.methods ?? [], tools: item.tools ?? [], updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["设计工具", item.category].filter(Boolean), route: `/studio?workflow=${encodeURIComponent(item.id)}` })),
+    ...(data.works ?? []).map((item) => ({ id: item.id, type: "work", title: item.title, summary: item.summary, category: item.discipline ?? "案例", author: item.creators?.join('、') || item.author || "作者待确认", creators:item.creators, methods: item.methods ?? [], tools: item.tools ?? [], previewUrl: item.previewUrl, updatedAt: item.updatedAt ?? "1970-01-01T00:00:00.000Z", tags: ["案例社区", item.discipline].filter(Boolean), route: `/community?work=${encodeURIComponent(item.id)}` })),
   ];
   const items = keyword ? candidates.filter((item) => `${item.title}${item.summary}${item.category}${item.author}${item.tags.join("")}`.toLowerCase().includes(keyword)) : [];
   return { query, items, matchCount: items.length, counts: { all: items.length }, availableTags: [...new Set(items.flatMap((item) => item.tags))] };

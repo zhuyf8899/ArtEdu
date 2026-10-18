@@ -20,6 +20,7 @@ import { LearningGraph } from "./LearningGraph.jsx";
 import { CurriculumAtlas } from "./CurriculumAtlas.jsx";
 import { MorphMySpace } from "./morph/MorphMySpace.jsx";
 import { mySpaceView, enrichFavoriteRecords } from "./morph/mySpaceModel.js";
+import { useUnsavedChanges } from './useUnsavedChanges.js';
 
 const COURSE_IMAGES = {
   "course-ai-design-foundation": "/assets/learning/ai-design-foundations.jpg",
@@ -52,6 +53,7 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
   const [taskForm, setTaskForm] = useState({ title: "", dueDate: "" });
   const [noteForm, setNoteForm] = useState({ title: "", content: "", courseId: "" });
   const [saving, setSaving] = useState(false);
+  useUnsavedChanges(Boolean(taskForm.title.trim()||taskForm.dueDate||noteForm.title.trim()||noteForm.content.trim()||noteForm.courseId),{busy:saving,label:'学习计划或笔记'});
   const [loadError, setLoadError] = useState("");
   const [recentResources, setRecentResources] = useState([]);
   const { confirmAction } = useFeedback();
