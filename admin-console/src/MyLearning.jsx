@@ -176,9 +176,9 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
       <div id="learning-view-content" className="learning-content" aria-busy={!isGenericAtlas && loading}>
         {/* 默认直接展示原有十门课程圆形图谱，不经过空知识库中间页。 */}
         {isGenericAtlas ? <CurriculumAtlas courseId={learningAtlas === "course" ? learningAtlasCourse : ""} onNavigate={onNavigate} onPersonal={() => onNavigate("/my-learning?atlas=personal")} /> : <>
-        {view === "graph" && <div className="personal-atlas-entry"><div><strong>个性化知识图谱</strong><p>依据我的课程、实践与成长记录展示；未配置知识点时不推断掌握度。</p></div><button onClick={() => onNavigate("/my-learning")}>返回通用图谱 <ArrowRight size={17} /></button></div>}
+        {view === "graph" && <div className="personal-atlas-entry"><div><strong>个性化知识图谱</strong><p>依据我的课程、实践与成长记录展示；未配置知识点时不推断掌握度。</p></div><button onClick={() => onNavigate("/my-learning")}>返回课程总览 <ArrowRight size={17} /></button></div>}
         {loading ? <LearningLoading /> : loadError ? <LearningLoadError message={loadError} onRetry={load} /> : <>
-          {view === "graph" && isPersonalAtlas && <LearningGraph data={data} onNavigate={onNavigate} onView={setView} />}
+          {view === "graph" && isPersonalAtlas && <LearningGraph key={account.id} accountId={account.id} data={data} onNavigate={onNavigate} onView={setView} />}
           {view === "overview" && <Overview data={data} recentResources={recentResources} displayName={displayName} onView={setView} onToggleTask={toggleTask} onNavigate={onNavigate} />}
           {view === "courses" && <CoursesView courses={data.courses} onNavigate={onNavigate} />}
           {view === "plan" && <PlanView tasks={data.tasks} form={taskForm} setForm={setTaskForm} saving={saving} onSubmit={addTask} onToggle={toggleTask} onDelete={removeTask} />}

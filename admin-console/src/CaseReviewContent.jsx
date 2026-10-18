@@ -43,7 +43,7 @@ export function CaseReviewChecks({ work, review }) {
         <div><dt>生成模型</dt><dd>{review.model}</dd></div>
         <div><dt>内容检测</dt><dd><span className="review-check-state">{review.machineStatus}</span></dd></div>
       </dl>
-      {!!issues.length && <div className="review-check-alert" role="note"><strong>需核对 {issues.length} 项</strong><ul>{issues.map(issue => <li key={issue}>{issue}</li>)}</ul><small>提醒不代表自动通过或驳回，请结合实际作品审查。</small></div>}
+      {!!issues.length && <div className="review-check-alert" role="note"><strong>需核对 {issues.length} 项</strong><ul>{issues.map(issue => <li key={issue}>{issue}</li>)}</ul></div>}
     </section>
     <section className="review-card" aria-labelledby="review-rights-title">
       <h3 id="review-rights-title">署名与展示授权 <span className={`review-status ${story.authorization === "confirmed" ? "is-approved" : "is-pending"}`}>{story.authorization === "confirmed" ? "已确认" : "待确认"}</span></h3>

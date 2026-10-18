@@ -24,9 +24,9 @@ export class CreationStorageService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly database: DatabaseService) {}
 
   onModuleInit() {
-    this.cleanupTimer = setInterval(() => { void this.cleanupExpired(); }, 60 * 60 * 1000);
+    this.cleanupTimer = setInterval(() => { void this.cleanupExpired().catch(()=>undefined); }, 30 * 1000);
     this.cleanupTimer.unref();
-    void this.cleanupExpired();
+    void this.cleanupExpired().catch(()=>undefined);
   }
 
   onModuleDestroy() { if (this.cleanupTimer) clearInterval(this.cleanupTimer); }
@@ -40,10 +40,10 @@ export class CreationStorageService implements OnModuleInit, OnModuleDestroy {
     try {
       const row = await this.database.transaction(async (client) => {
         await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`temporary-upload:${actor.id}`]);
-        const used = await client.query<{ bytes: string }>("SELECT COALESCE(SUM(size_bytes), 0)::text AS bytes FROM temporary_creation_uploads WHERE user_id=$1 AND deleted_at IS NULL AND expires_at > CURRENT_TIMESTAMP", [actor.id]);
+        const used = await client.query<{ bytes: string }>("SELECT COALESCE(SUM(size_bytes), 0)::text AS bytes FROM temporary_creation_uploads WHERE user_id=$1 AND deleted_at IS NULL AND LEAST(expires_at,created_at + INTERVAL '20 minutes') > CURRENT_TIMESTAMP", [actor.id]);
         if (Number(used.rows[0]?.bytes ?? 0) + upload.sizeBytes > environment.temporaryUploadQuotaBytes) throw new PayloadTooLargeException(`临时创作文件已达到 ${Math.floor(environment.temporaryUploadQuotaBytes / 1024 / 1024)} MB 配额，请删除文件或等待过期清理`);
         const id = `temp-upload-${randomUUID()}`;
-        const result = await client.query<UploadRow>("INSERT INTO temporary_creation_uploads (id,user_id,conversation_local_id,file_name,mime_type,storage_key,size_bytes,sha256,expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,CURRENT_TIMESTAMP + ($9 * INTERVAL '1 hour')) RETURNING id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at", [id, actor.id, conversationLocalId ?? null, upload.fileName, upload.mimeType, upload.storageKey, upload.sizeBytes, upload.sha256, environment.temporaryUploadRetentionHours]);
+        const result = await client.query<UploadRow>("INSERT INTO temporary_creation_uploads (id,user_id,conversation_local_id,file_name,mime_type,storage_key,size_bytes,sha256,expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,CURRENT_TIMESTAMP + INTERVAL '20 minutes') RETURNING id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at", [id, actor.id, conversationLocalId ?? null, upload.fileName, upload.mimeType, upload.storageKey, upload.sizeBytes, upload.sha256]);
         return result.rows[0];
       });
       return this.present(row);
@@ -54,16 +54,16 @@ export class CreationStorageService implements OnModuleInit, OnModuleDestroy {
   }
 
   async list(actor: Actor) {
-    const result = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE user_id=$1 AND deleted_at IS NULL AND expires_at > CURRENT_TIMESTAMP ORDER BY created_at DESC", [actor.id]);
+    const result = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE user_id=$1 AND deleted_at IS NULL AND LEAST(expires_at,created_at + INTERVAL '20 minutes') > CURRENT_TIMESTAMP ORDER BY created_at DESC", [actor.id]);
     const usedBytes = result.rows.reduce((sum, row) => sum + Number(row.size_bytes), 0);
     return { quotaBytes: getEnvironment().temporaryUploadQuotaBytes, usedBytes, items: result.rows.map((row) => this.present(row)) };
   }
 
   async open(actor: Actor, uploadId: string) {
-    const result = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE id=$1 AND deleted_at IS NULL AND expires_at > CURRENT_TIMESTAMP", [uploadId]);
+    const result = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE id=$1 AND deleted_at IS NULL AND LEAST(expires_at,created_at + INTERVAL '20 minutes') > CURRENT_TIMESTAMP", [uploadId]);
     const row = result.rows[0];
     if (!row || row.user_id !== actor.id) throw new ForbiddenException("无权访问该临时文件");
-    await this.database.query("UPDATE temporary_creation_uploads SET last_accessed_at=CURRENT_TIMESTAMP, expires_at=CURRENT_TIMESTAMP + ($2 * INTERVAL '1 hour') WHERE id=$1", [uploadId, getEnvironment().temporaryUploadRetentionHours]);
+    await this.database.query("UPDATE temporary_creation_uploads SET last_accessed_at=CURRENT_TIMESTAMP WHERE id=$1", [uploadId]);
     return { ...this.present(row), stream: createReadStream(path.join(getEnvironment().uploadRoot, row.storage_key)) };
   }
 
@@ -72,12 +72,12 @@ export class CreationStorageService implements OnModuleInit, OnModuleDestroy {
    * 这里绝不把服务器绝对路径交给模型；模型只看到文件名和内容摘要。
    */
   async readForAgent(actor: Actor, uploadId: string) {
-    const result = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE id=$1 AND deleted_at IS NULL AND expires_at > CURRENT_TIMESTAMP", [uploadId]);
+    const result = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE id=$1 AND deleted_at IS NULL AND LEAST(expires_at,created_at + INTERVAL '20 minutes') > CURRENT_TIMESTAMP", [uploadId]);
     const row = result.rows[0];
     if (!row || row.user_id !== actor.id) throw new ForbiddenException("无权读取该临时文件");
     const filePath = path.join(getEnvironment().uploadRoot, row.storage_key);
     const content = await extractAgentText(filePath, row.mime_type).catch(() => "");
-    await this.database.query("UPDATE temporary_creation_uploads SET last_accessed_at=CURRENT_TIMESTAMP, expires_at=CURRENT_TIMESTAMP + ($2 * INTERVAL '1 hour') WHERE id=$1", [uploadId, getEnvironment().temporaryUploadRetentionHours]);
+    await this.database.query("UPDATE temporary_creation_uploads SET last_accessed_at=CURRENT_TIMESTAMP WHERE id=$1", [uploadId]);
     return {
       ...this.present(row),
       content: content.slice(0, MAX_AGENT_FILE_TEXT),
@@ -92,21 +92,23 @@ export class CreationStorageService implements OnModuleInit, OnModuleDestroy {
    * 编码为 data URL，供 OpenAI-compatible 的 image_url 分段使用。
    */
   async readImageForVision(actor: Actor, uploadId: string) {
-    const result = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE id=$1 AND deleted_at IS NULL AND expires_at > CURRENT_TIMESTAMP", [uploadId]);
+    const result = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE id=$1 AND deleted_at IS NULL AND LEAST(expires_at,created_at + INTERVAL '20 minutes') > CURRENT_TIMESTAMP", [uploadId]);
     const row = result.rows[0];
     if (!row || row.user_id !== actor.id) throw new ForbiddenException("无权读取该临时文件");
     if (!VISION_MIME_TYPES.has(row.mime_type)) throw new BadRequestException("视觉模型仅支持 JPEG、PNG、GIF 或 WebP 图片");
     if (Number(row.size_bytes) > MAX_AGENT_VISION_IMAGE_BYTES) throw new PayloadTooLargeException("用于识图的图片不能超过 8 MB");
     const bytes = await readFile(path.join(getEnvironment().uploadRoot, row.storage_key));
-    await this.database.query("UPDATE temporary_creation_uploads SET last_accessed_at=CURRENT_TIMESTAMP, expires_at=CURRENT_TIMESTAMP + ($2 * INTERVAL '1 hour') WHERE id=$1", [uploadId, getEnvironment().temporaryUploadRetentionHours]);
+    await this.database.query("UPDATE temporary_creation_uploads SET last_accessed_at=CURRENT_TIMESTAMP WHERE id=$1", [uploadId]);
     return { fileName: row.file_name, dataUrl: `data:${row.mime_type};base64,${bytes.toString("base64")}` };
   }
 
   async cleanupExpired() {
-    const expired = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE deleted_at IS NULL AND expires_at <= CURRENT_TIMESTAMP LIMIT 200");
+    await this.database.query("UPDATE temporary_creation_uploads SET expires_at=LEAST(expires_at,created_at+INTERVAL '20 minutes') WHERE expires_at>created_at+INTERVAL '20 minutes'");
+    await this.database.query('DELETE FROM temporary_creation_uploads WHERE deleted_at IS NOT NULL');
+    const expired = await this.database.query<UploadRow>("SELECT id,user_id,file_name,mime_type,storage_key,size_bytes,expires_at FROM temporary_creation_uploads WHERE deleted_at IS NULL AND LEAST(expires_at,created_at + INTERVAL '20 minutes') <= CURRENT_TIMESTAMP LIMIT 200");
     for (const row of expired.rows) {
-      await rm(path.join(getEnvironment().uploadRoot, row.storage_key), { force: true }).catch(() => undefined);
-      await this.database.query("UPDATE temporary_creation_uploads SET deleted_at=CURRENT_TIMESTAMP WHERE id=$1 AND deleted_at IS NULL", [row.id]);
+      await rm(path.join(getEnvironment().uploadRoot, row.storage_key), { force: true });
+      await this.database.query("DELETE FROM temporary_creation_uploads WHERE id=$1", [row.id]);
     }
     return expired.rows.length;
   }
@@ -117,7 +119,7 @@ export class CreationStorageService implements OnModuleInit, OnModuleDestroy {
     if (!row) throw new NotFoundException("临时文件不存在或已删除");
     if (row.user_id !== actor.id) throw new ForbiddenException("无权删除该临时文件");
     await rm(path.join(getEnvironment().uploadRoot, row.storage_key), { force: true });
-    await this.database.query("UPDATE temporary_creation_uploads SET deleted_at=CURRENT_TIMESTAMP WHERE id=$1 AND deleted_at IS NULL", [uploadId]);
+    await this.database.query("DELETE FROM temporary_creation_uploads WHERE id=$1", [uploadId]);
     return { id: uploadId, deleted: true };
   }
 

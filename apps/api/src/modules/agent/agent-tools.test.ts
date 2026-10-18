@@ -49,7 +49,7 @@ test("用户明确确认后才启动已发布工作流", async () => {
   const studio = { async startWorkflow(receivedActor: Actor, workflowId: string, input: { context: Record<string, unknown> }) {
     return { receivedActor: receivedActor.id, workflowId, context: input.context };
   } } as unknown as StudioService;
-  const confirmed: AgentToolContext = { ...baseContext, messages: [{ role: "user", content: "我确认，启动工作流。" }] };
+  const confirmed: AgentToolContext = { ...baseContext, messages: [{ role: "user", content: "我确认，启动工作流 workflow-1。" }] };
   const result = await executePlatformTool(call("start_workflow_run", { workflowId: "workflow-1", context: { theme: "宋锦" } }), confirmed, {
     actor, runId: "run-1", database: {} as DatabaseService, agents: {} as AgentService, studio,
   });

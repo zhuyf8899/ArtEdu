@@ -4,6 +4,42 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { createDeltaBuffer } from "../src/chatStream.js";
+import { appendActivity, settleActivity, activityLabel, recoverExecution, visibleActivities } from '../src/agentActivity.js';
+
+test('restoring execution never replays a consumed homepage job and settles stale streaming rows', () => {
+  const event={id:'call',kind:'tool',name:'search_web',status:'running'};
+  const recovered=recoverExecution({pending:{prompt:'hello'},messages:[{role:'user',content:'hello'},{role:'assistant',streaming:true,activity:[event],content:''}]});
+  assert.equal(recovered.pending,null);
+  assert.equal(recovered.messages[1].paused,true);
+  assert.equal(recovered.messages[1].activity[1].status,'paused');
+  assert.ok(!recovered.messages[1].streaming);
+  assert.deepEqual(recoverExecution({pending:{prompt:'hello'},messages:[]}).pending,{prompt:'hello'});
+});
+
+test('tool notices retain transitions, deduplicate delivery, and never store tool arguments', () => {
+  const first=appendActivity([],{id:'1',kind:'tool',name:'search_web',status:'running',arguments:{secret:'hidden'}});
+  assert.equal(appendActivity(first,first[0]),first);
+  const done=appendActivity(first,{...first[0],status:'succeeded'});
+  assert.equal(done.length,2);
+  assert.equal(activityLabel(done[1]),'联网搜索：已完成');
+  assert.equal('arguments' in first[0],false);
+  assert.deepEqual(settleActivity(done,'paused'),done);
+  const interrupted=settleActivity(first,'paused');
+  assert.equal(interrupted[1].status,'paused');
+  assert.equal(appendActivity(first,{id:'x',kind:'tool',name:'bad',status:'invented'}),first);
+});
+
+test('visible activity keeps latest model, task and tool states and hides internal probes', () => {
+  const events=[{id:'run',kind:'run',name:'agent.execute',status:'running'}, {id:'model',kind:'model',name:'model.invoke',status:'succeeded'},
+    {id:'a',kind:'tool',name:'search_web',status:'running',at:'2026-10-17T12:00:00Z'},
+    {id:'a',kind:'tool',name:'search_web',status:'succeeded',at:'2026-10-17T12:00:01Z'},
+    {id:'b',kind:'tool',name:'search_web',status:'failed'},
+    {id:'probe',kind:'tool',name:'harness_probe',status:'succeeded'}];
+  const visible=visibleActivities(events);
+  assert.equal(visible.length,4);
+  assert.equal(visible[2].at,events[2].at);
+  assert.deepEqual(visible.map(activityLabel),['执行任务：进行中','调用模型：已完成','联网搜索：已完成','联网搜索：失败']);
+});
 
 function manualScheduler() {
   const queue = [];
@@ -85,5 +121,6 @@ test("滚动跟随输出，但用户往回翻看时不抢滚动", async () => {
   assert.ok(source.includes("const streamingLength = messages[messages.length - 1]?.content?.length ?? 0;"));
   // 进入/切换对话与发出新一轮必须无条件到底；只有流式跟随才用"离底部近才跟随"的保守规则。
   assert.ok(source.includes("const force = jumpToBottomRef.current;"));
-  assert.ok(source.includes("if (!force && node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;"));
+  assert.ok(source.includes("if (!force && !followOutputRef.current) return;"));
+  assert.ok(source.includes('new ResizeObserver'), '图片和成果卡片改变高度后仍须跟随输出');
 });

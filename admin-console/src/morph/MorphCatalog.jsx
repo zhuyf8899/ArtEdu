@@ -47,7 +47,7 @@ export function MorphCourseCatalog({courses,onOpen,onNavigate}) {
         value={category} onChange={setCategory} query={query} onQueryChange={setQuery} searchLabel="搜索原子课程" placeholder="搜索原子课程…"
         resultLabel={`${visible.length} / ${courses.length} 门课程`} selected={selected} onClear={reset}/>
       {visible.length?<div className="course-grid">{visible.map(c=><MorphCourseCard key={c.id} course={c} onOpen={onOpen}/>)}</div>:<div className="empty"><BookOpenText size={30}/><h2>没有匹配的课程</h2><button className="button secondary" onClick={reset}>清除筛选</button></div>}
-      {courses.some(c=>c.catalog?.bundleId)&&<p className="morph-catalog-footnote">课程状态以实际开放情况为准，试学内容待教研审核；筹备课程仅提供规划预览。学习进度来自你的实际记录，课程连线为探索建议，不代表正式先修要求。</p>}
+
     </div></>;
 
 }

@@ -5,7 +5,7 @@ import path from "node:path";
 import { Document, HeadingLevel, Packer, Paragraph, TextRun, Footer, PageNumber, AlignmentType } from "docx";
 import PptxGenJS from "pptxgenjs";
 import { getEnvironment } from "../../common/environment";
-import { documentContentSchema, type DocumentContent, type OfficeFormat } from "./document-content";
+import { documentSchemaFor, type DocumentContent, type OfficeFormat } from "./document-content";
 import { createPdf } from "./pdf-export";
 export type { OfficeFormat } from "./document-content";
 
@@ -22,7 +22,7 @@ export function outputExtension(mimeType: string) {
 @Injectable()
 export class OfficeExportService {
   async create(jobId: string, content: DocumentContent, format: OfficeFormat): Promise<OfficeArtifact> {
-    const document = documentContentSchema.parse(content);
+    const document = documentSchemaFor(format).parse(content);
     const fileName = `${safeFileStem(document.title)}-${jobId.slice(0, 8)}.${format}`;
     const storageKey = path.posix.join("generated", jobId, `${randomUUID()}.${format}`);
     const absolutePath = safeJoin(path.resolve(getEnvironment().uploadRoot), storageKey);

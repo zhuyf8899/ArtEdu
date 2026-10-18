@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { supportsCreationMethod } from "../src/creation-capabilities.js";
-import { buildCreationParameters, creationMethod, normalizePageCount, resolveCreationOperation } from "../src/creationMethods.js";
+import { buildCreationParameters, creationMethod, normalizePageCount, promptForOperation, resolveCreationOperation } from "../src/creationMethods.js";
 import { readFile } from "node:fs/promises";
 
 test("document generation requires explicit document capability, not just chat", () => {
@@ -24,6 +24,29 @@ test("建议模式不强制执行操作，只有显式产物意图才切换通�
   assert.equal(resolveCreationOperation("生成一张蓝绿色连续平铺纹样", "chat").jobType, "pattern");
   assert.equal(resolveCreationOperation("生成一个学生作品画廊网页原型", "chat").jobType, "webpage");
   assert.equal(resolveCreationOperation("生成一份 8 页 PPT 课堂汇报", "chat").id, "slides");
+});
+
+test("图片模式把「要出图」写进提示词，纯提问和点名别的文件类型仍照旧", () => {
+  // 以前图片模式完全不看所选模式：句子里没有"图片/海报/纹样"就退回文字回答，
+  // 于是"生成一个3D博丽神社的前端界面"最后去写 HTML，一个字都没提要图。
+  const op = resolveCreationOperation("生成一个3D博丽神社的前端界面", "ui");
+  assert.equal(op.jobType, "image");
+  const request = promptForOperation("生成一个3D博丽神社的前端界面", op);
+  assert.match(request, /生成图片/, "图片模式的提示词必须明确要求出图");
+  assert.match(request, /generate_image/, "要指名调用生图工具，否则服务端仍按文字回答");
+  // 已经写明生图意图就不重复追加
+  const asked = "帮我生成图片：青绿色纹样海报";
+  assert.equal(promptForOperation(asked, op), asked);
+  // 纯提问留在对话模式（这条原有行为不能回退）
+  assert.equal(resolveCreationOperation("讲讲宋代山水画的构图特点", "ui").jobType, "chat");
+  assert.equal(promptForOperation("讲讲宋代山水画的构图特点", creationMethod("chat")), "讲讲宋代山水画的构图特点");
+  // 图片模式下明确要网页/文档，仍按用户点名的文件类型
+  assert.equal(resolveCreationOperation("生成一个学生作品画廊网页原型", "ui").jobType, "webpage");
+  assert.equal(resolveCreationOperation("生成一份 8 页 PPT 课堂汇报", "ui").id, "slides");
+  // 图案模式同理，提示词要求的是图案图片
+  const pattern = resolveCreationOperation("博丽神社", "pattern");
+  assert.equal(pattern.jobType, "pattern");
+  assert.match(promptForOperation("博丽神社", pattern), /图案图片/);
 });
 
 test("创作页绑定续写表单、键盘发送、历史文件留存与消息操作", async () => {
@@ -58,7 +81,7 @@ test("开启智能搜索时不强制 tool_choice，且不把检索当成默认�
   // 保持 auto，具体是否检索由用户需求决定，而不是强制第一轮调用。
   assert.ok(!/toolChoice:\s*\{/.test(portal), "不得向模型发送对象形态的 tool_choice");
   assert.ok(portal.includes('model: { toolChoice: "auto" }'));
-  assert.ok(portal.includes("仅当用户明确要求实时互联网资料"));
+  assert.ok(!portal.includes('systemPrompt: `${searchEnabled'), '前端不再覆盖后端工具和交付策略');
   assert.ok(!portal.includes("promptWithSearchPolicy"), "系统策略不得污染用户原始提示词");
   assert.ok(!portal.includes("首轮必须调用 search_web"));
 });
@@ -68,10 +91,10 @@ test("暂停输出：中断在途请求，且不当作失败处理", async () =>
   const api = await readFile(new URL("../src/services/adminApi.js", import.meta.url), "utf8");
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   // 每一轮生成持有自己的 AbortController：暂停只中断当前这一轮。
-  assert.ok(workspace.includes("const abortRef = useRef(null)"));
-  assert.ok(workspace.includes("abortRef.current?.abort()"));
+  assert.ok(workspace.includes("const executionsRef = useRef(new Map())"));
+  assert.ok(workspace.includes("executionsRef.current.get(activeIdRef.current)?.controller.abort()"));
   // 生成入口把 signal 与增量回调一起交给 onCreate：前者用于暂停，后者用于流式回填。
-  assert.ok(workspace.includes("}, controller.signal, onDelta);"), "onCreate 必须同时收到 signal 与 onDelta");
+  assert.ok(workspace.includes("}, controller.signal, onDelta, onProgress);"), "onCreate 必须收到 signal、正文与执行事件回调");
   // 暂停走独立分支：保留内容、回填输入，而不是走失败态。
   assert.ok(workspace.includes('if (error?.name === "AbortError")'));
   assert.ok(workspace.includes("settlePaused"));
@@ -83,7 +106,8 @@ test("暂停输出：中断在途请求，且不当作失败处理", async () =>
   assert.ok(api.includes('if (error?.name === "AbortError") throw error;'));
   assert.ok(api.includes("signal: options.signal"));
   // 暂停是用户主动行为，不该弹错误提示。
-  assert.ok(portal.includes('if (error?.name === "AbortError") throw error;'));
+  assert.ok(portal.includes('if (error?.name === "AbortError") {'));
+  assert.ok(portal.includes('error.checkpoint=await getAgentRun'), '暂停后读取已保存成果，不丢弃检查点');
 });
 
 test("联网检索来源以引用卡片渲染，且复用同一套 URL 安全规则", async () => {
@@ -124,7 +148,8 @@ test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条
 
   // 门户：agent 分支必须走流式入口，并透传增量回调。
   assert.ok(portal.includes("executeAgentRunStream(run.id"));
-  assert.ok(portal.includes("{ signal, onDelta }"));
+  assert.ok(portal.includes("{ signal, onDelta, onProgress }"));
+  assert.ok(api.includes('event === "progress"'));
 });
 
 test("经典创作页独立成屏，MORPH 版本按交接设计保留公共导航", async () => {
@@ -188,7 +213,7 @@ test("进入对话一定停在最新消息处，不因滚动保护而停在顶�
   const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
   assert.ok(workspace.includes("const jumpToBottomRef = useRef(false);"), "要有强制到底的标记");
   assert.ok(workspace.includes("jumpToBottomRef.current = true;"), "载入/发送时置位");
-  assert.ok(workspace.includes("if (!force && node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;"));
+  assert.ok(workspace.includes("if (!force && !followOutputRef.current) return;"));
 });
 
 test("「重新输出」清除上一轮回复后重新生成，而不是回填输入框", async () => {

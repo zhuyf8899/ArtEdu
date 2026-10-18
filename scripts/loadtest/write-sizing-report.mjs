@@ -1,0 +1,59 @@
+import {readFile,writeFile} from 'node:fs/promises';
+const data=JSON.parse(await readFile('local-artifacts/loadtest/results.json','utf8'));
+const f=(n,d=1)=>Number.isFinite(n)?n.toFixed(d):'—';
+const rows=data.filter(r=>!r.error).sort((a,b)=>a.label.localeCompare(b.label)).map(r=>`| ${r.label} | ${r.users} | ${r.hold}s | ${f(r.steadyP95)} | ${f(r.rps)} | ${f(r.failure*100,2)}% | ${r.exit===0?'通过':'未通过'} | ${f(r.apiMiB)} / ${f(r.dbMiB)} |`).join('\n');
+const text=`# 本地升压与常见服务器规格评估（2026-10-18）
+
+## 已完成实测
+
+通过标准：保持段和全程业务请求P95<1000ms、业务错误率<1%、HTTP失败率<2%；P99>5秒或错误率超阈值会自动停止。1500人原生测试因保持段P95超过1秒未通过，未继续到2000人。
+
+| 环境/档位 | 虚拟用户 | 保持时间 | 保持段P95(ms) | 平均HTTP/s（含登录/爬坡/降压） | HTTP失败率 | 结果 | API/DB内存峰值(MiB) |
+| --- | ---: | ---: | ---: | ---: | ---: | --- | ---: |
+${rows}
+
+原生环境为Core Ultra 9 275HX、24逻辑CPU、31.36GiB内存，Windows Node24 API＋Docker PostgreSQL。Linux限额环境为Node22.23.3 API＋同一PostgreSQL。二者操作系统、Node版本、缓存状态不同，不能把延迟差异完全归因于CPU配置。
+
+本轮8核档1000人的P95约230ms，高于4核档约159ms，吞吐也相近，因此没有证据表明当前浏览负载从4核升级8核会提速。两档均通过；差异可能受短测波动、缓存、数据积累和宿主调度影响，未做重复试验来分离原因。扩大资源上限不等于应用能使用更多资源。所有限额档健康检查无失败，API/数据库OOM=false、RestartCount=0。测试服务已停止，数据库卷和日志保留。
+
+## 限额配置含义
+
+| 服务器预算档位 | API CPU/内存上限 | PostgreSQL CPU/内存上限 | 预留系统/其他服务内存 |
+| --- | --- | --- | --- |
+| 2核4GB | 1核 / 1GiB | 1核 / 1GiB | 约2GiB |
+| 4核8GB | 2核 / 3GiB | 2核 / 3GiB | 约2GiB |
+| 8核16GB | 4核 / 7GiB | 4核 / 7GiB | 约2GiB |
+
+以上是容器CPU配额和内存上限，不是真实云实例。API与数据库不能互借CPU配额，CPU限额合计达到服务器名义核数，未给系统预留硬CPU配额；宿主仍有富余CPU。内存从未接近上限，因此不能证明大内存带来容量增长。单Node进程也不能自动利用全部CPU。Docker Desktop Linux VM总内存约15.3GiB；8核16GB档给两个容器共14GiB预算。
+
+## “理想数据”的使用边界
+
+实测数字只代表这套有3–8秒思考停顿的接口脚本，覆盖首页、课程、案例、搜索、学习空间及约10%迭代保存笔记。使用独立账号和真实认证Cookie。目录为15门课程、14个案例的合成元数据；复用同一隔离库，笔记随测试积累，缓存也有变化。500人延迟高于800人的现象说明短测波动，不能拟合线性容量曲线。
+
+未测浏览器渲染、静态资源、媒体/PDF传输、Nginx/TLS、公网、Agent/SSE、RAG、真实模型、GPU和后台索引。300/500人原生保持180秒，其余保持90秒，均不能替代30–60分钟持续稳定性验收。数据库池10。测试仅在独立preload中将单IP限流放宽至读60000/分钟、写12000/分钟；生产限流未修改。当前结果不能代表共享校园出口IP下的生产限流行为。
+
+模型生成并发需要单独确定供应商限流、费用、队列和超时。本表的1000个虚拟浏览用户不等于1000个同时生成请求。
+
+## 常见规格的采购判断
+
+| 常见规格 | 已验证范围 | 当前项目的规划定位 |
+| --- | --- | --- |
+| 2核2GB | 未做同规格压力测试；现有Ubuntu约1.6GiB仅有低负载采样 | 不作为几百人正式部署首选，系统、发布和Worker余量不足 |
+| 2核4GB | 限额300人通过，1000人P95约2.4秒未通过 | 预算演示、轻量浏览；300人也需要上云长测与公网验证 |
+| 4核8GB | 限额1000人短测通过，但数据库CPU接近所分配的2核 | 几百人正式试运行的优先起点，不能把1000人短测当作长期承诺 |
+| 8核16GB | 见实测表的1000人结果 | 1000人目标或同机有额外后台任务时的候选；后台任务仍需另测 |
+| 16核32GB | 未实测 | 暂无采购依据；单API进程不会因核数翻倍而容量翻倍，优先检查查询、连接池、缓存和多实例方案 |
+
+“理想”运行目标建议为业务P95<300ms、错误率<0.1%、持续CPU约60%–70%以内、无持续swap/OOM，并有内存及磁盘余量；这是规划目标，严于本轮P95<1秒的初筛通过线。某档短测通过不代表它达到全部理想目标。没有给未测机型编造峰值人数或QPS。
+
+## 云型号与公网
+
+腾讯云可用标准型SA5/S8等同等CPU内存规格作候选；4核8GB例如SA5.LARGE8，8核16GB例如SA5.2XLARGE16，16核32GB例如SA5.4XLARGE32。具体代际、地域与库存以购买页面为准，容量不按核数线性增长。官方规格：https://cloud.tencent.com/document/product/213/101709 、https://cloud.tencent.com/document/product/213/104025 。厂商标注的内网Gbps不是购买的公网带宽。
+
+原生300人平均收流量约1.2MB/s（约9.5Mbps），500人约1.9MB/s（约15Mbps），1000人约2.9MB/s（约24Mbps），1500人约3.2MB/s（约26Mbps）；含登录和整个测试时间，仅回环接口数据且未测压缩。这提示10Mbps可能先受限，正式带宽还要按Nginx压缩与媒体策略实测；图片、视频建议对象存储/CDN。不能据此把CPU足够等同于公网访问流畅。
+
+## 证据与复现
+
+脚本在scripts/loadtest，原始分档证据在local-artifacts/loadtest/runs，每档含summary.json、resources.jsonl、environment.json、exit.json和load.log；限额档额外有quotas.txt记录实际CPU/内存配额及OOM/restart。原始汇总为local-artifacts/loadtest/results.json。账号凭据在忽略目录，不写入报告。
+`;
+await writeFile('docs/loadtest-sizing-20261018.md',text);

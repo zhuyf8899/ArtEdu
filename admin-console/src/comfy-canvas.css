@@ -17,4 +17,18 @@
 .comfy-editor__progress progress { width: 100%; accent-color: #a8da65; }
 .comfy-node { background: #252b34; border-color: #49515d; border-top: 3px solid #9ed85b; }
 .comfy-editor .react-flow__controls button { background: #303844; fill: #e5e9f0; }
+.comfy-editor .react-flow__controls-button { padding: 5px; border-radius: 0; display: flex; align-items: center; justify-content: center; }
+.comfy-editor .react-flow__controls-button svg { width: 16px; height: 16px; flex: none; fill: currentColor; }
 @media(max-width:850px) { .comfy-editor > header { min-height: 140px; padding: 12px; } .comfy-editor__body { height: calc(100dvh - 140px); display: grid; grid-template-rows: minmax(250px,1fr) 220px; } .comfy-editor__canvas { height: auto; min-height: 0; } .comfy-editor__body > .comfy-editor__results { width: 100%; max-height: none; padding: 14px; } .comfy-editor__body > .comfy-editor__library { width: min(280px,calc(100% - 36px)); max-height: none; bottom: 240px; } }
+
+/* Header height grows when controls wrap; the canvas uses the remaining space. */
+.comfy-editor { display: flex; flex-direction: column; min-height: 0; }
+.comfy-editor > header { flex: none; }
+.comfy-editor__body { flex: 1; height: auto; min-height: 0; margin-top: 0; }
+.comfy-editor__canvas { min-height: 0; }
+.comfy-editor__results { min-height: 0; }
+@media(max-width:850px) {
+  .comfy-editor__body { height: auto; grid-template-rows: minmax(0,1fr) minmax(100px,180px); }
+  .comfy-editor__body > .comfy-editor__library { bottom: 190px; }
+  .comfy-editor .react-flow__minimap { width: 120px; height: 90px; }
+}

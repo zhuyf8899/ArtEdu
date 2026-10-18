@@ -12,6 +12,7 @@ import "@fontsource/noto-sans-sc/700.css";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { LocalLogin, UserPortal } from "./Portal.jsx";
 import { useResourceNavigation } from "./useResourceNavigation.js";
+import { clearGraphSessions } from "./graphSession.js";
 import { SESSION_EXPIRED } from "./services/httpFeedback.js";
 import { canViewAdminSection, adminRoutes } from "./navigationModel.js";
 import { FeedbackProvider, useFeedback } from "./FeedbackCenter.jsx";
@@ -70,7 +71,7 @@ function AppContent() {
   const signOut = async () => {
     try { await logoutLocal(); }
     catch(error) { if(error.status !== 401) { notify('退出失败，当前会话仍保留，请重试。' + error.message, 'error'); return; } }
-    setAccount(null); setSessionMessage(''); navigate('/');
+    clearGraphSessions(); setAccount(null); setSessionMessage(''); navigate('/');
   };
 
   // 按顺序选择一个界面；return 后本轮不会继续判断后面的分支。
@@ -86,7 +87,7 @@ function AppContent() {
   const query = new URLSearchParams(search);
   // Curriculum queries stay in the URL, so refresh and browser history restore the selected goal.
   const curriculumProps = { curriculumTopic: (query.get('topic') ?? '').slice(0,200) };
-  return <UserPortal {...curriculumProps} account={account} section={sectionFromPath(pathname)} communityWorkId={query.get('work') ?? ''} searchQuery={query.get("query") ?? ""} learningCourseId={query.get("course") ?? ""} learningLessonId={query.get("lesson") ?? ""} learningView={query.get("view") ?? ""} learningAtlas={query.get("atlas") ?? ""} learningAtlasCourse={query.get("atlasCourse") ?? ""} studioWorkflowId={query.get("workflow") ?? ""} studioRunId={query.get("run") ?? ""} studioBuilder={query.get("builder") === "1"} studioEditId={query.get("edit") ?? ""} creationStartNew={query.get("new") === "1"} creationId={query.get("id") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
+  return <UserPortal {...curriculumProps} account={account} section={sectionFromPath(pathname)} communityWorkId={query.get('work') ?? ''} searchQuery={query.get("query") ?? ""} learningCourseId={query.get("course") ?? ""} learningLessonId={query.get("lesson") ?? ""} learningView={query.get("view") ?? ""} learningAtlas={query.get("atlas") ?? ""} learningAtlasCourse={query.get("atlasCourse") ?? ""} studioWorkflowId={query.get("workflow") ?? ""} studioRunId={query.get("run") ?? ""} studioBuilder={query.get("builder") === "1"} studioEditId={query.get("edit") ?? ""} creationHistoryOpen={query.get("history") === "1"} creationStartNew={query.get("new") === "1"} creationId={query.get("id") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
 }
 
 function toPortalAccount(actor) {

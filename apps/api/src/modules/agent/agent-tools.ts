@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { AgentToolContext } from "./agent-runtime";
 import type { ModelToolCall, ModelToolDefinition } from "../generation/model-adapter";
 import { z } from "zod";
@@ -10,8 +11,12 @@ import { AgentWorkspaceService } from "./agent-workspace.service";
 import { GenerationService } from "../generation/generation.service";
 import { RagService } from "../rag/rag.service";
 import { extractPageReferences, normalizeRelative, summarizePageCheck, type AssetState } from "./agent-page-check";
+import vm from 'node:vm';
+import {imageGenerationParametersSchema} from '../generation/generation.contracts';
+import {checkRenderedPage} from './agent-browser-check';
 
 export const platformToolDefinitions: readonly ModelToolDefinition[] = [
+  {type:'function',function:{name:'generate_image',description:'用户明确要求生图时调用，生成一张真实私有图片。只解释时不得调用。供应商可能添加AI标识；文件返回不等于视觉内容已核验。',parameters:{type:'object',properties:{prompt:{type:'string',minLength:1,maxLength:1500},workspacePath:{type:'string',description:'嵌入网页时将图片同步保存到工作区的相对路径，如assets/hero.png；后缀按实际图片格式自动调整。'},size:{type:'string',pattern:'^\\d{3,4}x\\d{3,4}$'},aspectRatio:{type:'string',enum:['1:1','4:3','3:4','16:9','9:16']}},required:['prompt']}}},
   { type: "function", function: { name: "search_platform", description: "搜索当前用户可见的课程、工作流和案例作品。", parameters: { type: "object", properties: { query: { type: "string", minLength: 1 }, type: { type: "string", enum: ["all", "course", "workflow", "work"] }, limit: { type: "integer", minimum: 1, maximum: 10 } }, required: ["query"] } } },
   { type: "function", function: { name: "list_published_content", description: "列出当前用户可见的已发布课程、工作流或案例；用户未提供 ID、要求随便打开一个内容时使用。返回站内相对路径，不会打开外部浏览器。", parameters: { type: "object", properties: { type: { type: "string", enum: ["all", "course", "workflow", "work"] }, limit: { type: "integer", minimum: 1, maximum: 10 } } } } },
   { type: "function", function: { name: "search_web", description: "联网检索公开互联网，返回可引用的来源列表与检索摘要。仅在用户开启智能搜索时可用；必须基于返回的来源回答并在结尾给出真实链接，不得把未检索到的内容说成搜索结果。", parameters: { type: "object", properties: { query: { type: "string", minLength: 1, maxLength: 300 } }, required: ["query"] } } },
@@ -31,10 +36,10 @@ export const platformToolDefinitions: readonly ModelToolDefinition[] = [
   { type: "function", function: { name: "change_workspace_directory", description: "验证并切换 Agent 工作区目录。该工具返回后续操作应使用的目录前缀。", parameters: { type: "object", properties: { directory: { type: "string" } }, required: ["directory"] } } },
   { type: "function", function: { name: "read_workspace_file", description: "读取 Agent 自己工作区中的文本文件。", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } } },
   { type: "function", function: { name: "write_workspace_file", description: "在 Agent 自己工作区创建或覆盖文本文件；适用于生成 HTML、CSS、JS、JSON、Markdown，以及直接用几何元素手绘的 .svg 图形。返回站内本地打开链接。", parameters: { type: "object", properties: { path: { type: "string" }, content: { type: "string", maxLength: 200000 } }, required: ["path", "content"] } } },
-  { type: "function", function: { name: "create_workspace_directory", description: "在 Agent 自己工作区创建目录。创建多文件网页前，先用它建立 assets、src 等目录；不能访问服务器其他位置。", parameters: { type: "object", properties: { directory: { type: "string" } }, required: ["directory"] } } },
+  { type: "function", function: { name: "create_workspace_directory", description: "在 Agent 自己工作区创建目录。仅在需要独立空目录时使用；写文件会自动建立父目录；不能访问服务器其他位置。", parameters: { type: "object", properties: { directory: { type: "string" } }, required: ["directory"] } } },
   { type: "function", function: { name: "write_workspace_files", description: "一次创建一组互相引用的文本文件，适合 HTML、CSS、JS 多文件网页，或与页面配套的 .svg 图形。每次最多 30 个文件；返回每个文件的私有打开链接。", parameters: { type: "object", properties: { files: { type: "array", minItems: 1, maxItems: 30, items: { type: "object", properties: { path: { type: "string" }, content: { type: "string", maxLength: 200000 } }, required: ["path", "content"] } } }, required: ["files"] } } },
   { type: "function", function: { name: "open_workspace_file", description: "打开 Agent 自己工作区中的文件，返回站内私有链接；HTML 会在浏览器中预览。此操作不访问服务器工作区以外的文件。", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } } },
-  { type: "function", function: { name: "check_page", description: "对工作区里的 HTML 做静态自检，返回结论与问题清单：有没有样式来源（<link rel=stylesheet> 或内联 <style>）、引用的 CSS/JS/图片是否真的在工作区里、有没有引用外部 CDN 或外部图片、有没有用绝对路径。写完网页后必须调用它自检：verdict 为 fail 时必须先修复再汇报，不得声称已完成。注意它只做静态检查，最后仍要把预览链接给用户确认视觉效果。", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } } },
+  { type: "function", function: { name: "check_page", description: "对工作区里的 HTML 做静态自检，并在浏览器可用时检查部分交互和布局，返回结论与问题清单：有没有样式来源（<link rel=stylesheet> 或内联 <style>）、引用的 CSS/JS/图片是否真的在工作区里、有没有引用外部 CDN 或外部图片、有没有用绝对路径。写完网页后必须调用它自检：verdict 为 fail 时必须先修复再汇报，不得声称已完成。可选浏览器检查的可用性及范围以返回结果为准，最后返回预览链接。", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } } },
   { type: "function", function: { name: "create_agent_artifact", description: "将本轮设计说明、网页规格、图案提示词或学习笔记保存为私有成果草稿。保存草稿无需再次向用户索取确认。", parameters: { type: "object", properties: { artifactType: { type: "string", enum: ["brief", "webpage", "pattern", "document"] }, content: { type: "string", minLength: 1 } }, required: ["artifactType", "content"] } } },
   { type: "function", function: { name: "start_workflow_run", description: "在用户明确确认后启动已发布工作流，不执行任意外部 URL。", parameters: { type: "object", properties: { workflowId: { type: "string" }, context: { type: "object" } }, required: ["workflowId"] } } },
 ];
@@ -86,9 +91,11 @@ function parseArguments(call: ModelToolCall): unknown {
  * 写入型工具只接受当前会话中用户给出的明确确认，避免模型把“建议保存/建议运行”
  * 误当成已经授权的动作。前端在用户确认后会把确认语句写入 context。
  */
-function hasExplicitConfirmation(context: AgentToolContext) {
+export function hasExplicitConfirmation(context: AgentToolContext, target: string) {
   const latestUserMessage = [...context.messages].reverse().find((message) => message.role === "user")?.content ?? "";
-  return /(?:^|[\s，。；;！!])(?:我)?(?:确认|同意|批准|可以执行|开始执行|保存草稿|启动工作流)(?:[\s，。；;！!]|$)/.test(latestUserMessage);
+  const text=latestUserMessage.replace(/[“「『][^”」』]*[”」』]/g,'').replace(/"[^"\n]*"/g,'');
+  const escaped=target.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return !/[?？]|不要|不许|别|暂不|尚未|未确认|不同意|取消/.test(text)&&!!target&&new RegExp('(?:^|[^A-Za-z0-9_-])'+escaped+'(?:$|[^A-Za-z0-9_-])').test(text)&&/^(?:请)?(?:我)?(?:确认|同意|批准)(?:立即)?[，,\s]*(?:启动|运行|执行)/.test(text.trim());
 }
 
 async function getCourseLesson(args: z.infer<typeof getCourseLessonSchema>, dependencies: PlatformToolDependencies) {
@@ -168,8 +175,28 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
     case "generate_document": {
       if (!dependencies.generation) throw new Error("文档生成服务不可用");
       const input = documentSchema.parse(raw);
-      const result = await dependencies.generation.runJob(dependencies.actor, { jobType: "document", prompt: input.prompt, modelConfigId: input.modelConfigId, context: [], parameters: { outputFormat: input.format, ...(input.format === "pptx" && input.pageCount ? { pageCount: input.pageCount } : {}) } });
+      const inherited=(context.request.messages||context.messages).filter(m=>m.role==='user'||m.role==='assistant').slice(-20).map(m=>({role:m.role,content:m.content.slice(0,20000)}));
+      const result = await dependencies.generation.runJob(dependencies.actor, { jobType: "document", prompt: input.prompt, modelConfigId: input.modelConfigId, context: inherited, parameters: { outputFormat: input.format, ...(input.format === "pptx" && input.pageCount ? { pageCount: input.pageCount } : {}) } }, context.request.signal);
+      if(!result.artifact?.downloadUrl)throw Error('文档服务没有返回实际文件');
       return { status: "succeeded", document: result.artifact, openUrl: result.artifact?.downloadUrl ?? null };
+    }
+    case 'generate_image': {
+      if(!dependencies.generation)throw Error('图片生成服务不可用');
+      context.request.signal?.throwIfAborted();
+      const input=imageGenerationParametersSchema.extend({prompt:z.string().trim().min(1).max(1500),workspacePath:z.string().trim().min(1).max(500).optional()}).strict().parse(raw);
+      const {prompt,workspacePath,...parameters}=input;
+      const result=await dependencies.generation.runJob(dependencies.actor,{jobType:'image',prompt,context:[],parameters:{...parameters,imageCount:1}},context.request.signal);
+      const image=result.artifact;
+      if(!image||!/^image\/(png|jpeg|webp|gif|avif)$/.test(image.mimeType)||!/^\/api\/(?!\/)/.test(image.downloadUrl))throw Error('图片服务没有返回实际私有图片');
+      let workspaceAsset;
+      if(workspacePath){
+        if(!dependencies.workspace)throw Error('工作区服务不可用，图片仍可从私有产物下载');
+        const file=await dependencies.generation.downloadOutput(dependencies.actor,result.job.id);
+        const extension=({ 'image/png':'png','image/jpeg':'jpg','image/webp':'webp','image/gif':'gif','image/avif':'avif'} as Record<string,string>)[image.mimeType];
+        const destination=workspacePath.replace(/\.[^/.]+$/,'')+'.'+extension;
+        workspaceAsset=await dependencies.workspace.writeImage(dependencies.actor,destination,file.data,image.mimeType);
+      }
+      return {status:'succeeded',image,workspaceAsset,openUrl:image.downloadUrl,visualValidation:'pending_visual',note:'图片文件已生成，尚未进行视觉核验；不能据请求描述声称无文字或完全符合构图。供应商可能保留AI生成标识。'};
     }
     case "get_course_lesson":
       return getCourseLesson(getCourseLessonSchema.parse(raw), dependencies);
@@ -195,14 +222,36 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
         assets.push(found ?? { path: relative ?? reference, exists: false, sizeBytes: null });
       }
       const summary = summarizePageCheck({ htmlBytes: Buffer.byteLength(page.content, "utf8"), references, assets });
+      const styles=[...page.content.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(m=>m[1]);
+      const code=[...styles,...[...page.content.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1])];
+      for(const reference of [...new Set([...references.stylesheets,...references.scripts])].slice(0,30)){
+        const relative=normalizeRelative(base,reference);
+        if(relative&&assets.some(a=>a.path===relative&&a.exists))code.push((await dependencies.workspace.read(dependencies.actor,relative)).content);
+      }
+      if(code.some(s=>/(?:url\(\s*['"]?|@import\s+['"])(?:https?:)?\/\//i.test(s)))summary.issues.push({level:'fail',message:'CSS引用了离线预览不可用的外部资源。'});
+      if(code.some(s=>/\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(/.test(s)))summary.issues.push({level:'fail',message:'脚本包含离线预览禁止的网络请求。'});
+      if(!references.stylesheets.length&&styles.length&&styles.every(s=>!s.replace(/\/\*[\s\S]*?\*\//g,'').trim()))summary.issues.push({level:'fail',message:'内联样式为空。'});
+      for(const m of page.content.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi))if(!/\bsrc\s*=|type\s*=\s*['"](?:module|application\/(?:json|ld\+json))/.test(m[1])&&m[2].trim())try{new vm.Script(m[2]);}catch{summary.issues.push({level:'fail',message:'内联脚本存在语法错误。'});}
+      const revision=createHash('sha256').update(JSON.stringify([page.content,code,assets])).digest('hex');
+      const browser=summary.issues.some(i=>i.level==='fail')?null:await checkRenderedPage(page.path,async p=>/\.(png|jpe?g|webp|gif|avif)$/i.test(p)?dependencies.workspace!.readAsset(dependencies.actor,p):(await dependencies.workspace!.read(dependencies.actor,p)).content);
+      if(browser?.failureKind==='environment')return {
+        status:'failed', code:'PAGE_CHECK_UNAVAILABLE', retryable:false,
+        checkedPath:page.path,verdict:'unavailable',openUrl:dependencies.workspace.openUrl(page.path),
+        browser,issues:browser.issues,staticVerdict:summary.verdict,
+        nextStep:'检查环境暂不可用，保留当前文件并结束执行。不要修改页面或重复检查来解决环境故障。',
+      };
+      if(browser?.available&&!browser.passed)summary.issues.push(...browser.issues.map(message=>({level:'fail' as const,message})));
       return {
         status: "succeeded",
         checkedPath: page.path,
-        verdict: summary.verdict,
+        revision,
+        verdict: summary.issues.some(i=>i.level==='fail')?'fail':summary.verdict,
+        openUrl:dependencies.workspace.openUrl(page.path),
+        browser,
         issues: summary.issues,
         references: { stylesheets: references.stylesheets, scripts: references.scripts, images: references.images, external: references.external, absolute: references.absolute, inlineStyleBlocks: references.inlineStyleBlocks, inlineScriptBlocks: references.inlineScriptBlocks },
         assets,
-        nextStep: summary.verdict === "pass" ? "静态自检通过；把预览链接交给用户确认视觉效果。" : "先按 issues 修复，再重新调用 check_page 确认。",
+        nextStep: summary.issues.some(i=>i.level==='fail') ? '先按issues修复，再重新检查。' : browser?.available ? '基础浏览器检查通过；把预览链接交给用户确认视觉与完整交互要求。' : '静态检查通过，浏览器未配置；尚未验证交互，请打开预览确认。',
       };
     }
     case "get_workflow_detail":
@@ -245,8 +294,8 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
       return { status: "succeeded", artifactId, artifactType: input.artifactType, message: "已保存为本次创作的私有草稿。" };
     }
     case "start_workflow_run": {
-      if (!hasExplicitConfirmation(context)) return { status: "confirmation_required", message: "请先取得用户明确确认，再启动工作流。" };
       const input = startWorkflowSchema.parse(raw);
+      if (!hasExplicitConfirmation(context,input.workflowId)) return { status: "confirmation_required", message: `请明确确认启动工作流 ${input.workflowId}，再执行。` };
       const run = await dependencies.studio.startWorkflow(dependencies.actor, input.workflowId, { context: input.context });
       return { status: "succeeded", workflowRun: run, message: "工作流已启动。" };
     }

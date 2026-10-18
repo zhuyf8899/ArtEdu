@@ -4,17 +4,18 @@ import { atlasCourses } from "./curriculumAtlas.js";
 import { buildCourseGraph, courseAtlasUrl, courseGraphPath } from "./courseKnowledge.js";
 import { graphCenter, graphZoom } from "./graphViewport.js";
 import "./CourseKnowledgeGraph.css";
+import {useGraphSessionState} from "./useGraphSessionState.js";
 
 const nodeLabels = { root: "课程", branch: "知识主题", point: "知识点", practice: "建议练习" };
 
 export function CourseKnowledgeGraph({ course, onNavigate, onBack, onPersonal }) {
   const graph = useMemo(() => buildCourseGraph(course), [course]);
-  const [selectedId, setSelectedId] = useState(`${course.id}:root`);
-  const [showPractice, setShowPractice] = useState(true);
-  const [viewMode, setViewMode] = useState("graph");
-  const [zoomMode, setZoomMode] = useState("auto");
+  const [selectedId, setSelectedId] = useGraphSessionState(course.id,"selected",`${course.id}:root`);
+  const [showPractice, setShowPractice] = useGraphSessionState(course.id,"practice",true);
+  const [viewMode, setViewMode] = useGraphSessionState(course.id,"mode","graph");
+  const [zoomMode, setZoomMode] = useGraphSessionState(course.id,"zoomMode","auto");
   const [detailOpen, setDetailOpen] = useState(false);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useGraphSessionState(course.id,"scale",1);
   const viewport = useRef(null);
   const detail = useRef(null);
   const heading = useRef(null);
@@ -112,7 +113,7 @@ export function CourseKnowledgeGraph({ course, onNavigate, onBack, onPersonal })
       <button className="course-knowledge__close" aria-label="关闭节点详情" onClick={closeDetail}><X size={20} /></button>
       <header><div><span className="curriculum-atlas__eyebrow">{nodeLabels[selected.kind]} / {course.title}</span><h4 id={`${detailId}-title`} ref={heading} tabIndex={-1}>{selected.title}</h4><p>{selected.summary}</p></div><div className="course-knowledge__detail-actions"><button onClick={() => { if (viewMode === "graph") { selectNode(selected.id); opener.current = viewport.current?.querySelector(`[data-knowledge-node="${selected.id}"]`) ?? opener.current; } closeDetail(); }}><ArrowLeft size={16} />{viewMode === "graph" ? "返回图谱节点" : "返回知识目录"}</button><button onClick={() => onNavigate(`/search?query=${encodeURIComponent(course.searchTerm)}`)}><BookOpenText size={18} />查找平台课程<ArrowRight size={16} /></button></div><small>此处为关键词检索，非正式课程绑定；查看节点不会更新学习进度。</small></header>
       <div className="course-knowledge__detail-grid">
-        <section><h5>{selected.kind === "practice" ? "建议成果" : "资料依据"}</h5>{selected.kind === "practice" ? <><p>{selected.outcome}</p><small>此练习由平台编辑建议，不是原教材的作业要求，也不会自动更新学习进度。</small></> : <><ul>{sourceItems.map((s) => <li key={s.id}><strong>{s.title}</strong><small>{s.inspected}</small></li>)}</ul><small>知识点为资料目录与关键页的编辑提炼，非教材全文；主题划分不是原书章节逐条复刻。</small></>}</section>
+        <section><h5>{selected.kind === "practice" ? "建议成果" : "资料依据"}</h5>{selected.kind === "practice" ? <><p>{selected.outcome}</p><small>拓展练习</small></> : <><ul>{sourceItems.map((s) => <li key={s.id}><strong>{s.title}</strong><small>{s.inspected}</small></li>)}</ul></>}</section>
         <section><h5>知识关联</h5><div className="course-knowledge__related">{connections.map((e) => {
           const n = graph.nodes.find((item) => item.id === (e.from === selected.id ? e.to : e.from));
           return <button key={n.id} onClick={() => selectNode(n.id)}><span><small>{e.kind === "practice" ? "用于建议练习" : e.from === selected.id ? "包含" : "归属于"}</small>{n.title}</span><ArrowRight size={15} /></button>;

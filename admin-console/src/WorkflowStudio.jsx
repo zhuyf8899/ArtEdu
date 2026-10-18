@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, MagnifyingGlass, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
+import { hasDownstreamPrompt } from './workflowExecution.js';
 import { ComfyCanvas } from './ComfyCanvas.jsx';
 import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLinks, getToolDirectoryLinks, getWorkflow, getWorkflowRun, getWorkflows, startWorkflowRun, updateToolDirectoryLink } from "./services/adminApi.js";
 import { studioUrl } from "./navigationModel.js";
@@ -20,19 +21,37 @@ const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https:
  * 工作流自己是否带着提示词。带着的话，「创作需求」输入节点只是"可选需求"：
  * 使用者什么都不填也该能一键出图；整条链路一句提示词都没有时才需要停下来问一句。
  */
-const PROMPT_NODE_TYPES = ["prompt", "text_encode", "skill"];
-const nodesCarryPrompt = (nodes = []) => nodes.some((node) => PROMPT_NODE_TYPES.includes(node.type) && String(node.data?.value ?? "").trim());
+const nodesCarryPrompt = (nodes, edges, id) => hasDownstreamPrompt(nodes, edges, id);
 
 export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", onNavigate, onNotice, canPublish = false, canManageToolDirectory = false, variant = 'classic' }) {
   const [recommendOpen,setRecommendOpen]=useState(false);
   const [workflows, setWorkflows] = useState([]);
   const [catalogState,setCatalogState]=useState('loading'),[catalogError,setCatalogError]=useState('');
+  const [catalogQuery,setCatalogQuery]=useState('');
+  const [catalogTotal,setCatalogTotal]=useState(0);
+  const [loadingMore,setLoadingMore]=useState(false);
   const catalogRequest=useRef(0);
-  const loadWorkflows=useCallback(async()=>{
+  // 目录分页：后端默认每页 20 条。以前只取第一页且没有检索，第 21 条之后的工作流在目录里根本没有入口。
+  const WORKFLOW_PAGE_SIZE = 20;
+  const loadWorkflows=useCallback(async(query="")=>{
     const requestId=++catalogRequest.current;setCatalogState('loading');setCatalogError('');
-    try { const payload=await getWorkflows("", { includeDrafts: true });if(requestId!==catalogRequest.current)return;setWorkflows(payload.items??[]);setCatalogState('ready'); }
+    try { const payload=await getWorkflows(query, { includeDrafts: true, page: 1, pageSize: WORKFLOW_PAGE_SIZE });if(requestId!==catalogRequest.current)return;setWorkflows(payload.items??[]);setCatalogTotal(typeof payload.total==='number'?payload.total:(payload.items?.length??0));setCatalogState('ready'); }
     catch(error){if(requestId!==catalogRequest.current)return;setCatalogError(error.message);setCatalogState('error');}
   },[]);
+  // 只追加、不重排：按当前已显示的条数推算下一页，并用 id 去重，慢请求或双击都不会把同一条工作流塞两遍。
+  const loadMoreWorkflows=useCallback(async()=>{
+    const requestId=catalogRequest.current;
+    const page=Math.floor(workflows.length/WORKFLOW_PAGE_SIZE)+1;
+    setLoadingMore(true);setCatalogError('');
+    try {
+      const payload=await getWorkflows(catalogQuery.trim(), { includeDrafts: true, page, pageSize: WORKFLOW_PAGE_SIZE });
+      if(requestId!==catalogRequest.current)return;
+      setWorkflows(current=>{const seen=new Set(current.map(item=>item.id));return [...current,...(payload.items??[]).filter(item=>!seen.has(item.id))];});
+      if(typeof payload.total==='number')setCatalogTotal(payload.total);
+    } catch(error) { if(requestId===catalogRequest.current) setCatalogError(error.message); }
+    finally { setLoadingMore(false); }
+  },[catalogQuery, workflows.length]);
+  const searchWorkflows=(event)=>{ event.preventDefault(); void loadWorkflows(catalogQuery.trim()); };
   const [selected, setSelected] = useState(null);
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -67,7 +86,7 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
   const start = async () => {
     const requestId = opening.current;
     setLoading(true);
-    try { const next = await startWorkflowRun(selected.id); setAutoError(""); if (!alive.current || requestId !== opening.current) return; onNavigate(studioUrl({workflow:selected.id,run:next.id}), {replace:true}); onNotice("工作流已开始，节点进度会自动保存"); }
+    try { const next = await startWorkflowRun(selected.id, {}, selected.versionId); setAutoError(""); if (!alive.current || requestId !== opening.current) return; onNavigate(studioUrl({workflow:selected.id,run:next.id}), {replace:true}); onNotice("工作流已开始，节点进度会自动保存"); }
     catch (error) { if(requestId === opening.current) onNotice(error.message); }
     finally { if(requestId === opening.current) setLoading(false); }
   };
@@ -87,7 +106,7 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
     // 只有「非现场给不可」的两种情况才停下来：要上传的参考图片；
     // 以及整条链路里一句提示词都没有时，创作需求必须问一句（否则没东西可生成）。
     if (run.context?.engine === "comfyui" || !node || node.type === "load_image") return;
-    if (node.type === "input" && !String(node.data?.value ?? "").trim() && !nodesCarryPrompt(run.nodes)) return;
+    if (node.type === "input" && !String(node.data?.value ?? "").trim() && !nodesCarryPrompt(run.nodes, run.edges, node.id)) return;
     const key = `${run.id}:${run.currentStep}`;
     if (advancing.current === key) return;
     advancing.current = key;
@@ -118,10 +137,16 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
     <div className="workflow-catalog__list">
       <header className="workflow-catalog__toolbar">
         <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>先打开画布查看节点，再点击开始运行；编辑与新建请进入工作流管理。</span></div>
-        <button className="primary-button" disabled={loading} onClick={openBuilder}><Plus size={18} weight="bold" /> 管理与新建工作流</button>
+        <div className="workflow-catalog__actions">
+          <form className="workflow-catalog__search" role="search" onSubmit={searchWorkflows}>
+            <input value={catalogQuery} onChange={(event) => setCatalogQuery(event.target.value)} placeholder="搜索工作流名称或描述" aria-label="搜索节点工作流" />
+            <button type="submit" disabled={catalogState === 'loading'}><MagnifyingGlass size={16} weight="bold" /> 搜索</button>
+          </form>
+          <button className="primary-button" disabled={loading} onClick={openBuilder}><Plus size={18} weight="bold" /> 管理与新建工作流</button>
+        </div>
       </header>
       {catalogState==='loading'&&<p role="status">正在同步节点工作流…</p>}
-      {catalogState==='error'&&<p className="catalog-inline-warning" role="alert">工作流目录暂时无法加载：{catalogError}。<button onClick={loadWorkflows}>重新加载工作流</button></p>}
+      {catalogState==='error'&&<p className="catalog-inline-warning" role="alert">工作流目录暂时无法加载：{catalogError}。<button onClick={() => loadWorkflows(catalogQuery.trim())}>重新加载工作流</button></p>}
       {workflows.length ? <section className="workflow-grid">{workflows.map((workflow) => {
         // 只有作者本人能在这里看到草稿，所以「草稿」标记同时也是一次试运行的入口。
         const draft = workflow.versionPublished === false;
@@ -133,7 +158,11 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
           <small className="workflow-card__state">{draft ? "未发布 · 草稿试运行仅自己可见" : workflow.versionNumber ? `V${workflow.versionNumber} · 已发布` : "尚无保存版本"}</small>
           <button disabled={loading} onClick={() => open(workflow)}>{draft ? "打开草稿画布" : "打开节点画布"} <ArrowRight size={16} weight="bold" /></button>
         </article>;
-      })}</section> : catalogState==='ready'&&<div className="empty-state"><Wrench size={28} weight="thin" /><strong>还没有节点工作流</strong><span>进入「管理与新建工作流」搭一个：保存后你就能在这里试运行，发布后其他人也能看到。</span></div>}
+      })}</section> : catalogState==='ready'&&<div className="empty-state"><Wrench size={28} weight="thin" /><strong>{catalogQuery.trim() ? "没有匹配的节点工作流" : "还没有节点工作流"}</strong><span>{catalogQuery.trim() ? `「${catalogQuery.trim()}」没有匹配到工作流名称或描述，换个关键词试试。` : "进入「管理与新建工作流」搭一个：保存后你就能在这里试运行，发布后其他人也能看到。"}</span></div>}
+      {(workflows.length > 0 || catalogTotal > 0) && <footer className="workflow-catalog__pager">
+        <span>已显示 {workflows.length} / {catalogTotal} 条{catalogQuery.trim() ? `（搜索：${catalogQuery.trim()}）` : ""}</span>
+        {workflows.length < catalogTotal && <button className="outline-button" disabled={loadingMore || catalogState === 'loading'} onClick={loadMoreWorkflows}>{loadingMore ? "正在加载…" : `加载更多（还有 ${catalogTotal - workflows.length} 条）`}</button>}
+      </footer>}
     </div>
     </div>
   </section>;
@@ -176,7 +205,7 @@ function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder, variant, on
       onClear={()=>{setCategory('全部');setToolQuery('');}} actions={<div className="tool-directory__actions"><div className="tool-directory__view-switch" role="group" aria-label="切换工具浏览方式"><button type="button" className={viewMode === "grid" ? "is-active" : ""} aria-label="卡片浏览" aria-pressed={viewMode === "grid"} title="卡片浏览" onClick={() => setViewMode("grid")}><SquaresFour size={17} weight="bold" /></button><button type="button" className={viewMode === "list" ? "is-active" : ""} aria-label="列表浏览" aria-pressed={viewMode === "list"} title="列表浏览" onClick={() => setViewMode("list")}><ListBullets size={18} weight="bold" /></button></div>{canManage && <button className="outline-button tool-directory__manage" onClick={openNew}><Plus size={16} weight="bold" /> 添加工具</button>}</div>}
     />}{variant === 'morph' && toolState === 'error' && <div className="empty" role="alert"><p>{toolError}</p><button className="button secondary" onClick={load}>重新加载工具</button></div>}{variant !== 'morph' && <div className="tool-directory__toolbar" aria-label="工具分类"><span>按用途浏览</span><div>{categories.map((item) => <button type="button" className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><em>{visibleLinks.length} 个入口</em></div>}
     <div className={`tool-directory__list tool-directory__list--${viewMode}`}>{visibleLinks.map((tool) => <ToolDirectoryCard variant={variant} key={tool.id} tool={tool} canManage={canManage} onEdit={edit} onNavigate={onNavigate} onOpenWorkflowBuilder={onOpenWorkflowBuilder} />)}</div>
-    {variant === 'morph' && <p className="morph-tool-directory-note">外部工具入口仅跳转官方网站，不代表已接入平台 API；账号、费用及访问政策以官网为准。</p>}
+
     {variant === 'morph' && toolState === 'ready' && !visibleLinks.length && <div className="empty"><h2>没有匹配的工具</h2><p>试试其他名称或用途分类。</p><button className="button secondary" onClick={()=>{setCategory('全部');setToolQuery('');}}>清除工具筛选</button></div>}</section>;
 }
 

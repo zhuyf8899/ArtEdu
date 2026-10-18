@@ -108,7 +108,7 @@ test('tool recommendation drafts are local, account-isolated and validate safe p
 test('recommendation UI uses a native modal with keyboard close and restored focus, never admin publishing',async()=>{
   const source=await read('morph/ToolRecommendationDialog.jsx');
   assert.match(source,/element\.showModal\(\)/);assert.match(source,/onCancel=\{onClose\}/);assert.match(source,/opener\.focus\(\)/);
-  assert.match(source,/尚未提交审核或公开发布/);assert.match(source,/role="alert"/);
+  assert.match(source,/草稿保存在此浏览器，暂不公开/);assert.match(source,/role="alert"/);
   assert.doesNotMatch(source,/createToolDirectoryLink|updateToolDirectoryLink|fetch\(/);
   const studio=await read('WorkflowStudio.jsx');assert.match(studio,/推荐一个工具/);assert.match(studio,/accountId=\{accountId\}/);
 });

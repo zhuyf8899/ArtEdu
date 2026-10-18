@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {localMessages} from './prompt.mjs';
+test('Bridge沿用服务端规则和历史，同时如实声明仅文本能力',()=>{const messages=localMessages({input:{prompt:'问题',execution:{systemPrompt:'可信规则',context:[{role:'user',content:'历史'}]}}});assert.match(messages[0].content,/可信规则/);assert.match(messages[0].content,/仅文本回答/);assert.equal(messages[1].content,'历史');assert.equal(messages.at(-1).content,'问题');assert.ok(!messages[0].content.includes('undefined'));});

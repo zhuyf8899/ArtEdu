@@ -157,7 +157,7 @@ test("分图使用独立 URL 并保留课程返回、个人扩展及零进度写
   assert.match(atlas, /CourseKnowledgeGraph key=\{courseView.id\}/);
   assert.match(graph, /返回十门课程总图/);
   assert.match(graph, /courseAtlasUrl\(e.target.value\)/);
-  assert.match(graph, /不是原教材的作业要求/);
+  assert.match(graph, /拓展练习/);
   assert.doesNotMatch(graph, /services\/adminApi|fetch\(|localStorage|sessionStorage|updateLearning/);
 });
 
@@ -171,11 +171,11 @@ test("静态图谱与个人 API 失败隔离，个人扩展保留并可往返", 
   assert.match(learning, /aria-busy=\{!isGenericAtlas && loading\}/);
   assert.match(learning, /learningAtlas === "personal"/);
   assert.match(learning, /onNavigate\("\/my-learning\?atlas=personal"\)/);
-  assert.match(learning, /返回通用图谱/);
+  assert.match(learning, /返回课程总览/);
   assert.match(learning, /isPersonalAtlas && <LearningGraph/);
   assert.doesNotMatch(atlas, /services\/adminApi|fetch\(|getLearningSpace|localStorage|sessionStorage/);
   assert.match(atlas, /颜色区分知识方向，不表示学习进度/);
   assert.match(atlas, /并非原教材内容/);
-  assert.match(atlas, /不代表这十门课程均已上线/);
+  assert.match(atlas, /查看个人学习进度，请进入“个性化图谱”/);
   assert.doesNotMatch(atlas, /\/learning\?course=/);
 });

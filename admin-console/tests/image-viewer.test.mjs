@@ -40,7 +40,7 @@ test("外链工具的页标按站点 favicon → 图标服务顺序回退", () =
 test("对话内的图片产物直接渲染，不再只给跳转链接", async () => {
   const workspace = await read("../src/CreationWorkspace.jsx");
   assert.match(workspace, /import \{ ZoomableImage \} from "\.\/ImageLightbox\.jsx"/);
-  assert.match(workspace, /\{artifactImageOf\(message\.localFile\)\}/, "气泡里要挂图片");
+  assert.match(workspace, /artifactImageOf\(message\.localFile\)/, "气泡里要挂图片");
   assert.match(workspace, /function artifactImageOf\(file\)/);
   assert.match(workspace, /if \(!file\?\.downloadUrl \|\| isImageArtifact\(file\)\) return result\.content;/, "图片产物不再拼跳转链接");
   assert.match(workspace, /return `\$\{result\.content\}\\n\\n\[打开本次生成的 /, "文档产物仍保留下载入口");

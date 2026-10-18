@@ -1,0 +1,48 @@
+name: artedu-loadtest
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: artedu_loadtest
+      POSTGRES_USER: loadtest
+      POSTGRES_PASSWORD: loadtest_local_only
+    ports: ["127.0.0.1:55432:5432"]
+    volumes: ["database:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loadtest -d artedu_loadtest"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [isolated]
+  api:
+    image: artedu-loadtest-api:local
+    build:
+      context: ../../local-artifacts/loadtest/build/api
+    environment:
+      NODE_ENV: test
+      HOST: 0.0.0.0
+      PORT: 4000
+      DATABASE_URL: postgresql://loadtest:loadtest_local_only@postgres:5432/artedu_loadtest
+      DATABASE_POOL_SIZE: 10
+      CORS_ORIGIN: http://127.0.0.1:18200
+      ENABLE_LOCAL_AUTH: "true"
+      ENABLE_FILE_UPLOADS: "false"
+      MODEL_EXECUTION_ENABLED: "false"
+      RAG_ENABLED: "false"
+      ARTEDU_LOAD_TEST: "isolated-local"
+    volumes: ["./preload.cjs:/loadtest/preload.cjs:ro"]
+    command: ["node", "--require", "/loadtest/preload.cjs", "dist/main.js"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [isolated]
+  web:
+    image: artedu-loadtest-web:local
+    build:
+      context: ../../local-artifacts/loadtest/build/web
+    ports: ["127.0.0.1:18200:80"]
+    depends_on: [api]
+    networks: [isolated]
+networks:
+  isolated: {}
+volumes:
+  database:

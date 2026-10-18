@@ -1,0 +1,20 @@
+/* Shared title region. Page content retains its original styles and handlers. */
+.hero{height:190px;min-height:190px;border:0;isolation:isolate;background:transparent;overflow:hidden}
+.hero:after{display:none}
+.hero-content{height:100%;padding:30px 0 24px;position:relative;z-index:1;pointer-events:none}
+.hero .eyebrow{font-size:10px;line-height:18px;letter-spacing:1.5px;max-width:42%}
+.hero h1{margin:7px 0 8px;font-size:36px;line-height:46px;max-width:42%}
+.hero .intro{font-size:13px;line-height:22px;max-width:40%}
+.hero .intro br{display:none}
+.hero .hero-bottom,.hero .hint{display:none}
+.hero .live-dot{box-shadow:none}
+.banner-art{position:absolute;left:calc(50% + min(40vw,768px)*.02);right:max(10%,calc((100% - 1536px)/2));top:10px;bottom:12px;pointer-events:none}
+.banner-art canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.banner-toggle{position:absolute;right:0;bottom:0;pointer-events:auto;border:0;background:transparent;padding:5px 7px;color:#737c91;font-size:10px;line-height:16px;cursor:pointer;border-radius:4px;z-index:3}
+.banner-toggle:hover{background:#ffffff70;color:var(--purple,#6554e8)}
+.banner-toggle:focus-visible{outline:2px solid var(--purple,#6554e8);outline-offset:2px}
+.banner-toggle:disabled{cursor:default;opacity:.65}
+@media(max-width:1100px) and (min-width:769px){.hero{height:200px;min-height:200px}.hero-content{padding-top:25px}.hero .intro{font-size:12px;line-height:20px}}
+@media(max-width:1000px){.banner-art{right:5%}}
+@media(max-width:768px){.hero{height:250px;min-height:250px}.hero-content{padding:24px 0 0}.hero .eyebrow{max-width:100%;font-size:9px}.hero h1{font-size:30px;line-height:40px;max-width:100%;margin:5px 0}.hero .intro{max-width:100%;font-size:12px;line-height:20px}.banner-art{top:131px;left:5%;right:5%;bottom:10px}.banner-toggle{bottom:0}.hero .intro br{display:none}}
+@media(prefers-reduced-motion:reduce){.banner-toggle{display:none}}

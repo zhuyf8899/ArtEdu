@@ -1,3 +1,4 @@
+import {cacheExpired} from '../cloud-cache/cache-policy';
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { createReadStream } from "node:fs";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
@@ -16,7 +17,14 @@ const MAX_BATCH_BYTES = 4 * 1024 * 1024;
  */
 @Injectable()
 export class AgentWorkspaceService {
-  private root(actor: Actor) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id); }
+  private conversationScope = "";
+  forConversation(id: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ForbiddenException("无效的会话工作区");
+    const scoped = new AgentWorkspaceService();
+    scoped.conversationScope = id;
+    return scoped;
+  }
+  private root(actor: Actor) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id, ...(this.conversationScope ? ["__conversations", this.conversationScope] : [])); }
 
   /**
    * 自检工具需要知道页面引用的文件是否存在、多大——只做 stat，不读内容，
@@ -26,7 +34,7 @@ export class AgentWorkspaceService {
     const relative = this.relative(filePath);
     if (!relative) return null;
     const info = await stat(this.resolve(actor, relative)).catch(() => null);
-    if (!info?.isFile()) return null;
+    if (!info?.isFile() || cacheExpired(info.mtimeMs)) return null;
     return { path: relative, exists: true as const, sizeBytes: info.size };
   }
 
@@ -40,7 +48,7 @@ export class AgentWorkspaceService {
       items: (await Promise.all(entries.slice(0, MAX_LIST_ITEMS).map(async (entry) => {
         const info = await stat(path.join(target, entry.name));
         return { name: entry.name, path: relative ? `${relative}/${entry.name}` : entry.name, kind: entry.isDirectory() ? "directory" : "file", sizeBytes: info.size, updatedAt: info.mtime.toISOString() };
-      }))).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name)),
+      }))).filter(item=>!cacheExpired(item.updatedAt)).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name)),
     };
   }
 
@@ -55,7 +63,7 @@ export class AgentWorkspaceService {
   async read(actor: Actor, filePath: string) {
     const target = this.resolve(actor, this.relative(filePath));
     const info = await stat(target).catch(() => null);
-    if (!info?.isFile()) throw new NotFoundException("工作区文件不存在");
+    if (!info?.isFile() || cacheExpired(info.mtimeMs)) throw new NotFoundException("工作区文件不存在");
     if (info.size > MAX_FILE_BYTES) throw new ForbiddenException("工作区文件超过 2 MB，不能直接读取");
     return { path: this.relative(filePath), content: (await readFile(target, "utf8")).slice(0, 120000), sizeBytes: info.size };
   }
@@ -68,6 +76,23 @@ export class AgentWorkspaceService {
     await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
     await writeFile(target, content, { encoding: "utf8", mode: 0o600 });
     return { path: relative, sizeBytes: Buffer.byteLength(content, "utf8"), openUrl: this.openUrl(relative) };
+  }
+
+  async writeImage(actor: Actor, filePath: string, data: Buffer, mimeType: string) {
+    const relative=this.relative(filePath);
+    if (!relative || !/^image\/(png|jpeg|webp|gif|avif)$/.test(mimeType) || workspaceContentType(relative)!==mimeType) throw new ForbiddenException('图片路径扩展名必须匹配实际类型');
+    if(data.length>8*1024*1024)throw new ForbiddenException('图片不能超过8MB');
+    const target=this.resolve(actor,relative);
+    await mkdir(path.dirname(target),{recursive:true,mode:0o700});
+    await writeFile(target,data,{mode:0o600});
+    return {path:relative,sizeBytes:data.length,openUrl:this.openUrl(relative)};
+  }
+
+  async readAsset(actor: Actor, filePath: string) {
+    const target=this.resolve(actor,this.relative(filePath));
+    const info=await stat(target);
+    if(!info.isFile()||cacheExpired(info.mtimeMs)||info.size>8*1024*1024)throw new ForbiddenException('预览资源不可读取');
+    return readFile(target);
   }
 
   async createDirectory(actor: Actor, directory: string) {
@@ -95,7 +120,7 @@ export class AgentWorkspaceService {
     const relative = this.relative(filePath);
     const target = this.resolve(actor, relative);
     const info = await stat(target).catch(() => null);
-    if (!info?.isFile()) throw new NotFoundException("工作区文件不存在");
+    if (!info?.isFile() || cacheExpired(info.mtimeMs)) throw new NotFoundException("工作区文件不存在");
     return { path: relative, stream: createReadStream(target), contentType: contentType(relative), fileName: path.basename(relative) };
   }
 
@@ -105,7 +130,8 @@ export class AgentWorkspaceService {
    */
   openUrl(filePath: string) {
     const relative = this.relative(filePath);
-    return `/api/agent-runs/workspace-preview/${relative.split("/").map(encodeURIComponent).join("/")}`;
+    const prefix = this.conversationScope ? `__conversations/${this.conversationScope}/` : "";
+    return `/api/agent-runs/workspace-preview/${prefix}${relative.split("/").map(encodeURIComponent).join("/")}`;
   }
 
   private relative(value: string) {

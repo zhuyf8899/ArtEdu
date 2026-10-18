@@ -8,8 +8,9 @@ import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import type { CreateAgentRunInput } from "./agent.contracts";
 import { scanText } from "./agent.scanner";
+import {assessDelivery,planTask} from './agent-policy';
 
-type RunStatus = "queued" | "running" | "waiting_user" | "succeeded" | "failed" | "blocked" | "cancelled";
+type RunStatus = "queued" | "running" | "waiting_user" | "succeeded" | "failed" | "blocked" | "cancelled" | "partial" | "paused" | "needs_confirmation";
 
 interface RunRow extends QueryResultRow {
   id: string; user_id: string; scenario: string; status: RunStatus; input_json: Record<string, unknown>;
@@ -34,22 +35,22 @@ export class AgentService {
   }
 
   async listMyRuns(actor: Actor) {
-    const rows = await this.database.query<RunRow>(`SELECT * FROM agent_runs WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`, [actor.id]);
+    const rows = await this.database.query<RunRow>(`SELECT * FROM agent_runs WHERE user_id=$1 AND created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes' ORDER BY created_at DESC LIMIT 50`, [actor.id]);
     return { items: rows.rows.map((row) => this.mapRun(row)) };
   }
 
   async listOpenAlerts(actor: Actor) {
     if (!actor.roles.includes("admin")) throw new ForbiddenException("仅管理员可查看安全告警");
-    const result = await this.database.query(`SELECT id,run_id,user_id,severity,status,summary,target_type,target_id,created_at FROM agent_security_alerts WHERE status='open' ORDER BY created_at DESC LIMIT 100`);
+    const result = await this.database.query(`SELECT id,run_id,user_id,severity,status,summary,target_type,target_id,created_at FROM agent_security_alerts WHERE status='open' AND created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes' ORDER BY created_at DESC LIMIT 100`);
     return { items: result.rows.map((row) => ({ id: row.id, runId: row.run_id, userId: row.user_id, severity: row.severity, status: row.status, summary: row.summary, targetType: row.target_type, targetId: row.target_id, createdAt: row.created_at.toISOString() })) };
   }
 
   // 供服务端 Agent 执行链路记录消息；不暴露为浏览器写接口，避免用户伪造 Agent 输出。
-  async appendAgentMessage(runId: string, content: string) {
+  async appendAgentMessage(runId: string, content: string, role: "agent" | "system" = "agent") {
     return this.database.transaction(async (client) => {
-      const result = await client.query<{ user_id: string }>("SELECT user_id FROM agent_runs WHERE id=$1", [runId]);
+      const result = await client.query<{ user_id: string }>("SELECT user_id FROM agent_runs WHERE id=$1 AND created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes'", [runId]);
       if (!result.rows[0]) throw new NotFoundException("Agent Run 不存在");
-      await this.recordMessage(client, runId, result.rows[0].user_id, "agent", content, "message", `agent-message-${randomUUID()}`);
+      await this.recordMessage(client, runId, result.rows[0].user_id, role, content, "message", `agent-message-${randomUUID()}`);
     });
     return this.getRunInternal(runId);
   }
@@ -57,7 +58,7 @@ export class AgentService {
   async claimForExecution(actor: Actor, runId: string) {
     const run = await this.getOwnedRun(runId);
     if (run.user_id !== actor.id && !actor.roles.includes("admin")) throw new ForbiddenException("无权执行该 Agent Run");
-    const result = await this.database.query<RunRow>(`UPDATE agent_runs SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='queued' RETURNING *`, [runId]);
+    const result = await this.database.query<RunRow>(`UPDATE agent_runs SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='queued' AND created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes' RETURNING *`, [runId]);
     if (!result.rows[0]) throw new ConflictException("该 Agent Run 已被执行或不能再次执行");
     return this.mapRun(result.rows[0]);
   }
@@ -67,7 +68,8 @@ export class AgentService {
     const toolCallId = `agent-tool-${randomUUID()}`;
     await this.database.transaction(async (client) => {
       const scanStatus = await this.scanTarget(client, runId, run.user_id, "tool_call", toolCallId, JSON.stringify({ input, output }));
-      await client.query(`INSERT INTO agent_tool_calls (id,run_id,tool_name,status,input_json,output_json,started_at,completed_at) VALUES ($1,$2,$3,'succeeded',$4::jsonb,$5::jsonb,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [toolCallId, runId, toolName, JSON.stringify(input), JSON.stringify({ ...output, scanStatus })]);
+      const failed=!!output.error||output.status==='failed'||output.status==='confirmation_required'||output.verdict==='fail';
+      await client.query(`INSERT INTO agent_tool_calls (id,run_id,tool_name,status,input_json,output_json,started_at,completed_at) VALUES ($1,$2,$3,$6,$4::jsonb,$5::jsonb,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [toolCallId, runId, toolName, JSON.stringify(input), JSON.stringify({ ...output, scanStatus }),failed?'failed':'succeeded']);
     });
     return toolCallId;
   }
@@ -95,7 +97,7 @@ export class AgentService {
     const result = await this.database.query(`
       SELECT artifact.id,artifact.run_id,artifact.artifact_type,artifact.storage_key,artifact.external_url,artifact.metadata_json,artifact.created_at
       FROM agent_artifacts artifact JOIN agent_runs run ON run.id=artifact.run_id
-      WHERE run.user_id=$1 ORDER BY artifact.created_at DESC LIMIT $2
+      WHERE run.user_id=$1 AND run.created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes' ORDER BY artifact.created_at DESC LIMIT $2
     `, [actor.id, limit]);
     return { items: result.rows.map((row: Record<string, any>) => ({ id: row.id, runId: row.run_id, type: row.artifact_type, metadata: row.metadata_json, openUrl: row.storage_key ? `/api/agent-runs/${row.run_id}/artifacts/${row.id}/download` : row.external_url, createdAt: row.created_at.toISOString() })) };
   }
@@ -114,6 +116,11 @@ export class AgentService {
 
   async completeRun(runId: string) {
     await this.database.query(`UPDATE agent_runs SET status='succeeded',updated_at=CURRENT_TIMESTAMP,completed_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='running'`, [runId]);
+    return this.getRunInternal(runId);
+  }
+
+  async finishRun(runId: string, delivery: import('./agent-policy').AgentDelivery) {
+    await this.database.query(`UPDATE agent_runs SET status=$2,failure_reason=$3,input_json=input_json || $4::jsonb,updated_at=CURRENT_TIMESTAMP,completed_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='running'`, [runId, delivery.status, delivery.status==='succeeded'?null:delivery.reason.slice(0,1000), JSON.stringify({delivery})]);
     return this.getRunInternal(runId);
   }
 
@@ -164,7 +171,7 @@ export class AgentService {
     return this.getRunInternal(runId);
   }
 
-  private async recordMessage(client: PoolClient, runId: string, userId: string, role: "user" | "agent", content: string, targetType: "input" | "message", targetId: string) {
+  private async recordMessage(client: PoolClient, runId: string, userId: string, role: "user" | "agent" | "system", content: string, targetType: "input" | "message", targetId: string) {
     const messageId = targetType === "message" ? targetId : `agent-message-${randomUUID()}`;
     const environment = getEnvironment();
     const matches = scanText(content, environment.agentAlertKeywords, environment.agentBlockedKeywords);
@@ -200,7 +207,7 @@ export class AgentService {
   }
 
   private async getOwnedRun(runId: string) {
-    const result = await this.database.query<RunRow>("SELECT * FROM agent_runs WHERE id=$1", [runId]);
+    const result = await this.database.query<RunRow>("SELECT * FROM agent_runs WHERE id=$1 AND created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes'", [runId]);
     if (!result.rows[0]) throw new NotFoundException("Agent Run 不存在");
     return result.rows[0];
   }
@@ -216,6 +223,7 @@ export class AgentService {
     ]);
     return {
       ...this.mapRun(run),
+      delivery: run.input_json.delivery as import('./agent-policy').AgentDelivery|undefined ?? (run.status==='running'?{...assessDelivery({contract:planTask({prompt:String(run.input_json.prompt??'')}),ledger:toolCalls.rows.map(row=>({name:row.tool_name,output:row.output_json}))}),status:'partial' as const,reason:'任务执行中，以下为已保存成果'}:undefined),
       messages: messages.rows.map((row) => ({ id: row.id, role: row.role, content: row.content, scanStatus: row.scan_status, createdAt: row.created_at.toISOString() })),
       toolCalls: toolCalls.rows.map((row) => ({ id: row.id, toolName: row.tool_name, status: row.status, input: row.input_json, output: row.output_json, errorMessage: row.error_message, startedAt: row.started_at.toISOString(), completedAt: row.completed_at?.toISOString() ?? null })),
       artifacts: artifacts.rows.map((row) => ({ id: row.id, type: row.artifact_type, storageKey: row.storage_key, externalUrl: row.external_url, downloadUrl: row.storage_key ? `/api/agent-runs/${runId}/artifacts/${row.id}/download` : null, metadata: row.metadata_json, scanStatus: row.scan_status, createdAt: row.created_at.toISOString() })),
@@ -225,7 +233,7 @@ export class AgentService {
   }
 
   private mapRun(row: RunRow) {
-    return { id: row.id, userId: row.user_id, scenario: row.scenario, status: row.status, input: row.input_json, failureReason: row.failure_reason, createdAt: row.created_at.toISOString(), updatedAt: row.updated_at.toISOString(), completedAt: row.completed_at?.toISOString() ?? null };
+    return { id: row.id, userId: row.user_id, scenario: row.scenario, status: row.status, input: row.input_json, delivery: row.input_json.delivery as import('./agent-policy').AgentDelivery | undefined, failureReason: row.failure_reason, createdAt: row.created_at.toISOString(), updatedAt: row.updated_at.toISOString(), completedAt: row.completed_at?.toISOString() ?? null };
   }
 
   private artifactPath(storageKey: string) {

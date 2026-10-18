@@ -50,10 +50,10 @@ export class ComfyService {
                 await c.query(`UPDATE workflow_runs SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE id=$1`, [row.run_id]);
         });
     }
-    async queue(actor: Actor) { await this.expire(); const r = await this.db.query(`SELECT j.run_id,j.status,j.error,j.progress_json,j.created_at,w.name,w.id AS workflow_id FROM comfy_jobs j JOIN workflow_runs r ON r.id=j.run_id JOIN workflows w ON w.id=r.workflow_id WHERE j.user_id=$1 ORDER BY j.created_at DESC LIMIT 50`, [actor.id]); return { items: r.rows.map(j => ({ runId: j.run_id, workflowId: j.workflow_id, workflowName: j.name, status: j.status, error: j.error, progress: j.progress_json })) }; }
+    async queue(actor: Actor) { await this.expire(); const r = await this.db.query(`SELECT j.run_id,j.status,j.error,j.progress_json,j.created_at,w.name,w.id AS workflow_id FROM comfy_jobs j JOIN workflow_runs r ON r.id=j.run_id JOIN workflows w ON w.id=r.workflow_id WHERE j.user_id=$1 AND j.created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes' ORDER BY j.created_at DESC LIMIT 50`, [actor.id]); return { items: r.rows.map(j => ({ runId: j.run_id, workflowId: j.workflow_id, workflowName: j.name, status: j.status, error: j.error, progress: j.progress_json })) }; }
     async job(actor: Actor, runId: string) {
         await this.expire();
-        const r = await this.db.query(`SELECT * FROM comfy_jobs WHERE run_id=$1 AND user_id=$2`, [runId, actor.id]);
+        const r = await this.db.query(`SELECT * FROM comfy_jobs WHERE run_id=$1 AND user_id=$2 AND created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes'`, [runId, actor.id]);
         if (!r.rows[0])
             throw new NotFoundException('ComfyUI 任务不存在');
         const a = await this.db.query(`SELECT id,file_name,is_preview,sha256 FROM comfy_artifacts WHERE run_id=$1`, [runId]);
@@ -73,7 +73,7 @@ export class ComfyService {
         const previous = await this.db.query(`SELECT j.prompt_json,j.status,r.workflow_id,r.workflow_version_id,r.total_steps,r.context_json
           FROM comfy_jobs j JOIN workflow_runs r ON r.id=j.run_id JOIN workflows w ON w.id=r.workflow_id
           JOIN workflow_versions v ON v.id=r.workflow_version_id
-          WHERE j.run_id=$1 AND j.user_id=$2 AND w.status<>'archived'
+          WHERE j.run_id=$1 AND j.user_id=$2 AND j.created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes' AND w.status<>'archived'
             AND (v.published_at IS NOT NULL OR w.created_by=$2 OR $3::boolean)`, [runId, actor.id, actor.roles.some(role => ['admin', 'teacher', 'operator'].includes(role))]);
         const row = previous.rows[0];
         if (!row || !['failed', 'cancelled'].includes(row.status))

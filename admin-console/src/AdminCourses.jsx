@@ -137,7 +137,7 @@ function CourseKnowledgeEditor({ course, busy, onClose: closeEditor, onSave }) {
     } catch (problem) { setError(problem.message); }
   };
   return <Modal title={`${course.title} · 图谱配置`} subtitle="// KNOWLEDGE BINDINGS" onClose={onClose} className="course-modal--wide course-modal--bindings">
-    <form onSubmit={save}><p className="learning-binding-note">课程知识点描述整体学习范围；课时知识点用于关联具体学习记录。已发布课程可单独配置，不更改课程正文、课时 ID 或学习进度。配置本身不代表用户已掌握知识。</p>
+    <form onSubmit={save}><p className="learning-binding-note">课程知识点描述学习范围，课时知识点关联学习记录。已发布课程也可在此配置。</p>
       <h3>课程涉及的知识</h3><LearningBindingFields knowledgeOnly disabled={busy} value={{ knowledgePoints }} onChange={(_, value) => setKnowledgePoints(value)} />
       <h3>将知识落实到课时</h3>{lessons.map((lesson, index) => <fieldset key={lesson.id} className="course-lesson-editor"><legend>{index + 1}. {lesson.title}</legend>
         <LearningBindingFields knowledgeOnly disabled={busy} value={lesson} onChange={(_, value) => setLessons((current) => current.map((item) => item.id === lesson.id ? { ...item, knowledgePoints: value } : item))} />

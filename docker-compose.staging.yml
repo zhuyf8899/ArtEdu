@@ -49,6 +49,8 @@ services:
       NODE_ENV: development
       ARTEDU_ENV_LABEL: ${ARTEDU_ENV_LABEL:-staging}
       ARTEDU_VERSION: ${ARTEDU_VERSION:-unversioned}
+      PAGE_CHECK_SERVICE_URL: http://page-check:8080/check
+      PAGE_CHECK_ASSET_HOST: api
       CASE_VIDEO_MAX_MIB: ${CASE_VIDEO_MAX_MIB:-100}
       DATABASE_URL: postgresql://artedu:${ARTEDU_POSTGRES_PASSWORD}@postgres:5432/artedu
       HOST: 0.0.0.0
@@ -89,6 +91,9 @@ services:
       RAG_WEB_FALLBACK_ENABLED: ${RAG_WEB_FALLBACK_ENABLED:-true}
     volumes:
       - artedu_staging_uploads:/data/uploads
+    networks:
+      - default
+      - page-check
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,6 +102,29 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+
+  page-check:
+    image: ${COMPOSE_PROJECT_NAME:-artedu}-api:latest
+    restart: unless-stopped
+    command: ["node", "dist/modules/agent/browser-check-worker.js"]
+    user: "1000:1000"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    mem_limit: 512m
+    environment:
+      HOME: /tmp
+      ISOLATED_PAGE_CHECK_WORKER: "1"
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m,mode=1777
+    networks:
+      - page-check
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   rag-worker:
     build:
@@ -139,3 +167,7 @@ services:
 volumes:
   artedu_staging_postgres:
   artedu_staging_uploads:
+
+networks:
+  page-check:
+    internal: true

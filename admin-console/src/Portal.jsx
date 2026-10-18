@@ -4,10 +4,10 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowClockwise, ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
-  Compass, GraduationCap, GridFour, House, ImageSquare, Lightbulb, LockKey,
+  Compass, GraduationCap, GridFour, House, ImageSquare, Lightbulb,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
-import { createAgentRun, executeAgentRun, executeAgentRunStream, getApiHealth, getPortalHome, getCourses, getWorks, runGenerationJob } from "./services/adminApi.js";
+import { createAgentRun, executeAgentRun, executeAgentRunStream, getAgentRun, getApiHealth, getPortalHome, getCourses, getWorks, runGenerationJob } from "./services/adminApi.js";
 import { AiCreationLauncher } from "./AiCreationConsole.jsx";
 import { AiCreationWorkspace } from "./CreationWorkspace.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
@@ -76,24 +76,23 @@ export function LocalLogin({ onLogin, message = "" }) {
       <p className="eyebrow">// WELCOME</p>
       <h1>登录后进入<br />学习与创作空间。</h1>
       <p>使用平台账号登录，课程进度、学习笔记与创作记录都会跟随账号保存。</p>
-      <div className="test-login__note"><LockKey size={17} weight="bold" /><span>密码不会保存在浏览器；登录会话仅使用 HttpOnly 安全 Cookie。</span></div>
     </section>
     <section className="test-login__accounts">
       <div className="account-panel__heading"><div><p>// SIGN IN</p><h2>账号登录</h2></div></div>
-      {isHostedPreview && <p className="login-error" role="status">当前为界面预览，未连接 API 或测试数据库；账号仅可在本地测试环境使用。</p>}
-      {!isHostedPreview && <div className={`login-service login-service--${serviceStatus}`} role="status"><span>{serviceStatus === "checking" ? <ArrowClockwise className="spin" size={16} /> : serviceStatus === "online" ? <CheckCircle size={16} weight="fill" /> : <X size={16} weight="bold" />}{serviceStatus === "checking" ? "正在检测登录服务" : serviceStatus === "online" ? "登录服务与数据库连接正常" : "登录服务暂不可用"}</span>{serviceStatus === "offline" && <button type="button" onClick={checkService}>重新检测</button>}</div>}
+      {isHostedPreview && <p className="login-error" role="status">预览页面暂不支持登录。</p>}
+      {!isHostedPreview && serviceStatus === "offline" && <div className="login-service login-service--offline" role="status"><span>登录服务暂不可用</span><button type="button" onClick={checkService}>重试连接</button></div>}
       {message && <p role="status">{message}</p>}
       <form className="local-login-form" onSubmit={submit}>
         <label>账号<input autoComplete="username" required maxLength="120" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
         <label>密码<input type="password" autoComplete="current-password" required minLength="1" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         {error && <p className="login-error" role="alert">{error}</p>}
-        <button disabled={submitting || serviceStatus !== "online"}>{submitting ? "正在验证…" : serviceStatus === "checking" ? "正在连接…" : serviceStatus === "offline" ? "服务未连接" : "安全登录"} <ArrowRight size={16} weight="bold" /></button>
+        <button disabled={submitting || serviceStatus !== "online"}>{submitting ? "正在登录…" : serviceStatus === "checking" ? "正在连接…" : serviceStatus === "offline" ? "服务未连接" : "登录"} <ArrowRight size={16} weight="bold" /></button>
       </form>
     </section>
   </main></div>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", communityWorkId = "", curriculumTopic = "", learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", communityWorkId = "", curriculumTopic = "", learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationHistoryOpen = false, creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -142,7 +141,6 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     const completed = await executeAgentRun(run.id, {
       mode: "server",
       providerId: modelId,
-      systemPrompt: "你只负责为艺术教育对话拟定后续提问。输出恰好 3 个自然、具体、互不重复的问题，格式为 JSON 字符串数组。不要调用工具，不要回答问题。",
       model: { maxTokens: 240, toolChoice: "auto" },
     }, { signal });
     if (completed.status !== "succeeded") throw new Error("建议问题生成未完成");
@@ -150,7 +148,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   };
   // signal 由创作页下发：用户点「暂停输出」时中断在途请求。
   // onDelta 同样由创作页下发：正文增量实时回到气泡里，实现逐字输出。
-  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal, onDelta) => {
+  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal, onDelta, onProgress) => {
+    let activeRunId=null;
     try {
       if (portalLoading || !isLive) throw new Error("平台服务尚未就绪，请等待加载完成后重试");
       const searchEnabled = parameters.searchEnabled === true;
@@ -158,7 +157,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       const cleanPrompt = prompt;
       // 任务分流必须是白名单：普通问答只能走文本 Agent，绝不允许因为未知类型
       // 或缺失映射而默认回退到 ui_design / 图片生成通道。
-      const agentScenarios = { chat: "chat", webpage: "webpage_generation" };
+      const agentScenarios = { chat: "chat", webpage: "webpage_generation", document:"document_generation", image:"ui_design", pattern:"pattern_generation" };
       const offlineScenarios = { chat: "chat", image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation", document: "document_generation" };
       const artifactJobTypes = new Set(["image", "pattern", "document"]);
       const agentScenario = agentScenarios[jobType];
@@ -166,54 +165,47 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       if (data.creation.enabled && agentScenario) {
         const scenario = agentScenario;
         const run = await createAgentRun({ scenario, prompt: cleanPrompt, parameters: { ...parameters, source: "portal-home" } }, { signal });
+        activeRunId=run.id;
+        onProgress?.({id:'run',kind:'run',name:'agent.execute',status:'running',runId:run.id,at:new Date().toISOString()});
         const completed = await executeAgentRunStream(run.id, {
           mode: "server",
-          providerId: modelConfigId,
+          providerId: data.creation.models.find(m=>m.id===modelConfigId&&m.capabilities?.includes('chat'))?.id ?? data.creation.models.find(m=>m.capabilities?.includes('chat'))?.id,
           context,
           searchEnabled,
-          systemPrompt: `${searchEnabled
-            ? "仅当用户明确要求实时互联网资料、官网链接或事实核验时调用 search_web；调用后只能依据实际来源回答并列出链接。"
-            : "联网搜索关闭：不要调用或提及 search_web。"}\n平台课程、案例与工作流的发现和读取工具始终可用，但只有用户明确询问平台内容、要求列出内容或打开站内内容时才调用。未提供 ID 时先用 list_published_content 或 search_platform。对“打开”请求返回站内相对路径 Markdown 链接，不要谈浏览器、域名、路由字段或能力限制。直接完成用户的任务，不要复述平台规则、工具名或能力说明。成果草稿可直接保存；启动工作流才需要用户明确确认。`,
-          // 不要用 tool_choice 强制指定函数：当前文本模型（deepseek-flash）运行在
-          // 思考模式下，DeepSeek 会直接拒绝并返回
-          // 400 "Thinking mode does not support this tool_choice"。
-          // 首轮调用 search_web 由上面的 systemPrompt 明确要求，auto 下模型会遵守；
-          // 强制反而会让开启搜索的每一轮对话都失败。
+          // 工具与交付策略由服务端组合，前端只传本轮意图和搜索偏好。
           model: { toolChoice: "auto" },
-        }, { signal, onDelta });
+        }, { signal, onDelta, onProgress });
+        if (!completed.delivery && completed.status !== 'succeeded') throw new Error(completed.failureReason || 'Agent 执行未完成');
         const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
-        showToast(searchEnabled ? "已完成带搜索能力的 Agent 创作" : "已完成 Agent 创作", "success");
         return {
           id: run.id,
           content: message?.content ?? "未生成创作建议。",
           sources: searchSourcesFromRun(completed.toolCalls),
+          status:completed.delivery?.status??completed.status,
+          delivery:completed.delivery,
         };
       }
-      if (!data.creation.enabled) {
-        const scenario = offlineScenarios[jobType];
-        if (!scenario) throw new Error("不支持的创作类型，已阻止执行");
-        const run = await createAgentRun({ scenario, prompt: cleanPrompt, parameters }, { signal });
-        const completed = await executeAgentRun(run.id, { mode: data.creation.enabled ? "server" : "mock", providerId: modelConfigId, context }, { signal });
-        const lastMessage = [...(completed.messages ?? [])].reverse().find((message) => message.role === "agent");
-        showToast("本地演示已完成：创作说明已写入审计记录。", "success");
-        return { id: run.id, local: true, content: lastMessage?.content ?? "本地创作说明已生成。" };
-      }
+      if (!data.creation.enabled) throw new Error('平台模型服务暂不可用，请稍后重试');
       if (!artifactJobTypes.has(jobType)) throw new Error("不支持的创作类型，已阻止执行");
       // 只挑真正声明支持该能力的模型；图像/图案留给服务端的内部图像通道（不带 modelConfigId）。
       const selectedModelId = modelConfigId ?? data.creation.models.find((model) => model.capabilities?.includes(jobType))?.id;
+      onProgress?.({id:'artifact',kind:'tool',name:`generation.${jobType}`,status:'running',at:new Date().toISOString()});
       const result = await runGenerationJob({ jobType, prompt: cleanPrompt, context, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } }, { signal });
-      showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
+      onProgress?.({id:'artifact',kind:'tool',name:`generation.${jobType}`,status:'succeeded',at:new Date().toISOString()});
       void loadPortalData();
       // 产物类结果（kind=asset）的 content 是存储键，不能当正文显示。
         return { ...result.job, content: resultContent(result), model: result.output.metadata?.model, localFile: result.artifact ?? null };
     } catch (error) {
       // 主动暂停不是失败：不弹错误提示，交给创作页显示「已暂停」并回填输入。
-      if (error?.name === "AbortError") throw error;
+      if (error?.name === "AbortError") {
+        if(activeRunId)try{error.checkpoint=await getAgentRun(activeRunId,{signal:AbortSignal.timeout(2500)});}catch{}
+        throw error;
+      }
       showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。", "error");
       throw error;
     }
   };
-  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal, onDelta) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal, onDelta);
+  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal, onDelta, onProgress) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal, onDelta, onProgress);
 
   const pageTitle = { home: "学习与创作总览", courses: "AI讲堂", studio: "设计工具", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning", creation: "/create" }[nextSection] ?? "/");
@@ -281,7 +273,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
         {section === "search" && <SearchResults variant={morph ? 'morph' : 'classic'} initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
 
-        {section === "creation" && <AiCreationWorkspace key={creationId || (creationStartNew ? "new" : "latest")} account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} onSuggest={suggestFollowups} creation={data.creation} onNotice={showToast} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
+        {section === "creation" && <AiCreationWorkspace account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} onSuggest={suggestFollowups} creation={data.creation} onNotice={showToast} showHistory={creationHistoryOpen} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
       </Suspense>
       </div>
     </main>

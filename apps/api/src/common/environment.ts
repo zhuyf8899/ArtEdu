@@ -21,7 +21,6 @@ const environmentSchema = z.object({
   ENABLE_FILE_UPLOADS: z.enum(["true", "false"]).default("false"),
   UPLOAD_ROOT: z.string().trim().min(1).optional(),
   TEMPORARY_UPLOAD_QUOTA_MB: z.coerce.number().int().min(10).max(2048).default(200),
-  TEMPORARY_UPLOAD_RETENTION_HOURS: z.coerce.number().int().min(1).max(720).default(72),
   MODEL_EXECUTION_ENABLED: z.enum(["true", "false"]).default("false"),
   MODEL_PROVIDERS_JSON: z.string().optional(),
   RAG_ENABLED: z.enum(["true", "false"]).default("false"),
@@ -48,7 +47,6 @@ export interface Environment {
   fileUploadsEnabled: boolean;
   uploadRoot: string;
   temporaryUploadQuotaBytes: number;
-  temporaryUploadRetentionHours: number;
   modelExecutionEnabled: boolean;
   modelProvidersJson?: string;
   ragEnabled: boolean;
@@ -113,7 +111,6 @@ export function getEnvironment(): Environment {
     fileUploadsEnabled: parsed.ENABLE_FILE_UPLOADS === "true",
     uploadRoot,
     temporaryUploadQuotaBytes: parsed.TEMPORARY_UPLOAD_QUOTA_MB * 1024 * 1024,
-    temporaryUploadRetentionHours: parsed.TEMPORARY_UPLOAD_RETENTION_HOURS,
     modelExecutionEnabled: parsed.MODEL_EXECUTION_ENABLED === "true",
     modelProvidersJson: parsed.MODEL_PROVIDERS_JSON,
     ragEnabled: parsed.RAG_ENABLED === "true",

@@ -16,7 +16,7 @@ export function CurriculumComposer({courses=[],topic='',loading,error,onRetry,on
     if(!result?.steps.length||busy.current||saved)return;
     busy.current=true;setSaving(true);const savingTopic=topic;
     try {
-      await createLearningNote({title:`${result.title} · 学习路径`,content:[`学习目标：${topic}`,'依据当前课程目录编排，仅为学习建议，不代表已选课或已完成。',...result.steps.map(({course,reason},index)=>`${index+1}. ${course.title}（${courseReadiness(course)||'已开放'}）\n${reason}\n/learning?course=${encodeURIComponent(course.id)}`)].join('\n\n')});
+      await createLearningNote({title:`${result.title} · 学习路径`,content:[`学习目标：${topic}`,'依据当前课程目录编排的学习建议。',...result.steps.map(({course,reason},index)=>`${index+1}. ${course.title}（${courseReadiness(course)||'已开放'}）\n${reason}\n/learning?course=${encodeURIComponent(course.id)}`)].join('\n\n')});
       if(currentTopic.current===savingTopic)setSaved(true);
       onNotice('学习路径已保存到「我的空间 → 学习笔记」。');
     } catch(e){onNotice(e.message,'error');}

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { workflowLearningSchema } from "../../common/learning-bindings";
 import { caseStorySchema } from "./case-story";
+import { additionalPlatformNodeTypes } from './workflow-text-nodes';
 
 export const catalogQuerySchema = z.object({
   query: z.string().trim().max(100).optional(),
@@ -48,15 +49,19 @@ const graphPointSchema = z.object({
 const workflowNodeSchema = z.object({
   id: z.string().trim().min(1).max(80),
   // 节点名是平台稳定的执行契约；执行器可按能力忽略未支持节点，但不得把未知节点当作模型调用。
-  type: z.enum(["comfy", "input", "prompt", "negative_prompt", "skill", "model", "text_generate", "preview", "note", "load_checkpoint", "text_encode", "empty_latent", "ksampler", "vae_decode", "load_image", "save_image", "lora", "controlnet", "upscale"]),
+  type: z.enum(["comfy", "input", "prompt", "negative_prompt", "prompt_merge", "skill", "model", "text_generate", "preview", "note", "load_checkpoint", "text_encode", "empty_latent", "ksampler", "vae_decode", "load_image", "save_image", "lora", "controlnet", "upscale", ...additionalPlatformNodeTypes]),
   position: graphPointSchema,
   data: z.object({
     label: z.string().trim().min(1).max(160),
     description: z.string().trim().max(1200).default(""),
-    value: z.string().trim().max(10000).optional(),
+    value: z.string().max(10000).optional(),
     exampleInput: z.string().trim().max(4000).default(""),
     exampleOutput: z.string().trim().max(4000).default(""),
     parameterDescription: z.string().trim().max(2000).default(""),
+    separator: z.string().max(100).optional(),
+    find: z.string().max(1000).optional(),
+    replacement: z.string().max(10000).optional(),
+    selection: z.enum(['a', 'b']).optional(),
   }).passthrough(),
 });
 
@@ -94,11 +99,46 @@ export const workflowDefinitionSchema = z.object({
     nodeIds.add(node.id);
   }
   const edgeIds = new Set<string>();
+  const newInputs = new Set<string>();
   for (const edge of definition.edges) {
     if (edgeIds.has(edge.id)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "连线 ID 不能重复" });
     edgeIds.add(edge.id);
     if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "连线必须连接到已有节点" });
     if (edge.source === edge.target) context.addIssue({ code: z.ZodIssueCode.custom, path: ["edges"], message: "节点不能连接到自身" });
+    if (definition.nodes.find(node => node.id === edge.target)?.type === 'prompt_merge') {
+      const sourceType = definition.nodes.find(node => node.id === edge.source)?.type;
+      if ((edge.targetHandle === 'positive' && ['negative_prompt', 'text_to_negative'].includes(sourceType ?? '')) || (edge.targetHandle === 'negative' && ['input', 'prompt', 'skill', 'text_generate', 'text_to_prompt'].includes(sourceType ?? ''))) context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: '正向与负向提示词必须连接到合并节点对应的端口' });
+    }
+    const target = definition.nodes.find(node => node.id === edge.target);
+    if (target && (additionalPlatformNodeTypes as readonly string[]).includes(target.type)) {
+      const ports = target.type === 'text_constant' ? [] : ['text_join', 'result_select'].includes(target.type) ? ['a', 'b'] : ['input'];
+      const port = edge.targetHandle ?? 'input';
+      const key = JSON.stringify([edge.target, port]);
+      if (!ports.includes(port) || newInputs.has(key)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: '节点输入端口不存在或重复连接' });
+      newInputs.add(key);
+    }
+    const source = definition.nodes.find(node => node.id === edge.source);
+    if (source && (additionalPlatformNodeTypes as readonly string[]).includes(source.type) && edge.sourceHandle && edge.sourceHandle !== 'output') context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: '节点输出端口不存在' });
+  }
+  if (definition.engine === 'comfyui') {
+    for (const node of definition.nodes) {
+      if (typeof node.data.classType !== 'string' || !node.data.classType || !node.data.widgets || typeof node.data.widgets !== 'object' || Array.isArray(node.data.widgets)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['nodes'], message: 'ComfyUI 节点参数无效' });
+    }
+    const connected = new Set<string>();
+    for (const edge of definition.edges) {
+      const key = JSON.stringify([edge.target, edge.targetHandle]);
+      if (!/^\d+$/.test(edge.sourceHandle ?? '') || !edge.targetHandle || connected.has(key)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: 'ComfyUI 连线端口无效或输入重复连接' });
+      connected.add(key);
+    }
+    const active = new Set<string>(), visited = new Set<string>();
+    const visit = (id: string): boolean => {
+      if (active.has(id)) return true;
+      if (visited.has(id)) return false;
+      active.add(id);
+      if (definition.edges.filter(e => e.target === id).some(e => visit(e.source))) return true;
+      active.delete(id); visited.add(id); return false;
+    };
+    if ([...nodeIds].some(visit)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: 'ComfyUI 工作流不能包含循环连接' });
   }
   const groupIds = new Set<string>();
   for (const group of definition.groups) {
@@ -133,6 +173,7 @@ export const workflowVersionInputSchema = z.object({
 });
 
 export const workflowRunInputSchema = z.object({
+  versionId: z.string().trim().min(1).max(160).optional(),
   context: z.record(z.unknown()).default({}),
 });
 

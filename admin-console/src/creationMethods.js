@@ -1,6 +1,7 @@
 import {
   Browser, ChatCircleDots, CirclesThreePlus, Code, FileDoc, FilePpt,
 } from "@phosphor-icons/react";
+import {planTask} from './taskIntent.js';
 
 // 创作能力定义由入口编排器与对话页共用，避免两处按钮列表出现漂移。
 export const CREATION_METHODS = [
@@ -90,19 +91,41 @@ export function titleFromPrompt(prompt) {
   return firstLine.length > 22 ? `${firstLine.slice(0, 22)}…` : firstLine;
 }
 
-// 模式只影响建议语气；真正执行什么能力，由用户本轮话语里的显式意图决定。
+// 模式作为显式信号参与路由：对话模式按话语意图走；图片模式除非是纯提问或点名了别的文件类型，否则就出图。
 export function resolveCreationOperation(prompt, advisoryMethodId = DEFAULT_METHOD_ID) {
-  const text = String(prompt ?? "").trim().toLowerCase();
-  const wantsDocument = /\b(word|docx|ppt|pptx|pdf)\b|(?:生成|输出|制作|创建|导出|写|做|整理).*(?:文档|教案|课件|讲义|方案|汇报)/.test(text);
-  if (wantsDocument) {
-    if (/\b(ppt|pptx)\b|课件|演示/.test(text)) return creationMethod("slides");
-    if (/\bpdf\b|打印|讲义/.test(text)) return creationMethod("pdf");
-    return creationMethod("word");
+  const text = String(prompt || '').trim();
+  const advisory = creationMethod(advisoryMethodId);
+  // 图片模式（UI 创作 / 图案生成）是用户显式选的，意图就是「要一张图」。
+  // 以前这里完全忽略 advisoryMethodId，只要句子里没出现"图片/海报/纹样"就退回文字回答，
+  // 于是"图片模式 + 生成一个3D博丽神社的前端界面"最后去写 HTML 了——一个字都没提要图。
+  // 现在：显式图片模式下，只要不是纯提问、且没有点名别的文件类型，就按图片交付。
+  if (['ui', 'pattern'].includes(advisory.id)) {
+    const conversational = /^(?:请|帮我)?(?:讲讲|讲一下|解释|讲解|说明|分析|评价|点评|比较|梳理|如何|怎么|为什么|什么是|列)/.test(text);
+    const otherDeliverable = /(word|docx|pptx?|pdf|网页|网站|html|svg|代码|教案|课件)/i.test(text);
+    if (text && !conversational && !otherDeliverable) return advisory;
   }
-  if (/(生成|出|画|绘制|创建|制作|设计).*(网页|页面|网站|html|前端|交互原型|响应式|组件)|vibe coding/.test(text)) return creationMethod("vibe");
-  if (/(生成|出|画|绘制|创建|制作|设计).*(纹样|图案|花纹|平铺|pattern|材质)/.test(text)) return creationMethod("pattern");
-  if (/(生成|出|画|绘制|创建|制作|设计).*(图片|图像|插画|海报|图标|icon|视觉草图|界面|ui)|出图|画一张|来一张/.test(text)) return creationMethod("ui");
-  return creationMethod("chat");
+  const plan=planTask({prompt});
+  if(plan.deliverables.length!==1)return creationMethod('chat');
+  const item=plan.deliverables[0];
+  if(item.kind==='webpage')return creationMethod('vibe');
+  if(item.kind==='document')return creationMethod(item.format==='pptx'?'slides':item.format==='pdf'?'pdf':'word');
+  if(item.kind==='image')return creationMethod(/纹样|图案|pattern/i.test(prompt)?'pattern':'ui');
+  return creationMethod('chat');
+}
+
+/**
+ * 把"要出图"这件事明确写进发给模型的提示词。
+ * 服务端会按提示词重新判定交付类型，提示词里不含生图意图时它只会回一段文字；
+ * 图片模式下补一句交付要求，前后端才在同一条道上。
+ */
+export function promptForOperation(content, operation) {
+  const hint = {
+    image: '请直接生成图片（调用 generate_image 工具），不要只给文字方案或代码。',
+    pattern: '请直接生成图案图片（调用 generate_image 工具），不要只给文字描述。',
+  }[operation?.jobType];
+  if (!hint) return content;
+  if (/(生成图片|生图|出图|generate_image)/i.test(content)) return content;
+  return `${content}\n\n【交付要求】${hint}`;
 }
 
 // 组装一次生成请求：实际操作、模型、搜索开关决定 jobType 与模型参数。

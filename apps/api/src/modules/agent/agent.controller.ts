@@ -15,7 +15,7 @@ export class AgentController {
   @Get("workspace-file")
   async openWorkspaceFile(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Query("path") filePath: string) {
     const asset = await this.workspace.open(await this.auth.getActor(request), filePath);
-    reply.header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff");
+    reply.header("Cache-Control", "private, no-store").header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff");
     return asset.stream;
   }
 
@@ -27,7 +27,7 @@ export class AgentController {
   async previewWorkspaceFile(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     const filePath = String((request.params as Record<string, string>)["*"] ?? "");
     const asset = await this.workspace.open(await this.auth.getActor(request), filePath);
-    reply.header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff").header("Cache-Control", "private, no-store");
+    reply.header("Cache-Control", "private, no-store").header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff").header("Cache-Control", "private, no-store");
     // HTML 使用 allow-scripts + allow-same-origin 以加载受认证资源，同源存储并未隔离。
     // connect-src 阻止 fetch/WebSocket，form-action 阻止表单；获准的资源请求仍可携带会话。
     // 显式主机来源允许同主机任意端口资源；完整策略与限制见 workspace-preview-csp。
@@ -91,6 +91,7 @@ export class AgentController {
       const run = await this.harness.execute(actor, runId, input, {
         signal: controller.signal,
         onDelta: (text) => send("delta", { text }),
+        onProgress: (event) => send("progress", event),
       });
       send("done", { run });
     } catch (error) {

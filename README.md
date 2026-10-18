@@ -4,6 +4,8 @@
 
 ## 当前已实现
 
+2026-10-16：新增 MORPH LAB v17 接入版入口 `http://localhost:4173/morph/`，复用现有课程、案例、学习记录与 AI 接口；新账号资料和草稿需迁移 `0037`。接入范围与验证见 [MORPH UI 前后端接入](docs/morph-ui-integration.md)。
+
 - PostgreSQL 数据模型、版本化迁移、演示种子数据和 Docker Compose。
 - NestJS + Fastify API，包含开发身份回退、角色权限、输入校验、事务和审计记录。
 - 首页聚合、生成任务排队与查询基础接口。

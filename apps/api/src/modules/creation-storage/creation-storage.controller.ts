@@ -16,7 +16,7 @@ export class CreationStorageController {
   @Delete(":uploadId") async remove(@Req() request: FastifyRequest, @Param("uploadId") uploadId: string) { return this.storage.remove(await this.auth.getActor(request), uploadId); }
   @Get(":uploadId/download") async download(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("uploadId") uploadId: string) {
     const asset = await this.storage.open(await this.auth.getActor(request), uploadId);
-    reply.header("Content-Type", asset.mimeType).header("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff");
+    reply.header("Cache-Control", "private, no-store").header("Content-Type", asset.mimeType).header("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff");
     return asset.stream;
   }
 }

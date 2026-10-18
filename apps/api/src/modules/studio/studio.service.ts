@@ -1,3 +1,5 @@
+import {cacheExpired} from '../cloud-cache/cache-policy';
+import { assertTextNodeParameters, textProcessingTypes } from './workflow-text-nodes';
 import { ComfyService } from './comfy.service';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
@@ -111,7 +113,12 @@ export class StudioService {
       values.push(query.category);
       where.push(`w.category = $${values.length}`);
     }
-    values.push(query.pageSize, (query.page - 1) * query.pageSize);
+    // 总条数必须在加 LIMIT/OFFSET 之前算：目录要能告诉用户「共 N 条」，并据此决定还显示不显示「加载更多」。
+    // 这里不能再带 LATERAL 取版本，只数工作流行，避免同一份定义被重复展开。
+    const counted = await this.database.query(
+      `SELECT COUNT(*)::int AS total FROM workflows w WHERE ${where.join(" AND ")}`, values);
+    const total = Number(counted.rows[0]?.total ?? 0);
+    const pageValues = [...values, query.pageSize, (query.page - 1) * query.pageSize];
     const result = await this.database.query(`
       SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url, w.status,
         latest.id AS version_id, latest.version_number, latest.definition_json,
@@ -125,9 +132,9 @@ export class StudioService {
       ) latest ON TRUE
       WHERE ${where.join(" AND ")}
       ORDER BY w.is_featured DESC, w.featured_rank NULLS LAST, w.updated_at DESC
-      LIMIT $${values.length - 1} OFFSET $${values.length}
-    `, values);
-    return { items: result.rows.map((row) => this.mapWorkflow(row)), page: query.page, pageSize: query.pageSize };
+      LIMIT $${pageValues.length - 1} OFFSET $${pageValues.length}
+    `, pageValues);
+    return { items: result.rows.map((row) => this.mapWorkflow(row)), page: query.page, pageSize: query.pageSize, total };
   }
 
   async getWorkflow(workflowId: string, actor: Actor | null = null) {
@@ -172,7 +179,11 @@ export class StudioService {
       values.push(`%${query.query}%`);
       where.push(`(w.name ILIKE $${values.length} OR COALESCE(w.description, '') ILIKE $${values.length})`);
     }
-    values.push(query.pageSize, (query.page - 1) * query.pageSize);
+    // 管理页同样要能翻页：先数总数，再取当前页；否则工作流一多，后面的记录在列表里就再也点不到。
+    const counted = await this.database.query(
+      `SELECT COUNT(*)::int AS total FROM workflows w WHERE ${where.join(" AND ")}`, values);
+    const total = Number(counted.rows[0]?.total ?? 0);
+    const pageValues = [...values, query.pageSize, (query.page - 1) * query.pageSize];
     const result = await this.database.query(`
       SELECT w.id,w.name,w.description,w.category,w.entry_type,w.entry_url,w.status,w.created_by,
         w.created_at,w.updated_at,creator.display_name AS creator_name,
@@ -187,9 +198,9 @@ export class StudioService {
       ) latest ON TRUE
       WHERE ${where.join(" AND ")}
       ORDER BY w.updated_at DESC
-      LIMIT $${values.length - 1} OFFSET $${values.length}
-    `, values);
-    return { items: result.rows.map((row) => this.mapManagedWorkflow(row)), page: query.page, pageSize: query.pageSize };
+      LIMIT $${pageValues.length - 1} OFFSET $${pageValues.length}
+    `, pageValues);
+    return { items: result.rows.map((row) => this.mapManagedWorkflow(row)), page: query.page, pageSize: query.pageSize, total };
   }
 
   async getManagedWorkflow(actor: Actor, workflowId: string) {
@@ -239,11 +250,16 @@ export class StudioService {
     if (!actor.roles.includes("admin") && workflow.rows[0].created_by !== actor.id) throw new ForbiddenException("只能编辑自己创建的工作流");
     if (input.publish) this.auth.requireAnyRole(actor, WORKFLOW_PUBLISH_ROLES);
     const definition = input.definition ?? this.legacyStepsToDefinition(input.steps ?? []);
-    if (definition.engine === 'comfyui') {
+    if (definition.engine === 'comfyui' && input.publish) {
       if (!this.comfy) throw new BadRequestException('缺少原生工作流执行服务');
       definition.comfyPrompt = await this.comfy.validateGraph(actor, definition);
+    } else if (definition.engine === 'comfyui') {
+      // A draft may have missing models or disconnected inputs. Never retain a
+      // client-supplied executable prompt; publication and execution recompile.
+      delete definition.comfyPrompt;
     } else if (input.publish) this.assertExecutableDefinition(definition);
     const version = await this.database.transaction(async (client) => {
+      await client.query('SELECT id FROM workflows WHERE id=$1 FOR UPDATE', [workflowId]);
       const next = await client.query<{ number: number }>("SELECT COALESCE(MAX(version_number), 0)::int + 1 AS number FROM workflow_versions WHERE workflow_id = $1", [workflowId]);
       const id = `workflow-version-${randomUUID()}`;
       await client.query(`
@@ -259,7 +275,7 @@ export class StudioService {
   async startWorkflow(actor: Actor, workflowId: string, input: WorkflowRunInput) {
     // 试运行与发布解耦：作者本人（以及教师/运营/管理员）可以直接跑最新版本，
     // 包括还没发布的草稿；其它人仍然只能跑已发布版本。
-    const canTrialDraft = WORKFLOW_PUBLISH_ROLES.some((role) => actor.roles.includes(role));
+    const canTrialDraft = Boolean(input.versionId) && WORKFLOW_PUBLISH_ROLES.some((role) => actor.roles.includes(role));
     const result = await this.database.query(`
       SELECT w.id,w.name,w.description,w.category,w.entry_type,w.entry_url,w.status,w.created_by,
         latest.id AS version_id,latest.version_number,latest.definition_json,latest.prompt_template,latest.published_at,
@@ -268,10 +284,11 @@ export class StudioService {
       LEFT JOIN LATERAL (
         SELECT * FROM workflow_versions
         WHERE workflow_id=w.id AND (published_at IS NOT NULL OR w.created_by=$2 OR $3::boolean)
+          AND ($4::text IS NULL OR id=$4)
         ORDER BY version_number DESC LIMIT 1
       ) latest ON TRUE
       WHERE w.id=$1 AND (w.status='published' OR w.created_by=$2 OR $3::boolean) AND w.status<>'archived'
-    `, [workflowId, actor.id, canTrialDraft]);
+    `, [workflowId, actor.id, canTrialDraft, input.versionId ?? null]);
     if (!result.rows[0]) throw new NotFoundException("工作流不存在或尚未发布");
     const workflow = this.mapWorkflow(result.rows[0]);
     if (!workflow.versionId) throw new ConflictException("工作流还没有可运行版本");
@@ -315,22 +332,16 @@ export class StudioService {
 
   async updateRun(actor: Actor, runId: string, input: WorkflowRunProgressInput) {
     const current = await this.getRun(actor, runId) as Record<string, any>;
+    if(current.startedAt&&cacheExpired(current.startedAt))throw new ConflictException('临时执行上下文已过期（20分钟），请重新发起任务');
     if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");
     if (input.stepIndex !== current.currentStep) throw new ConflictException("只能处理当前步骤");
     const currentNode = current.nodes.find((node: Record<string, any>) => node.id === current.steps[current.currentStep]?.id);
     if (input.action !== "note" && currentNode?.type !== "note") throw new ConflictException("可执行节点必须由服务端实际执行，不能手动跳过");
-    const advances = input.action === "complete" || input.action === "skip";
-    const nextStep = advances ? Math.min(current.currentStep + 1, current.totalSteps) : current.currentStep;
-    const completed = nextStep >= current.totalSteps && advances;
+    if (input.action !== 'note') return this.executeRun(actor, runId, {});
     await this.database.transaction(async (client) => {
       await client.query(`
         INSERT INTO workflow_run_events (id,run_id,step_index,event_type,note) VALUES ($1,$2,$3,$4,$5)
       `, [`workflow-event-${randomUUID()}`, runId, input.stepIndex, input.action, input.note ?? null]);
-      await client.query(`
-        UPDATE workflow_runs SET current_step=$2,status=$3,
-          completed_at=CASE WHEN $3='completed' THEN CURRENT_TIMESTAMP ELSE NULL END,updated_at=CURRENT_TIMESTAMP
-        WHERE id=$1 AND user_id=$4
-      `, [runId, nextStep, completed ? "completed" : "in_progress", actor.id]);
     });
     return this.getRun(actor, runId);
   }
@@ -338,30 +349,46 @@ export class StudioService {
   /** 按连接关系传递上游状态；生成节点通过平台统一模型服务计费和归档。 */
   async executeRun(actor: Actor, runId: string, input: WorkflowRunExecuteInput) {
     const current = await this.getRun(actor, runId) as Record<string, any>;
+    if(current.startedAt&&cacheExpired(current.startedAt))throw new ConflictException('临时执行上下文已过期（20分钟），请重新发起任务');
     if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");
     if (current.definition.engine === 'comfyui') throw new ConflictException('原生工作流由 GPU Worker 执行，请查看队列状态');
     const step = current.steps[current.currentStep];
     const node = current.nodes.find((item: Record<string, any>) => item.id === step?.id);
     if (!node) throw new ConflictException("当前节点不存在，无法执行");
+    const executionToken = randomUUID();
     const claimed = await this.database.query(`UPDATE workflow_runs
-      SET context_json=jsonb_set(context_json, '{executing}', jsonb_build_object('step', current_step, 'at', CURRENT_TIMESTAMP), true)
+      SET context_json=jsonb_set(context_json, '{executing}', jsonb_build_object('step', current_step, 'at', CURRENT_TIMESTAMP, 'token', $4::text), true)
       WHERE id=$1 AND user_id=$2 AND status='in_progress' AND current_step=$3
         AND (context_json->'executing' IS NULL OR (context_json->'executing'->>'at')::timestamptz < CURRENT_TIMESTAMP - INTERVAL '10 minutes')
-      RETURNING id`, [runId, actor.id, current.currentStep]);
+      RETURNING id`, [runId, actor.id, current.currentStep, executionToken]);
     if (!claimed.rowCount) throw new ConflictException("该节点正在执行，或执行进度已更新");
     try {
     const saved = this.workflowContext(current.context);
-    const parents = current.edges.filter((edge: Record<string, any>) => edge.target === node.id).map((edge: Record<string, any>) => edge.source);
+    delete (saved as any).executing;
+    const incoming = current.edges.filter((edge: Record<string, any>) => edge.target === node.id);
+    let parents = incoming.map((edge: Record<string, any>) => edge.source);
+    if (node.type === 'result_select') {
+      const chosen = incoming.filter((edge: Record<string, any>) => edge.targetHandle === (node.data?.selection ?? 'a'));
+      if (chosen.length !== 1) throw new BadRequestException('结果选择需要在所选端口连接一路上游结果');
+      parents = [chosen[0].source];
+    }
+    if (node.type === 'text_join') parents = ['a', 'b'].map(port => {
+      const matches = incoming.filter((edge: Record<string, any>) => edge.targetHandle === port);
+      if (matches.length !== 1) throw new BadRequestException('文本拼接的 A、B 端口各需要连接一路文字');
+      return matches[0].source;
+    });
     // 起跑时约定的需求为空时要留空（undefined），不能写成空字符串：
     // 空字符串会让输入节点判空失败，把「节点里已经配好默认值」的草稿试运行挡在门外。
+    const receivesInitialPrompt = node.type === 'input' || (!current.nodes.some((item: Record<string, any>) => item.type === 'input') && ['prompt', 'skill'].includes(node.type));
     const context = parents.length
-      ? this.mergeNodeStates(saved, parents)
-      : this.workflowContext({ prompt: saved.initialPrompt || undefined, size: saved.initialSize });
+      ? this.mergeNodeStates(saved, parents, node.type === 'text_join')
+      : this.workflowContext({ prompt: receivesInitialPrompt ? saved.initialPrompt || undefined : undefined, size: saved.initialSize });
+    context.inputNodeIds = parents;
     if (input.prompt && node.type !== "input") throw new BadRequestException("只可在输入节点填写创作需求");
     if (input.negativePrompt !== undefined && node.type !== "negative_prompt") throw new BadRequestException("只可在负向提示词节点填写排除内容");
     if (input.referenceFileId && node.type !== "load_image") throw new BadRequestException("只可在参考素材节点上传图片");
     if (input.prompt) context.prompt = input.prompt;
-    if (input.negativePrompt !== undefined) context.negativePrompt = input.negativePrompt;
+    if (input.negativePrompt !== undefined) { context.negativePrompt = input.negativePrompt; context.negativePromptParts = { [node.id]: input.negativePrompt }; }
     if (input.referenceFileId) context.referenceFileId = input.referenceFileId;
     const output = await this.executeNode(actor, node, context);
     saved.nodeResults[node.id] = output;
@@ -370,18 +397,20 @@ export class StudioService {
     const nextStep = Math.min(current.currentStep + 1, current.totalSteps);
     const completed = nextStep >= current.totalSteps;
     await this.database.transaction(async (client) => {
+      const persisted = await client.query(`UPDATE workflow_runs SET context_json=$2::jsonb,current_step=$3,status=$4,
+        completed_at=CASE WHEN $4='completed' THEN CURRENT_TIMESTAMP ELSE NULL END,updated_at=CURRENT_TIMESTAMP
+        WHERE id=$1 AND user_id=$5 AND status='in_progress' AND current_step=$6 AND context_json->'executing'->>'token'=$7`,
+        [runId, JSON.stringify(saved), nextStep, completed ? "completed" : "in_progress", actor.id, current.currentStep, executionToken],
+      );
+      if (!persisted.rowCount) throw new ConflictException('执行记录已过期或被其他执行更新，请重新读取任务');
       await client.query(
         "INSERT INTO workflow_run_events (id,run_id,step_index,event_type,note) VALUES ($1,$2,$3,'execute',$4)",
         [`workflow-event-${randomUUID()}`, runId, current.currentStep, this.executionNote(node, output)],
       );
-      await client.query(`UPDATE workflow_runs SET context_json=$2::jsonb,current_step=$3,status=$4,
-        completed_at=CASE WHEN $4='completed' THEN CURRENT_TIMESTAMP ELSE NULL END,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND user_id=$5`,
-        [runId, JSON.stringify(saved), nextStep, completed ? "completed" : "in_progress", actor.id],
-      );
     });
     return this.getRun(actor, runId);
     } catch (error) {
-      await this.database.query("UPDATE workflow_runs SET context_json=context_json-'executing' WHERE id=$1 AND user_id=$2 AND current_step=$3", [runId, actor.id, current.currentStep]);
+      await this.database.query("UPDATE workflow_runs SET context_json=context_json-'executing' WHERE id=$1 AND user_id=$2 AND current_step=$3 AND context_json->'executing'->>'token'=$4", [runId, actor.id, current.currentStep, executionToken]);
       throw error;
     }
   }
@@ -391,17 +420,41 @@ export class StudioService {
     const unsupported = definition.nodes.find((node) => ["lora", "controlnet", "upscale", "text_encode", "load_checkpoint", "vae_decode"].includes(node.type));
     if (unsupported) throw new BadRequestException(`“${unsupported.data?.label ?? unsupported.type}”尚无真实执行服务，不能发布`);
     if (definition.nodes.every((node) => node.type === "note")) return;
-    const inputIds = definition.nodes.filter((node) => node.type === "input").map((node) => node.id);
-    if (!inputIds.length) throw new BadRequestException("可执行工作流需要创作输入节点");
-    if (!definition.nodes.some((node) => node.type === "preview" || node.type === "save_image")) throw new BadRequestException("可执行工作流需要成果预览或保存节点");
-    const reached = new Set(inputIds);
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const edge of definition.edges) if (reached.has(edge.source) && !reached.has(edge.target)) { reached.add(edge.target); changed = true; }
+    if (!definition.nodes.some((node) => ['preview', 'save_image', 'text_preview'].includes(node.type))) throw new BadRequestException("可执行工作流需要成果预览或保存节点");
+    const available = new Map<string, Set<string>>();
+    for (const step of this.definitionToSteps(definition)) {
+      const node = definition.nodes.find(n => n.id === step.id)!;
+      const incoming = definition.edges.filter(e => e.target === node.id);
+      const parents = incoming.filter(e => node.type !== 'result_select' || e.targetHandle === (node.data?.selection ?? 'a')).map(e => e.source);
+      const fields = new Set(parents.flatMap(id => [...(available.get(id) ?? [])]));
+      const value = String(node.data?.value ?? '').trim();
+      const need = (field: string, message: string) => { if (!fields.has(field)) throw new BadRequestException(`“${node.data?.label ?? node.id}”${message}`); };
+      assertTextNodeParameters(node);
+      if (node.type === 'text_constant') fields.add('text');
+      if (['text_join', 'result_select'].includes(node.type) && ['a', 'b'].some(port => incoming.filter(e => e.targetHandle === port).length !== 1)) throw new BadRequestException(`“${node.data?.label ?? node.id}”的 A、B 端口需要各连接一路输入`);
+      if (node.type === 'text_join') {
+        if (parents.some(id => !['text', 'prompt'].some(field => available.get(id)?.has(field)))) throw new BadRequestException('文本拼接的每一路输入都需要文字或正向提示词');
+        fields.add('text');
+      }
+      if (textProcessingTypes.includes(node.type)) {
+        if (node.type !== 'text_template' && !fields.has('text') && !fields.has('prompt')) throw new BadRequestException(`“${node.data?.label ?? node.id}”需要连接文字或正向提示词`);
+        if (node.type === 'text_template') {
+          for (const [placeholder, field] of [['text', 'text'], ['prompt', 'prompt'], ['negative', 'negativePrompt']]) if (value.includes(`{${placeholder}}`)) need(field, `的 {${placeholder}} 占位符缺少上游数据`);
+        }
+        if (node.type === 'text_to_prompt') { fields.delete('text'); fields.add('prompt'); }
+        else if (node.type === 'text_to_negative') { fields.delete('text'); fields.delete('prompt'); fields.add('negativePrompt'); }
+        else fields.add('text');
+      }
+      if (node.type === 'negative_prompt') fields.add('negativePrompt');
+      if (node.type === 'reroute' && incoming.length !== 1) throw new BadRequestException('数据转接需要且只能连接一路输入');
+      if (['prompt', 'skill'].includes(node.type) && !value) throw new BadRequestException(`“${node.data?.label ?? node.id}”需要填写提示词或创作约束`);
+      if (['input', 'prompt', 'skill'].includes(node.type)) fields.add('prompt');
+      if (node.type === 'text_generate') { need('prompt', '需要连接创作输入或正向提示词'); fields.add('prompt'); fields.add('text'); }
+      if (node.type === 'ksampler') { need('prompt', '需要连接正向提示词或合并后的生成条件'); fields.add('artifact'); }
+      if (node.type === 'save_image') need('artifact', '需要连接图片生成节点的输出');
+      if (node.type === 'prompt_merge' && !parents.length) throw new BadRequestException('提示词合并节点需要连接上游提示词');
+      available.set(node.id, fields);
     }
-    const detached = definition.nodes.find((node) => node.type !== "note" && !reached.has(node.id));
-    if (detached) throw new BadRequestException(`节点“${detached.data?.label ?? detached.id}”没有连接到输入`);
   }
 
   async listWorks(actor: Actor, query: CatalogQuery) {
@@ -459,8 +512,8 @@ export class StudioService {
     const privileged = result.rows[0].author_id === actor.id || this.canReview(actor);
     const story = caseStorySchema.parse(result.rows[0].story_json ?? {});
     const visibleAssets = assets.rows.map(asset => ({ ...asset,
-      url: `/api/works/${encodeURIComponent(workId)}/assets/${encodeURIComponent(asset.id)}/download`,
-      canDownload: asset.asset_type !== "document" || privileged || story.allowDocumentDownload,
+      url: asset.external_url && /^https?:\/\//i.test(asset.external_url) ? asset.external_url : `/api/works/${encodeURIComponent(workId)}/assets/${encodeURIComponent(asset.id)}/download`,
+      canDownload: !asset.external_url && (asset.asset_type !== "document" || privileged || story.allowDocumentDownload),
     }));
     const reviewHistory = reviewEvents.rows.map(event => ({ action: event.action, reason: event.reason ?? "", createdAt: event.created_at, reviewer: event.reviewer ?? "审核人员" }));
     const latestRejection = reviewHistory.find(event => event.action === "reject") ?? null;
@@ -810,10 +863,12 @@ export class StudioService {
     const definition = this.normalizeWorkflowDefinition(row.definition_json);
     // 试运行跑的是草稿还是已发布版本：运行页据此显示「草稿试运行」。
     const versionPublished = row.published_at === undefined ? null : Boolean(row.published_at);
-    const context = row.context_json ?? {};
+    const expired = Boolean(row.started_at && cacheExpired(row.started_at));
+    const context = expired ? {} : row.context_json ?? {};
     return {
       id: row.id, workflowId: row.workflow_id, workflowName: row.workflow_name, category: row.category,
-      status: row.status, currentStep: Number(row.current_step), totalSteps: Number(row.total_steps),
+      status: expired && row.status === 'in_progress' ? 'cancelled' : row.status, expired,
+      currentStep: Number(row.current_step), totalSteps: Number(row.total_steps),
       context, definition, nodes: definition.nodes, edges: definition.edges, steps: this.definitionToSteps(definition),
       versionId: row.workflow_version_id ?? null,
       versionNumber: row.version_number ?? null,
@@ -831,6 +886,9 @@ export class StudioService {
     context.size ??= "1024x1024";
     return context as {
       prompt?: string; negativePrompt?: string; initialPrompt?: string; initialSize?: string; text?: string; size: string; modelConfigId?: string;
+      promptParts?: Record<string, string>; negativePromptParts?: Record<string, string>;
+      fieldSources?: Record<string, string>; lineage?: string[];
+      inputNodeIds?: string[];
       trialRun?: boolean; versionNumber?: number;
       adapters: Array<{ type: string; value: string }>;
       referenceFileId?: string;
@@ -845,36 +903,120 @@ export class StudioService {
       prompt: context.prompt, negativePrompt: context.negativePrompt, text: context.text, size: context.size,
       modelConfigId: context.modelConfigId, referenceFileId: context.referenceFileId,
       artifact: context.artifact, adapters: context.adapters,
+      promptParts: context.promptParts, negativePromptParts: context.negativePromptParts,
+      fieldSources: context.fieldSources, lineage: context.lineage,
     };
   }
 
-  private mergeNodeStates(saved: ReturnType<StudioService["workflowContext"]>, parents: string[]) {
+  private mergeNodeStates(saved: ReturnType<StudioService["workflowContext"]>, parents: string[], joiningText = false) {
     const states = parents.map((id) => saved.nodeStates[id]).filter(Boolean);
     if (states.length !== parents.length) throw new ConflictException("上游节点尚未全部执行");
     const merged = this.workflowContext({});
     merged.nodeResults = saved.nodeResults;
     merged.nodeStates = saved.nodeStates;
-    for (const state of states) {
-      for (const key of ["prompt", "negativePrompt", "text", "size", "modelConfigId", "referenceFileId", "artifact"] as const) {
-        if (state[key] !== undefined) (merged as any)[key] = state[key];
-      }
-      merged.adapters.push(...(state.adapters ?? []));
+    // Preserve independent prompt contributions and deduplicate common ancestors.
+    for (const [field, parts] of [['prompt', 'promptParts'], ['negativePrompt', 'negativePromptParts']] as const) {
+      const contributions: Record<string, string> = {};
+      states.forEach((state, index) => Object.assign(contributions, state[parts] ?? (state[field] ? { [`legacy:${parents[index]}:${state[field]}`]: state[field] } : {})));
+      merged[parts] = contributions;
+      merged[field] = Object.keys(contributions).length ? [...new Set(Object.values(contributions).filter(Boolean))].join('\n') : undefined;
     }
+    merged.fieldSources = {};
+    merged.lineage = [...new Set(states.flatMap(state => state.lineage ?? []))];
+    for (const key of ['text', 'size', 'modelConfigId', 'referenceFileId', 'artifact'] as const) {
+      if (joiningText && key === 'text') continue;
+      let candidates = states.filter(state => state[key] !== undefined || state.fieldSources?.[key]);
+      const explicit = candidates.filter(state => state.fieldSources?.[key]);
+      if (explicit.length) candidates = explicit;
+      // An explicit downstream setting supersedes its ancestor's setting.
+      candidates = candidates.filter(state => !candidates.some(other => other.fieldSources?.[key] !== state.fieldSources?.[key] && state.fieldSources?.[key] && other.lineage?.includes(state.fieldSources[key])));
+      if (new Set(candidates.map(state => JSON.stringify(state[key]))).size > 1) throw new ConflictException(`上游分支的${({ text: '生成文字', size: '图片尺寸', modelConfigId: '图片模型', referenceFileId: '参考图片', artifact: '图片产物' })[key]}冲突，请明确选择一个来源`);
+      if (candidates.length) {
+        (merged as any)[key] = candidates[0][key];
+        if (candidates[0].fieldSources?.[key]) merged.fieldSources[key] = candidates[0].fieldSources[key];
+      }
+    }
+    merged.adapters = [...new Map(states.flatMap(state => state.adapters ?? []).map(item => [JSON.stringify(item), item])).values()] as typeof merged.adapters;
     return merged;
   }
 
   private async executeNode(actor: Actor, node: Record<string, any>, context: ReturnType<StudioService["workflowContext"]>) {
     const value = String(node.data?.value ?? "").trim();
     const label = String(node.data?.label ?? node.type);
-    const appendPrompt = (piece: string) => { context.prompt = [context.prompt, piece].filter(Boolean).join("\n").trim(); };
+    context.lineage = [...new Set([...(context.lineage ?? []), node.id])];
+    context.fieldSources ??= {};
+    const appendPrompt = (piece: string) => {
+      context.promptParts ??= context.prompt ? { inherited: context.prompt } : {};
+      context.promptParts[node.id] = piece;
+      context.prompt = Object.values(context.promptParts).filter(Boolean).join('\n').trim();
+    };
+    const inputText = () => {
+      const text = context.text ?? context.prompt;
+      if (text === undefined) throw new BadRequestException(`${label} 需要上游文字或正向提示词`);
+      return text;
+    };
+    const setText = (text: string) => {
+      if (text.length > 10000) throw new BadRequestException('节点处理后的文字不能超过 10000 字');
+      context.text = text;
+      context.fieldSources!.text = node.id;
+      return { kind: 'text', text };
+    };
+    assertTextNodeParameters(node);
     switch (node.type) {
+      case 'text_constant':
+        return setText(String(node.data?.value ?? ''));
+      case 'text_join': {
+        const pieces = (context.inputNodeIds ?? []).map(id => {
+          const state = context.nodeStates[id];
+          const text = state?.text ?? state?.prompt;
+          if (typeof text !== 'string') throw new BadRequestException('文本拼接的每一路输入都需要文字或正向提示词');
+          return text;
+        });
+        if (pieces.length !== 2) throw new BadRequestException('文本拼接需要 A、B 两路文字');
+        return setText(pieces.join(node.data?.separator ?? '\n'));
+      }
+      case 'text_replace':
+        return setText(inputText().split(node.data.find).join(node.data.replacement ?? ''));
+      case 'text_template': {
+        const text = String(node.data?.value ?? '').replace(/\{(text|prompt|negative)\}/g, (_match, key: string) => {
+          const replacement = key === 'negative' ? context.negativePrompt : key === 'prompt' ? context.prompt : context.text;
+          if (replacement === undefined) throw new BadRequestException(`模板的 {${key}} 占位符缺少上游数据`);
+          return replacement;
+        });
+        return setText(text);
+      }
+      case 'text_to_prompt': {
+        const text = inputText().trim();
+        if (!text) throw new BadRequestException('正向提示词不能为空');
+        context.prompt = text;
+        context.promptParts = { [node.id]: text };
+        delete context.text; delete context.fieldSources.text;
+        return { kind: 'prompt', prompt: text };
+      }
+      case 'text_to_negative': {
+        const text = inputText().trim();
+        if (text.length > 1500) throw new BadRequestException('负向提示词不能超过 1500 字');
+        context.negativePrompt = text;
+        context.negativePromptParts = { [node.id]: text };
+        delete context.prompt; delete context.promptParts;
+        delete context.text; delete context.fieldSources.text;
+        return { kind: 'negative_prompt', negativePrompt: text };
+      }
+      case 'text_preview':
+        return { ...setText(inputText()), kind: 'text_preview' };
+      case 'reroute':
+        return { kind: 'passthrough', text: context.text, prompt: context.prompt, artifact: context.artifact };
+      case 'result_select':
+        return { kind: 'selected_result', selection: node.data?.selection ?? 'a', sourceNodeId: context.inputNodeIds?.[0], text: context.text, artifact: context.artifact };
       case "input":
         // 输入节点是"可选的用户需求"。工作流自己带着正向提示词时，使用者什么都不填
         // 也应该能一路跑到出图，不再当成错误拦住（提示词由后面的 prompt 节点补齐）。
         context.prompt ??= value;
+        context.promptParts = { [node.id]: context.prompt ?? '' };
         return { kind: "input", prompt: context.prompt ?? "" };
       case "load_image":
         if (!context.referenceFileId) throw new BadRequestException("请上传一张已获授权的参考图片");
+        context.fieldSources.referenceFileId = node.id;
         return { kind: "reference", source: context.referenceFileId };
       case "prompt": case "text_encode":
         if (!value) throw new BadRequestException(`${label} 需要填写提示词`);
@@ -882,17 +1024,21 @@ export class StudioService {
         return { kind: "prompt", prompt: context.prompt };
       case "negative_prompt":
         if (value.length > 1500) throw new BadRequestException("负向提示词不能超过 1500 字");
-        context.negativePrompt = context.negativePrompt ?? value;
+        context.negativePromptParts ??= context.negativePrompt ? { inherited: context.negativePrompt } : {};
+        if (!(node.id in context.negativePromptParts)) context.negativePromptParts[node.id] = value;
+        context.negativePrompt = Object.values(context.negativePromptParts).filter(Boolean).join('\n');
         return { kind: "negative_prompt", negativePrompt: context.negativePrompt };
+      case 'prompt_merge':
+        return { kind: 'generation_conditions', prompt: context.prompt ?? '', negativePrompt: context.negativePrompt ?? '', size: context.size };
       case "skill":
         if (!value) throw new BadRequestException("Skill 节点需要填写可执行的创作约束");
         appendPrompt(value);
         return { kind: "skill", applied: value };
       case "model":
         // 留空表示使用服务端为 image 能力配置的内部默认模型，避免把供应商选择暴露给学生。
-        if (!value) return { kind: "model", modelConfigId: "internal-default" };
-        context.modelConfigId = value;
-        return { kind: "model", modelConfigId: value };
+        context.modelConfigId = value || undefined;
+        context.fieldSources.modelConfigId = node.id;
+        return { kind: "model", modelConfigId: value || "internal-default" };
       case "text_generate": {
         if (!context.prompt) throw new BadRequestException("文本生成节点需要连接创作输入");
         if (!this.generation || !this.models) throw new ConflictException("文本生成服务尚未装配");
@@ -902,6 +1048,9 @@ export class StudioService {
           modelConfigId, parameters: { source: "workflow-canvas", workflowNodeId: node.id },
         });
         context.text = generated.output.content;
+        context.fieldSources.text = node.id;
+        context.prompt = context.text;
+        context.promptParts = { [node.id]: context.text ?? '' };
         return { kind: "generated_text", jobId: generated.job.id, text: context.text };
       }
       case "load_checkpoint":
@@ -912,6 +1061,8 @@ export class StudioService {
         throw new BadRequestException(`${label} 尚无可用的 GPU 执行服务，请移除该节点后运行`);
       case "empty_latent": {
         context.size = /^\d{3,4}x\d{3,4}$/.test(value) ? value : context.size;
+        if (value && !/^\d{3,4}x\d{3,4}$/.test(value)) throw new BadRequestException('图片尺寸格式应为 1024x1024');
+        if (value) context.fieldSources.size = node.id;
         return { kind: "latent", size: context.size };
       }
       case "ksampler": {
@@ -932,6 +1083,7 @@ export class StudioService {
         });
         if (!generated.artifact) throw new ConflictException("图片服务未返回可保存产物");
         context.artifact = generated.artifact;
+        context.fieldSources.artifact = node.id;
         return { kind: "generation", jobId: generated.job.id, artifact: generated.artifact };
       }
       case "vae_decode":

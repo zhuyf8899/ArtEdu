@@ -40,3 +40,16 @@
 .workflow-editor-fullscreen .workflow-flow-node { border-top: 3px solid var(--node-color, #a8da65); }
 .workflow-editor-fullscreen .workflow-graph-check { color: #c8dfad; background: #263221; border-color: #455c36; }
 .workflow-editor-fullscreen .workflow-canvas-selection-hint { color: #aab3be; background: transparent; }
+.workflow-flow-node { cursor: grab; touch-action: none; }
+.workflow-flow-node:active { cursor: grabbing; }
+.workflow-flow-node :is(input, textarea) { cursor: text; touch-action: auto; }
+.workflow-flow-node .react-flow__handle { cursor: crosshair; }
+.workflow-flow-node select { width: 100%; padding: 7px; border: 1px solid #536173; border-radius: 5px; cursor: pointer; }
+.workflow-preset-actions { display: grid; gap: 8px; padding: 12px; border-bottom: 1px solid #49515d; }
+.workflow-preset-actions > strong { font-size: 12px; }
+@media (max-width:600px) {
+  .workflow-editor-fullscreen { grid-template-rows: 185px minmax(260px, 1fr) 240px 62px; }
+  .workflow-editor-fullscreen > .learning-back { top: 12px; left: 15px; padding: 8px 12px; }
+  .workflow-editor-fullscreen .workflow-canvas-topbar { justify-content: flex-end; padding: 58px 15px 12px; gap: 8px; }
+  .workflow-editor-fullscreen .workflow-canvas-topbar > div:first-child { display: none; }
+}

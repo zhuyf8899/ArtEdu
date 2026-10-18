@@ -12,6 +12,9 @@ RUN cd apps/api && npm ci
 COPY apps/api ./apps/api
 COPY migrations ./migrations
 COPY seed ./seed
+# Curated summaries used by the idempotent knowledge-atlas import, no private source files.
+COPY admin-console/package.json ./admin-console/package.json
+COPY admin-console/src/curriculumAtlas.js admin-console/src/courseKnowledge.js ./admin-console/src/
 # Content installer verifies the same public covers served by the web image.
 COPY admin-console/public/morph-v17 ./admin-console/public/morph-v17
 

@@ -1,9 +1,11 @@
 import { createPortal } from 'react-dom';
 import { ZoomableImage } from './ImageLightbox.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ReactFlow, ViewportPortal, Background, Controls, MiniMap, Handle, Position, addEdge, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
+import { ReactFlow, ViewportPortal, Background, Controls, MiniMap, Handle, Position, addEdge, reconnectEdge, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 import { getComfyCatalog, getComfyQueue, cancelComfyJob, retryComfyJob, getComfyJob, getMyWorkflowRuns, startWorkflowRun } from './services/adminApi.js';
-import { ports, specs, isWidget, compatible, nodeFromInfo, compilePrompt, importComfy } from './comfyGraph.js';
+import { ports, specs, isWidget, nodeFromInfo, compilePrompt, importComfy, validConnection, validateGraphStructure } from './comfyGraph.js';
+import { nodeGroup } from '../../shared/comfyNodes.mjs';
+import { COMFY_PRESETS, createComfyPreset } from './comfyPresets.js';
 import './comfy-canvas.css';
 import '@xyflow/react/dist/style.css';
 function ComfyNode({ data, selected }) {
@@ -12,7 +14,8 @@ function ComfyNode({ data, selected }) {
     return <div className={`comfy-node ${selected ? 'is-selected' : ''} ${data.active ? 'is-running' : ''}`}><strong>{data.label}</strong><small>{data.classType}</small>
     {io.inputs.map(p => <div className="comfy-port" key={p.name}><Handle id={p.name} type="target" position={Position.Left}/><span>{p.name}</span><small>{p.type}</small></div>)}
     {io.outputs.map(p => <div className="comfy-port comfy-port--out" key={p.name}><Handle id={p.name} type="source" position={Position.Right}/><span>{p.label}</span><small>{p.type}</small></div>)}
-    {specs(data.info).filter(([, s]) => isWidget(s)).map(([name, s]) => <label className="nodrag" key={name}><Handle id={name} type="target" position={Position.Left}/><span>{name}</span>{linked.has(name) ? <small>由上游提供</small> : Array.isArray(s[0]) ? <select value={data.widgets[name] ?? ''} onChange={e => data.update(name, e.target.value)}>{s[0].map(v => <option key={v} value={v}>{v}</option>)}</select> : s[0] === 'BOOLEAN' ? <input type="checkbox" checked={!!data.widgets[name]} onChange={e => data.update(name, e.target.checked)}/> : s[0] === 'STRING' && s[1]?.multiline ? <textarea value={data.widgets[name] ?? ''} onChange={e => data.update(name, e.target.value)}/> : <input type={s[0] === 'STRING' ? 'text' : 'number'} min={s[1]?.min} max={s[1]?.max} step={s[0] === 'FLOAT' ? 'any' : 1} value={data.widgets[name] ?? ''} onChange={e => data.update(name, s[0] === 'STRING' ? e.target.value : Number(e.target.value))}/>}</label>)}
+    {specs(data.info).filter(([, s]) => isWidget(s)).map(([name, s]) => <label className="nodrag nowheel" key={name} title={s[1]?.tooltip} onBlur={data.endEdit}>{!Array.isArray(s[0]) && <Handle id={name} type="target" position={Position.Left}/>}<span>{name}</span>{linked.has(name) ? <small>由上游提供</small> : Array.isArray(s[0]) ? <select aria-label={name} disabled={data.readOnly} value={data.widgets[name] ?? ''} onChange={e => data.update(name, s[0].find(v => String(v) === e.target.value))}>{!s[0].length && <option value="">本机没有可用选项</option>}{s[0].map(v => <option key={v} value={v}>{v}</option>)}</select> : s[0] === 'BOOLEAN' ? <input aria-label={name} disabled={data.readOnly} type="checkbox" checked={!!data.widgets[name]} onChange={e => data.update(name, e.target.checked)}/> : s[0] === 'STRING' && s[1]?.multiline ? <textarea aria-label={name} disabled={data.readOnly} value={data.widgets[name] ?? ''} onChange={e => data.update(name, e.target.value)}/> : <input aria-label={name} disabled={data.readOnly} type={s[0] === 'STRING' ? 'text' : 'number'} min={s[1]?.min} max={s[0] === 'INT' ? Math.min(s[1]?.max ?? Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER) : s[1]?.max} step={s[0] === 'FLOAT' ? 'any' : 1} value={data.widgets[name] ?? ''} onChange={e => data.update(name, s[0] === 'STRING' || e.target.value === '' ? e.target.value : Number(e.target.value))}/>}</label>)}
+    {!data.info && <p role="status">节点定义不可用，请连接 Worker 后刷新。</p>}
   </div>;
 }
 const nodeTypes = { comfy: ComfyNode };
@@ -21,13 +24,16 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
     const [flow, setFlow] = useState(null);
     const [catalog, setCatalog] = useState({});
     const [query, setQuery] = useState('');
+    const [category, setCategory] = useState('全部');
     const [paletteOpen, setPaletteOpen] = useState(false);
     const [job, setJob] = useState(null);
     const [queue, setQueue] = useState([]);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
+    const locked = readOnly || loading || busy;
     const history = useRef({ past: [], future: [] });
     const copied = useRef(null);
+    const reconnecting = useRef(null);
     const graphRef = useRef(graph);
     graphRef.current = graph;
     const [revision, setRevision] = useState(0);
@@ -36,18 +42,23 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
             const result = await getComfyCatalog();
             setCatalog(result.nodes || {});
             setQueue((await getComfyQueue()).items || []);
+            setError('');
         }
         catch (e) {
             setError(e.message);
         }
     };
     useEffect(() => {
+        history.current = { past: [], future: [] };
+        copied.current = null;
+        setJob(null);
         void refresh();
+        let stopped = false;
         getMyWorkflowRuns().then(async (result) => {
             const run = result.items?.find(r => r.workflowId === selected.id && r.context?.engine === 'comfyui');
-            if (run)
-                setJob(await getComfyJob(run.id));
-        }).catch(e => setError(e.message));
+            if (run) { const next = await getComfyJob(run.id); if (!stopped) setJob(next); }
+        }).catch(e => { if (!stopped) setError(e.message); });
+        return () => { stopped = true; };
     }, [selected.id]);
     useEffect(() => {
         if (!job || !['queued', 'running', 'cancelling'].includes(job.status))
@@ -72,34 +83,43 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
         timer = setTimeout(tick, 1500);
         return () => { stopped = true; clearTimeout(timer); };
     }, [job?.runId, job?.status]);
-    const commit = next => {
-        if (readOnly)
-            return;
+    const recordHistory = key => {
+        if (key && history.current.editKey === key) return;
+        history.current.editKey = key;
         history.current.past.push(structuredClone(graphRef.current));
         history.current.past = history.current.past.slice(-80);
         history.current.future = [];
+    };
+    const commit = (next, key) => {
+        if (locked)
+            return;
+        if (JSON.stringify(next) === JSON.stringify(graphRef.current)) return;
+        recordHistory(key);
+        graphRef.current = next;
         onDefinition(next);
         setRevision(n => n + 1);
     };
     const undo = () => {
         const h = history.current;
-        if (!h.past.length || readOnly)
+        if (!h.past.length || locked)
             return;
         h.future.push(structuredClone(graphRef.current));
-        onDefinition(h.past.pop());
+        h.editKey = null;
+        const next = h.past.pop(); graphRef.current = next; onDefinition(next);
         setRevision(n => n + 1);
     };
     const redo = () => {
         const h = history.current;
-        if (!h.future.length || readOnly)
+        if (!h.future.length || locked)
             return;
         h.past.push(structuredClone(graphRef.current));
-        onDefinition(h.future.pop());
+        h.editKey = null;
+        const next = h.future.pop(); graphRef.current = next; onDefinition(next);
         setRevision(n => n + 1);
     };
     useEffect(() => {
         const key = e => {
-            if (readOnly || e.target.closest('input,textarea,select,[contenteditable]') || !(e.ctrlKey || e.metaKey))
+            if (locked || e.target.closest('input,textarea,select,[contenteditable]') || !(e.ctrlKey || e.metaKey))
                 return;
             const k = e.key.toLowerCase();
             if (k === 'z' || k === 'y') {
@@ -109,7 +129,7 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
             if (k === 'c') {
                 e.preventDefault();
                 const ids = new Set(graphRef.current.nodes.filter(n => n.selected).map(n => n.id));
-                copied.current = { nodes: graphRef.current.nodes.filter(n => ids.has(n.id)), edges: graphRef.current.edges.filter(e => ids.has(e.source) && ids.has(e.target)) };
+                copied.current = structuredClone({ nodes: graphRef.current.nodes.filter(n => ids.has(n.id)), edges: graphRef.current.edges.filter(e => ids.has(e.source) && ids.has(e.target)) });
             }
             if (k === 'v' && copied.current?.nodes.length) {
                 e.preventDefault();
@@ -124,33 +144,19 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
         };
         window.addEventListener('keydown', key);
         return () => window.removeEventListener('keydown', key);
-    }, [readOnly, onDefinition, revision]);
+    }, [locked, onDefinition, revision]);
     useEffect(() => {
         if (!flow || !Object.keys(catalog).length)
             return;
-        const timer = setTimeout(() => flow.fitView({ padding: 0.2, minZoom: 0.15, maxZoom: 1 }), 120);
+        const timer = setTimeout(() => {
+            const viewport = graphRef.current.viewport;
+            if (viewport && (viewport.x || viewport.y || viewport.zoom !== 1)) void flow.setViewport(viewport);
+            else void flow.fitView({ padding: 0.2, minZoom: 0.15, maxZoom: 1 });
+        }, 120);
         return () => clearTimeout(timer);
-    }, [flow, catalog, graph.nodes.length]);
-    const nodes = useMemo(() => graph.nodes.map(n => ({ ...n, data: { ...n.data, active: job?.progress?.node === n.id && job?.status === 'running', info: catalog[n.data.classType], linkedInputs: graph.edges.filter(e => e.target === n.id).map(e => e.targetHandle), update: (name, value) => commit({ ...graph, nodes: graph.nodes.map(x => x.id === n.id ? { ...x, data: { ...x.data, widgets: { ...x.data.widgets, [name]: value } } } : x) }) } })), [graph, catalog, job?.progress?.node, job?.status]);
-    const valid = c => {
-        const a = graph.nodes.find(n => n.id === c.source), b = graph.nodes.find(n => n.id === c.target);
-        if (!a || !b || a.id === b.id || graph.edges.some(e => e.target === b.id && e.targetHandle === c.targetHandle))
-            return false;
-        const from = catalog[a.data.classType]?.output?.[Number(c.sourceHandle)];
-        const to = specs(catalog[b.data.classType]).find(([name]) => name === c.targetHandle)?.[1]?.[0];
-        if (!from || !to || Array.isArray(to) || !compatible(from, to))
-            return false;
-        const seen = new Set();
-        const visit = id => {
-            if (id === a.id)
-                return true;
-            if (seen.has(id))
-                return false;
-            seen.add(id);
-            return graph.edges.filter(e => e.source === id).some(e => visit(e.target));
-        };
-        return !visit(b.id);
-    };
+    }, [flow, selected.id, !!Object.keys(catalog).length]);
+    const nodes = useMemo(() => graph.nodes.map(n => ({ ...n, data: { ...n.data, readOnly: locked, endEdit: () => { history.current.editKey = null; }, active: job?.progress?.node === n.id && job?.status === 'running', info: catalog[n.data.classType], linkedInputs: graph.edges.filter(e => e.target === n.id).map(e => e.targetHandle), update: (name, value) => { const current = graphRef.current; commit({ ...current, nodes: current.nodes.map(x => x.id === n.id ? { ...x, data: { ...x.data, widgets: { ...x.data.widgets, [name]: value } } } : x) }, `${n.id}:${name}`); } } })), [graph, catalog, job?.progress?.node, job?.status, locked]);
+    const valid = c => !locked && validConnection(c, { ...graphRef.current, edges: graphRef.current.edges.filter(e => e.id !== reconnecting.current) }, catalog);
     const load = async (e) => {
         const file = e.target.files?.[0];
         e.target.value = '';
@@ -161,7 +167,7 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
                 throw new Error('工作流文件过大');
             const raw = JSON.parse(await file.text());
             const next = raw.format === 'artedu-comfy-workflow' && raw.definition?.engine === 'comfyui' ? raw.definition : importComfy(raw, catalog);
-            compilePrompt(next, catalog);
+            validateGraphStructure(next);
             commit(next);
             setError('');
         }
@@ -183,14 +189,22 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
             setError(e.message);
         }
     };
+    const exportCanvas = () => {
+        try {
+            validateGraphStructure(graph);
+            const { comfyPrompt, ...definition } = graph;
+            const url = URL.createObjectURL(new Blob([JSON.stringify({ format: 'artedu-comfy-workflow', version: 2, definition }, null, 2)], { type: 'application/json' }));
+            const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'comfy-canvas.json'; anchor.click(); URL.revokeObjectURL(url);
+        } catch (e) { setError(e.message); }
+    };
     const run = async () => {
         setBusy(true);
         setError('');
         try {
             const prompt = compilePrompt(graph, catalog);
-            if (!readOnly && !await onSave(false, { ...graph, comfyPrompt: prompt }))
-                return;
-            const result = await startWorkflowRun(selected.id);
+            const saved = readOnly ? null : await onSave(false, { ...graph, comfyPrompt: prompt });
+            if (!readOnly && !saved) return;
+            const result = await startWorkflowRun(selected.id, {}, saved?.id ?? selected.versionId);
             setJob(await getComfyJob(result.id));
         }
         catch (e) {
@@ -200,9 +214,20 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
             setBusy(false);
         }
     };
-    return createPortal(<section className="comfy-editor"><header><button onClick={onBack}>返回</button>{readOnly ? <strong>{editor.name}</strong> : <input aria-label="工作流名称" value={editor.name} onChange={e => onChange('name', e.target.value)}/>}<button onClick={refresh}>刷新节点与队列</button>{!readOnly && <><label>导入 ComfyUI JSON<input hidden type="file" accept=".json" onChange={load}/></label><button onClick={exportApi}>导出 API JSON</button><button disabled={loading} onClick={() => {
+    const addPreset = kind => {
+        try {
+            const preset = createComfyPreset(kind, catalog, cryptoId);
+            if (graph.nodes.length + preset.nodes.length > 80) throw new Error('最多 80 个节点');
+            const offset = graph.nodes.length ? Math.max(...graph.nodes.map(n => n.position.y + (n.measured?.height || 400))) + 120 : 0;
+            commit({ ...graph, nodes: [...graph.nodes.map(n => ({ ...n, selected: false })), ...preset.nodes.map(n => ({ ...n, selected: true, position: { ...n.position, y: n.position.y + offset } }))], edges: [...graph.edges, ...preset.edges] });
+            setError('');
+        } catch (e) { setError(e.message); }
+    };
+    return createPortal(<section className="comfy-editor"><header><button disabled={loading || busy} onClick={onBack}>返回</button>{readOnly ? <strong>{editor.name}</strong> : <input disabled={locked} aria-label="工作流名称" value={editor.name} onChange={e => onChange('name', e.target.value)}/>}<button onClick={refresh}>刷新节点与队列</button>{!readOnly && <><label>导入 ComfyUI JSON<input disabled={locked} hidden type="file" accept=".json" onChange={load}/></label><button onClick={exportCanvas}>导出画布 JSON</button><button onClick={exportApi}>导出 API JSON</button><button disabled={loading || busy} onClick={() => {
                 try {
-                    void onSave(false, { ...graph, comfyPrompt: compilePrompt(graph, catalog) });
+                    validateGraphStructure(graph);
+                    const { comfyPrompt, ...draft } = graph;
+                    void onSave(false, draft);
                 }
                 catch (e) {
                     setError(e.message);
@@ -219,27 +244,39 @@ export function ComfyCanvas({ editor, selected, onDefinition, onChange, onBack, 
                     }
                 }}>发布</button>}</>}<button disabled={busy || loading || ['queued', 'running', 'cancelling'].includes(job?.status)} onClick={run}>加入运行队列</button></header>
     {error && <p role="alert">{error}</p>}
-    <div className="comfy-editor__body">{!readOnly && <button className="comfy-editor__library-toggle" aria-pressed={paletteOpen} onClick={() => setPaletteOpen(v => !v)}>＋ 添加节点</button>}{!readOnly && paletteOpen && <aside className="comfy-editor__library"><input aria-label="搜索 ComfyUI 节点" placeholder="搜索节点" value={query} onChange={e => setQuery(e.target.value)}/><button onClick={undo}>撤销</button><button onClick={redo}>重做</button><button onClick={() => flow?.fitView({ padding: .2, minZoom: .15 })}>查看全图</button><button onClick={() => flow?.fitView({ nodes: graph.nodes.filter(n => n.selected), padding: .3, maxZoom: 1 })}>聚焦选中节点</button><button disabled={graph.nodes.filter(n => n.selected).length < 2} onClick={() => {
+    <div className="comfy-editor__body">{!readOnly && <button className="comfy-editor__library-toggle" aria-pressed={paletteOpen} onClick={() => setPaletteOpen(v => !v)}>＋ 添加节点</button>}{!readOnly && paletteOpen && <aside className="comfy-editor__library"><input aria-label="搜索 ComfyUI 节点" placeholder="搜索节点" value={query} onChange={e => setQuery(e.target.value)}/><select aria-label="节点分类" value={category} onChange={e => setCategory(e.target.value)}>{['全部', ...new Set(Object.keys(catalog).map(nodeGroup))].map(name => <option key={name}>{name}</option>)}</select><h3>添加完整节点链</h3>{COMFY_PRESETS.map(p => <button key={p.id} disabled={p.required.some(name => !catalog[name])} onClick={() => addPreset(p.id)}>{p.label}</button>)}<small>追加到画布；图生图使用本机图片，局部重绘使用图片透明区域。</small><button onClick={undo}>撤销</button><button onClick={redo}>重做</button><button onClick={() => flow?.fitView({ padding: .2, minZoom: .15 })}>查看全图</button><button onClick={() => flow?.fitView({ nodes: graph.nodes.filter(n => n.selected), padding: .3, maxZoom: 1 })}>聚焦选中节点</button><button disabled={graph.nodes.filter(n => n.selected).length < 2} onClick={() => {
                 const ids = graph.nodes.filter(n => n.selected).map(n => n.id);
                 if ((graph.groups?.length || 0) >= 20)
                     return onNotice('最多 20 个分组');
                 commit({ ...graph, groups: [...(graph.groups || []), { id: cryptoId(), title: '节点分组', color: '#9ed85b', nodeIds: ids }] });
-            }}>选中节点建组</button>{(graph.groups || []).map(g => <label key={g.id}>分组<input value={g.title} onChange={e => commit({ ...graph, groups: graph.groups.map(x => x.id === g.id ? { ...x, title: e.target.value } : x) })}/><button onClick={() => commit({ ...graph, groups: graph.groups.filter(x => x.id !== g.id) })}>删除分组</button></label>)}{!Object.keys(catalog).length && <p>请连接 GPU Worker 获取真实节点、模型与参数。</p>}{Object.entries(catalog).filter(([name, info]) => `${name} ${info.display_name} ${info.category}`.toLowerCase().includes(query.toLowerCase())).map(([name, info]) => <button key={name} onClick={() => {
+            }}>选中节点建组</button>{(graph.groups || []).map(g => <label key={g.id}>分组<input value={g.title} onChange={e => commit({ ...graph, groups: graph.groups.map(x => x.id === g.id ? { ...x, title: e.target.value } : x) })}/><button onClick={() => commit({ ...graph, groups: graph.groups.filter(x => x.id !== g.id) })}>删除分组</button></label>)}{!Object.keys(catalog).length && <p>请连接 GPU Worker 获取真实节点、模型与参数。</p>}{Object.entries(catalog).filter(([name, info]) => (category === '全部' || nodeGroup(name) === category) && `${name} ${info.display_name} ${info.category} ${nodeGroup(name)}`.toLowerCase().includes(query.toLowerCase())).map(([name, info]) => <button key={name} onClick={() => {
                     if (graph.nodes.length >= 80)
                         return onNotice('最多 80 个节点');
                     commit({ ...graph, nodes: [...graph.nodes, nodeFromInfo(cryptoId(), name, info, { x: 100 + graph.nodes.length % 4 * 300, y: 100 + Math.floor(graph.nodes.length / 4) * 350 })] });
-                }}>{info.display_name || name}<small>{info.category}</small></button>)}</aside>}
-    <div className="comfy-editor__canvas"><ReactFlow nodes={nodes} edges={graph.edges} nodeTypes={nodeTypes} onInit={setFlow} minZoom={0.15} fitView nodesDraggable={!readOnly} nodesConnectable={!readOnly} deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']} onNodesChange={changes => {
-            if (!readOnly) {
-                const nextNodes = applyNodeChanges(changes, graph.nodes);
+                }}>{info.display_name || name}<small>{nodeGroup(name)} · {info.category}</small></button>)}</aside>}
+    <div className="comfy-editor__canvas"><ReactFlow nodes={nodes} edges={graph.edges} nodeTypes={nodeTypes} onInit={setFlow} minZoom={0.15} defaultViewport={graph.viewport} onMoveEnd={(_, viewport) => {
+            if (!locked) { const next = { ...graphRef.current, viewport }; graphRef.current = next; onDefinition(next); }
+        }} nodesDraggable={!locked} nodesConnectable={!locked} edgesReconnectable={!locked} deleteKeyCode={locked ? null : ['Backspace', 'Delete']} onNodeDragStart={() => { if (!locked) recordHistory(); }} onNodesChange={changes => {
+            if (!locked) {
+                const current = graphRef.current;
+                const nextNodes = applyNodeChanges(changes, current.nodes);
                 const ids = new Set(nextNodes.map(n => n.id));
-                const next = { ...graph, nodes: nextNodes, groups: (graph.groups || []).map(g => ({ ...g, nodeIds: g.nodeIds.filter(id => ids.has(id)) })).filter(g => g.nodeIds.length >= 2), edges: graph.edges.filter(e => ids.has(e.source) && ids.has(e.target)) };
-                if (changes.every(c => c.type === 'select'))
-                    onDefinition(next);
+                const next = { ...current, nodes: nextNodes, groups: (current.groups || []).map(g => ({ ...g, nodeIds: g.nodeIds.filter(id => ids.has(id)) })).filter(g => g.nodeIds.length >= 2), edges: current.edges.filter(e => ids.has(e.source) && ids.has(e.target)) };
+                if (changes.every(c => ['select', 'dimensions', 'position'].includes(c.type))) {
+                    graphRef.current = next; onDefinition(next);
+                }
                 else
                     commit(next);
             }
-        }} onEdgesChange={changes => !readOnly && commit({ ...graph, edges: applyEdgeChanges(changes, graph.edges) })} isValidConnection={valid} onConnect={c => valid(c) && commit({ ...graph, edges: addEdge({ ...c, id: cryptoId() }, graph.edges) })}><ViewportPortal>{(graph.groups || []).map(g => {
+        }} onEdgesChange={changes => {
+            if (locked) return;
+            const current = graphRef.current, next = { ...current, edges: applyEdgeChanges(changes, current.edges) };
+            if (changes.every(c => c.type === 'select')) { graphRef.current = next; onDefinition(next); }
+            else commit(next);
+        }} isValidConnection={valid} onReconnectStart={(_, edge) => { reconnecting.current = edge.id; }} onReconnectEnd={() => { reconnecting.current = null; }} onReconnect={(edge, connection) => {
+            const current = graphRef.current;
+            if (!locked && validConnection(connection, { ...current, edges: current.edges.filter(e => e.id !== edge.id) }, catalog)) commit({ ...current, edges: reconnectEdge(edge, connection, current.edges) });
+        }} onConnect={c => valid(c) && commit({ ...graphRef.current, edges: addEdge({ ...c, id: cryptoId() }, graphRef.current.edges) })}><ViewportPortal>{(graph.groups || []).map(g => {
             const members = graph.nodes.filter(n => g.nodeIds.includes(n.id));
             if (members.length < 2)
                 return null;

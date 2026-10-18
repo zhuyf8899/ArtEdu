@@ -1,7 +1,8 @@
 // Outbound-only GPU worker. Run against a dedicated, loopback ComfyUI instance.
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-export const CORE_NODES = ['CheckpointLoaderSimple', 'CLIPTextEncode', 'EmptyLatentImage', 'KSampler', 'VAEDecode', 'SaveImage', 'PreviewImage', 'LoadImage', 'LoraLoader', 'ControlNetLoader', 'ControlNetApplyAdvanced', 'UpscaleModelLoader', 'ImageUpscaleWithModel'];
+import { CORE_NODES } from '../../shared/comfyNodes.mjs';
+export { CORE_NODES } from '../../shared/comfyNodes.mjs';
 export function endpoint(raw) {
     const u = new URL(raw);
     if (!['http:', 'https:'].includes(u.protocol) || !['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) || u.username || u.password || u.pathname !== '/')
@@ -190,4 +191,4 @@ export async function runWorker() {
 }
 function pause(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
-    runWorker().catch(e => { console.error(e.message); process.exitCode = 1; });
+    { console.error('本地Bridge已停用，请使用平台云端执行'); process.exitCode=1; }
