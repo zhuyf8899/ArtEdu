@@ -110,10 +110,10 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
   if (variant === 'morph') return <MorphComposer {...{prompt,setPrompt,methodId,setMethodId,model,models,setModelId,searchEnabled,setSearchEnabled,sending,quotaBlocked,reference,setReference,referenceInput,promptInput,submit,onNotice,onNavigate}} />;
   return <section className="ai-creation ai-creation--launcher" aria-labelledby="ai-creation-title">
     <div className="ai-creation__intro">
-      <span>{serviceReady ? "已配置模型服务 · 校内账号直接使用" : "本地演示模式 · 不调用外部模型"}</span>
+      {!serviceReady && <span>创作服务暂不可用</span>}
       {/* 默认能力是问答，所以首屏文案跟着能力走，避免对着提问者喊"创作"。 */}
       <h2 id="ai-creation-title">今天想<span>问</span>什么？</h2>
-      <p>模式只影响下方建议和输入提示；真正执行问答、出图、网页或文档，由你这次输入的明确意图决定。</p>
+      <p>提问、生成图片，或描述你想完成的创作。</p>
     </div>
 
     <form className="ai-launcher" onSubmit={submit}>
@@ -146,7 +146,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
             try {
               const uploaded = await uploadTemporaryCreationFile(file);
               setReference({ id: uploaded.id, fileName: uploaded.fileName, sizeBytes: uploaded.sizeBytes, expiresAt: uploaded.expiresAt, downloadUrl: uploaded.downloadUrl });
-              onNotice?.(`“${uploaded.fileName}”已临时上传，20 分钟后过期，读取不会续期`, "success");
+              onNotice?.(`“${uploaded.fileName}”已上传，20 分钟后过期`, "success");
             } catch (error) { onNotice?.(error.message || "文件上传失败", "error"); }
             event.target.value = "";
           }} />
@@ -161,7 +161,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
 
       <div className="ai-launcher__status">
         <span><ImageSquare size={13} /> {account.shortName} · 建议模式：{method.label} · <b ref={modelRef} className={`ai-launcher__model${modelClipped ? " is-clipped" : ""}`} title={modelLabel}>{modelLabel}</b></span>
-        {reference && <span title="临时文件独立占用服务器配额">临时文件：{reference.fileName} · 20 分钟后自动过期</span>}
+        {reference && <span>参考文件：{reference.fileName} · 20 分钟后过期</span>}
         <span>{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
         {prompt.trim() && <button type="button" onClick={() => { setPrompt(""); setDraftSaved(false); clearDraft(account.id); }}><Trash size={13} /> 清空草稿</button>}
         <em><FloppyDisk size={13} />{draftSaved ? "草稿已保存" : "输入后自动保存"}</em>
@@ -173,7 +173,6 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
       <div>{method.suggestions.slice(0, 3).map((item) => <button type="button" key={item} onClick={() => { setPrompt(item); promptInput.current?.focus(); }}>{item}<ArrowRight size={15} weight="bold" /></button>)}</div>
     </div>
 
-    <p className="ai-launcher__hint">提交后进入标准 Agent 对话页：模式保留为建议环境，不会强制把普通问题变成图片或文档任务。</p>
 
     {recent.length > 0 && <div className="ai-history-strip">
       <button type="button" onClick={() => onLaunch(recent[0].id)}><ChatCircleDots size={16} weight="bold" />继续上次对话 · {recent[0].title}</button>

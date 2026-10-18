@@ -46,12 +46,12 @@ export function planTask({ prompt, previousTask = null }: {
     if (conversational.test(text) && !hasExplicitOther || /直接在对话里回复|不要生成文件|先不要生成或保存/.test(text))
         return { action: 'answer', deliverables: [], reason: '用户要求解释、讨论或明确不交付文件' };
     const affirmative = clauses.map(s => s.replace(/(?:不要|不想|不用|无需|先别|别|不需要|暂不)[^，,。；;]*?(?:但|而是)/g, '').replace(/(?:不要|不想|不用|无需|先别|别|不需要|暂不)[^，,。；;]*$/g, '')).filter(s => !/^(?:请)?(?:不要|不想|不用|无需|先别|别|不需要|暂不)/.test(s)).join('，');
-    const create = /(生成|制作|创建|导出|搭建|做个|做一个|生图|出图|画|绘制)|\b(build|create|make|generate|export)\b/i.test(affirmative);
+    const create = /(生成|制作|创建|导出|搭建|做个|做一个|设计(?:一套|一个|一款)|生图|出图|画|绘制)|\b(build|create|make|generate|export)\b/i.test(affirmative);
     const deliverables = [];
     const imageApi = /生图|出图|(?:调用|使用|用).*(?:图片生成|图像生成|生图|generate_image)/i.test(affirmative);
-    const visualMockup = /(?:网页|页面|网站|首页|UI).*(?:设计图|效果图|截图)|(?:设计图|效果图|截图).*(?:网页|页面|网站|首页|UI)/i.test(affirmative);
-    const webRequest = clauses.some(s => !/^(?:请)?(?:不要|不用|别|无需)/.test(s) && /(?:制作|创建|搭建|做个|做一个|生成).*(?:网页|页面|网站|html|website)/i.test(s) && !/(?:设计图|效果图|截图)/i.test(s));
-    if (create && (!visualMockup || webRequest) && /网页|页面|网站|html|gallery|website|webpage|交互.*画廊/i.test(affirmative))
+    const visualMockup = /(?:网页|页面|网站|首页|前端界面|UI界面|UI).*(?:设计图|效果图|截图)|(?:设计图|效果图|截图).*(?:网页|页面|网站|首页|前端界面|UI界面|UI)/i.test(affirmative);
+    const webRequest = clauses.some(s => !/^(?:请)?(?:不要|不用|别|无需)/.test(s) && /(?:制作|创建|搭建|做个|做一个|生成|设计).*(?:网页|页面|网站|前端界面|UI界面|博客|html|website)/i.test(s) && !/(?:设计图|效果图|截图)/i.test(s));
+    if (create && (!visualMockup || webRequest) && /网页|页面|网站|前端界面|UI界面|博客|html|gallery|website|webpage|交互.*画廊/i.test(affirmative))
         deliverables.push({ kind: 'webpage', format: 'html' });
     if (create && /word|docx|pptx?|powerpoint|pdf|文档|教案|课件|讲义/i.test(affirmative)) {
         const formats = [/word|docx/i.test(affirmative) ? 'docx' : '', /ppt|powerpoint/i.test(affirmative) ? 'pptx' : '', /pdf/i.test(affirmative) ? 'pdf' : ''].filter(Boolean);

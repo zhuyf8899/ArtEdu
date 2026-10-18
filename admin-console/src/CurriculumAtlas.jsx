@@ -102,6 +102,6 @@ export function CurriculumAtlas({ onPersonal, onNavigate, courseId = "" }) {
       </div>
     </section>}
     </>}
-    <p className="curriculum-atlas__disclaimer">依据《AI课程设计》十个课程方向的资料目录与关键内容提炼，非教材全文或正式授课大纲。通用图谱无需配置任务点；个人进度请进入“个性化图谱”。查找平台课程仅检索已发布内容，不代表这十门课程均已上线。</p>
+    <p className="curriculum-atlas__disclaimer">参考《AI课程设计》整理十个课程方向。查看个人学习进度，请进入“个性化图谱”。</p>
   </section>;
 }

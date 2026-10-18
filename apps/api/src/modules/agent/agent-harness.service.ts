@@ -156,6 +156,7 @@ export class AgentHarnessService {
     const deltaSink = hooks.onDelta ? (delta: ModelStreamDelta) => hooks.onDelta?.(delta.content) : undefined;
 
     const runParameters = run.input.parameters as Record<string, unknown> | undefined;
+    const workspace = typeof runParameters?.conversationLocalId === 'string' && /^[0-9a-f-]{36}$/i.test(runParameters.conversationLocalId) ? this.workspace.forConversation(runParameters.conversationLocalId) : this.workspace;
     const referenceId = typeof runParameters?.referenceFileId === "string" ? runParameters.referenceFileId : "";
     // 临时文件可能恰好过期；这不应让整轮问答失败，模型会收到明确的缺失说明。
     const uploadedFile = referenceId ? await this.creationStorage.readForAgent(actor, referenceId).catch(() => null) : null;
@@ -223,7 +224,6 @@ export class AgentHarnessService {
                 ...input.model,
                 toolChoice: input.model.toolChoice ?? "auto",
                 tools: runParameters?.source==='followup-suggestions'?[]:platformToolDefinitions.filter(tool=>input.searchEnabled||tool.function.name!=='search_web'),
-                maxTokens: input.model.maxTokens ?? 3600,
                 ...(/deepseek/i.test(serverAdapter!.id)?{providerOptions:{...input.model.providerOptions,thinking:{type:'disabled'}}}:{}),
               },
             },
@@ -251,7 +251,7 @@ export class AgentHarnessService {
                     });
                     return { ...searchResult, externalContentNotice: externalWebContentNotice };
                   }
-                  const output = await executePlatformTool(call, context, { actor, runId, agents: this.agents, database: this.database, studio: this.studio, creationStorage: this.creationStorage, workspace: this.workspace, generation: this.generation, rag: this.rag });
+                  const output = await executePlatformTool(call, context, { actor, runId, agents: this.agents, database: this.database, studio: this.studio, creationStorage: this.creationStorage, workspace, generation: this.generation, rag: this.rag });
                   await this.agents.appendToolCall(runId, call.function.name, { round: context.round, arguments: call.function.arguments }, output as Record<string, unknown>);
                   return output;
                 }
@@ -260,7 +260,6 @@ export class AgentHarnessService {
                 return { accepted: true, round: context.round };
               },
             },
-            maxRounds: typeof runParameters?.callBudget==='number'&&Number.isInteger(runParameters.callBudget)?Math.max(2,Math.min(8,runParameters.callBudget)):8,
           })
         : (() => { throw new BadRequestException("不支持的执行模式"); })();
 

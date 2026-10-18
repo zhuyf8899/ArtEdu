@@ -30,15 +30,16 @@ function canonicalArguments(raw:string) {
  try {const sort=(v:any):any=>Array.isArray(v)?v.map(sort):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,sort(v[k])])):v;return JSON.stringify(sort(JSON.parse(raw)));} catch{return raw;}
 }
 export async function runTaskLoop(options: Options) {
-    const limit = options.maxRounds ?? 5;
-    if (!Number.isInteger(limit) || limit < 1 || limit > 32)
-        throw Error('轮数必须在1到32之间');
+    const limit = options.maxRounds ?? Infinity;
+    if (options.maxRounds !== undefined && (!Number.isSafeInteger(limit) || limit < 1))
+        throw Error('轮数必须是正整数');
     const contract = options.contract ?? { action: 'answer', deliverables: [] };
     const definitions = [...(options.tools ?? options.request.parameters?.tools ?? [])].filter(t => t.function.name !== 'harness_probe' && allowsTaskTool(contract, t.function.name));
     const byName = new Map(definitions.map(t => [t.function.name, t]));
     const messages: ModelMessage[] = [...(options.request.messages ?? [{ role: 'user', content: options.request.prompt || '' }])];
     const ledger: any[] = [], roundTexts: any[] = [];
     let toolCallCount = 0;
+    const answerParts: string[] = [];
     const progress = async (e: Omit<AgentProgressEvent, 'at'>) => { await options.onProgress?.({ ...e, at: new Date().toISOString() }); };
     const finish = (result: ModelResult, round: number, exhausted = false) => {
         const delivery = assessDelivery({ contract, ledger, content: result.content, finishReason: result.finishReason, budgetExhausted: exhausted });
@@ -46,7 +47,7 @@ export async function runTaskLoop(options: Options) {
             delivery.status = 'paused';
             delivery.reason = '任务已暂停，已有成果已保留';
         }
-        return { ...result, rounds: round, messages, toolCallCount, ledger, roundTexts, delivery };
+        return { ...result, content: [...answerParts, result.content].join(''), rounds: round, messages, toolCallCount, ledger, roundTexts, delivery };
     };
     for (let round = 1; round <= limit; round++) {
         if (options.request.signal?.aborted)
@@ -55,7 +56,7 @@ export async function runTaskLoop(options: Options) {
         const state = assessDelivery({ contract, ledger, content: '' });
 
         const available = definitions;
-        const next: ModelRequest = { ...options.request, messages: [...messages, ...(options.recovery && contract.action !== 'answer' ? [{ role: 'system' as const, content: `执行进度：已有产物 ${JSON.stringify(state.artifacts.map(a => ({ path: a.path, validation: a.validation })))}；缺项 ${JSON.stringify(state.missing)}。${taskExecutionGuidance(contract)}还剩${limit - round + 1}次调用。` }] : [])], parameters: { ...options.request.parameters, tools: finalRound ? [] : available, toolChoice: finalRound ? 'none' : 'auto' } };
+        const next: ModelRequest = { ...options.request, messages: [...messages, ...(options.recovery && contract.action !== 'answer' ? [{ role: 'system' as const, content: `执行进度：已有产物 ${JSON.stringify(state.artifacts.map(a => ({ path: a.path, validation: a.validation })))}；缺项 ${JSON.stringify(state.missing)}。${taskExecutionGuidance(contract)}${Number.isFinite(limit) ? `还剩${limit - round + 1}次调用。` : '完成并检查全部交付物后结束。'}` }] : [])], parameters: { ...options.request.parameters, tools: finalRound ? [] : available, toolChoice: finalRound ? 'none' : 'auto' } };
         const me = { id: `model-${round}`, kind: 'model' as const, name: 'model.invoke', round };
         await progress({ ...me, status: 'running' });
         let result: ModelResult;
@@ -71,7 +72,12 @@ export async function runTaskLoop(options: Options) {
         // Never execute a truncated tool batch. Keep earlier complete artifacts.
         if (result.finishReason === 'length') {
             if (options.recovery && !finalRound) {
-                messages.push({ role: 'system', content: '上一轮输出被截断，该批工具完全未执行。不要续接残缺JSON；重新提交更小的完整工具参数。' + taskExecutionGuidance(contract) });
+                if (!result.toolCalls?.length && !contract.deliverables?.length && result.content.trim()) {
+                    answerParts.push(result.content);
+                    messages.push({ role: 'assistant', content: result.content }, { role: 'system', content: '上一段回答达到供应商单次输出长度，请从断点继续，不要重复已输出内容。完成回答后正常结束。' });
+                } else {
+                    messages.push({ role: 'system', content: '上一轮输出被截断，该批工具完全未执行。不要续接残缺JSON；重新提交更小的完整工具参数。' + taskExecutionGuidance(contract) });
+                }
                 continue;
             }
             return finish(result, round);

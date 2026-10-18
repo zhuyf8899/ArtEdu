@@ -17,7 +17,14 @@ const MAX_BATCH_BYTES = 4 * 1024 * 1024;
  */
 @Injectable()
 export class AgentWorkspaceService {
-  private root(actor: Actor) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id); }
+  private conversationScope = "";
+  forConversation(id: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ForbiddenException("无效的会话工作区");
+    const scoped = new AgentWorkspaceService();
+    scoped.conversationScope = id;
+    return scoped;
+  }
+  private root(actor: Actor) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id, ...(this.conversationScope ? ["__conversations", this.conversationScope] : [])); }
 
   /**
    * 自检工具需要知道页面引用的文件是否存在、多大——只做 stat，不读内容，
@@ -123,7 +130,8 @@ export class AgentWorkspaceService {
    */
   openUrl(filePath: string) {
     const relative = this.relative(filePath);
-    return `/api/agent-runs/workspace-preview/${relative.split("/").map(encodeURIComponent).join("/")}`;
+    const prefix = this.conversationScope ? `__conversations/${this.conversationScope}/` : "";
+    return `/api/agent-runs/workspace-preview/${prefix}${relative.split("/").map(encodeURIComponent).join("/")}`;
   }
 
   private relative(value: string) {

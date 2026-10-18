@@ -68,8 +68,8 @@ test("暂停输出：中断在途请求，且不当作失败处理", async () =>
   const api = await readFile(new URL("../src/services/adminApi.js", import.meta.url), "utf8");
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   // 每一轮生成持有自己的 AbortController：暂停只中断当前这一轮。
-  assert.ok(workspace.includes("const abortRef = useRef(null)"));
-  assert.ok(workspace.includes("abortRef.current?.abort()"));
+  assert.ok(workspace.includes("const executionsRef = useRef(new Map())"));
+  assert.ok(workspace.includes("executionsRef.current.get(activeIdRef.current)?.controller.abort()"));
   // 生成入口把 signal 与增量回调一起交给 onCreate：前者用于暂停，后者用于流式回填。
   assert.ok(workspace.includes("}, controller.signal, onDelta, onProgress);"), "onCreate 必须收到 signal、正文与执行事件回调");
   // 暂停走独立分支：保留内容、回填输入，而不是走失败态。

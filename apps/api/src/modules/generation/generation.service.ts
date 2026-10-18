@@ -129,7 +129,7 @@ export class GenerationService {
         parameters: {
           temperature: 0.4,
           // 文档要写满整篇；问答比普通创作需要更多余地，否则长答案会被截断。
-          maxTokens: input.jobType === "document" ? 6500 : input.jobType === "chat" ? 2200 : 1200,
+          ...(input.jobType === "chat" ? {} : { maxTokens: input.jobType === "document" ? 6500 : 1200 }),
           ...(input.jobType === "document" ? { responseFormat: "json_object" as const } : {}),
           // 所有图片 API 统一接收标准字段；文本模型仍保留其关闭 thinking 的参数。
           providerOptions: imageOptions ?? { thinking: { type: "disabled" } },

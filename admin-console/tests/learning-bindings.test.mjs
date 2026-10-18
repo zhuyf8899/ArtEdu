@@ -55,7 +55,7 @@ test("课程和工作流编辑器、图谱详情使用统一配置入口和明�
   assert.match(course, /图谱配置/);
   assert.match(workflow, /normalizeLearningBindings\(editor.definition.learning\)/);
   assert.match(evidence, /课程涉及.*未开始.*学习中.*关联课时已完成/);
-  assert.match(evidence, /尚未做能力评价/);
+  assert.match(evidence, /已提交/);
   assert.match(graph, /目标达成/);
   assert.doesNotMatch(graph, /熟练/);
 });

@@ -4,7 +4,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowClockwise, ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
-  Compass, GraduationCap, GridFour, House, ImageSquare, Lightbulb, LockKey,
+  Compass, GraduationCap, GridFour, House, ImageSquare, Lightbulb,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
 import { createAgentRun, executeAgentRun, executeAgentRunStream, getAgentRun, getApiHealth, getPortalHome, getCourses, getWorks, runGenerationJob } from "./services/adminApi.js";
@@ -75,18 +75,17 @@ export function LocalLogin({ onLogin, message = "" }) {
       <p className="eyebrow">// WELCOME</p>
       <h1>登录后进入<br />学习与创作空间。</h1>
       <p>使用平台账号登录，课程进度、学习笔记与创作记录都会跟随账号保存。</p>
-      <div className="test-login__note"><LockKey size={17} weight="bold" /><span>密码不会保存在浏览器；登录会话仅使用 HttpOnly 安全 Cookie。</span></div>
     </section>
     <section className="test-login__accounts">
       <div className="account-panel__heading"><div><p>// SIGN IN</p><h2>账号登录</h2></div></div>
-      {isHostedPreview && <p className="login-error" role="status">当前为界面预览，未连接 API 或测试数据库；账号仅可在本地测试环境使用。</p>}
-      {!isHostedPreview && <div className={`login-service login-service--${serviceStatus}`} role="status"><span>{serviceStatus === "checking" ? <ArrowClockwise className="spin" size={16} /> : serviceStatus === "online" ? <CheckCircle size={16} weight="fill" /> : <X size={16} weight="bold" />}{serviceStatus === "checking" ? "正在检测登录服务" : serviceStatus === "online" ? "登录服务与数据库连接正常" : "登录服务暂不可用"}</span>{serviceStatus === "offline" && <button type="button" onClick={checkService}>重新检测</button>}</div>}
+      {isHostedPreview && <p className="login-error" role="status">预览页面暂不支持登录。</p>}
+      {!isHostedPreview && serviceStatus === "offline" && <div className="login-service login-service--offline" role="status"><span>登录服务暂不可用</span><button type="button" onClick={checkService}>重试连接</button></div>}
       {message && <p role="status">{message}</p>}
       <form className="local-login-form" onSubmit={submit}>
         <label>账号<input autoComplete="username" required maxLength="120" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
         <label>密码<input type="password" autoComplete="current-password" required minLength="1" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         {error && <p className="login-error" role="alert">{error}</p>}
-        <button disabled={submitting || serviceStatus !== "online"}>{submitting ? "正在验证…" : serviceStatus === "checking" ? "正在连接…" : serviceStatus === "offline" ? "服务未连接" : "安全登录"} <ArrowRight size={16} weight="bold" /></button>
+        <button disabled={submitting || serviceStatus !== "online"}>{submitting ? "正在登录…" : serviceStatus === "checking" ? "正在连接…" : serviceStatus === "offline" ? "服务未连接" : "登录"} <ArrowRight size={16} weight="bold" /></button>
       </form>
     </section>
   </main></div>;
@@ -270,7 +269,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
         {section === "search" && <SearchResults variant={morph ? 'morph' : 'classic'} initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
 
-        {section === "creation" && <AiCreationWorkspace key={creationId || (creationStartNew ? "new" : "latest")} account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} onSuggest={suggestFollowups} creation={data.creation} onNotice={showToast} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
+        {section === "creation" && <AiCreationWorkspace account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} onSuggest={suggestFollowups} creation={data.creation} onNotice={showToast} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
       </Suspense>
       </div>
     </main>

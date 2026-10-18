@@ -19,7 +19,7 @@ export function LearningPathCanvas({ graph, framework, contents, paths, selected
       <div className="knowledge-path__stages" aria-label="选择学习阶段">{framework.stages.map((stage) => <button type="button" key={stage.id} aria-pressed={!showAll && visibleStages.some((item) => item.id === stage.id)} onClick={() => { setFocusId(stage.id); setShowAll(false); onSelect({ stageId: stage.id, column: 0 }); setExpanded(false); }}>{stage.number} {stage.title}</button>)}</div>
       <button type="button" className="knowledge-path__all" aria-pressed={showAll} onClick={() => { setShowAll((value) => !value); setFocusId(null); onSelect({ stageId: framework.currentStage.id, column: 0 }); setExpanded(false); }}>{showAll ? "聚焦当前与下一阶段" : "查看全部阶段"}</button>
     </div>
-    <div className="knowledge-path__line-legend"><span><i />已有记录或配置关联</span><span><i className="is-suggested" />建议路径</span><small>箭头表示路径方向，不代表正式能力认证</small></div>
+    <div className="knowledge-path__line-legend"><span><i />已有记录或配置关联</span><span><i className="is-suggested" />建议路径</span></div>
     <p className="knowledge-orbits__scroll-hint" id={`${id}-hint`}>{showAll ? "全部四阶段" : "当前聚焦两个阶段"} · 点击圆点展开关联，小屏可左右滑动</p>
     <div className="knowledge-orbits__viewport" tabIndex={0} role="region" aria-label="阶段学习关系图谱，可横向滚动" aria-describedby={`${id}-hint`}>
       <div className="knowledge-orbits__canvas knowledge-path__canvas" style={{ "--path-stage-count": visibleStages.length }}>
@@ -54,7 +54,7 @@ export function LearningPathCanvas({ graph, framework, contents, paths, selected
     </div>
     <section className="knowledge-path__expanded" id={`${id}-branches`} hidden={!expanded} aria-label="选中圆点的关联分支">
       <header><div><span>关联分支 · {selectedStage.title}</span><strong>{selectedColumn === 4 ? recommendation.title : content.headline}</strong></div><button type="button" onClick={() => setExpanded(false)}><X size={15} />收起分支</button></header>
-      {branches.length ? <div className="knowledge-path__branch-list">{branches.map((branch, index) => <div key={`${branch.title}-${index}`} className={`knowledge-path__branch ${branch.existing ? "is-existing" : "is-suggested"}`}><span className="knowledge-path__branch-line">{branch.relation}<ArrowRight size={13} /></span><button type="button" className={`knowledge-orbits__node knowledge-path__leaf is-${branch.state}`} onClick={() => onGoTo(branch.action)} title={branch.title} aria-label={`${branch.relation}：${branch.title}，点击打开`}><strong>{branch.title}</strong><small>打开内容<ArrowRight size={12} /></small></button></div>)}</div> : <p className="knowledge-path__empty">暂无已配置的关联内容，不推测知识点关系。可在下方查看下一步建议。</p>}
+      {branches.length ? <div className="knowledge-path__branch-list">{branches.map((branch, index) => <div key={`${branch.title}-${index}`} className={`knowledge-path__branch ${branch.existing ? "is-existing" : "is-suggested"}`}><span className="knowledge-path__branch-line">{branch.relation}<ArrowRight size={13} /></span><button type="button" className={`knowledge-orbits__node knowledge-path__leaf is-${branch.state}`} onClick={() => onGoTo(branch.action)} title={branch.title} aria-label={`${branch.relation}：${branch.title}，点击打开`}><strong>{branch.title}</strong><small>打开内容<ArrowRight size={12} /></small></button></div>)}</div> : <p className="knowledge-path__empty">暂无关联内容，可查看下方建议。</p>}
     </section>
   </>;
 }

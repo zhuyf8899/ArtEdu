@@ -89,10 +89,10 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
     <button className="publish-scrim" aria-label="关闭案例编辑" disabled={busy} onClick={onClose} />
     <form ref={dialog} className="publish-form case-editor" onSubmit={save} aria-label="案例草稿编辑">
       <header><div><span>CASE STUDY</span><h2>{initial ? "编辑案例草稿" : "新建案例草稿"}</h2></div><button type="button" disabled={busy} onClick={onClose} aria-label="关闭案例编辑">关闭</button></header>
-      <p>先保存和预览，确认后再单独提交审核。提示词只作为教学文字展示，不会自动执行。</p>
+      <p>保存并预览案例，确认后提交审核。</p>
       <fieldset disabled={busy}>
         <label>案例名称<input required minLength={2} maxLength={160} value={form.title} onChange={e => change("title", e.target.value)} /></label>
-        <label>项目简介<textarea required minLength={2} maxLength={3000} value={form.summary} onChange={e => change("summary", e.target.value)} /><small>描述作品主题、创作理念与成果；不在正文中填写上传、导入、服务状态或缺失文件说明。</small></label>
+        <label>项目简介<textarea required minLength={2} maxLength={3000} value={form.summary} onChange={e => change("summary", e.target.value)} /><small>描述作品主题、创作理念与成果。</small></label>
         <div className="publish-form__row"><label>学科<input required maxLength={100} value={form.discipline} onChange={e => change("discipline", e.target.value)} /></label><label>来源<select value={form.story.origin} onChange={e => storyChange("origin", e.target.value)}><option value="unspecified">请选择来源</option><option value="collected">收集案例／外部创作</option><option value="platform">在 ArtEdu 创作</option></select><small>提交审核前需明确来源；外部案例还需填写作者与授权说明。</small></label></div>
         <label>原作者／团队（多人用逗号分隔）<input maxLength={960} value={labelFields.creators} onChange={e => setLabelFields({...labelFields,creators:e.target.value})} placeholder="支持匿名作者；上传者不会替代原作者署名" /></label>
         {form.story.origin === "collected" && <section className="case-editor-step" aria-label="作品来源与展览信息">
@@ -121,7 +121,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
         <button type="button" disabled={form.story.steps.length >= 20} onClick={() => storyChange("steps",[...form.story.steps,emptyStep()])}>＋ 添加创作步骤</button>
         <label>经验与反思<textarea maxLength={4000} value={form.story.reflection} onChange={e => storyChange("reflection",e.target.value)} /></label>
         <label>编辑备注（仅上传者与审核人员可见）<textarea maxLength={8000} value={form.story.editorialNote} onChange={e => storyChange("editorialNote", e.target.value)} placeholder="资料整理说明、尚缺素材、核对情况等写在这里，不混入作者的创作反思。" /></label>
-        {!!editorialIssues.length && <aside className="case-editorial-warning" role="status"><strong>公开文案需要调整</strong>{editorialIssues.map((issue, index) => <p key={`${issue.field}-${index}`}>{issue.message}</p>)}<small>可以先保存草稿，调整后再提交审核；平台不会自动删除或改写作者文字。</small></aside>}
+        {!!editorialIssues.length && <aside className="case-editorial-warning" role="status"><strong>公开文案需要调整</strong>{editorialIssues.map((issue, index) => <p key={`${issue.field}-${index}`}>{issue.message}</p>)}<small>可先保存草稿，调整后再提交审核。</small></aside>}
         <h3>发布与附件权限</h3>
         <label>展示授权<select value={form.story.authorization} onChange={e => storyChange("authorization",e.target.value)}><option value="pending">待确认（仅保存草稿）</option><option value="confirmed">已获得作者展示授权</option></select></label>
         <label>授权说明（仅上传者与审核人员可见）<textarea maxLength={1000} value={form.story.authorizationNote} onChange={e => storyChange("authorizationNote",e.target.value)} placeholder="记录授权渠道、范围与时间，不填写私人联系方式" /></label>

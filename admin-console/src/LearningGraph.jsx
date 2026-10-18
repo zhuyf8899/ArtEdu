@@ -50,12 +50,12 @@ export function LearningGraph({ data, onNavigate, onView, accountId }) {
         <button type="button" onClick={() => goTo(selectedContent.action)}>前往{actionLabel(selectedContent.action)}<ArrowRight size={17} /></button>
         <div className="knowledge-orbits__detail-body">
           <section><h5>学习与创作记录</h5>{selectedContent.records.length ? selectedContent.records.map((record, index) => <button className="knowledge-orbits__record-link" type="button" key={`${record.title}-${index}`} onClick={() => goTo(record.action)}><span><strong>{record.title}</strong><small>{record.detail}</small></span><ArrowRight size={15} /></button>) : <p>尚无对应记录，先从下一步开始。</p>}</section>
-          <section><h5>已学内容 · 来自已完成课时</h5>{selectedContent.knowledge.length ? <ul>{selectedContent.knowledge.map((topic) => <li key={topic}>{topic}</li>)}</ul> : <p>{graph.lessons.length ? "此板块暂无已完成课时对应的知识内容。任务、笔记和工具记录不等同于知识掌握。" : "暂无已完成课时的内容记录，不会将已选课程或推荐内容标为已学。"}</p>}</section>
+          <section><h5>已学内容 · 来自已完成课时</h5>{selectedContent.knowledge.length ? <ul>{selectedContent.knowledge.map((topic) => <li key={topic}>{topic}</li>)}</ul> : <p>{graph.lessons.length ? "暂无已完成课时对应的知识内容。" : "完成课时后，这里会展示对应的知识内容。"}</p>}</section>
           <section className="knowledge-orbits__next"><h5>下一步学什么</h5><strong>{selectedContent.next.title}</strong><p>{selectedContent.next.text}</p><button type="button" onClick={() => goTo(selectedContent.next.action)}>开始下一步<ArrowRight size={15} /></button></section>
         </div>
       </div>}
       <KnowledgeEvidence graph={graph} source={selectedColumn === 4 ? null : selectedContent.source} onGoTo={goTo} />
-      <p className="knowledge-framework__disclaimer">实线表示已有记录或明确配置的关联，虚线表示建议路径；“后续阶段”是路线规划，不表示已绑定课程或必须按顺序解锁。颜色表示累计记录目标，不是知识掌握或能力认证。已学内容来自已完成课时；工作流工具配置不等于外部工具使用。</p>
+      <p className="knowledge-framework__disclaimer">实线：已有记录或关联 · 虚线：建议路径 · 颜色：记录进度</p>
     </section>
 
     <section className="knowledge-guidance" aria-label="下一阶段建议">
@@ -63,7 +63,7 @@ export function LearningGraph({ data, onNavigate, onView, accountId }) {
       <div className="knowledge-guidance__reason"><strong>{followingStage ? `接下来：${followingStage.title}` : "持续学习与表达"}</strong><p>{next ? `先补齐「${framework.currentStage.title}」的「${next.title}」目标，目前为 ${next.display ?? `${next.value} / ${next.target} ${next.unit}`}。` : "四个方面都已有阶段记录，接下来可以选择自己感兴趣的方向继续深挖。"}{followingStage && `下一阶段重点：${followingStage.subtitle}。`}</p><span>推荐基于学习记录，不替代教师评价。</span></div>
     </section>
 
-    <details className="knowledge-orbits__evidence"><summary>查看课程、工作流与成长足迹<span>展开真实学习记录</span></summary><div className="knowledge-evidence"><section><div className="knowledge-evidence__title"><BookOpenText size={19} /><strong>正在学习的课程</strong></div>{graph.courses.length ? graph.courses.slice(0, 3).map((course) => <button key={course.id} type="button" onClick={() => onNavigate(`/learning?course=${encodeURIComponent(course.id)}`)}><span>{course.title}<small>{course.completedLessons} / {course.lessonCount} 节课时</small></span><ArrowRight size={15} /></button>) : <p>尚未加入课程，先从 AI 讲堂选择一门。</p>}</section>
+    <details className="knowledge-orbits__evidence"><summary>查看课程、工作流与成长足迹<span>展开学习记录</span></summary><div className="knowledge-evidence"><section><div className="knowledge-evidence__title"><BookOpenText size={19} /><strong>正在学习的课程</strong></div>{graph.courses.length ? graph.courses.slice(0, 3).map((course) => <button key={course.id} type="button" onClick={() => onNavigate(`/learning?course=${encodeURIComponent(course.id)}`)}><span>{course.title}<small>{course.completedLessons} / {course.lessonCount} 节课时</small></span><ArrowRight size={15} /></button>) : <p>尚未加入课程，先从 AI 讲堂选择一门。</p>}</section>
       <section><div className="knowledge-evidence__title"><ImageSquare size={19} /><strong>最近的工作流</strong></div>{graph.runs.length ? graph.runs.slice(0, 3).map((run) => <button key={run.id} type="button" onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(run.workflowId)}&run=${encodeURIComponent(run.id)}`)}><span>{run.workflowName}<small>{run.category || "平台工作流"} · {run.status === "completed" ? "已完成" : "已记录"}</small></span><ArrowRight size={15} /></button>) : <p>还没有平台工作流记录。</p>}</section>
       <section><div className="knowledge-evidence__title"><NotePencil size={19} /><strong>最近的成长足迹</strong></div>{graph.events.length ? graph.events.slice(0, 3).map((event) => <div className="knowledge-evidence__event" key={event.id}><span>{event.title}<small>{event.kind}</small></span><time dateTime={event.at}>{dateLabel(event.at)}</time></div>) : <p>完成课程或留下笔记后，这里会出现记录。</p>}</section></div></details>
   </div>;
