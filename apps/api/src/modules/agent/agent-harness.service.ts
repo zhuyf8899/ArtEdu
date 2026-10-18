@@ -278,7 +278,7 @@ export class AgentHarnessService {
       }, { content: result.content, providerId: resultProviderId, rounds: "rounds" in result ? result.rounds : 1, toolCallCount: "toolCallCount" in result ? result.toolCallCount : 0 });
       const artifactType = scenario === "webpage_generation" ? "webpage" : scenario === "pattern_generation" ? "pattern" : scenario === "document_generation" ? "document" : "brief";
       await this.agents.appendArtifact(runId, artifactType, { content: result.content, providerId: resultProviderId, scenario, generatedBy: "agent-harness", rounds: "rounds" in result ? result.rounds : 1, delivery:result.delivery });
-      await this.agents.appendAgentMessage(runId, result.delivery&&result.delivery.status!=='succeeded'?result.delivery.reason:result.content);
+      await this.agents.appendAgentMessage(runId, composeAssistantMessage(result.content, result.delivery));
       const completed = result.delivery ? await this.agents.finishRun(runId,result.delivery) : await this.agents.completeRun(runId);
       await runProgress(result.delivery?.status ?? (completed.status==='succeeded'?'succeeded':'failed'));
       return completed;
@@ -300,4 +300,16 @@ export class AgentHarnessService {
     }
   }
 
+}
+
+/**
+ * 助手消息正文：正文永远是主体，未完成原因只作为附注跟在后面。
+ * 早前 partial/failed 时直接用 delivery.reason 覆盖正文，用户点开历史只看到
+ * 「图片尚未通过视觉要求核验」这一句，以为整个回答丢了。
+ */
+export function composeAssistantMessage(content: string | null | undefined, delivery?: { status?: string; reason?: string } | null) {
+  const text = String(content ?? "");
+  const reason = delivery && delivery.status && delivery.status !== "succeeded" ? String(delivery.reason ?? "").trim() : "";
+  if (!reason) return text;
+  return text ? `${text}\n\n（${reason}）` : `（${reason}）`;
 }
