@@ -31,6 +31,11 @@ const environmentSchema = z.object({
   RAG_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(64).max(4096).default(768),
   RAG_MIN_SIMILARITY: z.coerce.number().min(0).max(1).default(0.62),
   RAG_WEB_FALLBACK_ENABLED: z.enum(["true", "false"]).default("true"),
+  // 扫描版 PDF 没有文字层，pdftotext 抽不到东西；这时回退成 pdftoppm 渲染 + tesseract OCR。
+  // 默认开启：一本书 OCR 一页约 5 秒，上限页数用来防止超大扫描件把 Worker 占住几个小时。
+  RAG_OCR_ENABLED: z.enum(["true", "false"]).default("true"),
+  RAG_OCR_MAX_PAGES: z.coerce.number().int().min(0).max(5000).default(400),
+  RAG_OCR_DPI: z.coerce.number().int().min(100).max(400).default(200),
   AGENT_ALERT_KEYWORDS: z.string().optional(),
   AGENT_BLOCK_KEYWORDS: z.string().optional(),
 });
@@ -56,6 +61,9 @@ export interface Environment {
   ragEmbeddingDimensions: number;
   ragMinSimilarity: number;
   ragWebFallbackEnabled: boolean;
+  ragOcrEnabled: boolean;
+  ragOcrMaxPages: number;
+  ragOcrDpi: number;
   agentAlertKeywords: string[];
   agentBlockedKeywords: string[];
 }
@@ -120,6 +128,9 @@ export function getEnvironment(): Environment {
     ragEmbeddingDimensions: parsed.RAG_EMBEDDING_DIMENSIONS,
     ragMinSimilarity: parsed.RAG_MIN_SIMILARITY,
     ragWebFallbackEnabled: parsed.RAG_WEB_FALLBACK_ENABLED === "true",
+    ragOcrEnabled: parsed.RAG_OCR_ENABLED === "true",
+    ragOcrMaxPages: parsed.RAG_OCR_MAX_PAGES,
+    ragOcrDpi: parsed.RAG_OCR_DPI,
     agentAlertKeywords: splitKeywords(parsed.AGENT_ALERT_KEYWORDS),
     agentBlockedKeywords: splitKeywords(parsed.AGENT_BLOCK_KEYWORDS),
   };
