@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { supportsCreationMethod } from "../src/creation-capabilities.js";
-import { buildCreationParameters, creationMethod, normalizePageCount, resolveCreationOperation } from "../src/creationMethods.js";
+import { buildCreationParameters, creationMethod, normalizePageCount, promptForOperation, resolveCreationOperation } from "../src/creationMethods.js";
 import { readFile } from "node:fs/promises";
 
 test("document generation requires explicit document capability, not just chat", () => {
@@ -24,6 +24,29 @@ test("建议模式不强制执行操作，只有显式产物意图才切换通�
   assert.equal(resolveCreationOperation("生成一张蓝绿色连续平铺纹样", "chat").jobType, "pattern");
   assert.equal(resolveCreationOperation("生成一个学生作品画廊网页原型", "chat").jobType, "webpage");
   assert.equal(resolveCreationOperation("生成一份 8 页 PPT 课堂汇报", "chat").id, "slides");
+});
+
+test("图片模式把「要出图」写进提示词，纯提问和点名别的文件类型仍照旧", () => {
+  // 以前图片模式完全不看所选模式：句子里没有"图片/海报/纹样"就退回文字回答，
+  // 于是"生成一个3D博丽神社的前端界面"最后去写 HTML，一个字都没提要图。
+  const op = resolveCreationOperation("生成一个3D博丽神社的前端界面", "ui");
+  assert.equal(op.jobType, "image");
+  const request = promptForOperation("生成一个3D博丽神社的前端界面", op);
+  assert.match(request, /生成图片/, "图片模式的提示词必须明确要求出图");
+  assert.match(request, /generate_image/, "要指名调用生图工具，否则服务端仍按文字回答");
+  // 已经写明生图意图就不重复追加
+  const asked = "帮我生成图片：青绿色纹样海报";
+  assert.equal(promptForOperation(asked, op), asked);
+  // 纯提问留在对话模式（这条原有行为不能回退）
+  assert.equal(resolveCreationOperation("讲讲宋代山水画的构图特点", "ui").jobType, "chat");
+  assert.equal(promptForOperation("讲讲宋代山水画的构图特点", creationMethod("chat")), "讲讲宋代山水画的构图特点");
+  // 图片模式下明确要网页/文档，仍按用户点名的文件类型
+  assert.equal(resolveCreationOperation("生成一个学生作品画廊网页原型", "ui").jobType, "webpage");
+  assert.equal(resolveCreationOperation("生成一份 8 页 PPT 课堂汇报", "ui").id, "slides");
+  // 图案模式同理，提示词要求的是图案图片
+  const pattern = resolveCreationOperation("博丽神社", "pattern");
+  assert.equal(pattern.jobType, "pattern");
+  assert.match(promptForOperation("博丽神社", pattern), /图案图片/);
 });
 
 test("创作页绑定续写表单、键盘发送、历史文件留存与消息操作", async () => {

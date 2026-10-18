@@ -10,7 +10,7 @@ import { CapabilityPicker } from "./CapabilityPicker.jsx";
 import { DocumentOptions } from "./DocumentOptions.jsx";
 import { supportsCreationMethod } from "./creation-capabilities.js";
 import {
-  DEFAULT_METHOD_ID, FALLBACK_MODELS, buildCreationParameters, creationMethod, formatConversationTime, resolveCreationOperation, titleFromPrompt,
+  DEFAULT_METHOD_ID, FALLBACK_MODELS, buildCreationParameters, creationMethod, formatConversationTime, promptForOperation, resolveCreationOperation, titleFromPrompt,
 } from "./creationMethods.js";
 import {
   createConversation, deleteConversation, listConversations, makeModelContext, saveConversation, taskStateFor,
@@ -254,7 +254,9 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       onProgress({id:'run',kind:'run',name:'agent.execute',status:'running'});
       const result = await onCreate({
         jobType: operationDefinition.jobType,
-        prompt: content,
+        // 图片模式必须把「要出图」写进提示词：服务端按提示词重新判定交付类型，
+        // 只传 jobType 它并不会因此就去调用生图工具。
+        prompt: promptForOperation(content, operationDefinition),
         modelConfigId: modelId ?? undefined,
         parameters: {...buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),conversationLocalId: conversation.id, previousTask:taskStateFor(baseMessages,conversation.memoryState)},
         context,
