@@ -55,11 +55,15 @@ test("预览路由必须用 previewCspFor，不能只看 text/html", async () =>
   assert.ok(!controller.includes('if (asset.contentType.startsWith("text/html"))'), "不能退回只给 HTML 加策略的旧写法");
 });
 
-test("系统提示与工具说明都告诉模型可以画 SVG，并写明自包含要求", async () => {
+test("SVG指引只用于矢量任务，不能全局诱导生图任务写SVG", async () => {
   const harness = await readFile(path.join(process.cwd(), "src", "modules", "agent", "agent-harness.service.ts"), "utf8");
   const tools = await readFile(path.join(process.cwd(), "src", "modules", "agent", "agent-tools.ts"), "utf8");
-  assert.ok(harness.includes(".svg"), "系统提示要给出写 .svg 的明确指引");
-  assert.ok(harness.includes("自包含"), "必须写明 SVG 不能引用外部资源，否则预览里不会显示");
+  assert.ok(!harness.includes("需要图形时可以直接画 SVG"));
+  const {composeAgentPrompt,planTask}=await import('./agent-policy');
+  assert.ok(composeAgentPrompt({contract:planTask({prompt:'用SVG绘制图标'})}).includes('自包含SVG'));
+  const imagePrompt=composeAgentPrompt({contract:planTask({prompt:'生成一张图片'})});
+  assert.ok(!imagePrompt.includes('可写入自包含SVG'));
+  assert.ok(imagePrompt.includes('必须调用 generate_image'));
   assert.ok(tools.includes(".svg"), "工作区写入工具的说明要包含 SVG");
 });
 

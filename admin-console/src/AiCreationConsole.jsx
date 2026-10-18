@@ -146,7 +146,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
             try {
               const uploaded = await uploadTemporaryCreationFile(file);
               setReference({ id: uploaded.id, fileName: uploaded.fileName, sizeBytes: uploaded.sizeBytes, expiresAt: uploaded.expiresAt, downloadUrl: uploaded.downloadUrl });
-              onNotice?.(`“${uploaded.fileName}”已临时上传，72 小时未活动后自动删除`, "success");
+              onNotice?.(`“${uploaded.fileName}”已临时上传，20 分钟后过期，读取不会续期`, "success");
             } catch (error) { onNotice?.(error.message || "文件上传失败", "error"); }
             event.target.value = "";
           }} />
@@ -161,7 +161,7 @@ export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () 
 
       <div className="ai-launcher__status">
         <span><ImageSquare size={13} /> {account.shortName} · 建议模式：{method.label} · <b ref={modelRef} className={`ai-launcher__model${modelClipped ? " is-clipped" : ""}`} title={modelLabel}>{modelLabel}</b></span>
-        {reference && <span title="临时文件独立占用服务器配额">临时文件：{reference.fileName} · 72 小时未活动自动删除</span>}
+        {reference && <span title="临时文件独立占用服务器配额">临时文件：{reference.fileName} · 20 分钟后自动过期</span>}
         <span>{quota.dailyLimit === null || quota.dailyLimit === undefined ? "今日额度未限制" : `今日剩余 ${Math.max(0, quota.dailyLimit - quota.dailyUsed)} / ${quota.dailyLimit}`}</span>
         {prompt.trim() && <button type="button" onClick={() => { setPrompt(""); setDraftSaved(false); clearDraft(account.id); }}><Trash size={13} /> 清空草稿</button>}
         <em><FloppyDisk size={13} />{draftSaved ? "草稿已保存" : "输入后自动保存"}</em>

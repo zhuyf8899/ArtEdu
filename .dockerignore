@@ -1,5 +1,6 @@
 .git
 .github
+local-artifacts
 node_modules
 **/node_modules
 **/dist

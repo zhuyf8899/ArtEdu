@@ -13,10 +13,11 @@ import {
   DEFAULT_METHOD_ID, FALLBACK_MODELS, buildCreationParameters, creationMethod, formatConversationTime, resolveCreationOperation, titleFromPrompt,
 } from "./creationMethods.js";
 import {
-  createConversation, deleteConversation, listConversations, makeModelContext, saveConversation,
+  createConversation, deleteConversation, listConversations, makeModelContext, saveConversation, taskStateFor,
 } from "./conversationStore.js";
 import { uploadTemporaryCreationFile } from "./services/adminApi.js";
 import { createDeltaBuffer } from "./chatStream.js";
+import { activityLabel, appendActivity, settleActivity, recoverExecution, visibleActivities } from './agentActivity.js';
 import { findReplyIndex, mergeFollowupQuestions, parseFollowupQuestions, withSuggestions } from "./followupQuestions.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
 
@@ -51,6 +52,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   const loadedIdRef = useRef("");
   const ranPendingRef = useRef("");
   const scrollRef = useRef(null);
+  const followOutputRef = useRef(true);
   // 进入对话、切换对话、发出新一轮时置位：无论用户上次停在哪里，都必须落到最新消息处。
   // 平时（流式输出时）才用"离底部近才跟随"的保守规则，避免抢用户翻看历史的滚动。
   const jumpToBottomRef = useRef(false);
@@ -80,11 +82,11 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const updateConversations = useCallback((updater) => {
-    setConversations((current) => {
-      const next = typeof updater === "function" ? updater(current) : updater;
-      conversationsRef.current = next;
-      return next;
-    });
+    // SSE events can arrive before React commits its next render. Update the
+    // persistence source synchronously so an old pending job cannot be revived.
+    const next = typeof updater === "function" ? updater(conversationsRef.current) : updater;
+    conversationsRef.current = next;
+    setConversations(next);
   }, []);
 
   const modelLabel = model?.name ?? "未选择模型";
@@ -92,8 +94,9 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   // 载入本地对话列表；IndexedDB 不可用时页面仍可读，只是不再持久化。
   useEffect(() => {
     let cancelled = false;
-    void listConversations(account.id).then((items) => {
+    void listConversations(account.id).then((records) => {
       if (cancelled) return;
+      const items = records.map(recoverExecution);
       conversationsRef.current = items;
       setConversations(items);
       setLoaded(true);
@@ -155,15 +158,20 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   // 暂停不是失败：保留已渲染的内容、把输入回填输入框，且不弹错误提示
   // （错误提示会让人以为请求坏了）。服务端那一次调用可能仍在收尾，但界面上
   // 控制权已经交还用户，可以改完直接重新发送。
-  const settlePaused = useCallback(async (conversationId, streaming, promptText) => {
+  const settlePaused = useCallback(async (conversationId, streaming, promptText, checkpoint) => {
     setPrompt(promptText);
     // 已经流出来的正文要留住——暂停不等于丢弃，只补一句说明。
     const partial = streaming[streaming.length - 1]?.content ?? "";
     const pauseNote = "已暂停本次输出，输入已保留，可直接重新发送继续。";
     const pausedMessages = [...streaming.slice(0, -1), {
+      ...streaming[streaming.length - 1],
       role: "assistant",
       content: partial ? `${partial}\n\n（${pauseNote}）` : pauseNote,
       paused: true,
+      status:'paused',
+      ...(checkpoint?{delivery:{...checkpoint,status:'paused'}}:{}),
+      streaming: false,
+      activity: settleActivity(streaming[streaming.length - 1]?.activity, 'paused'),
     }];
     setMessages(pausedMessages);
     await persist(conversationId, { pending: null, messages: pausedMessages }).catch(() => {});
@@ -182,7 +190,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     setFailed(false);
     const controller = new AbortController();
     abortRef.current = controller;
-    const context = makeModelContext(conversation);
+    const context = makeModelContext(conversation, baseMessages);
     // 空气泡 + 占位文案：支持流式的场景一到增量就顶掉占位文案；
     // 不支持流式的场景（生图/文档）继续显示占位，行为与改动前一致。
     const placeholderText = serviceReady
@@ -201,23 +209,40 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       },
     });
     const onDelta = (text) => { deltaBuffer.push(text); };
+    let activityWrites = Promise.resolve();
+    const onProgress = (event) => {
+      if (controller.signal.aborted) return;
+      const last = rendered[rendered.length - 1];
+      const activity = appendActivity(last.activity, event);
+      if (activity === last.activity&&(!event.runId||event.runId===last.runId)) return;
+      rendered = [...rendered.slice(0,-1), { ...last, activity,...(event.runId?{runId:event.runId}:{}) }];
+      setMessages(rendered);
+      if (event.kind === 'tool' && event.status === 'failed') onNotice?.(activityLabel(event), 'error');
+      if(event.status==='running'||event.kind==='model')return;
+      const snapshot = rendered;
+      activityWrites = activityWrites.then(() => persist(conversation.id, { pending: null, messages: snapshot })).catch(() => {});
+    };
     try {
       await persist(conversation.id, { pending: null, methodId: usedMethodId, messages: rendered });
+      onProgress({id:'run',kind:'run',name:'agent.execute',status:'running'});
       const result = await onCreate({
         jobType: operationDefinition.jobType,
         prompt: content,
         modelConfigId: modelId ?? undefined,
-        parameters: buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),
+        parameters: {...buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),previousTask:taskStateFor(baseMessages,conversation.memoryState)},
         context,
-      }, controller.signal, onDelta);
+      }, controller.signal, onDelta, onProgress);
+      const status=result?.status??(result?'succeeded':'failed');
+      onProgress({id:'run',kind:'run',name:'agent.execute',status});
+      await activityWrites;
       // 最终正文以服务端返回为准，尚未画出的那一帧不必再补。
       deltaBuffer.cancelFrame();
-      const finalMessages = [...rendered.slice(0, -1), { role: "assistant", content: responseText(result, operationDefinition), sources: result?.sources ?? null, localFile: result?.localFile ?? null }];
+      const finalMessages = [...rendered.slice(0, -1), { role: "assistant", status, delivery:result?.delivery, activity: settleActivity(rendered[rendered.length-1]?.activity, status), content: responseText(result, operationDefinition), sources: result?.sources ?? null, localFile: result?.localFile ?? null }];
       setMessages(finalMessages);
       setFailed(!result);
       if (!result) setPrompt(content);
       await persist(conversation.id, { messages: finalMessages, methodId: usedMethodId, pageCount: usedPageCount ?? "" });
-      if (result) {
+      if (result&&status==='succeeded') {
         const replyIndex = finalMessages.length - 1;
         const replyContent = finalMessages[replyIndex].content;
         const stopSuggesting = () => setSuggestingFor((value) => value?.conversationId === conversation.id && value?.replyIndex === replyIndex ? null : value);
@@ -245,16 +270,17 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         })();
       }
     } catch (error) {
+      await activityWrites;
       if (error?.name === "AbortError") {
         // 暂停时要把还在缓冲里的最后一段正文交给界面，否则会丢掉已生成的尾巴。
         deltaBuffer.flush();
-        await settlePaused(conversation.id, rendered, content);
+        await settlePaused(conversation.id, rendered, content, error.checkpoint?.delivery);
         return;
       }
       deltaBuffer.cancelFrame();
       setFailed(true);
       setPrompt(content);
-      const failedMessages = [...rendered.slice(0, -1), { role: "assistant", content: error.message || "请求失败，请重试", failed: true }];
+      const failedMessages = [...rendered.slice(0, -1), { role: "assistant", activity: settleActivity(rendered[rendered.length-1]?.activity, 'failed'), content: error.message || "请求失败，请重试", failed: true }];
       setMessages(failedMessages);
       await persist(conversation.id, { pending: null, messages: failedMessages }).catch(() => {});
       console.error("[creation] 生成失败", error);
@@ -302,16 +328,22 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     if (!node) return;
     const force = jumpToBottomRef.current;
     if (force) jumpToBottomRef.current = false;
-    if (!force && node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;
+    if (!force && !followOutputRef.current) return;
+    if(force)followOutputRef.current=true;
     node.scrollTo({ top: node.scrollHeight, behavior: "auto" });
   }, [messages.length, streamingLength, messages[messages.length - 1]?.suggestions?.length, suggestingFor]);
+  useEffect(()=>{
+    const node=scrollRef.current;if(!node||typeof ResizeObserver==='undefined')return;
+    const observer=new ResizeObserver(()=>{if(followOutputRef.current)node.scrollTop=node.scrollHeight;});
+    [...node.children].forEach(child=>observer.observe(child));return()=>observer.disconnect();
+  },[loaded,messages.length]);
 
   const send = async (event) => {
     event.preventDefault();
     const content = prompt.trim();
     if (!content || sending || !ready) return;
     const operationDefinition = resolveCreationOperation(content, methodId);
-    const modelSupportsOperation = supportsCreationMethod(model, operationDefinition.jobType);
+    const modelSupportsOperation = supportsCreationMethod(model, 'chat');
     const operationNeedsSelectedModel = !["image", "pattern"].includes(operationDefinition.jobType);
     if (serviceReady && operationNeedsSelectedModel && !modelSupportsOperation) { onNotice?.(`请选择支持${operationDefinition.label}的模型`, "error"); return; }
     if (quotaBlocked) {
@@ -374,7 +406,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     const conversation = conversationsRef.current.find((item) => item.id === activeId);
     if (!conversation) return;
     const operationDefinition = resolveCreationOperation(previousUser.content, methodId);
-    const modelSupportsOperation = supportsCreationMethod(model, operationDefinition.jobType);
+    const modelSupportsOperation = supportsCreationMethod(model, 'chat');
     const operationNeedsSelectedModel = !["image", "pattern"].includes(operationDefinition.jobType);
     if (serviceReady && operationNeedsSelectedModel && !modelSupportsOperation) { onNotice?.(`请选择支持${operationDefinition.label}的模型`, "error"); return; }
     if (quotaBlocked) {
@@ -478,7 +510,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     <main className="creation-canvas__main">
       <section className="creation-canvas__conversation ai-conversation">
         <header className="creation-canvas__conversation-title"><div><p>{method.eyebrow}</p><h1>{activeConversation?.title ?? "新的创作对话"}</h1></div><span>建议模式：{method.label}</span></header>
-        <div className="ai-thread creation-canvas__thread" ref={scrollRef} aria-busy={sending} aria-live="polite">
+        <div className="ai-thread creation-canvas__thread" ref={scrollRef} onScroll={e=>{const node=e.currentTarget;followOutputRef.current=node.scrollHeight-node.scrollTop-node.clientHeight<=160;}} onClickCapture={e=>{if(e.target.closest('summary'))followOutputRef.current=false;}} aria-busy={sending} aria-live="polite">
               {messages.length ? messages.map((message, index) => <ChatMessage
                 key={`${index}-${message.role}`}
                 message={message}
@@ -503,6 +535,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         <div className="creation-canvas__input">
               <label htmlFor="artedu-thread-prompt" className="sr-only">继续描述你的创作想法</label>
               <textarea ref={promptInput} id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={2} disabled={sending} />
+              <small className="cloud-cache-notice">使用平台模型。对话在本机保存；本轮对话、附件及未保存成果在云端仅缓存20分钟，请及时下载成果。</small>
               <div className="creation-canvas__toolbar">
                 <div className="creation-canvas__tools">
                 <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx,.txt,.md,.csv" onChange={async (event) => {
@@ -513,7 +546,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
                     const nextReference = { id: uploaded.id, fileName: uploaded.fileName, sizeBytes: uploaded.sizeBytes, expiresAt: uploaded.expiresAt, downloadUrl: uploaded.downloadUrl };
                     setReference(nextReference);
                     if (activeConversation) await persist(activeConversation.id, { reference: nextReference, attachments: [...(activeConversation.attachments ?? []).filter((item) => item.id !== nextReference.id), nextReference] });
-                    onNotice?.(`“${uploaded.fileName}”已临时上传，72 小时未活动后自动删除`, "success");
+                    onNotice?.(`“${uploaded.fileName}”已临时上传，20 分钟后过期，读取不会续期`, "success");
                   } catch (error) { onNotice?.(error.message || "文件上传失败", "error"); }
                   event.target.value = "";
                 }} />
@@ -574,11 +607,15 @@ const ChatMessage = memo(function ChatMessage({ message, index, suggesting, onCo
     <button type="button" className="ai-message__action" onClick={() => onEdit(message.content)}><PencilSimple size={14} />编辑</button>
   </div>;
   const pendingSuggestions = suggesting && !message.suggestions?.length;
+  const activities = visibleActivities(message.activity);
+  const runActivity=activities.find(event=>event.kind==='run')??activities.at(-1);
   return <div className={`ai-message ai-message--assistant${message.streaming ? " ai-message--streaming" : ""}`}>
     <span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span>
     <div className="ai-message__body">
-      <span className="ai-message__author">{message.paused ? "已暂停" : message.failed ? "请求未完成" : "ArtEdu 助教"}</span>
+      <span className="ai-message__author">{message.paused||message.status==='paused' ? "已暂停" : message.status==='partial'?'部分完成':message.status==='needs_confirmation'?'等待确认':message.failed||message.status==='failed' ? "请求未完成" : "ArtEdu 助教"}</span>
+      {!!activities.length && <details className="agent-execution" open={message.streaming||message.status==='partial'||message.status==='failed'}><summary>执行进度 · {activityLabel(runActivity)}</summary><ol className="agent-activity" aria-label="Agent 执行记录">{activities.map(event => <li key={event.id} data-status={event.status}><span aria-hidden="true">{event.status === 'failed' ? '!' : '·'}</span><span>{activityLabel(event)}</span><time dateTime={event.at}>{new Date(event.at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</time></li>)}</ol></details>}
       <AiMarkdown>{message.content || message.placeholder}</AiMarkdown>
+      {!!message.delivery?.artifacts?.length&&<div className="agent-artifacts" aria-label="本轮成果">{message.delivery.artifacts.filter(a=>/^\/api\/(?!\/)/.test(a.openUrl)).map(a=><article key={a.openUrl} className="agent-artifact"><strong>{a.kind==='image'?'AI生成图片 · ':''}{a.path}</strong>{a.kind==='image'&&<ZoomableImage src={a.openUrl} alt="AI生成图片，视觉内容待核验" fileName={a.path}/>}<small>{a.kind==='image'?'视觉内容待核验':a.kind==='webpage'?(a.validation==='pass'?'最新版本检查通过':'尚未通过检查'):'文件已生成'}</small>{a.kind==='webpage'&&a.validation!=='pass'?<span>检查通过后可预览</span>:<a href={a.openUrl} target="_blank" rel="noopener noreferrer">打开成果 ↗</a>}</article>)}</div>}
       {artifactImageOf(message.localFile)}
       {(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}
       <div className="ai-message__actions">

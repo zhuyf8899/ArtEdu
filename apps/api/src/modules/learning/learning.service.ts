@@ -83,7 +83,7 @@ export class LearningService {
       this.database.query(`
         SELECT r.id, r.workflow_id AS "workflowId", r.status, r.current_step AS "currentStep", r.total_steps AS "totalSteps",
           r.updated_at AS "updatedAt", w.name AS "workflowName", w.category,
-          r.context_json->'artifact' AS artifact,
+          CASE WHEN r.started_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes' THEN r.context_json->'artifact' ELSE NULL END AS artifact,
           v.definition_json->'learning' AS "learningBindings"
         FROM workflow_runs r
         JOIN workflows w ON w.id = r.workflow_id

@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "configure": "node bridge.mjs configure",
-    "run": "node bridge.mjs run",
-    "pair": "node bridge.mjs pair",
-    "run:gpu": "node comfy-worker.mjs",
+    "configure": "node disabled.mjs",
+    "run": "node disabled.mjs",
+    "pair": "node disabled.mjs",
+    "run:gpu": "node disabled.mjs",
     "test:gpu": "node --test comfy-worker.test.mjs"
   }
 }

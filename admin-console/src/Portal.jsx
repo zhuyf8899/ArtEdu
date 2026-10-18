@@ -7,7 +7,7 @@ import {
   Compass, GraduationCap, GridFour, House, ImageSquare, Lightbulb, LockKey,
   MagnifyingGlass, Palette, Plus, RocketLaunch, Sparkle, Stack, UsersThree, X,
 } from "@phosphor-icons/react";
-import { createAgentRun, executeAgentRun, executeAgentRunStream, getApiHealth, getPortalHome, getCourses, getWorks, runGenerationJob } from "./services/adminApi.js";
+import { createAgentRun, executeAgentRun, executeAgentRunStream, getAgentRun, getApiHealth, getPortalHome, getCourses, getWorks, runGenerationJob } from "./services/adminApi.js";
 import { AiCreationLauncher } from "./AiCreationConsole.jsx";
 import { AiCreationWorkspace } from "./CreationWorkspace.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
@@ -138,7 +138,6 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
     const completed = await executeAgentRun(run.id, {
       mode: "server",
       providerId: modelId,
-      systemPrompt: "你只负责为艺术教育对话拟定后续提问。输出恰好 3 个自然、具体、互不重复的问题，格式为 JSON 字符串数组。不要调用工具，不要回答问题。",
       model: { maxTokens: 240, toolChoice: "auto" },
     }, { signal });
     if (completed.status !== "succeeded") throw new Error("建议问题生成未完成");
@@ -146,7 +145,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   };
   // signal 由创作页下发：用户点「暂停输出」时中断在途请求。
   // onDelta 同样由创作页下发：正文增量实时回到气泡里，实现逐字输出。
-  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal, onDelta) => {
+  const startGeneration = async (jobType, prompt, parameters = {}, modelConfigId, context = [], signal, onDelta, onProgress) => {
+    let activeRunId=null;
     try {
       if (portalLoading || !isLive) throw new Error("平台服务尚未就绪，请等待加载完成后重试");
       const searchEnabled = parameters.searchEnabled === true;
@@ -154,7 +154,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       const cleanPrompt = prompt;
       // 任务分流必须是白名单：普通问答只能走文本 Agent，绝不允许因为未知类型
       // 或缺失映射而默认回退到 ui_design / 图片生成通道。
-      const agentScenarios = { chat: "chat", webpage: "webpage_generation" };
+      const agentScenarios = { chat: "chat", webpage: "webpage_generation", document:"document_generation", image:"ui_design", pattern:"pattern_generation" };
       const offlineScenarios = { chat: "chat", image: "ui_design", pattern: "pattern_generation", webpage: "webpage_generation", document: "document_generation" };
       const artifactJobTypes = new Set(["image", "pattern", "document"]);
       const agentScenario = agentScenarios[jobType];
@@ -162,54 +162,47 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       if (data.creation.enabled && agentScenario) {
         const scenario = agentScenario;
         const run = await createAgentRun({ scenario, prompt: cleanPrompt, parameters: { ...parameters, source: "portal-home" } }, { signal });
+        activeRunId=run.id;
+        onProgress?.({id:'run',kind:'run',name:'agent.execute',status:'running',runId:run.id,at:new Date().toISOString()});
         const completed = await executeAgentRunStream(run.id, {
           mode: "server",
-          providerId: modelConfigId,
+          providerId: data.creation.models.find(m=>m.id===modelConfigId&&m.capabilities?.includes('chat'))?.id ?? data.creation.models.find(m=>m.capabilities?.includes('chat'))?.id,
           context,
           searchEnabled,
-          systemPrompt: `${searchEnabled
-            ? "仅当用户明确要求实时互联网资料、官网链接或事实核验时调用 search_web；调用后只能依据实际来源回答并列出链接。"
-            : "联网搜索关闭：不要调用或提及 search_web。"}\n平台课程、案例与工作流的发现和读取工具始终可用，但只有用户明确询问平台内容、要求列出内容或打开站内内容时才调用。未提供 ID 时先用 list_published_content 或 search_platform。对“打开”请求返回站内相对路径 Markdown 链接，不要谈浏览器、域名、路由字段或能力限制。直接完成用户的任务，不要复述平台规则、工具名或能力说明。成果草稿可直接保存；启动工作流才需要用户明确确认。`,
-          // 不要用 tool_choice 强制指定函数：当前文本模型（deepseek-flash）运行在
-          // 思考模式下，DeepSeek 会直接拒绝并返回
-          // 400 "Thinking mode does not support this tool_choice"。
-          // 首轮调用 search_web 由上面的 systemPrompt 明确要求，auto 下模型会遵守；
-          // 强制反而会让开启搜索的每一轮对话都失败。
+          // 工具与交付策略由服务端组合，前端只传本轮意图和搜索偏好。
           model: { toolChoice: "auto" },
-        }, { signal, onDelta });
+        }, { signal, onDelta, onProgress });
+        if (!completed.delivery && completed.status !== 'succeeded') throw new Error(completed.failureReason || 'Agent 执行未完成');
         const message = [...(completed.messages ?? [])].reverse().find((item) => item.role === "agent");
-        showToast(searchEnabled ? "已完成带搜索能力的 Agent 创作" : "已完成 Agent 创作", "success");
         return {
           id: run.id,
           content: message?.content ?? "未生成创作建议。",
           sources: searchSourcesFromRun(completed.toolCalls),
+          status:completed.delivery?.status??completed.status,
+          delivery:completed.delivery,
         };
       }
-      if (!data.creation.enabled) {
-        const scenario = offlineScenarios[jobType];
-        if (!scenario) throw new Error("不支持的创作类型，已阻止执行");
-        const run = await createAgentRun({ scenario, prompt: cleanPrompt, parameters }, { signal });
-        const completed = await executeAgentRun(run.id, { mode: data.creation.enabled ? "server" : "mock", providerId: modelConfigId, context }, { signal });
-        const lastMessage = [...(completed.messages ?? [])].reverse().find((message) => message.role === "agent");
-        showToast("本地演示已完成：创作说明已写入审计记录。", "success");
-        return { id: run.id, local: true, content: lastMessage?.content ?? "本地创作说明已生成。" };
-      }
+      if (!data.creation.enabled) throw new Error('平台模型服务暂不可用，请稍后重试');
       if (!artifactJobTypes.has(jobType)) throw new Error("不支持的创作类型，已阻止执行");
       // 只挑真正声明支持该能力的模型；图像/图案留给服务端的内部图像通道（不带 modelConfigId）。
       const selectedModelId = modelConfigId ?? data.creation.models.find((model) => model.capabilities?.includes(jobType))?.id;
+      onProgress?.({id:'artifact',kind:'tool',name:`generation.${jobType}`,status:'running',at:new Date().toISOString()});
       const result = await runGenerationJob({ jobType, prompt: cleanPrompt, context, modelConfigId: selectedModelId, parameters: { source: "portal-home", ...parameters } }, { signal });
-      showToast(`模型已完成创作建议：${result.job.id.slice(0, 8)}…`, "success");
+      onProgress?.({id:'artifact',kind:'tool',name:`generation.${jobType}`,status:'succeeded',at:new Date().toISOString()});
       void loadPortalData();
       // 产物类结果（kind=asset）的 content 是存储键，不能当正文显示。
         return { ...result.job, content: resultContent(result), model: result.output.metadata?.model, localFile: result.artifact ?? null };
     } catch (error) {
       // 主动暂停不是失败：不弹错误提示，交给创作页显示「已暂停」并回填输入。
-      if (error?.name === "AbortError") throw error;
+      if (error?.name === "AbortError") {
+        if(activeRunId)try{error.checkpoint=await getAgentRun(activeRunId,{signal:AbortSignal.timeout(2500)});}catch{}
+        throw error;
+      }
       showToast(isLive ? error.message : "API 服务不可用，暂时无法创建任务。", "error");
       throw error;
     }
   };
-  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal, onDelta) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal, onDelta);
+  const createFromConversation = ({ jobType, prompt, parameters, modelConfigId, context }, signal, onDelta, onProgress) => startGeneration(jobType, prompt, parameters, modelConfigId, context, signal, onDelta, onProgress);
 
   const pageTitle = { home: "学习与创作总览", courses: "AI讲堂", studio: "设计工具", community: "案例社区", myLearning: "我的学习", search: "全站搜索", creation: "创作会话" }[section];
   const navigateSection = (nextSection) => onNavigate({ home: "/", courses: "/learning", studio: "/studio", community: "/community", myLearning: "/my-learning", creation: "/create" }[nextSection] ?? "/");

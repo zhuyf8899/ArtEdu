@@ -58,7 +58,7 @@ test("开启智能搜索时不强制 tool_choice，且不把检索当成默认�
   // 保持 auto，具体是否检索由用户需求决定，而不是强制第一轮调用。
   assert.ok(!/toolChoice:\s*\{/.test(portal), "不得向模型发送对象形态的 tool_choice");
   assert.ok(portal.includes('model: { toolChoice: "auto" }'));
-  assert.ok(portal.includes("仅当用户明确要求实时互联网资料"));
+  assert.ok(!portal.includes('systemPrompt: `${searchEnabled'), '前端不再覆盖后端工具和交付策略');
   assert.ok(!portal.includes("promptWithSearchPolicy"), "系统策略不得污染用户原始提示词");
   assert.ok(!portal.includes("首轮必须调用 search_web"));
 });
@@ -71,7 +71,7 @@ test("暂停输出：中断在途请求，且不当作失败处理", async () =>
   assert.ok(workspace.includes("const abortRef = useRef(null)"));
   assert.ok(workspace.includes("abortRef.current?.abort()"));
   // 生成入口把 signal 与增量回调一起交给 onCreate：前者用于暂停，后者用于流式回填。
-  assert.ok(workspace.includes("}, controller.signal, onDelta);"), "onCreate 必须同时收到 signal 与 onDelta");
+  assert.ok(workspace.includes("}, controller.signal, onDelta, onProgress);"), "onCreate 必须收到 signal、正文与执行事件回调");
   // 暂停走独立分支：保留内容、回填输入，而不是走失败态。
   assert.ok(workspace.includes('if (error?.name === "AbortError")'));
   assert.ok(workspace.includes("settlePaused"));
@@ -83,7 +83,8 @@ test("暂停输出：中断在途请求，且不当作失败处理", async () =>
   assert.ok(api.includes('if (error?.name === "AbortError") throw error;'));
   assert.ok(api.includes("signal: options.signal"));
   // 暂停是用户主动行为，不该弹错误提示。
-  assert.ok(portal.includes('if (error?.name === "AbortError") throw error;'));
+  assert.ok(portal.includes('if (error?.name === "AbortError") {'));
+  assert.ok(portal.includes('error.checkpoint=await getAgentRun'), '暂停后读取已保存成果，不丢弃检查点');
 });
 
 test("联网检索来源以引用卡片渲染，且复用同一套 URL 安全规则", async () => {
@@ -124,7 +125,8 @@ test("流式输出：前端走 SSE 增量渲染，并在 done 后落到同一条
 
   // 门户：agent 分支必须走流式入口，并透传增量回调。
   assert.ok(portal.includes("executeAgentRunStream(run.id"));
-  assert.ok(portal.includes("{ signal, onDelta }"));
+  assert.ok(portal.includes("{ signal, onDelta, onProgress }"));
+  assert.ok(api.includes('event === "progress"'));
 });
 
 test("经典创作页独立成屏，MORPH 版本按交接设计保留公共导航", async () => {
@@ -188,7 +190,7 @@ test("进入对话一定停在最新消息处，不因滚动保护而停在顶�
   const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
   assert.ok(workspace.includes("const jumpToBottomRef = useRef(false);"), "要有强制到底的标记");
   assert.ok(workspace.includes("jumpToBottomRef.current = true;"), "载入/发送时置位");
-  assert.ok(workspace.includes("if (!force && node.scrollHeight - node.scrollTop - node.clientHeight > 160) return;"));
+  assert.ok(workspace.includes("if (!force && !followOutputRef.current) return;"));
 });
 
 test("「重新输出」清除上一轮回复后重新生成，而不是回填输入框", async () => {

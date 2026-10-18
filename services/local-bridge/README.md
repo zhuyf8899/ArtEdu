@@ -1,3 +1,7 @@
+# 已停用
+
+不再注册本地Bridge接口，也不再提供配对、任务领取及本地执行入口。旧实现仅保留用于历史参考，模型通过平台云端执行。
+
 # ArtEdu Local Model Bridge
 
 Local Bridge runs on the user's device. It owns provider selection and API keys, invokes models locally, then returns only permitted results and progress to the cloud.

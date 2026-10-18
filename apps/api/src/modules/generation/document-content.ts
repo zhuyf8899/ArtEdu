@@ -21,6 +21,10 @@ export const documentContentSchema = z.object({
   sections: z.array(sectionSchema).min(1).max(11),
 }).strict();
 export type DocumentContent = z.infer<typeof documentContentSchema>;
+export function documentSchemaFor(format: OfficeFormat) {
+ if(format==='pptx')return documentContentSchema;
+ return documentContentSchema.extend({sections:z.array(z.object({heading:text(48),paragraphs:z.array(text(1200)).max(20).default([]),bullets:z.array(text(300)).max(20).default([])}).strict().superRefine((s,c)=>{if(!s.paragraphs.length&&!s.bullets.length)c.addIssue({code:'custom',message:'正文不能为空'});})).min(1).max(40)});
+}
 
 export const DOCUMENT_CONTENT_MESSAGE = "文档内容结构或页数不符合要求，未生成文件，请重试或简化要求";
 
@@ -37,7 +41,7 @@ export class DocumentContentError extends Error {
   }
 }
 
-export function parseDocumentContent(raw: string, pageCount?: number): DocumentContent {
+export function parseDocumentContent(raw: string, pageCount?: number, format: OfficeFormat = "pptx"): DocumentContent {
   // 部分 OpenAI-compatible 模型即使被要求只输出 JSON，仍会包一层 ```json 围栏。
   // 围栏不改变内容结构，先安全剥离；其余前后说明文字仍会被 JSON.parse 拒绝，避免
   // 从任意自然语言里猜测对象而把错误文档落盘。
@@ -47,9 +51,9 @@ export function parseDocumentContent(raw: string, pageCount?: number): DocumentC
   } catch {
     throw new DocumentContentError(DOCUMENT_CONTENT_MESSAGE, "模型返回的内容不是合法 JSON");
   }
-  const result = documentContentSchema.safeParse(parsed);
+  const result = documentSchemaFor(format).safeParse(parsed);
   if (!result.success) throw new DocumentContentError(DOCUMENT_CONTENT_MESSAGE, describeIssues(result.error));
-  if (pageCount !== undefined && result.data.sections.length + 1 !== pageCount) {
+  if (format === "pptx" && pageCount !== undefined && result.data.sections.length + 1 !== pageCount) {
     throw new DocumentContentError(DOCUMENT_CONTENT_MESSAGE, `PPT 页数不匹配：要求 ${pageCount} 页（含封面），模型返回 ${result.data.sections.length} 节`);
   }
   return result.data;
@@ -115,7 +119,7 @@ function extractJsonObject(raw: string) {
 }
 
 export function documentPrompt(format: OfficeFormat, pageCount?: number) {
-  return `你是 ArtEdu 中文艺术教育文档作者，输出真实正文，不要仅给制作建议。只输出一个合法 JSON 对象，不要代码围栏或额外字段。结构：{"schemaVersion":1,"title":"标题","summary":"用途与内容概述","sections":[{"heading":"章节标题","paragraphs":["段落"],"bullets":["要点"]}]}。标题最多48字，概述最多160字。每节标题最多48字，段落最多2段且每段180字以内，要点最多5条且每条80字以内，每节全部正文总计最多360字且非空。1到11节。正文使用纯文本，不输出 Markdown 标记、HTML、外部链接或虚构引用。格式为${format}。${format === "pptx" ? `封面独占1页，每节独占1页。${pageCount ? `必须恰好${pageCount - 1}节，共${pageCount}页（含封面），不能增加额外页。` : "按用户要求决定总页数（含封面），没有要求时使用5节加1页封面。"}` : "按主题组织连贯的正文，不能以空泛建议代替内容。"}`;
+  return `你是 ArtEdu 中文艺术教育文档作者，输出真实正文，不要仅给制作建议。只输出一个合法 JSON 对象，不要代码围栏或额外字段。结构：{"schemaVersion":1,"title":"标题","summary":"用途与内容概述","sections":[{"heading":"章节标题","paragraphs":["段落"],"bullets":["要点"]}]}。标题最多48字，概述最多160字。${format === "pptx" ? "每节标题最多48字，段落最多2段且每段180字以内，要点最多5条且每条80字以内，每节全部正文总计最多360字且非空。1到11节。" : "每节标题最多48字，可有20段且每段最多1200字，20条要点且每条最多300字，1到40节。按用户要求决定完整正文长度，不要为了凑满上限而扩写。"}正文使用纯文本，不输出 Markdown 标记或HTML。当前结构支持章节、段落与要点；不要声称已添加图片或复杂表格。不得虚构引用，用户要求来源时可以在正文给出可验证的真实出处。格式为${format}。${format === "pptx" ? `封面独占1页，每节独占1页。${pageCount ? `必须恰好${pageCount - 1}节，共${pageCount}页（含封面），不能增加额外页。` : "按用户要求决定总页数（含封面），没有要求时使用5节加1页封面。"}` : "按主题组织连贯的正文，不能以空泛建议代替内容。"}`;
 }
 
 export function documentMarkdown(document: DocumentContent) {

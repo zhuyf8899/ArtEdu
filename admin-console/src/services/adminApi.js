@@ -38,9 +38,6 @@ export const getAdminReviews = () => request("/admin/reviews");
 export const getAdminDashboard = () => request("/admin/dashboard");
 export const getApiHealth = () => request("/health");
 export const getCurrentUser = () => request("/auth/me");
-export const pairBridgeDevice = (displayName, tokenDays) => request("/local-bridge/pair", { method: "POST", body: JSON.stringify({ displayName, tokenDays }) });
-export const getBridgeDevices = () => request("/local-bridge/status");
-export const revokeBridgeDevice = (deviceId) => request(`/local-bridge/${encodeURIComponent(deviceId)}`, { method: "DELETE" });
 export const loginLocal = (username, password) => request("/auth/login", {
   method: "POST",
   body: JSON.stringify({ username, password }),
@@ -141,6 +138,7 @@ export const createAgentRun = (input, options = {}) => request("/agent-runs", {
   body: JSON.stringify(input),
   signal: options.signal,
 });
+export const getAgentRun = (runId,options={})=>request(`/agent-runs/${encodeURIComponent(runId)}`,options);
 
 export const executeAgentRun = (runId, input = {}, options = {}) => request(`/agent-runs/${encodeURIComponent(runId)}/execute`, {
   method: "POST",
@@ -155,7 +153,7 @@ export const executeAgentRun = (runId, input = {}, options = {}) => request(`/ag
  * 服务端或反代不支持流式时自动退回一次性调用，行为一致（只是没有增量）。
  */
 export const executeAgentRunStream = async (runId, input = {}, options = {}) => {
-  const { onDelta, signal } = options;
+  const { onDelta, onProgress, signal } = options;
   const response = await fetch(`${API_BASE_URL}/agent-runs/${encodeURIComponent(runId)}/execute-stream`, {
     method: "POST",
     credentials: "include",
@@ -188,6 +186,7 @@ export const executeAgentRunStream = async (runId, input = {}, options = {}) => 
         let payload = null;
         try { payload = JSON.parse(payloadText); } catch { payload = null; }
         if (event === "delta" && typeof payload?.text === "string") onDelta?.(payload.text);
+        else if (event === "progress" && payload?.id && payload?.status) onProgress?.(payload);
         else if (event === "done") completed = payload?.run ?? null;
         else if (event === "error") throw new Error(payload?.message || "生成失败");
       }

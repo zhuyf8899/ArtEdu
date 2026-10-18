@@ -40,12 +40,18 @@ export async function deleteConversation(id) {
   await transaction(db, "readwrite", (store) => store.delete(id));
 }
 
-export function makeModelContext(conversation) {
+export function taskStateFor(messages=[], memoryState=null) {
+  const reply=[...messages].reverse().find(m=>m.delivery?.artifacts?.some(a=>['webpage','document','image','graphic'].includes(a.kind)));
+  return reply?{artifacts:reply.delivery.artifacts.filter(a=>['webpage','document','image','graphic'].includes(a.kind)).map(a=>({path:a.path,kind:a.kind,...(a.kind==='document'?{format:a.path.split('.').at(-1)}:{})}))}:memoryState;
+}
+export function makeModelContext(conversation, baseMessages=conversation.messages) {
   const memory = conversation.memory ? [{ role: "system", content: `以下为此前对话的压缩记忆，仅作为上下文：\n${conversation.memory}` }] : [];
-  return [...memory, ...conversation.messages.filter((message) => !message.failed && message.content?.trim()).map(({ role, content }) => ({ role, content: content.slice(0, 20000) }))].slice(-30);
+  const state=taskStateFor(baseMessages,conversation.memoryState);
+  const stable=[...memory,...(state?[{role:'system',content:'先前产物提示（操作前须读取验证）：'+JSON.stringify(state)}]:[])];
+  return [...stable,...baseMessages.filter(message=>!message.failed&&['user','assistant'].includes(message.role)&&message.content?.trim()).slice(-(30-stable.length)).map(({role,content})=>({role,content:content.slice(0,20000)}))];
 }
 
-export function estimateConversationBytes(conversation) { return bytes(conversation.messages) + bytes(conversation.memory ?? "") + bytes(conversation.pinned ?? []) + bytes(conversation.reference ?? null) + bytes(conversation.attachments ?? []); }
+export function estimateConversationBytes(conversation) { return bytes(conversation.messages) + bytes(conversation.memory ?? "") + bytes(conversation.memoryState??null) + bytes(conversation.pinned ?? []) + bytes(conversation.reference ?? null) + bytes(conversation.attachments ?? []); }
 
 function compactConversation(conversation, otherConversations) {
   const totalBefore = estimateConversationBytes(conversation) + otherConversations.reduce((sum, item) => sum + estimateConversationBytes(item), 0);
@@ -53,7 +59,8 @@ function compactConversation(conversation, otherConversations) {
   if (!needsCompression) return conversation;
   const old = conversation.messages.slice(0, -KEEP_RECENT_MESSAGES);
   if (old.length) {
-    const retained = old.filter((message) => message.role === "user").slice(-12).map((message) => `用户：${clip(message.content, 700)}`);
+    conversation.memoryState=taskStateFor(old,conversation.memoryState);
+    const retained = old.filter(message=>!message.failed&&['user','assistant'].includes(message.role)).slice(-12).map(message=>`${message.role==='user'?'用户':'助教'}：${clip(message.content,700)}`);
     const prior = conversation.memory ? `${conversation.memory}\n` : "";
     conversation.memory = clip(`${prior}已压缩的历史要点：\n${retained.join("\n") || "此前已讨论创作方案。"}`, 10000);
     conversation.messages = conversation.messages.slice(-KEEP_RECENT_MESSAGES);

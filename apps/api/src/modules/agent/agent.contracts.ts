@@ -47,11 +47,12 @@ export const modelInvocationOptionsSchema = z.object({
 });
 
 export const executeAgentRunSchema = z.object({
-  /** local 仅向已配对的本地 Bridge 派发任务；server 使用服务端已配置的模型 provider。 */
-  mode: z.enum(["mock", "local", "server"]).default("local"),
+  /** 模型仅在云端执行；不再支持本地 Bridge。 */
+  mode: z.enum(["mock", "server"]).default("server"),
   providerId: z.string().trim().min(1).max(80).optional(),
   /** 仅在用户明确开启时向模型提供平台搜索工具。 */
   searchEnabled: z.boolean().default(false),
+  /** Compatibility field: treated as user-level format preferences, never a system instruction. */
   systemPrompt: z.string().trim().max(8000).optional(),
   context: z.array(modelMessageSchema).max(30).default([]),
   model: modelInvocationOptionsSchema.default({}),

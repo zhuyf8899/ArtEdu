@@ -1,6 +1,7 @@
 import {
   Browser, ChatCircleDots, CirclesThreePlus, Code, FileDoc, FilePpt,
 } from "@phosphor-icons/react";
+import {planTask} from './taskIntent.js';
 
 // 创作能力定义由入口编排器与对话页共用，避免两处按钮列表出现漂移。
 export const CREATION_METHODS = [
@@ -92,17 +93,13 @@ export function titleFromPrompt(prompt) {
 
 // 模式只影响建议语气；真正执行什么能力，由用户本轮话语里的显式意图决定。
 export function resolveCreationOperation(prompt, advisoryMethodId = DEFAULT_METHOD_ID) {
-  const text = String(prompt ?? "").trim().toLowerCase();
-  const wantsDocument = /\b(word|docx|ppt|pptx|pdf)\b|(?:生成|输出|制作|创建|导出|写|做|整理).*(?:文档|教案|课件|讲义|方案|汇报)/.test(text);
-  if (wantsDocument) {
-    if (/\b(ppt|pptx)\b|课件|演示/.test(text)) return creationMethod("slides");
-    if (/\bpdf\b|打印|讲义/.test(text)) return creationMethod("pdf");
-    return creationMethod("word");
-  }
-  if (/(生成|出|画|绘制|创建|制作|设计).*(网页|页面|网站|html|前端|交互原型|响应式|组件)|vibe coding/.test(text)) return creationMethod("vibe");
-  if (/(生成|出|画|绘制|创建|制作|设计).*(纹样|图案|花纹|平铺|pattern|材质)/.test(text)) return creationMethod("pattern");
-  if (/(生成|出|画|绘制|创建|制作|设计).*(图片|图像|插画|海报|图标|icon|视觉草图|界面|ui)|出图|画一张|来一张/.test(text)) return creationMethod("ui");
-  return creationMethod("chat");
+  const plan=planTask({prompt});
+  if(plan.deliverables.length!==1)return creationMethod('chat');
+  const item=plan.deliverables[0];
+  if(item.kind==='webpage')return creationMethod('vibe');
+  if(item.kind==='document')return creationMethod(item.format==='pptx'?'slides':item.format==='pdf'?'pdf':'word');
+  if(item.kind==='image')return creationMethod(/纹样|图案|pattern/i.test(prompt)?'pattern':'ui');
+  return creationMethod('chat');
 }
 
 // 组装一次生成请求：实际操作、模型、搜索开关决定 jobType 与模型参数。

@@ -3000,3 +3000,15 @@ body.workflow-runner-open .workflow-graph-runner__wait { color: #cfd3da; }
 .workflow-publish-confirm__card span { color: #5f646d; font-size: 13px; line-height: 1.65; }
 .workflow-publish-confirm__actions { margin-top: 8px; display: flex; justify-content: flex-end; gap: 9px; }
 .workflow-publish-button { border-color: #d99a33; color: #8a5a12; }
+
+.agent-activity { list-style: none; margin: 8px 0 16px; padding: 0; border: 1px solid var(--border, #dce1e4); border-radius: 10px; overflow: hidden; font-size: 13px; }
+.agent-activity li { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; background: rgba(120,130,140,.05); overflow-wrap: anywhere; }
+.agent-activity li + li { border-top: 1px solid rgba(120,130,140,.12); }
+.agent-activity li > span:first-child { color: #527354; flex-shrink: 0; }
+.agent-activity li[data-status="failed"] { color: #a53632; }
+.agent-activity li[data-status="paused"] { color: #806122; }
+.agent-activity time { margin-left: auto; white-space: nowrap; font-size: 11px; color: #6a737d; }
+
+.agent-execution{margin:12px 0;color:#5e5773}.agent-execution>summary{cursor:pointer;font-size:13px}.agent-artifacts{display:grid;gap:10px;margin:14px 0}.agent-artifact{display:grid;gap:7px;padding:14px;border:1px solid #ded8ea;border-radius:12px;background:#f7f5fb}.agent-artifact small{color:#6b617c}.agent-activity [data-status=partial],.agent-activity [data-status=needs_confirmation],.agent-activity [data-status=paused]{color:#886215}.agent-activity [data-status=validation_failed]{color:#a43d3d}
+
+.cloud-cache-notice{display:block;color:var(--muted);font-size:11px;line-height:1.5;margin:4px 0}

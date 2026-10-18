@@ -1,3 +1,4 @@
+import {cacheExpired} from '../cloud-cache/cache-policy';
 import { ComfyService } from './comfy.service';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
@@ -319,6 +320,7 @@ export class StudioService {
 
   async updateRun(actor: Actor, runId: string, input: WorkflowRunProgressInput) {
     const current = await this.getRun(actor, runId) as Record<string, any>;
+    if(current.startedAt&&cacheExpired(current.startedAt))throw new ConflictException('临时执行上下文已过期（20分钟），请重新发起任务');
     if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");
     if (input.stepIndex !== current.currentStep) throw new ConflictException("只能处理当前步骤");
     const currentNode = current.nodes.find((node: Record<string, any>) => node.id === current.steps[current.currentStep]?.id);
@@ -342,6 +344,7 @@ export class StudioService {
   /** 按连接关系传递上游状态；生成节点通过平台统一模型服务计费和归档。 */
   async executeRun(actor: Actor, runId: string, input: WorkflowRunExecuteInput) {
     const current = await this.getRun(actor, runId) as Record<string, any>;
+    if(current.startedAt&&cacheExpired(current.startedAt))throw new ConflictException('临时执行上下文已过期（20分钟），请重新发起任务');
     if (current.status !== "in_progress") throw new ConflictException("该工作流执行已结束");
     if (current.definition.engine === 'comfyui') throw new ConflictException('原生工作流由 GPU Worker 执行，请查看队列状态');
     const step = current.steps[current.currentStep];
@@ -814,7 +817,7 @@ export class StudioService {
     const definition = this.normalizeWorkflowDefinition(row.definition_json);
     // 试运行跑的是草稿还是已发布版本：运行页据此显示「草稿试运行」。
     const versionPublished = row.published_at === undefined ? null : Boolean(row.published_at);
-    const context = row.context_json ?? {};
+    const context = row.started_at && cacheExpired(row.started_at) ? {} : row.context_json ?? {};
     return {
       id: row.id, workflowId: row.workflow_id, workflowName: row.workflow_name, category: row.category,
       status: row.status, currentStep: Number(row.current_step), totalSteps: Number(row.total_steps),

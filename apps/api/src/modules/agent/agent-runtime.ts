@@ -1,4 +1,6 @@
 import type { ModelAdapter, ModelMessage, ModelRequest, ModelResult, ModelStreamDelta, ModelToolCall, ModelToolDefinition } from "../generation/model-adapter";
+import { runTaskLoop } from './agent-task-loop';
+import type { AgentTask, AgentDelivery } from './agent-policy';
 
 export interface AgentToolContext {
   round: number;
@@ -16,17 +18,29 @@ export interface ModelLoopOptions {
   tools?: readonly ModelToolDefinition[];
   executeTool?: AgentToolExecutor;
   maxRounds?: number;
+  contract?: AgentTask;
   /**
    * 正文增量回调。提供时优先走适配器的 executeStream，让上层把 token 实时推给
    * 客户端；未提供、或适配器不支持流式时，自动退回一次性调用，结果完全一致。
    */
   onDelta?: (delta: ModelStreamDelta) => void;
+  onProgress?: (event: AgentProgressEvent) => void | Promise<void>;
+}
+
+export interface AgentProgressEvent {
+  id: string;
+  kind: "model" | "tool" | "run";
+  name: string;
+  status: "running" | "succeeded" | "failed" | "paused" | "partial" | "needs_confirmation" | "validation_failed";
+  round?: number;
+  at: string;
 }
 
 export interface ModelLoopResult extends ModelResult {
   rounds: number;
   messages: ModelMessage[];
   toolCallCount: number;
+  delivery?: AgentDelivery;
 }
 
 /**
@@ -34,6 +48,7 @@ export interface ModelLoopResult extends ModelResult {
  * callers provide an executor after applying their own authorization rules.
  */
 export async function runModelLoop(options: ModelLoopOptions): Promise<ModelLoopResult> {
+  if (options.contract) return runTaskLoop({ ...options, recovery: true });
   const maxRounds = options.maxRounds ?? 8;
   if (!Number.isInteger(maxRounds) || maxRounds < 1 || maxRounds > 32) {
     throw new Error("模型循环轮数必须在 1 到 32 之间");
@@ -44,6 +59,7 @@ export async function runModelLoop(options: ModelLoopOptions): Promise<ModelLoop
   const messages = [...(options.request.messages ?? (options.request.prompt ? [{ role: "user" as const, content: options.request.prompt }] : []))];
   if (!messages.length) throw new Error("模型调用至少需要一条消息或 prompt");
   let toolCallCount = 0;
+  const progress = (event: Omit<AgentProgressEvent, "at">) => options.onProgress?.({ ...event, at: new Date().toISOString() });
 
   for (let round = 1; round <= maxRounds; round += 1) {
     // A named tool choice is a first-turn gate. Once its result has been returned,
@@ -56,21 +72,36 @@ export async function runModelLoop(options: ModelLoopOptions): Promise<ModelLoop
     };
     // 有增量回调且适配器支持流式就走流式；否则退回一次性调用，返回值同构。
     const deltaSink = options.onDelta;
-    const result = deltaSink && options.adapter.executeStream
-      ? await options.adapter.executeStream(nextRequest, deltaSink)
-      : await options.adapter.execute(nextRequest);
+    const modelEvent = { id: `model-${round}`, kind: "model" as const, name: "model.invoke", round };
+    await progress({ ...modelEvent, status: "running" });
+    let result: ModelResult;
+    try {
+      result = deltaSink && options.adapter.executeStream
+        ? await options.adapter.executeStream(nextRequest, deltaSink)
+        : await options.adapter.execute(nextRequest);
+      await progress({ ...modelEvent, status: "succeeded" });
+    } catch (error) {
+      await progress({ ...modelEvent, status: options.request.signal?.aborted ? "paused" : "failed" });
+      throw error;
+    }
     const toolCalls = result.toolCalls ?? [];
     if (!toolCalls.length) return { ...result, rounds: round, messages, toolCallCount };
     if (!options.executeTool) throw new Error("模型返回 tool call，但未提供工具执行器");
 
     messages.push({ role: "assistant", content: result.content, toolCalls });
     for (const call of toolCalls) {
+      const toolEvent = { id: `tool-${round}-${call.id}`, kind: "tool" as const, name: call.function.name, round };
+      await progress({ ...toolEvent, status: "running" });
       const definition = definitionsByName.get(call.function.name);
-      if (!definition) throw new Error(`模型请求了未注册的工具: ${call.function.name}`);
       let output: unknown;
       try {
+        if (!definition) throw new Error(`模型请求了未注册的工具: ${call.function.name}`);
         output = await options.executeTool.execute(call, { round, request: options.request, messages: [...messages] });
+        const failed = !!(output && typeof output === "object" && ("error" in output || (output as { status?: string }).status === "failed"));
+        await progress({ ...toolEvent, status: failed ? "failed" : "succeeded" });
       } catch (error) {
+        await progress({ ...toolEvent, status: options.request.signal?.aborted ? "paused" : "failed" });
+        if (options.request.signal?.aborted || !definition) throw error;
         output = { error: error instanceof Error ? error.message : "工具执行失败" };
       }
       messages.push({

@@ -3,6 +3,30 @@ import test from "node:test";
 import { runModelLoop } from "./agent-runtime";
 import type { ModelAdapter } from "../generation/model-adapter";
 
+test('execution events preserve model/tool order, failed tools, and expose no arguments or output', async () => {
+  const events: import('./agent-runtime').AgentProgressEvent[] = [];
+  let round=0;
+  const adapter: ModelAdapter = {id:'progress',capabilities:['chat'],async execute(){
+    if (++round===1) return {kind:'text',content:'',toolCalls:[{id:'private-call',type:'function',function:{name:'lookup',arguments:'{"secret":"private"}'}}]};
+    return {kind:'text',content:'done'};
+  }};
+  await runModelLoop({adapter,request:{jobType:'chat',prompt:'test'},tools:[{type:'function',function:{name:'lookup',parameters:{type:'object'}}}],executeTool:{execute:async()=>{throw Error('private error');}},onProgress:event=>{events.push(event);}});
+  assert.deepEqual(events.map(event=>`${event.kind}:${event.status}`),['model:running','model:succeeded','tool:running','tool:failed','model:running','model:succeeded']);
+  assert.ok(events.every(event=>event.at && event.id));
+  assert.ok(!JSON.stringify(events).includes('secret'));
+  assert.ok(!JSON.stringify(events).includes('private error'));
+});
+
+test('model errors and cancellation emit terminal events before propagating', async () => {
+  for (const cancelled of [false,true]) {
+    const controller=new AbortController();
+    const events: import('./agent-runtime').AgentProgressEvent[]=[];
+    const adapter: ModelAdapter={id:'failure',capabilities:['chat'],async execute(){if(cancelled)controller.abort();throw Error('offline');}};
+    await assert.rejects(runModelLoop({adapter,request:{jobType:'chat',prompt:'test',signal:controller.signal},onProgress:event=>{events.push(event);}}),/offline/);
+    assert.deepEqual(events.map(event=>event.status),['running',cancelled?'paused':'failed']);
+  }
+});
+
 test("模型循环会把 tool 结果回传并继续到最终文本", async () => {
   let calls = 0;
   const adapter: ModelAdapter = {

@@ -1,6 +1,7 @@
 /**
  * 【生成业务层】处理任务、额度、模型调用与产物归档。createJob 与 runJob 是不同入口：前者创建任务，后者包含服务端执行流程。不要把此服务与当前不领取任务的独立生成 Worker 混淆。
  */
+import {cacheExpired} from '../cloud-cache/cache-policy';
 import { ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
@@ -12,6 +13,7 @@ import { GenerationRepository } from "./generation.repository";
 import type { ModelMessage, ModelResult } from "./model-adapter";
 import { ModelRegistry } from "./model-registry";
 import { OfficeExportService, type OfficeFormat } from "./office-export.service";
+import {referenceContext} from '../agent/agent-context';
 import { DocumentContentError, documentMarkdown, documentPrompt, officeFormatSchema, parseDocumentContent, type DocumentContent } from "./document-content";
 import { imageGenerationParametersSchema } from "./generation.contracts";
 import { assertPdfAvailable, PdfExportError } from "./pdf-export";
@@ -72,17 +74,22 @@ export class GenerationService {
     if (!job) throw new NotFoundException("生成任务不存在");
     const canReadAllJobs = actor.roles.some((role) => ["admin", "teacher"].includes(role));
     if (job.userId !== actor.id && !canReadAllJobs) throw new ForbiddenException("无权查看此生成任务");
-    return job;
+    return cacheExpired(job.createdAt)?{...job,prompt:'',errorMessage:null}:job;
   }
 
   async downloadOutput(actor: Actor, jobId: string) {
     const job = await this.getJob(actor, jobId);
+    if(cacheExpired(job.createdAt)){
+      const saved=await this.database.query(`SELECT 1 FROM generation_outputs o WHERE o.job_id=$1 AND (EXISTS(SELECT 1 FROM work_generation_jobs w WHERE w.generation_job_id=o.job_id) OR EXISTS(SELECT 1 FROM learning_generation_outputs l WHERE l.generation_output_id=o.id)) LIMIT 1`,[job.id]);
+      if(!saved.rows.length)throw new NotFoundException('临时生成文件已过期（20分钟）');
+    }
     const output = await this.repository.getLatestOutput(job.id);
     if (!output) throw new NotFoundException("该任务尚未生成可下载文件");
     return { output, data: await this.officeExports.read(output.storageKey) };
   }
 
-  async runJob(actor: Actor, input: RunGenerationJobInput) {
+  async runJob(actor: Actor, input: RunGenerationJobInput, signal?: AbortSignal) {
+    signal?.throwIfAborted();
     let adapter;
     try {
       adapter = this.models.getForJob({ jobType: input.jobType, modelConfigId: input.modelConfigId });
@@ -106,13 +113,14 @@ export class GenerationService {
     try {
       const messages: ModelMessage[] = [
         { role: "system", content: systemPrompt },
-        ...(input.context ?? []),
+        ...referenceContext(input.context ?? []),
         { role: "user", content: input.prompt },
       ];
       const imageOptions = ["image", "pattern"].includes(input.jobType)
         ? imageGenerationParametersSchema.parse(input.parameters)
         : undefined;
       const invokeModel = (nextMessages: ModelMessage[]) => adapter.execute({
+        signal,
         jobType: input.jobType,
         modelConfigId: input.modelConfigId,
         // 产物类适配器（图像/视频）需要 jobId 决定文件落盘目录。
@@ -134,7 +142,7 @@ export class GenerationService {
       let document: DocumentContent | undefined;
       if (input.jobType === "document") {
         try {
-          document = parseDocumentContent(output.content, pageCount);
+          document = parseDocumentContent(output.content, pageCount, format);
         } catch (error) {
           if (!(error instanceof DocumentContentError)) throw error;
           // 结构不合格时把具体原因回喂给模型自修复一次：模型常见的失败是段落写超字数
@@ -146,13 +154,13 @@ export class GenerationService {
               role: "user",
               content: `上面的 JSON 未通过服务端校验：${error.detail ?? "结构与长度不符合要求"}。`
                 + "请保留原有内容要点，只修正结构与长度，重新输出一个合法 JSON 对象；"
-                + "不要输出解释、代码围栏或额外字段。字数上限：概述 160 字，每段 180 字，每节正文合计 360 字。",
+                + "不要输出解释、代码围栏或额外字段。" + documentPrompt(format,pageCount),
             },
           ]);
           inputUnits += Number(repaired.metadata?.inputTokens ?? 0);
           outputUnits += Number(repaired.metadata?.outputTokens ?? 0);
           if (repaired.finishReason === "length") throw new DocumentContentError("文档正文被模型截断，未生成不完整文件，请减少页数或内容后重试");
-          document = parseDocumentContent(repaired.content, pageCount);
+          document = parseDocumentContent(repaired.content, pageCount, format);
           output = repaired;
         }
       }
@@ -267,8 +275,8 @@ export class GenerationService {
 // 套在问答上会把"提问"逼成"方案"，答非所问。
 const CHAT_SYSTEM_PROMPT = [
   "你是 ArtEdu 艺术教育平台的中文助教，服务对象是艺术院校的师生。",
-  "回答方式：先给结论，再给依据，最后给可执行的做法；用中文，可用小标题和列表，但不要为了凑长度而展开。",
-  "篇幅与问题复杂度相称：简单的问题直接答；只有对方要求展开或问题本身复杂时才分层详述，默认不超过 600 字。",
+  "用中文直接回答当前问题，结构和篇幅按需求决定；仅在有帮助时给依据、步骤或列表。",
+  "篇幅与问题复杂度相称：简单的问题直接答；只有对方要求展开或问题本身复杂时才分层详述，不因固定字数省略必要内容。",
   "事实边界：涉及作品、作者、年代、流派、技法时，只讲有把握的内容；不确定就写明不确定，并给出可靠方向（建议查阅的著作、展览或检索词）。不得编造作品名、年代、作者、链接或统计数据。",
   "信息不足时先写明你的假设再回答；提问本身有歧义时，先指出是哪一种歧义，再分别作答。",
   "你当前只在对话中作答，不得声称已经生成图片、文档、代码仓库或部署链接；对方需要出图或出文档时，提示他切换到对应的创作能力。",

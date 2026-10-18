@@ -191,4 +191,4 @@ export async function runWorker() {
 }
 function pause(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
-    runWorker().catch(e => { console.error(e.message); process.exitCode = 1; });
+    { console.error('本地Bridge已停用，请使用平台云端执行'); process.exitCode=1; }
