@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { AgentToolContext } from "./agent-runtime";
 import type { ModelToolCall, ModelToolDefinition } from "../generation/model-adapter";
 import { z } from "zod";
@@ -231,11 +232,19 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
       if(code.some(s=>/\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(/.test(s)))summary.issues.push({level:'fail',message:'脚本包含离线预览禁止的网络请求。'});
       if(!references.stylesheets.length&&styles.length&&styles.every(s=>!s.replace(/\/\*[\s\S]*?\*\//g,'').trim()))summary.issues.push({level:'fail',message:'内联样式为空。'});
       for(const m of page.content.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi))if(!/\bsrc\s*=|type\s*=\s*['"](?:module|application\/(?:json|ld\+json))/.test(m[1])&&m[2].trim())try{new vm.Script(m[2]);}catch{summary.issues.push({level:'fail',message:'内联脚本存在语法错误。'});}
+      const revision=createHash('sha256').update(JSON.stringify([page.content,code,assets])).digest('hex');
       const browser=summary.issues.some(i=>i.level==='fail')?null:await checkRenderedPage(page.path,async p=>/\.(png|jpe?g|webp|gif|avif)$/i.test(p)?dependencies.workspace!.readAsset(dependencies.actor,p):(await dependencies.workspace!.read(dependencies.actor,p)).content);
+      if(browser?.failureKind==='environment')return {
+        status:'failed', code:'PAGE_CHECK_UNAVAILABLE', retryable:false,
+        checkedPath:page.path,verdict:'unavailable',openUrl:dependencies.workspace.openUrl(page.path),
+        browser,issues:browser.issues,staticVerdict:summary.verdict,
+        nextStep:'检查环境暂不可用，保留当前文件并结束执行。不要修改页面或重复检查来解决环境故障。',
+      };
       if(browser?.available&&!browser.passed)summary.issues.push(...browser.issues.map(message=>({level:'fail' as const,message})));
       return {
         status: "succeeded",
         checkedPath: page.path,
+        revision,
         verdict: summary.issues.some(i=>i.level==='fail')?'fail':summary.verdict,
         openUrl:dependencies.workspace.openUrl(page.path),
         browser,

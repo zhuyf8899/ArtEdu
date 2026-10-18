@@ -120,6 +120,21 @@ export async function runTaskLoop(options: Options) {
             await progress({ ...te, status: classifyToolOutcome(output) as AgentProgressEvent['status'] });
             messages.push({ role: 'tool', name: call.function.name, toolCallId: call.id, content: JSON.stringify(output) });
             toolCallCount++;
+            if (output?.code === 'PAGE_CHECK_UNAVAILABLE') {
+                const result = finish({kind:'text',content:'页面已保存，检查服务暂不可用。可打开已有成果查看，尚未完成浏览器验证。'}, round);
+                result.delivery.reason = '页面检查服务暂不可用，已有文件已保留';
+                return result;
+            }
+            // Stop only a proven no-progress cycle, not a productive long task.
+            if (call.function.name === 'check_page' && output?.verdict === 'fail') {
+                const signature = JSON.stringify({path:output.checkedPath,revision:output.revision,issues:output.issues});
+                const failures = ledger.filter(e => e.name === 'check_page' && e.output?.verdict === 'fail' && JSON.stringify({path:e.output.checkedPath,revision:e.output.revision,issues:e.output.issues}) === signature);
+                if (failures.length >= 3) {
+                    const result = finish({kind:'text',content:'同一版本页面的相同检查错误连续出现，已停止无效重试并保留成果。'}, round);
+                    result.delivery.reason = '相同页面错误未得到修复，已停止重复检查';
+                    return result;
+                }
+            }
         }
         if (options.recovery) {
             const checked = assessDelivery({ contract, ledger, content: '' });

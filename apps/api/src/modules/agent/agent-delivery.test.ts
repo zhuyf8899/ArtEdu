@@ -3,9 +3,29 @@ import {runModelLoop} from './agent-runtime';import {assessDelivery,planTask} fr
 import type {ModelAdapter,ModelToolCall} from '../generation/model-adapter';
 import {mkdtemp,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
 import {AgentWorkspaceService} from './agent-workspace.service';
+import {allowedCheckUrl} from './browser-check-worker';
 const web={action:'create' as const,deliverables:[{kind:'webpage',format:'html'}]};
 const call=(name:string,args:unknown):ModelToolCall=>({id:name,type:'function',function:{name,arguments:JSON.stringify(args)}});
 const definitions=['write_workspace_file','check_page','generate_image'].map(name=>({type:'function' as const,function:{name,parameters:{type:'object'}}}));
+test('检查服务环境故障立即结束并保留页面，不让模型反复改代码',async()=>{
+ let calls=0;
+ const adapter:ModelAdapter={id:'infra-failure',capabilities:['chat'],execute:async()=>({kind:'text',content:'',toolCalls:[call(++calls===1?'write_workspace_file':'check_page',{path:'index.html'})]})};
+ const result=await runModelLoop({adapter,request:{jobType:'chat'},contract:web,tools:definitions,executeTool:{execute:async c=>c.function.name==='check_page'?{status:'failed',code:'PAGE_CHECK_UNAVAILABLE',retryable:false,checkedPath:'index.html',verdict:'unavailable',openUrl:'/api/preview/index.html'}:{path:'index.html',openUrl:'/api/preview/index.html'}}});
+ assert.equal(calls,2);assert.equal(result.delivery?.status,'partial');assert.equal(result.delivery?.artifacts.length,1);assert.match(result.delivery!.reason,/检查服务暂不可用/);
+});
+test('同版本同错误三次即停止，但修正后的版本可继续检查',async()=>{
+ for(const changes of [false,true]){
+  let checks=0;
+  const adapter:ModelAdapter={id:'repeat',capabilities:['chat'],execute:async()=>({kind:'text',content:'',toolCalls:[call('check_page',{path:'index.html'})]})};
+  const result=await runModelLoop({adapter,request:{jobType:'chat'},contract:web,tools:definitions,executeTool:{execute:async()=>{checks++;return {checkedPath:'index.html',revision:changes?String(checks):'same',verdict:changes&&checks===5?'pass':'fail',issues:['同一错误'],openUrl:'/api/preview/index.html'};}}});
+  assert.equal(checks,changes?5:3);assert.equal(result.delivery?.status,changes?'succeeded':'partial');
+ }
+});
+test('独立检查容器只接受API的单次临时资源端点',()=>{
+ const prefix='http://api:12345/aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa/';
+ assert.equal(allowedCheckUrl(prefix+'index.html').prefix,prefix);
+ for(const url of ['http://example.com:12345/a','http://api:4000/api/auth/me','http://api:12345/../../etc/passwd','file:///etc/passwd','http://user:pass@api:12345/a'])assert.throws(()=>allowedCheckUrl(url));
+});
 test('工具参数截断不执行，完整重试后才能交付',async()=>{
  let n=0;const executed:string[]=[];
  const adapter:ModelAdapter={id:'fixture',capabilities:['chat'],execute:async()=>++n===1?{kind:'text',content:'',finishReason:'length',toolCalls:[call('write_workspace_file',{path:'bad.html'})]}:n===2?{kind:'text',content:'',toolCalls:[call('write_workspace_file',{path:'index.html'})]}:{kind:'text',content:'',toolCalls:[call('check_page',{path:'index.html'})]}};

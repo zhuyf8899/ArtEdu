@@ -54,7 +54,7 @@ cleanup_build_guard() {
   fi
   [ -z "$MEMORY_MONITOR_FILE" ] || rm -f "$MEMORY_MONITOR_FILE"
   # 即使构建失败也恢复临时停掉的服务，避免保护措施扩大故障面。
-  if [ "$OPTIONAL_SERVICES_STOPPED" = 1 ]; then "${COMPOSE[@]}" start embedding rag-worker >/dev/null 2>&1 || true; fi
+  if [ "$OPTIONAL_SERVICES_STOPPED" = 1 ]; then "${COMPOSE[@]}" start embedding rag-worker page-check >/dev/null 2>&1 || true; fi
 }
 trap cleanup_build_guard EXIT
 
@@ -119,7 +119,7 @@ fi
 echo "[2/14] 暂停非必需容器，为构建腾出内存"
 # 容器可能尚未创建（首次部署/项目名不匹配）。此处失败不应终止整个部署，
 # 但必须留下痕迹——2026-09-26 就是在这里被 set -e 静默杀掉的。
-if "${COMPOSE[@]}" stop embedding rag-worker; then
+if "${COMPOSE[@]}" stop embedding rag-worker page-check; then
   OPTIONAL_SERVICES_STOPPED=1
 else
   echo "  ! 暂停 embedding/rag-worker 未成功（容器可能尚未创建）；继续构建。" >&2
@@ -136,7 +136,7 @@ echo "[6/14] 构建 embedding 镜像（串行）"; build_service embedding
 echo "[7/14] 构建 web 镜像（串行）"; build_service web
 report_build_memory
 echo "[8/14] 恢复暂时停掉的 embedding 与 RAG Worker"
-if ! "${COMPOSE[@]}" start embedding rag-worker; then
+if ! "${COMPOSE[@]}" start embedding rag-worker page-check; then
   # 不影响后续：第 12 步的 up -d 会按需创建/重建这两个服务。
   echo "  ! start embedding/rag-worker 未成功；交给第 12 步的 up -d 处理。" >&2
 fi
@@ -160,7 +160,7 @@ echo "[11b/14] 校验并安装公开案例展示包"
 echo "[11c/14] 校验并安装 MORPH 课程与工具目录"
 "${COMPOSE[@]}" run --rm api npm run catalog:install
 echo "[12/14] 重建 embedding、应用与 RAG Worker"
-"${COMPOSE[@]}" up -d embedding api rag-worker web
+"${COMPOSE[@]}" up -d embedding page-check api rag-worker web
 echo "[13/14] 容器状态与健康检查"
 "${COMPOSE[@]}" ps
 sleep 5
@@ -174,6 +174,14 @@ if [ "$ready" != 1 ]; then
   exit 1
 fi
 echo '  健康检查通过'
+echo '  验证页面检查完整链路（API → 独立浏览器 → 临时页面）'
+"${COMPOSE[@]}" exec -T api node <<'JS'
+const {checkRenderedPage}=require('./dist/modules/agent/agent-browser-check');
+checkRenderedPage('health.html',async()=>'<html><head><style>body{margin:0}</style></head><body><h1>Page check ready</h1></body></html>').then(result=>{
+  if(!result.available||!result.passed){console.error(JSON.stringify(result));process.exitCode=1;}
+  else console.log('PAGE_CHECK_READY');
+}).catch(error=>{console.error(error.message);process.exitCode=1;});
+JS
 embedding_health=$("${COMPOSE[@]}" ps --format '{{.Health}}' embedding 2>/dev/null | head -1)
 if [ "$embedding_health" = healthy ]; then echo "  embedding 服务健康（模型：${RAG_EMBEDDING_MODEL:-bge-base-zh-v1.5}）"; else echo '  ! embedding 未就绪；只影响 RAG，请查看 embedding 日志。'; fi
 echo "[14/14] 部署后内存体检"

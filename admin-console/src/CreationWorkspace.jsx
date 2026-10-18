@@ -26,7 +26,7 @@ import { useUnsavedChanges } from './useUnsavedChanges.js';
 
 // 专用创作对话页：左侧历次对话，右侧长文本阅读区与续写输入。
 // 起始页提交的需求以 pending 形式落进本地对话，由本页接管真实的模型/演示调用。
-export function AiCreationWorkspace({ account, creation, ready = true, onCreate, onSuggest, onNotice, startNew = false, conversationId = "", onBack = () => {} }) {
+export function AiCreationWorkspace({ account, creation, ready = true, onCreate, onSuggest, onNotice, showHistory = false, startNew = false, conversationId = "", onBack = () => {} }) {
   const [conversations, setConversations] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -50,6 +50,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     try { return localStorage.getItem("artedu-creation-history-open") !== "0"; } catch { return true; }
   });
   const [suggestingFor, setSuggestingFor] = useState(null);
+  useEffect(() => { if (showHistory) setHistoryOpen(true); }, [showHistory]);
   const { confirmAction } = useFeedback();
 
   const conversationsRef = useRef([]);
@@ -524,7 +525,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       <div className="creation-canvas__header-left">
         <button type="button" className="creation-canvas__back" onClick={onBack}><ArrowLeft size={17} weight="bold" />返回</button>
         {/* 会话列表常驻左侧；收起后必须留按钮，否则用户找不回历史对话。 */}
-        <button type="button" className={`creation-canvas__history-toggle${historyOpen ? " is-open" : ""}`} aria-expanded={historyOpen} aria-controls="artedu-creation-history" onClick={() => setHistoryOpen((open) => !open)} title={historyOpen ? "收起会话列表" : "展开会话列表"}>
+        <button type="button" className={`creation-canvas__history-toggle${historyOpen ? " is-open" : ""}`} aria-expanded={historyOpen} aria-controls="artedu-creation-history" aria-label="历史对话" onClick={() => setHistoryOpen((open) => !open)} title={historyOpen ? "收起会话列表" : "展开会话列表"}>
           <SidebarSimple size={16} weight="bold" /><span>记录</span><b>{conversations.length}</b>
         </button>
       </div>
@@ -671,7 +672,7 @@ const ChatMessage = memo(function ChatMessage({ message, index, suggesting, onCo
       <span className="ai-message__author">{message.paused||message.status==='paused' ? "已暂停" : message.status==='partial'?'部分完成':message.status==='needs_confirmation'?'等待确认':message.failed||message.status==='failed' ? "请求未完成" : "ArtEdu 助教"}</span>
       {!!activities.length && <details className="agent-execution" open={message.streaming||message.status==='partial'||message.status==='failed'}><summary>执行进度 · {activityLabel(runActivity)}</summary><ol className="agent-activity" aria-label="Agent 执行记录">{activities.map(event => <li key={event.id} data-status={event.status}><span aria-hidden="true">{event.status === 'failed' ? '!' : '·'}</span><span>{activityLabel(event)}</span><time dateTime={event.at}>{new Date(event.at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</time></li>)}</ol></details>}
       <AiMarkdown>{message.content || message.placeholder}</AiMarkdown>
-      {!!message.delivery?.artifacts?.length&&<div className="agent-artifacts" aria-label="本轮成果">{message.delivery.artifacts.filter(a=>/^\/api\/(?!\/)/.test(a.openUrl) && !localSources.has(a.openUrl)).map(a=><article key={a.openUrl} className="agent-artifact"><strong>{a.kind==='image'?'AI生成图片 · ':''}{a.path}</strong>{a.kind==='image'&&<ZoomableImage src={a.openUrl} alt="AI生成图片，视觉内容待核验" fileName={a.path}/>}<small>{a.kind==='image'?'视觉内容待核验':a.kind==='webpage'?(a.validation==='pass'?'最新版本检查通过':'尚未通过检查'):'文件已生成'}</small>{a.kind==='webpage'&&a.validation!=='pass'?<span>检查通过后可预览</span>:<a href={a.openUrl} target="_blank" rel="noopener noreferrer">打开成果 ↗</a>}</article>)}</div>}
+      {!!message.delivery?.artifacts?.length&&<div className="agent-artifacts" aria-label="本轮成果">{message.delivery.artifacts.filter(a=>/^\/api\/(?!\/)/.test(a.openUrl) && !localSources.has(a.openUrl)).map(a=><article key={a.openUrl} className="agent-artifact"><strong>{a.kind==='image'?'AI生成图片 · ':''}{a.path}</strong>{a.kind==='image'&&<ZoomableImage src={a.openUrl} alt="AI生成图片，视觉内容待核验" fileName={a.path}/>}<small>{a.kind==='image'?'视觉内容待核验':a.kind==='webpage'?(a.validation==='pass'?'最新版本检查通过':'尚未通过检查'):'文件已生成'}</small><a href={a.openUrl} target="_blank" rel="noopener noreferrer">打开成果 ↗</a></article>)}</div>}
       {!!message.localArtifacts?.length && <div className="agent-artifacts" aria-label="本机成果">{message.localArtifacts.map(artifact => artifact.localArchiveId ? <LocalArtifact key={artifact.localArchiveId} artifact={artifact}/> : <p key={artifact.openUrl} role="alert">{artifact.path}：本地保存失败，请及时下载。</p>)}</div>}
       {!localSources.has(message.localFile?.downloadUrl) && artifactImageOf(message.localFile)}
       {(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}
