@@ -53,7 +53,10 @@ test('workflow preview fits the whole graph before a run and follows active node
   assert.match(runner,/useEffect\(\(\) => \{ focusNode\(activeId\)/);
   assert.doesNotMatch(runner,/onInit=\{[^\n]+startWorkflowRun/);
   const editor=await source('WorkflowAdmin.jsx');
-  assert.match(editor,/\.map\(\(node\) => \(\{ \.\.\.node, dragHandle: "\.drag-handle"/);
+  // 拖动语义改成了「整块节点都能拖，输入框除外」，所以 dragHandle 显式置空；
+  // 标题栏保留 .drag-handle 类只是为了样式和光标。
+  assert.match(editor,/\.map\(\(node\) => \(\{ \.\.\.node, dragHandle: undefined/);
+  assert.match(editor,/workflow-flow-node__bar drag-handle/);
   assert.doesNotMatch(editor,/<ReactFlow[^>]* dragHandle=/);
   assert.match(await source('CreationWorkspace.jsx'),/if\(!messages.length\)\{node.scrollTo\(\{top:0/);
 });
