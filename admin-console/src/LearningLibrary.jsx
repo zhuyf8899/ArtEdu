@@ -13,10 +13,12 @@ import { ZoomableImage } from "./ImageLightbox.jsx";
 import "./LearningBindings.css";
 import { MorphCourseCatalog } from './morph/MorphCatalog.jsx';
 import { morphCourseLevel } from './morph/morphPresentation.js';
+import { courseProgress, mergeCourseRecord } from './courseProgress.js';
+import { courseCardState } from './morph/curriculumModel.js';
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
 
-export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", initialLessonId = "", variant = 'classic' }) {
+export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialCourseId = "", initialLessonId = "", variant = 'classic' }) {
   const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -31,17 +33,31 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
   const [completionChecks, setCompletionChecks] = useState({});
   const lessonNodes = useRef(new Map());
   const courseRequest = useRef(0);
+  const catalogRequest = useRef(0);
 
   const loadCatalog = async () => {
+    const requestId = ++catalogRequest.current;
     setCatalogLoading(true);
     setCatalogError("");
-    try { const payload = await getCourses(); setCourses(payload.items ?? []); }
-    catch (error) { setCatalogError(error.message); onNotice(error.message); }
-    finally { setCatalogLoading(false); }
+    try { const payload = await getCourses(); if (requestId === catalogRequest.current) setCourses(payload.items ?? []); }
+    catch (error) { if (requestId === catalogRequest.current) { setCatalogError(error.message); onNotice(error.message); } }
+    finally { if (requestId === catalogRequest.current) setCatalogLoading(false); }
   };
 
-  // 首次显示页面后加载目录；void 表示这里不使用异步函数返回的 Promise。
-  useEffect(() => { void loadCatalog(); }, []);
+  // Returning from a detail URL must revalidate the catalog, including browser Back.
+  useEffect(() => { void loadCatalog(); return () => { catalogRequest.current++; }; }, [initialCourseId]);
+
+  const acceptCourse = (course, saved = false) => {
+    if (saved) {
+      // An older catalog request must not overwrite the successful save response.
+      catalogRequest.current++;
+      setCatalogLoading(false);
+      setCatalogError('');
+    }
+    setSelected(decorateCourse(course));
+    setCourses(current => mergeCourseRecord(current, course));
+    onCourseChange?.(course);
+  };
 
   /**
    * 首页、搜索结果和 Agent 回复里的「打开课程」都是 /learning?course=<id>，
@@ -72,7 +88,7 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
       // 两个独立请求一起发出，等它们都成功再更新界面。
       const [course, works] = await Promise.all([getCourse(courseId), getMyWorks()]);
       if (requestId !== courseRequest.current) return;
-      setSelected(decorateCourse(course)); setMyWorks(works.items ?? []); setCompletionChecks({});
+      acceptCourse(course); setMyWorks(works.items ?? []); setCompletionChecks({});
     }
     catch (error) { if (requestId === courseRequest.current) {setDetailError(error.message);onNotice(error.message);} }
     finally { if (requestId === courseRequest.current) setLoading(false); }
@@ -80,14 +96,14 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
 
   const enroll = async () => {
     setLoading(true);
-    try { setSelected(decorateCourse(await enrollCourse(selected.id))); onNotice("课程已加入“我的学习”"); }
+    try { acceptCourse(await enrollCourse(selected.id), true); onNotice("课程已加入“我的学习”"); }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
 
   const completeLesson = async (lessonId) => {
     setLoading(true);
-    try { setSelected(decorateCourse(await updateLessonProgress(selected.id, lessonId, 100, { completionConfirmed: true }))); onNotice("课时已完成，学习时长、课程进度与今日任务已同步"); }
+    try { acceptCourse(await updateLessonProgress(selected.id, lessonId, 100, { completionConfirmed: true }), true); onNotice("课时已完成，学习时长、课程进度与今日任务已同步"); }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
@@ -96,7 +112,7 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
     if (!workId) return;
     setLoading(true);
     try {
-      setSelected(decorateCourse(await submitLessonWork(selected.id, lessonId, { workId })));
+      acceptCourse(await submitLessonWork(selected.id, lessonId, { workId }), true);
       onNotice("作品已关联到课时，可以继续确认完成标准");
     } catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
@@ -120,8 +136,15 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
 
   if (selected) return <section className="learning-detail">
     <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
-    <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {variant === 'morph' ? morphCourseLevel(selected) : difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟{selected.availability==='coming_soon'?'（规划时长）':` · ${selected.lessonCount} 个课时`} · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div><aside><strong>{selected.availability==='coming_soon'?'筹备中':`${selected.progressPercent}%`}</strong><span>{selected.availability==='coming_soon'?'暂未开放选课':'学习进度'}</span>{selected.availability!=='coming_soon'&&<i><b style={{ width: `${selected.progressPercent}%` }} /></i>}{selected.enrollmentStatus ? <em>已加入学习</em> : <button disabled={loading||selected.availability==='coming_soon'} onClick={enroll}><PlayCircle size={18} weight="fill" /> {selected.availability==='coming_soon'?'教学资料筹备中':selected.availability==='trial'?'加入试学':'加入课程'}</button>}</aside></div>
-    {courseReadiness(selected)&&<p className="catalog-notice">{courseReadiness(selected)}。{selected.availability==='coming_soon'?'当前仅展示课程方向与规划时长，教学资料准备好后再开放选课。':'以下为新编试学讲义与自主练习，尚未通过教研审核；不会自动生成学习完成记录或能力认证。'}</p>}
+    <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {variant === 'morph' ? morphCourseLevel(selected) : difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟{selected.availability==='coming_soon'?'（规划时长）':` · ${selected.lessonCount} 个课时`} · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div>
+      <aside className={courseProgress(selected)>=100?'is-complete':''} aria-label="课程学习进度">
+        <strong>{selected.availability==='coming_soon'?'筹备中':`${courseProgress(selected)}%`}</strong>
+        <span>{selected.availability==='coming_soon'?'暂未开放选课':`${selected.lessons.filter(lesson=>lesson.progressPercent>=100).length} / ${selected.lessonCount} 课时已完成`}</span>
+        {selected.availability!=='coming_soon'&&<progress className="detail-learning-progress" aria-label={`${selected.title}学习进度`} aria-valuetext={`${courseCardState(selected).label}，${courseProgress(selected)}%`} max="100" value={courseProgress(selected)}/>}
+        {['in_progress','completed'].includes(selected.enrollmentStatus) ? <em>{courseCardState(selected).label==='未开始'?'已加入学习':courseCardState(selected).label}</em> : <button disabled={loading||selected.availability==='coming_soon'} onClick={enroll}><PlayCircle size={18} weight="fill" /> {selected.availability==='coming_soon'?'教学资料筹备中':selected.availability==='trial'?'加入试学':'加入课程'}</button>}
+      </aside>
+    </div>
+    {courseReadiness(selected)&&<p className="catalog-notice">{courseReadiness(selected)}。{selected.availability==='coming_soon'?'当前仅展示课程方向与规划时长，教学资料准备好后再开放选课。':'以下为新编试学讲义与自主练习，尚未通过教研审核；试学进度会保存，但不代表教研认证或专业能力认证。'}</p>}
     {selected.catalog?.tools?.length>0&&<section className="course-tools-links" aria-label="相关技能工具">{selected.catalog.tools.map(tool=><button key={tool} onClick={()=>onNavigate(`/studio?toolQuery=${encodeURIComponent(tool)}`)}>探索 {tool} ↗</button>)}</section>}
     {/* 课时卡把"分步学习 → 练习 → 完成标准 →（可选）关联作品 → 确认完成"整条闭环摆出来。 */}
     {learningLabels(selected.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>这门课涉及的知识</strong><div>{learningLabels(selected.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div><small>课程知识范围；实际学习记录将在“我的空间”的专业画像中呈现。</small></section>}
@@ -139,8 +162,8 @@ export function LearningLibrary({ onNotice, onNavigate, initialCourseId = "", in
     {selected.resources?.length > 0 && <CourseMaterials resources={selected.resources} />}
   </section>;
 
-  if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载 AI 讲堂</strong><p>正在同步课程、作者和工具标签。</p></section>;
-  if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>AI 讲堂暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
+  if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载{variant==='morph'?'原子课程':' AI 讲堂'}</strong><p>正在同步课程、作者和工具标签。</p></section>;
+  if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>{variant==='morph'?'原子课程':'AI 讲堂'}暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
 
   if (variant === 'morph') return <>{detailError&&initialCourseId&&<div className="catalog-notice" role="alert">{detailError}<button onClick={returnToCatalog}>返回原子课程</button></div>}<MorphCourseCatalog courses={courses} onOpen={showCourse} onNavigate={onNavigate} /></>;
   return <>

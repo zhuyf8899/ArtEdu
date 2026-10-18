@@ -15,6 +15,17 @@
 .morph-v17 .course-card.morph-course-card .course-cover>.status{top:15px;left:15px;padding:8px 12px;background:var(--ink);color:white;border:0;border-radius:8px;font-size:12px;line-height:18px;height:auto;min-height:0;max-width:calc(100% - 30px)}
 .morph-v17 .course-card.morph-course-card .course-cover>.status.done{background:var(--lime);color:var(--ink)}
 .morph-v17 .course-card.morph-course-card .course-cover>.status.new{background:white;color:var(--muted)}
+.morph-v17 .morph-course-card .course-progress-value{font-variant-numeric:tabular-nums}
+/* Match the handoff: purple while learning, green complete bar and lime complete badge. */
+.morph-v17 .morph-course-card progress.complete::-webkit-progress-value{background:#388a47}
+.morph-v17 .morph-course-card progress.complete::-moz-progress-bar{background:#388a47}
+.learning-detail__hero .detail-learning-progress{display:block;width:100%;height:8px;appearance:none;border:0;border-radius:8px;overflow:hidden;background:#e5dff0}
+.learning-detail__hero .detail-learning-progress::-webkit-progress-bar{background:#e5dff0}
+.learning-detail__hero .detail-learning-progress::-webkit-progress-value{background:#6554e8;border-radius:8px}
+.learning-detail__hero .detail-learning-progress::-moz-progress-bar{background:#6554e8}
+.morph-v17 .learning-detail__hero aside.is-complete .detail-learning-progress::-webkit-progress-value{background:#388a47}
+.morph-v17 .learning-detail__hero aside.is-complete .detail-learning-progress::-moz-progress-bar{background:#388a47}
+.morph-v17 .learning-detail__hero aside.is-complete em{background:var(--lime);color:var(--ink)}
 .morph-v17 .course-card.morph-course-card .small-meta{margin:8px 0 12px;padding:0;gap:8px}
 .morph-v17 .course-card.morph-course-card .card-actions{flex-direction:row;justify-content:flex-end;margin-top:16px;gap:8px}
 .morph-v17 .course-card.morph-course-card .card-actions>.buttons{margin-left:auto;gap:8px}

@@ -1,0 +1,35 @@
+/* Post-integration repairs, scoped to MORPH; retain the handoff's components and tokens. */
+.morph-v17.morph-login .test-login__intro>p:not(.eyebrow){color:#c4c7e1;font-size:14px;line-height:1.8}
+.morph-v17.morph-login .test-login__intro>p.eyebrow{color:#bcb1ff;position:static}
+.morph-v17 .search-page .search-page__hero>div>p{font-size:14px;line-height:1.7}
+.morph-v17 .search-page .search-page__hero .eyebrow{position:static}
+.morph-v17 .search-card__type{flex-wrap:wrap;align-items:flex-start;gap:6px 10px}
+.morph-v17 .search-card__type b{white-space:nowrap;flex-shrink:0}
+.morph-v17 .search-card__body{min-width:0;overflow-wrap:break-word}
+.morph-v17 .search-card h3{word-break:normal;overflow-wrap:break-word;letter-spacing:0}
+.morph-v17 .search-results>header{flex-wrap:wrap;gap:16px}
+.morph-v17 .search-sort{white-space:nowrap;gap:10px;flex-shrink:0}
+.morph-v17 .search-sort select{min-width:125px}
+.morph-v17 .search-card p{font-size:14px;line-height:1.75}
+.morph-v17 .search-card__details{font-size:13px}
+.morph-v17 .search-card .catalog-notice{align-self:flex-start;margin:8px 0 0;padding:4px 8px;font-size:12px;line-height:1.6}
+.morph-v17 .morph-space-manager :is(input,textarea,select){font-size:14px;line-height:1.6}
+.morph-v17 .morph-space-manager :is(input,textarea)::placeholder{color:#767188;opacity:1;font-size:14px}
+.catalog-inline-warning{padding:14px 18px;border:1px solid #e4d6af;border-radius:12px;background:#fffaf0;color:#685421;font-size:14px;line-height:1.7}
+.catalog-inline-warning button{margin-left:10px;text-decoration:underline;color:inherit;background:transparent;border:0}
+@media(min-width:821px) and (max-width:1150px){
+  .morph-v17 .search-layout{grid-template-columns:205px minmax(0,1fr);gap:20px}
+  .morph-v17 .search-card{grid-template-columns:minmax(0,1fr)}
+  .morph-v17 .search-card__visual,.morph-v17 .search-card__visual img{height:180px;min-height:180px;border-right:0;object-fit:cover}
+  .morph-v17 .search-card__body{padding:20px}
+}
+@media(max-width:1199px){
+  .morph-v17 .morph-space--compact aside.morph-space-quota{grid-template-columns:minmax(0,1fr);gap:5px}
+  .morph-v17 .morph-space--compact aside.morph-space-quota>strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+  .morph-v17 .morph-space--compact aside.morph-space-quota>button{grid-column:1;grid-row:auto;margin-top:5px;min-height:32px}
+}
+/* The graph runner is rendered in a body portal outside the MORPH shell. */
+body.workflow-runner-open .workflow-graph-runner__summary .workflow-player__progress{background:transparent;border:0;padding:0;box-shadow:none;gap:10px}
+body.workflow-runner-open .workflow-graph-runner__summary .workflow-player__progress>i{background:#414750;border:0;border-radius:8px;overflow:hidden}
+body.workflow-runner-open .workflow-graph-runner__summary .workflow-player__progress>i>b{background:#d8f845;border:0}
+body.workflow-runner-open .workflow-graph-runner__summary .workflow-player__progress>span{color:#ececee;white-space:nowrap}

@@ -9,6 +9,7 @@ import { mountFloating } from './floatingEffect.js';
 import { morphCourseCover, morphQueryMatches, morphCourseLevel } from './morphPresentation.js';
 import { CatalogControls } from './CatalogControls.jsx';
 import { courseCardState, courseDirections } from './curriculumModel.js';
+import { courseProgress } from '../courseProgress.js';
 
 export function MorphPageBanner({title,eyebrow,children}) {
   const root=useRef(null);
@@ -16,10 +17,20 @@ export function MorphPageBanner({title,eyebrow,children}) {
   return <header className="page-banner morph-page-banner" ref={root}><div className="container banner-copy"><div className="eyebrow">{eyebrow}</div><h1>{title}</h1></div>{children&&<div className="morph-banner-action">{children}</div>}<div className="banner-art" id="effect-stage"><canvas id="effect-canvas" aria-hidden="true"/></div></header>;
 }
 export function MorphCourseCard({course,onOpen}) {
-  const c=decorateCourse(course),progress=Math.max(0,Math.min(100,Number(c.progressPercent)||0)),readiness=courseReadiness(c),archived=Boolean(c.archived||c.status==='archived'),soon=c.availability==='coming_soon';
+  const c=decorateCourse(course),progress=courseProgress(c),readiness=courseReadiness(c),archived=Boolean(c.archived||c.status==='archived'),soon=c.availability==='coming_soon';
   const open=()=>onOpen(archived?'':c.id);
   const state=courseCardState(c);
-  return <article className={`course-card morph-course-card${archived?' is-archived':''}`}><div className="course-cover"><img src={coverImageFor({...c,coverImageUrl:morphCourseCover(c)},240,400)} alt={`${c.title}封面`} loading="lazy"/><span className={`status ${state.tone}`}>{state.label}</span></div><div className="course-body"><div className="classification"><span>{c.category}</span><span>难度：{morphCourseLevel(c)}</span></div><h2><button className="title-button" onClick={open}>{c.title}</button></h2><p>{c.summary}</p><p className="course-teacher">老师：{c.author}{readiness&&<small className="course-readiness">{readiness}</small>}</p>{!soon&&<progress className="progress" aria-label={`${c.title}学习进度`} max="100" value={progress}/>}<div className="small-meta"><span><Clock size={14}/> 耗时 {c.estimatedMinutes||0} 分钟{soon?' · 规划时长':''}</span>{!soon&&<span>{progress>0?`${progress}%`:'未开始'}</span>}</div><div className="card-actions"><div className="buttons"><button className="button secondary" onClick={open}>查看详情</button><button className="button" onClick={open}>{state.action}<ArrowUpRight size={15}/></button></div></div></div></article>;
+  return <article className={`course-card morph-course-card${archived?' is-archived':''}`} data-learning-state={state.tone==='done'?'completed':progress>0?'in_progress':'not_started'}>
+    <div className="course-cover"><img src={coverImageFor({...c,coverImageUrl:morphCourseCover(c)},240,400)} alt={`${c.title}封面`} loading="lazy"/><span className={`status ${state.tone}`}>{state.label}</span></div>
+    <div className="course-body">
+      <div className="classification"><span>{c.category}</span><span>难度：{morphCourseLevel(c)}</span></div>
+      <h2><button className="title-button" onClick={open}>{c.title}</button></h2><p>{c.summary}</p>
+      <p className="course-teacher">老师：{c.author}{readiness&&<small className="course-readiness">{readiness}</small>}</p>
+      {!soon&&<progress className={`progress${progress>=100?' complete':''}`} aria-label={`${c.title}学习进度`} aria-valuetext={`${state.label}，${progress}%`} max="100" value={progress}/>}
+      <div className="small-meta"><span><Clock size={14}/> 耗时 {c.estimatedMinutes||0} 分钟{soon?' · 规划时长':''}</span>{!soon&&<span className="course-progress-value">{progress>0?`${progress}%`:'未开始'}</span>}</div>
+      <div className="card-actions"><div className="buttons"><button className="button secondary" onClick={open}>查看详情</button><button className="button" onClick={open}>{state.action}<ArrowUpRight size={15}/></button></div></div>
+    </div>
+  </article>;
 }
 export function MorphCourseCatalog({courses,onOpen,onNavigate}) {
   const [category,setCategory]=useState('全部'),[query,setQuery]=useState('');

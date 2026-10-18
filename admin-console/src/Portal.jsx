@@ -14,6 +14,7 @@ import { useFeedback } from "./FeedbackCenter.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 import { MorphNav, MorphHero, MorphFooter } from './morph/MorphChrome.jsx';
 import { MorphHomeRecommendations } from './morph/MorphCatalog.jsx';
+import { mergeCourseRecord } from './courseProgress.js';
 
 const LearningLibrary = lazy(() => import("./LearningLibrary.jsx").then(({ LearningLibrary: component }) => ({ default: component })));
 const WorkflowStudio = lazy(() => import("./WorkflowStudio.jsx").then(({ WorkflowStudio: component }) => ({ default: component })));
@@ -92,7 +93,7 @@ export function LocalLogin({ onLogin, message = "" }) {
   </main></div>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", curriculumTopic = "", learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", communityWorkId = "", curriculumTopic = "", learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -128,6 +129,9 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
   const nextCourse = useMemo(() => data.courses.find((course) => course.progressPercent > 0 && course.progressPercent < 100) ?? data.courses[0], [data.courses]);
   const showToast = notify;
+  const syncCourse = useCallback(course => {
+    setData(current => ({ ...current, courses: mergeCourseRecord(current.courses, course) }));
+  }, []);
   const suggestFollowups = async ({ question, answer, modelId }, signal) => {
     if (!data.creation.enabled || !modelId) return null;
     const run = await createAgentRun({
@@ -266,12 +270,12 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
-        {section === "courses" && <LearningLibrary variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onNavigate={onNavigate} onNotice={showToast} />}
+        {section === "courses" && <LearningLibrary variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onCourseChange={syncCourse} onNavigate={onNavigate} onNotice={showToast} />}
         {section === 'curriculum' && <CurriculumComposer courses={data.courses} topic={curriculumTopic} loading={portalLoading} error={portalError} onRetry={loadPortalData} onNavigate={onNavigate} onNotice={showToast}/>}
 
         {section === "studio" && <WorkflowStudio accountId={account.id} variant={morph ? 'morph' : 'classic'} initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
-        {section === "community" && <CommunityLibrary variant={morph ? 'morph' : 'classic'} account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
+        {section === "community" && <CommunityLibrary variant={morph ? 'morph' : 'classic'} initialWorkId={communityWorkId} onNavigate={onNavigate} account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
 
         {section === "myLearning" && <MyLearning variant={morph ? 'morph' : 'classic'} learningView={learningView} creation={data.creation} caseCatalog={data.works} account={account} learningAtlas={learningAtlas} learningAtlasCourse={learningAtlasCourse} onNavigate={onNavigate} onNotice={showToast} />}
 

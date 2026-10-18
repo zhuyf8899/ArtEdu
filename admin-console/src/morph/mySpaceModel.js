@@ -1,4 +1,11 @@
+import { courseProgress } from '../courseProgress.js';
+import { decorateCourse } from '../coursePresentation.js';
 export const SPACE_VIEWS = ['overview','portrait','courses','plan','notes','works','favorites'];
+export const spaceCourseForCard = course => decorateCourse(course);
+export function spaceCourseStatus(course) {
+  if(course.archived || course.status === 'archived') return 'archived';
+  return courseProgress(course) >= 100 ? 'complete' : courseProgress(course) > 0 ? 'progress' : 'new';
+}
 export function mySpaceView(view, atlas) {
   // Retired graph links remain valid, but no longer render the conflicting graph UI.
   return SPACE_VIEWS.includes(view) ? view : atlas ? 'portrait' : 'overview';
