@@ -3,12 +3,17 @@ import { createPortal } from "react-dom";
 import { createWork, getWork, updateWork, uploadWorkAsset, getWorkUploadPolicy } from "./services/adminApi.js";
 import { caseUploadError, emptyStep, emptyStory, splitCaseLabels } from "./caseStory.js";
 import { findCaseEditorialIssues } from "./caseEditorial.js";
+import { useUnsavedChanges } from './useUnsavedChanges.js';
 
-export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice }) {
+export function CaseStoryEditor({ initial, workflows, onSaved, onClose: closeEditor, onNotice }) {
   const [form, setForm] = useState(() => ({ title: initial?.title ?? "", summary: initial?.summary ?? "", discipline: initial?.discipline ?? "视觉传达", tags: initial?.tags?.map(t => t.name).join("，") ?? "", workflowId: initial?.workflows?.[0]?.id ?? "", story: { ...emptyStory(), ...initial?.story } }));
   const [assets, setAssets] = useState(initial?.assets ?? []);
   const [files, setFiles] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [labelFields, setLabelFields] = useState(() => ({ creators: (initial?.story?.creators ?? []).join("，"), tools: (initial?.story?.tools ?? []).join("，"), methods: (initial?.story?.methods ?? []).join("，") }));
+  const baseline=useRef(JSON.stringify({form,labelFields}));
+  const requestLeave=useUnsavedChanges(files.length>0||JSON.stringify({form,labelFields})!==baseline.current,{busy,label:'案例草稿'});
+  const onClose=()=>{void requestLeave(closeEditor);};
   const [policy, setPolicy] = useState(null);
   const [progress, setProgress] = useState(null);
   const cancellation = useRef(null);
@@ -27,6 +32,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
     const focusable = () => [...dialog.current.querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled)')].filter(element => !element.matches(':disabled'));
     focusable()[0]?.focus({ preventScroll: true });
     const handleKey = event => {
+      if(document.querySelector('.feedback-dialog'))return;
       if (event.key === "Escape" && !closeState.current.busy) closeState.current.onClose();
       if (event.key !== "Tab") return;
       const items = focusable();
@@ -46,7 +52,6 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose, onNotice
   const uploaded = useRef(new Set());
   const originalAssetCount = useRef(initial?.assets?.length ?? 0);
   const [error, setError] = useState("");
-  const [labelFields, setLabelFields] = useState(() => ({ creators: (initial?.story?.creators ?? []).join("，"), tools: (initial?.story?.tools ?? []).join("，"), methods: (initial?.story?.methods ?? []).join("，") }));
   const change = (key, value) => setForm(current => ({ ...current, [key]: value }));
   const storyChange = (key, value) => setForm(current => ({ ...current, story: { ...current.story, [key]: value } }));
   const stepChange = (index, key, value) => storyChange("steps", form.story.steps.map((step, i) => i === index ? { ...step, [key]: value } : step));

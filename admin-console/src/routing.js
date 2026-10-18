@@ -17,10 +17,14 @@ export function useAppRoute() {
     return () => window.removeEventListener("popstate", updatePath);
   }, []);
 
-  const navigate = useCallback((to, { replace = false } = {}) => {
+  const navigate = useCallback((to, { replace = false, skipGuard = false } = {}) => {
     const nextUrl = new URL(safeDestination(to, window.location.origin), window.location.origin);
     const nextPath = normalizePath(nextUrl.pathname);
     if (`${nextPath}${nextUrl.search}` === `${window.location.pathname}${window.location.search}`) return;
+    if(!skipGuard){
+      const request=new CustomEvent('artedu:before-navigate',{cancelable:true,detail:{resume:()=>navigate(to,{replace,skipGuard:true})}});
+      if(!window.dispatchEvent(request))return;
+    }
     // pushState 改地址但不刷新整页，也不触发 popstate，所以还要手动更新状态。
     window.history[replace ? "replaceState" : "pushState"]({}, "", `${nextPath}${nextUrl.search}${nextUrl.hash}`);
     setLocation({ pathname: nextPath, search: nextUrl.search });

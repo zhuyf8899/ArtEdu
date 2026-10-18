@@ -33,15 +33,16 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
   const progress = run?.totalSteps ? Math.round((run.currentStep / run.totalSteps) * 100) : 0;
   const focusNode = useCallback((id) => {
     if (id) flowRef.current?.fitView({ nodes: [{ id }], padding: 0.5, minZoom: 0.85, maxZoom: 1.15, duration: 280 });
+    else flowRef.current?.fitView({ ...fitViewOptions, duration: 280 });
   }, []);
-  useEffect(() => { focusNode(activeId ?? versionNodes[0]?.id); }, [activeId, selected.id, focusNode]);
+  useEffect(() => { focusNode(activeId); }, [activeId, selected.id, focusNode]);
   // 窗口改变尺寸时重新聚焦当前节点，防止移动端切换方向后沿用桌面偏移量。
   useEffect(() => {
     if (!canvasRef.current || typeof ResizeObserver === "undefined") return;
     let frame;
     const observer = new ResizeObserver(() => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => focusNode(activeId ?? versionNodes[0]?.id));
+      frame = requestAnimationFrame(() => focusNode(activeId));
     });
     observer.observe(canvasRef.current);
     return () => { cancelAnimationFrame(frame); observer.disconnect(); };
@@ -66,7 +67,7 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
     </header>
     <div className="workflow-graph-runner__body">
       <div className="workflow-run-canvas" ref={canvasRef} aria-label="工作流节点图">
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={fitViewOptions} minZoom={0.2} maxZoom={2} nodesDraggable nodesConnectable={false} elementsSelectable zoomOnDoubleClick={false} onNodeDragStop={onNodeDragStop} onInit={(instance) => { flowRef.current = instance; requestAnimationFrame(() => focusNode(activeId ?? versionNodes[0]?.id)); }}><Background color="#384250" gap={18} size={1} /><Controls showInteractive={false} /></ReactFlow>
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={fitViewOptions} minZoom={0.2} maxZoom={2} nodesDraggable nodesConnectable={false} elementsSelectable zoomOnDoubleClick={false} onNodeDragStop={onNodeDragStop} onInit={(instance) => { flowRef.current = instance; requestAnimationFrame(() => focusNode(activeId)); }}><Background color="#384250" gap={18} size={1} /><Controls showInteractive={false} /></ReactFlow>
         <div className="workflow-run-canvas__actions"><button type="button" onClick={() => focusNode(activeId ?? versionNodes[0]?.id)}>聚焦当前节点</button><button type="button" onClick={() => flowRef.current?.fitView({ padding: 0.18, duration: 280 })}>查看全图</button></div>
       </div>
       <aside className="workflow-graph-runner__sidebar">

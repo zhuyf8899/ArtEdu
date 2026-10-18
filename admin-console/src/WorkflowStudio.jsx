@@ -5,7 +5,7 @@ import { createToolDirectoryLink, executeWorkflowRun, getManagedToolDirectoryLin
 import { studioUrl } from "./navigationModel.js";
 import { faviconSourcesFor } from "./imageSources.js";
 import { MorphPageBanner } from './morph/MorphCatalog.jsx';
-import { morphQueryMatches } from './morph/morphPresentation.js';
+import { morphQueryMatches, toolCategoryName } from './morph/morphPresentation.js';
 import { CatalogControls } from './morph/CatalogControls.jsx';
 import { MorphToolCard } from './morph/MorphToolCard.jsx';
 import { ToolRecommendationDialog } from './morph/ToolRecommendationDialog.jsx';
@@ -26,6 +26,13 @@ const nodesCarryPrompt = (nodes = []) => nodes.some((node) => PROMPT_NODE_TYPES.
 export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", onNavigate, onNotice, canPublish = false, canManageToolDirectory = false, variant = 'classic' }) {
   const [recommendOpen,setRecommendOpen]=useState(false);
   const [workflows, setWorkflows] = useState([]);
+  const [catalogState,setCatalogState]=useState('loading'),[catalogError,setCatalogError]=useState('');
+  const catalogRequest=useRef(0);
+  const loadWorkflows=useCallback(async()=>{
+    const requestId=++catalogRequest.current;setCatalogState('loading');setCatalogError('');
+    try { const payload=await getWorkflows("", { includeDrafts: true });if(requestId!==catalogRequest.current)return;setWorkflows(payload.items??[]);setCatalogState('ready'); }
+    catch(error){if(requestId!==catalogRequest.current)return;setCatalogError(error.message);setCatalogState('error');}
+  },[]);
   const [selected, setSelected] = useState(null);
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -40,7 +47,7 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
 
   // 目录带 includeDrafts：作者在这里就能看到自己的草稿并直接试运行，不用先发布。
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { getWorkflows("", { includeDrafts: true }).then((payload) => setWorkflows(payload.items ?? [])).catch((error) => onNotice(error.message)); }, []);
+  useEffect(() => { void loadWorkflows();return()=>{catalogRequest.current++;}; }, [loadWorkflows]);
 
   // A route opens the canvas; only an explicit start action creates a run.
   useEffect(() => {
@@ -93,11 +100,11 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
     }).finally(() => { if(alive.current && requestId === opening.current) setLoading(false); });
   }, [run, selected, loading, autoError, onNotice]);
 
-  if (initialWorkflowId && !selected && !builderOpen) return <section className="portal-empty"><h2>{loading ? '正在打开工作流…' : '工作流暂时无法打开'}</h2>{openError && <p role="alert">{openError}</p>}<button onClick={backToCatalog}>返回设计工具</button></section>;
+  if (initialWorkflowId && !selected && !builderOpen) return <section className="portal-empty"><h2>{loading ? '正在打开工作流…' : '工作流暂时无法打开'}</h2>{openError && <p role="alert">{openError}</p>}<button onClick={backToCatalog}>返回技能工具</button></section>;
   if (selected?.definition?.engine === 'comfyui') return <ComfyCanvas readOnly editor={{name:selected.name,definition:selected.definition}} selected={selected} onNotice={onNotice} onBack={backToCatalog} />;
   if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onNotice={onNotice} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={backToCatalog} onStart={start} onExecute={executeNode} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
-    <button className="learning-back" onClick={backToCatalog}><ArrowLeft size={16} weight="bold" /> 返回设计工具</button>
+    <button className="learning-back" onClick={backToCatalog}><ArrowLeft size={16} weight="bold" /> 返回技能工具</button>
     <Suspense fallback={<section className="portal-empty"><p>正在加载工作流创建器…</p></section>}>
       <WorkflowAdmin showToast={onNotice} canPublish={canPublish} initialWorkflowId={initialEditId} onWorkflowNavigate={(id) => onNavigate(studioUrl({builder:true,edit:id}))} />
     </Suspense>
@@ -113,6 +120,8 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
         <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>先打开画布查看节点，再点击开始运行；编辑与新建请进入工作流管理。</span></div>
         <button className="primary-button" disabled={loading} onClick={openBuilder}><Plus size={18} weight="bold" /> 管理与新建工作流</button>
       </header>
+      {catalogState==='loading'&&<p role="status">正在同步节点工作流…</p>}
+      {catalogState==='error'&&<p className="catalog-inline-warning" role="alert">工作流目录暂时无法加载：{catalogError}。<button onClick={loadWorkflows}>重新加载工作流</button></p>}
       {workflows.length ? <section className="workflow-grid">{workflows.map((workflow) => {
         // 只有作者本人能在这里看到草稿，所以「草稿」标记同时也是一次试运行的入口。
         const draft = workflow.versionPublished === false;
@@ -124,7 +133,7 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
           <small className="workflow-card__state">{draft ? "未发布 · 草稿试运行仅自己可见" : workflow.versionNumber ? `V${workflow.versionNumber} · 已发布` : "尚无保存版本"}</small>
           <button disabled={loading} onClick={() => open(workflow)}>{draft ? "打开草稿画布" : "打开节点画布"} <ArrowRight size={16} weight="bold" /></button>
         </article>;
-      })}</section> : <div className="empty-state"><Wrench size={28} weight="thin" /><strong>还没有节点工作流</strong><span>进入「管理与新建工作流」搭一个：保存后你就能在这里试运行，发布后其他人也能看到。</span></div>}
+      })}</section> : catalogState==='ready'&&<div className="empty-state"><Wrench size={28} weight="thin" /><strong>还没有节点工作流</strong><span>进入「管理与新建工作流」搭一个：保存后你就能在这里试运行，发布后其他人也能看到。</span></div>}
     </div>
     </div>
   </section>;
@@ -145,7 +154,7 @@ function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder, variant, on
   const load = useCallback(() => {
     setToolState('loading');setToolError('');
     const request = canManage ? getManagedToolDirectoryLinks : getToolDirectoryLinks;
-    request().then((payload) => {setLinks(payload.items ?? []);setToolState('ready');}).catch((error) => {setToolState('error');setToolError(error.message);onNotice(error.message);});
+    request().then((payload) => {setLinks((payload.items ?? []).map(tool=>({...tool,category:toolCategoryName(tool.category)})));setToolState('ready');}).catch((error) => {setToolState('error');setToolError(error.message);onNotice(error.message);});
   }, [canManage, onNotice]);
   useEffect(() => { load(); }, [load]);
   const categories = useMemo(() => ["全部", ...new Set(links.filter((item) => item.status === "active").map((item) => item.category).filter(Boolean))], [links]);

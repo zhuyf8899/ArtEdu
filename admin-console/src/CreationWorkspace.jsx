@@ -22,6 +22,7 @@ import { createDeltaBuffer } from "./chatStream.js";
 import { activityLabel, appendActivity, settleActivity, recoverExecution, visibleActivities } from './agentActivity.js';
 import { findReplyIndex, mergeFollowupQuestions, parseFollowupQuestions, withSuggestions } from "./followupQuestions.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
+import { useUnsavedChanges } from './useUnsavedChanges.js';
 
 // 专用创作对话页：左侧历次对话，右侧长文本阅读区与续写输入。
 // 起始页提交的需求以 pending 形式落进本地对话，由本页接管真实的模型/演示调用。
@@ -40,6 +41,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   const sending = runningIds.includes(activeId);
   const [failed, setFailed] = useState(false);
   const [reference, setReference] = useState(null);
+  useUnsavedChanges(!sending&&Boolean(prompt.trim()),{label:'尚未发送的创作输入'});
   const [pageCount, setPageCount] = useState("");
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [openConversationMenuId, setOpenConversationMenuId] = useState("");
@@ -361,6 +363,8 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
+    // Empty-state guidance starts at the top; it is not a latest chat reply.
+    if(!messages.length){node.scrollTo({top:0,behavior:'auto'});return;}
     const force = jumpToBottomRef.current;
     if (force) jumpToBottomRef.current = false;
     if (!force && !followOutputRef.current) return;
@@ -521,10 +525,10 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         <button type="button" className="creation-canvas__back" onClick={onBack}><ArrowLeft size={17} weight="bold" />返回</button>
         {/* 会话列表常驻左侧；收起后必须留按钮，否则用户找不回历史对话。 */}
         <button type="button" className={`creation-canvas__history-toggle${historyOpen ? " is-open" : ""}`} aria-expanded={historyOpen} aria-controls="artedu-creation-history" onClick={() => setHistoryOpen((open) => !open)} title={historyOpen ? "收起会话列表" : "展开会话列表"}>
-          <SidebarSimple size={16} weight="bold" /><span>会话</span><b>{conversations.length}</b>
+          <SidebarSimple size={16} weight="bold" /><span>记录</span><b>{conversations.length}</b>
         </button>
       </div>
-      <div className="creation-canvas__identity"><span>ARTEDU</span><i />创作空间</div>
+      <div className="creation-canvas__identity"><span>MORPH LAB</span><i />创作空间</div>
       <div className="creation-canvas__header-actions">
         <span className={sending ? "is-working" : ""}><i />{sending ? "正在生成" : serviceReady ? "可以开始创作" : "创作服务暂不可用"}</span>
         <button type="button" onClick={startBlank}><Plus size={16} weight="bold" />新对话</button>
@@ -533,7 +537,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
 
     <div className={`creation-canvas__body${historyOpen ? "" : " is-history-collapsed"}`}>
     <nav className="creation-canvas__history" id="artedu-creation-history" aria-label="历次创作对话" aria-hidden={historyOpen ? undefined : "true"}>
-      <div className="creation-canvas__history-label"><ChatCircleDots size={17} weight="bold" /><span>会话</span><b>{conversations.length}</b></div>
+      <div className="creation-canvas__history-label"><ChatCircleDots size={17} weight="bold" /><span>创作记录</span><b>{conversations.length}</b></div>
       <div className="creation-canvas__history-list">
         {conversations.length ? conversations.map((item) => <div className={`creation-canvas__history-item${item.id === activeId ? " is-active" : ""}`} key={item.id}>
           <button type="button" className="creation-canvas__history-open" onClick={() => openConversation(item.id)} title={item.title}>
@@ -545,7 +549,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
           {openConversationMenuId === item.id && <div className="creation-canvas__history-menu" role="menu">
             <button type="button" role="menuitem" onClick={() => { setOpenConversationMenuId(""); void removeConversation(item.id); }}><Trash size={15} />删除对话</button>
           </div>}
-        </div>) : <p>新对话会保存在这里。</p>}
+        </div>) : <p>还没有创作记录，开始后会自动保存在这里。</p>}
       </div>
     </nav>
 

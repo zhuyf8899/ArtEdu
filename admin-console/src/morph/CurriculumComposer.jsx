@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowUpRight, Spinner } from '@phosphor-icons/react';
 import { createLearningNote } from '../services/adminApi.js';
 import { courseReadiness } from '../coursePresentation.js';
-import { composeCurriculum, curriculumTopics } from './curriculumModel.js';
+import { composeCurriculum, curriculumTopics, curriculumAvailability } from './curriculumModel.js';
 import './handoff-details.css';
 
 export function CurriculumComposer({courses=[],topic='',loading,error,onRetry,onNavigate,onNotice}) {
   const [query,setQuery]=useState(''),[saving,setSaving]=useState(false),[saved,setSaved]=useState(false);
   const result=useMemo(()=>composeCurriculum(topic,courses),[topic,courses]);
+  const availability=curriculumAvailability(result);
   const heading=useRef(null),busy=useRef(false),currentTopic=useRef(topic);
   useEffect(()=>{currentTopic.current=topic;setSaved(false);if(topic)heading.current?.focus({preventScroll:true});},[topic]);
   const recommend=text=>{if(text.trim()){setQuery('');onNavigate('/curriculum?topic='+encodeURIComponent(text.trim()));}};
@@ -32,7 +33,7 @@ export function CurriculumComposer({courses=[],topic='',loading,error,onRetry,on
             <span className="eyebrow">YOUR LEARNING PATH</span><h2 ref={heading} tabIndex={-1}>{result.title} · 从方法到实践</h2><p>先建立通用基础，再进入专业应用。建议按以下顺序学习；筹备课程可先查看规划。</p>
             {result.missing.length>0&&<p className="curriculum-availability" role="status">部分课程尚未发布，仅展示当前目录中的 {result.steps.length} 门课程。</p>}
             <ol className="path-list">{result.steps.map(({course,reason},index)=><li key={course.id}><span className="path-number">{index+1}</span><div><h3><button type="button" className="title-button" onClick={()=>onNavigate('/learning?course='+encodeURIComponent(course.id))}>{course.title}<ArrowUpRight size={17}/></button></h3><p>{reason}</p><small>{course.estimatedMinutes||0} 分钟 · {courseReadiness(course)||'已开放'}{index?' · 承接 '+result.steps[index-1].course.title:' · 共同基础'}</small></div></li>)}</ol>
-            <footer><span>{result.steps.length} 门原子课程 · 规划约 {result.duration} 分钟</span><div><button className="button" disabled={!result.steps.length||saving||saved} onClick={save}>{saving?'正在保存…':saved?'已保存到学习笔记':'保存学习路径'}</button><button className="button secondary" onClick={()=>onNavigate('/my-learning?view=notes')}>我的空间<ArrowUpRight size={16}/></button></div></footer>
+            <footer><span>{result.steps.length} 门原子课程 · 规划约 {result.duration} 分钟<br/>{availability.availableCount} 门现在可学 · {availability.plannedCount} 门筹备中</span><div>{availability.nextCourse&&<button className="button" onClick={()=>onNavigate('/learning?course='+encodeURIComponent(availability.nextCourse.id))}>{availability.review?'回顾可学课程':'从可学课程开始'}<ArrowUpRight size={16}/></button>}<button className="button secondary" disabled={!result.steps.length||saving||saved} onClick={save}>{saving?'正在保存…':saved?'已保存到学习笔记':'保存学习路径'}</button><button className="button secondary" onClick={()=>onNavigate('/my-learning?view=notes')}>我的空间<ArrowUpRight size={16}/></button></div></footer>
           </section>}
         </>}
       </div>

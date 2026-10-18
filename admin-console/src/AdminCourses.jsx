@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, BookOpenText, Check, Clock, Plus, X } from "@phosphor-icons/react";
 import {
@@ -10,6 +10,8 @@ import {
 import { coverImageFor, prepareCoverFile } from "./coverImages.js";
 import { LearningBindingFields } from "./LearningBindingFields.jsx";
 import { normalizeLearningBindings } from "./learningBindings.js";
+import { ADMIN_COURSE_FILTERS, filterAdminCourses } from './adminCourseCatalog.js';
+import { useUnsavedChanges } from './useUnsavedChanges.js';
 
 const statusNames = { draft: "草稿", pending_review: "待审核", published: "已发布", rejected: "已驳回", archived: "已归档" };
 const editable = (course) => ["draft", "rejected"].includes(course.status);
@@ -28,13 +30,22 @@ export function AdminCourses({ showToast }) {
   const [resourceEditor, setResourceEditor] = useState(null);
   const [bindingCourse, setBindingCourse] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[category,setCategory]=useState('all');
+  const [loading,setLoading]=useState(true),[loadError,setLoadError]=useState('');
+  const request=useRef(0);
+  const filtered=filterAdminCourses(courses,{query,status:filter,category});
+  const categories=[...new Set(courses.map(course=>course.category).filter(Boolean))].sort();
 
   const load = async () => {
+    const requestId=++request.current;setLoading(true);setLoadError('');
     const [courseResult, reviewResult] = await Promise.allSettled([getAdminCourses(), getCourseReviews()]);
+    if(requestId!==request.current)return;
     if (courseResult.status === "fulfilled") setCourses(courseResult.value.items ?? []);
     if (reviewResult.status === "fulfilled") setReviews(reviewResult.value.items ?? []);
+    const errors=[courseResult.status==='rejected'&&'课程目录暂时无法加载',reviewResult.status==='rejected'&&'发布审核记录暂时无法加载'].filter(Boolean);
+    setLoadError(errors.join('；'));setLoading(false);
   };
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load();return()=>{request.current++;}; }, []);
   const run = async (work, success) => {
     setBusy(true);
     try { await work(); await load(); showToast(success); }
@@ -54,12 +65,14 @@ export function AdminCourses({ showToast }) {
 
   return <div className="page-content">
     <section className="page-intro"><div><p>// COURSE OPERATIONS</p><h1>课程资源管理</h1><span>创建课程、配置课时与资料，提交发布审核</span></div><button className="primary-button" onClick={() => setCourseEditor({ new: true, lessons: [emptyLesson()] })}><Plus size={18} weight="bold" /> 新建课程</button></section>
+    {loadError&&<p className="catalog-inline-warning" role="alert">{loadError}。已加载的记录仍保留。<button disabled={loading} onClick={load}>重新加载</button></p>}
     <section className="course-admin-grid">
       <article className="table-panel course-admin-list">
-        <div className="panel__heading course-admin-heading"><div><p>// COURSE LIBRARY</p><h2>课程列表</h2></div><span>{courses.length} 门课程</span></div>
-        {courses.map((course) => <div className="course-admin-row" key={course.id}>
+        <div className="panel__heading course-admin-heading"><div><p>// COURSE LIBRARY</p><h2>课程列表</h2></div><span role="status">{loading?'正在同步…':`${filtered.length} / ${courses.length} 门课程`}</span></div>
+        <div className="admin-course-filters" role="search" aria-label="管理课程筛选"><label>搜索课程<input aria-label="搜索管理课程" value={query} onChange={event=>setQuery(event.target.value)} placeholder="标题、编号或授课作者"/></label><label>内容状态<select aria-label="管理课程状态" value={filter} onChange={event=>setFilter(event.target.value)}>{ADMIN_COURSE_FILTERS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label>课程方向<select aria-label="管理课程方向" value={category} onChange={event=>setCategory(event.target.value)}><option value="all">全部方向</option>{categories.map(value=><option key={value}>{value}</option>)}</select></label><button onClick={()=>{setQuery('');setFilter('all');setCategory('all');}}>重置筛选</button></div>
+        {filtered.map((course) => <div className="course-admin-row" key={course.id}>
           <div className="course-admin-icon"><BookOpenText size={22} weight="bold" /></div>
-          <div><span>{course.category} · {course.lessonCount} 个课时 · {course.estimatedMinutes} 分钟</span><strong>{course.title}</strong><small>{course.creatorName || "平台课程"} · 版本 {course.versionNumber}</small></div>
+          <div><span>{course.category} · {course.lessonCount} 个课时 · {course.estimatedMinutes} 分钟</span><strong>{course.title}</strong><small>课程作者：{course.catalog?.authorLabel || course.creatorName || "作者待确认"} · 版本 {course.versionNumber}</small></div>
           <em className={`course-state course-state--${course.status}`}>{course.catalog?.bundleId&&course.status==='published'?(course.availability==='trial'?'试学 · 教研待审':'目录 · 筹备中'):statusNames[course.status] ?? course.status}</em>
           <div className="course-admin-actions">
             {course.catalog?.bundleId&&<a href={`/learning?course=${encodeURIComponent(course.id)}`} target="_blank" rel="noopener noreferrer">预览目录 / 试学讲义</a>}
@@ -69,9 +82,9 @@ export function AdminCourses({ showToast }) {
             <button disabled={busy || !editable(course)} onClick={() => run(() => submitCourseReview(course.id), "课程已提交发布审核")}>提交审核 <ArrowRight size={15} weight="bold" /></button>
           </div>
         </div>)}
-        {!courses.length && <div className="empty-state"><BookOpenText size={34} /><strong>尚无课程</strong><span>点击“新建课程”建立第一门正式课程。</span></div>}
+        {loading&&!courses.length?<div className="empty-state" role="status">正在加载课程…</div>:!filtered.length&&<div className="empty-state"><BookOpenText size={34} /><strong>{courses.length?'没有匹配的课程':loadError?'目录暂时不可用':'尚无课程'}</strong><span>{courses.length?'调整关键词或重置筛选，已归档课程不会删除。':loadError?'请使用上方重新加载入口重试。':'点击“新建课程”建立第一门正式课程。'}</span></div>}
       </article>
-      <article className="table-panel course-review-list">
+      <article className="table-panel course-review-list" data-pending={reviews.some(item=>item.status==='pending')}>
         <div className="panel__heading course-admin-heading"><div><p>// PUBLISH REVIEW</p><h2>课程发布审核</h2></div><span>{reviews.filter((item) => item.status === "pending").length} 项待处理</span></div>
         {reviews.slice(0, 8).map((review) => <div className="course-review-row" key={review.id}>
           <div><span><Clock size={13} /> {new Date(review.submittedAt).toLocaleString("zh-CN")}</span><strong>{review.courseTitle}</strong><small>{review.submitterName} · 版本 {review.snapshotVersion}</small></div>
@@ -108,9 +121,12 @@ export function AdminCourses({ showToast }) {
   </div>;
 }
 
-function CourseKnowledgeEditor({ course, busy, onClose, onSave }) {
+function CourseKnowledgeEditor({ course, busy, onClose: closeEditor, onSave }) {
   const [knowledgePoints, setKnowledgePoints] = useState(course.knowledgePoints ?? []);
   const [lessons, setLessons] = useState(course.lessons ?? []);
+  const baseline=useRef(JSON.stringify({knowledgePoints,lessons}));
+  const requestLeave=useUnsavedChanges(JSON.stringify({knowledgePoints,lessons})!==baseline.current,{busy,label:'课程知识配置'});
+  const onClose=()=>{void requestLeave(closeEditor);};
   const [error, setError] = useState("");
   const save = (event) => {
     event.preventDefault();
@@ -139,7 +155,7 @@ function Modal({ title, subtitle, onClose, children, className = "" }) {
   </section></div>, document.body);
 }
 
-function CourseEditor({ course, busy, onClose, onSave }) {
+function CourseEditor({ course, busy, onClose: closeEditor, onSave }) {
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState("");
   useEffect(() => {
@@ -154,6 +170,9 @@ function CourseEditor({ course, busy, onClose, onSave }) {
     coverAssetKey: course.coverAssetKey ?? "", isFeatured: course.isFeatured ?? false,
     lessons: course.lessons?.length ? course.lessons : [emptyLesson()],
   });
+  const baseline=useRef(JSON.stringify(form));
+  const requestLeave=useUnsavedChanges(Boolean(coverFile)||JSON.stringify(form)!==baseline.current,{busy,label:'课程草稿'});
+  const onClose=()=>{void requestLeave(closeEditor);};
   const set = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const setLesson = (index, field, value) => setForm((current) => ({ ...current, lessons: current.lessons.map((lesson, position) => position === index ? { ...lesson, [field]: value } : lesson) }));
   const totalMinutes = form.lessons.reduce((sum, lesson) => sum + (Number(lesson.estimatedMinutes) || 0), 0);
@@ -215,7 +234,7 @@ function ResourceManager({ course, busy, onClose, onAdd, onEdit }) {
   </Modal>;
 }
 
-function ResourceEditor({ course, resource, busy, onClose, onSave }) {
+function ResourceEditor({ course, resource, busy, onClose: closeEditor, onSave }) {
   const [file, setFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState("");
@@ -226,6 +245,9 @@ function ResourceEditor({ course, resource, busy, onClose, onSave }) {
     return () => URL.revokeObjectURL(url);
   }, [coverFile]);
   const [form, setForm] = useState({ title: resource.title ?? "", summary: resource.summary ?? "", tags: resource.tags?.join(", ") ?? "", coverUrl: resource.coverUrl ?? "", lessonId: resource.lessonId ?? "" });
+  const baseline=useRef(JSON.stringify(form));
+  const requestLeave=useUnsavedChanges(Boolean(file||coverFile)||JSON.stringify(form)!==baseline.current,{busy,label:'课程资料'});
+  const onClose=()=>{void requestLeave(closeEditor);};
   const set = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const save = (event) => {
     event.preventDefault();
