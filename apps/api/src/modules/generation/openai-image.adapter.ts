@@ -4,6 +4,7 @@ import path from "node:path";
 import { getEnvironment } from "../../common/environment";
 import type { ModelAdapter, ModelProviderConfig, ModelRequest, ModelResult } from "./model-adapter";
 import { describeProviderApiKeyEnvs, resolveProviderApiKeys } from "./provider-api-keys";
+import { downloadGeneratedImage, imageRequest, withImageApiKeys } from "./image-transport";
 
 /**
  * OpenAI Images 兼容协议适配器。
@@ -18,12 +19,12 @@ export class OpenAIImageAdapter implements ModelAdapter {
 
   async execute(request: ModelRequest): Promise<ModelResult> {
     if (!this.config.capabilities.includes(request.jobType)) throw new Error(`模型 ${this.id} 不支持任务类型 ${request.jobType}`);
-    const [apiKey] = resolveProviderApiKeys(this.config);
-    if (!apiKey) throw new Error(`模型 ${this.id} 未配置环境变量 ${describeProviderApiKeyEnvs(this.config)}`);
+    const apiKeys = resolveProviderApiKeys(this.config);
+    if (!apiKeys.length) throw new Error(`模型 ${this.id} 未配置环境变量 ${describeProviderApiKeyEnvs(this.config)}`);
     const prompt = this.prompt(request);
     const options = (request.parameters?.providerOptions ?? {}) as Record<string, unknown>;
     const siliconFlow = this.config.protocol === "siliconflow-image";
-    const response = await fetch(new URL("images/generations", this.baseUrl()), {
+    const body = await withImageApiKeys(apiKeys, apiKey => imageRequest(new URL("images/generations", this.baseUrl()), {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify(siliconFlow
@@ -42,15 +43,12 @@ export class OpenAIImageAdapter implements ModelAdapter {
           ...(typeof options.seed === "number" ? { seed: options.seed } : {}),
           ...(typeof options.style === "string" ? { style: options.style } : {}),
         }),
-      signal: request.signal ?? AbortSignal.timeout(this.config.timeoutMs),
-    });
-    if (!response.ok) throw new Error(`模型接口返回 HTTP ${response.status}`);
-    const body = await response.json() as { data?: Array<{ url?: string; b64_json?: string; revised_prompt?: string }>; images?: Array<{ url?: string; b64_json?: string; revised_prompt?: string }> };
+    }, { stage: "submit", timeoutMs: this.config.timeoutMs, signal: request.signal }, response => response.json() as Promise<{ data?: Array<{ url?: string; b64_json?: string; revised_prompt?: string }>; images?: Array<{ url?: string; b64_json?: string; revised_prompt?: string }> }>));
     const image = siliconFlow ? body.images?.[0] : body.data?.[0];
     if (!image?.url && !image?.b64_json) throw new Error("图片接口没有返回可下载产物");
     const { bytes, mimeType } = image.b64_json
       ? { bytes: Buffer.from(image.b64_json, "base64"), mimeType: "image/png" }
-      : await downloadImage(image.url!, this.config.timeoutMs);
+      : await downloadGeneratedImage(image.url!, this.config.timeoutMs, request.signal);
     if (bytes.length === 0) throw new Error("图片接口返回空文件");
     const jobId = request.jobId ?? randomUUID();
     const storageKey = path.posix.join("generated", jobId, `${randomUUID()}.${extensionFor(mimeType)}`);
@@ -75,15 +73,6 @@ export class OpenAIImageAdapter implements ModelAdapter {
   }
 
   private baseUrl() { return this.config.baseUrl.endsWith("/") ? this.config.baseUrl : `${this.config.baseUrl}/`; }
-}
-
-async function downloadImage(url: string, timeoutMs: number) {
-  // 只允许 https 成品地址，避免上游返回内网 URL 时触发 SSRF。
-  if (new URL(url).protocol !== "https:") throw new Error("图片供应商返回了不安全的下载地址");
-  const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
-  if (!response.ok) throw new Error(`下载生成图片失败 HTTP ${response.status}`);
-  const type = response.headers.get("content-type")?.split(";")[0]?.toLowerCase();
-  return { bytes: Buffer.from(await response.arrayBuffer()), mimeType: type?.startsWith("image/") ? type : "image/png" };
 }
 
 function imageSize(options: Record<string, unknown>) {

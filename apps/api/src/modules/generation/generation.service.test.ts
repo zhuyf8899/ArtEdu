@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HttpException } from "@nestjs/common";
+import { HttpException, Logger } from "@nestjs/common";
 import type { Actor } from "../auth/auth.service";
 import type { GenerationJob } from "./generation.repository";
 import { GenerationService } from "./generation.service";
 import type { ModelRequest, ModelResult } from "./model-adapter";
+import { ImageTransportError } from "./image-transport";
 
 const actor: Actor = {
   id: "user-student-demo",
@@ -13,6 +14,23 @@ const actor: Actor = {
   accountStatus: "active",
   roles: ["student"],
 };
+
+test("图片失败记录具体阶段和原因码，并写入不含密钥的诊断日志", async context => {
+  const logged = context.mock.method(Logger.prototype, "error", () => undefined);
+  const usage: Array<Record<string, unknown>> = [];
+  const repository = {
+    markRunning: async () => true,
+    failJob: async () => undefined,
+    recordUsage: async (record: Record<string, unknown>) => { usage.push(record); },
+  };
+  const registry = { getForJob: () => ({ id: "internal-image", execute: async () => { throw new ImageTransportError("download", 3, "ECONNRESET"); } }) };
+  const service = new GenerationService({} as never, repository as never, registry as never);
+  service.createJob = async () => ({ id: "diagnostic-image-job" } as GenerationJob);
+  await assert.rejects(service.runJob(actor, { jobType: "image", prompt: "private prompt must not be logged", parameters: {} }), /图片已生成，但文件下载暂时失败/);
+  assert.equal(usage[0].errorCode, "image_download_econnreset");
+  assert.deepEqual(logged.mock.calls[0].arguments[0], { event: "generation_failed", jobId: "diagnostic-image-job", modelConfigId: "internal-image", jobType: "image", errorCode: "image_download_econnreset", stage: "download", attempts: 3, upstreamStatus: undefined, causeCode: "ECONNRESET" });
+  assert.ok(!JSON.stringify(logged.mock.calls).includes("private prompt"));
+});
 
 for (const jobType of ["image", "pattern"] as const) {
   for (const output of [

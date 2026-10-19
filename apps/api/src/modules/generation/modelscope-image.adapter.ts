@@ -4,6 +4,8 @@ import path from "node:path";
 import { getEnvironment } from "../../common/environment";
 import type { ModelAdapter, ModelProviderConfig, ModelRequest, ModelResult } from "./model-adapter";
 import { describeProviderApiKeyEnvs, resolveProviderApiKeys } from "./provider-api-keys";
+import { downloadGeneratedImage, imageRequest, withImageApiKeys } from "./image-transport";
+import { setTimeout as pause } from "node:timers/promises";
 
 // ModelScope（魔搭）文生图不是 OpenAI 的 chat/completions：
 //   1. POST {base}/v1/images/generations （带 X-ModelScope-Async-Mode: true）提交异步任务，拿 task_id
@@ -28,8 +30,8 @@ export class ModelScopeImageAdapter implements ModelAdapter {
     if (!this.config.capabilities.includes(request.jobType)) {
       throw new Error(`模型 ${this.config.id} 不支持任务类型 ${request.jobType}`);
     }
-    const [apiKey] = resolveProviderApiKeys(this.config);
-    if (!apiKey) throw new Error(`模型 ${this.config.id} 未配置环境变量 ${describeProviderApiKeyEnvs(this.config)}`);
+    const apiKeys = resolveProviderApiKeys(this.config);
+    if (!apiKeys.length) throw new Error(`模型 ${this.config.id} 未配置环境变量 ${describeProviderApiKeyEnvs(this.config)}`);
 
     const prompt = this.resolvePrompt(request);
     const size = this.resolveSize(request);
@@ -37,15 +39,10 @@ export class ModelScopeImageAdapter implements ModelAdapter {
     const jobId = request.jobId ?? randomUUID();
     const deadline = Date.now() + Math.max(this.config.timeoutMs, MIN_IMAGE_TIMEOUT_MS);
 
-    const taskId = await this.submit(apiKey, prompt, size, negativePrompt);
-    const imageUrl = await this.waitForImage(apiKey, taskId, deadline);
-
-    const response = await fetch(imageUrl, { signal: AbortSignal.timeout(Math.max(5000, deadline - Date.now())) });
-    if (!response.ok) throw new Error(`下载生成图片失败 HTTP ${response.status}`);
-    const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.length === 0) throw new Error("模型接口返回了空图片");
-
-    const mimeType = normalizeImageMime(response.headers.get("content-type"), imageUrl);
+    const submitted = await withImageApiKeys(apiKeys, async apiKey => ({ apiKey, taskId: await this.submit(apiKey, prompt, size, negativePrompt, request.signal) }));
+    const taskId = submitted.taskId;
+    const imageUrl = await this.waitForImage(submitted.apiKey, taskId, deadline, request.signal);
+    const { bytes, mimeType } = await downloadGeneratedImage(imageUrl, Math.max(1, deadline - Date.now()), request.signal);
     const storageKey = path.posix.join("generated", jobId, `${randomUUID()}.${extensionFor(mimeType)}`);
     const absolutePath = safeJoin(path.resolve(getEnvironment().uploadRoot), storageKey);
     await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o700 });
@@ -88,8 +85,8 @@ export class ModelScopeImageAdapter implements ModelAdapter {
     return typeof raw === "string" ? raw.trim() : "";
   }
 
-  private async submit(apiKey: string, prompt: string, size: string, negativePrompt: string) {
-    const response = await fetch(new URL("v1/images/generations", this.baseUrl()), {
+  private async submit(apiKey: string, prompt: string, size: string, negativePrompt: string, signal?: AbortSignal) {
+    const body = await imageRequest(new URL("v1/images/generations", this.baseUrl()), {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -98,23 +95,17 @@ export class ModelScopeImageAdapter implements ModelAdapter {
         "X-ModelScope-Async-Mode": "true",
       },
       body: JSON.stringify({ model: this.config.model, prompt, size, ...(negativePrompt ? { negative_prompt: negativePrompt } : {}) }),
-      signal: AbortSignal.timeout(this.config.timeoutMs),
-    });
-    if (!response.ok) throw new Error(`模型接口返回 HTTP ${response.status}`);
-    const body = await response.json() as { task_id?: string; task_status?: string; message?: string };
+    }, { stage: "submit", timeoutMs: this.config.timeoutMs, signal }, response => response.json() as Promise<{ task_id?: string; task_status?: string; message?: string }>);
     if (!body.task_id) throw new Error(`模型接口未返回任务号${body.message ? `：${body.message}` : ""}`);
     return body.task_id;
   }
 
-  private async waitForImage(apiKey: string, taskId: string, deadline: number) {
+  private async waitForImage(apiKey: string, taskId: string, deadline: number, signal?: AbortSignal) {
     let lastStatus = "UNKNOWN";
     while (Date.now() < deadline) {
-      const response = await fetch(new URL(`v1/tasks/${encodeURIComponent(taskId)}`, this.baseUrl()), {
+      const body = await imageRequest(new URL(`v1/tasks/${encodeURIComponent(taskId)}`, this.baseUrl()), {
         headers: { authorization: `Bearer ${apiKey}`, "X-ModelScope-Task-Type": "image_generation" },
-        signal: AbortSignal.timeout(Math.max(5000, deadline - Date.now())),
-      });
-      if (!response.ok) throw new Error(`模型接口返回 HTTP ${response.status}`);
-      const body = await response.json() as { task_status?: string; output_images?: string[]; message?: string };
+      }, { stage: "poll", timeoutMs: Math.max(1, Math.min(this.config.timeoutMs, deadline - Date.now())), signal }, response => response.json() as Promise<{ task_status?: string; output_images?: string[]; message?: string }>);
       lastStatus = body.task_status ?? "UNKNOWN";
       if (lastStatus === "SUCCEED") {
         const url = body.output_images?.[0];
@@ -122,7 +113,7 @@ export class ModelScopeImageAdapter implements ModelAdapter {
         return url;
       }
       if (lastStatus === "FAILED") throw new Error(`模型生成失败${body.message ? `：${body.message}` : ""}`);
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      await pause(Math.min(POLL_INTERVAL_MS, Math.max(1, deadline - Date.now())), undefined, { signal });
     }
     throw new Error(`图像生成超时（最后状态 ${lastStatus}）`);
   }
@@ -136,14 +127,6 @@ function safeJoin(root: string, storageKey: string) {
   const target = path.resolve(root, storageKey);
   if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error("非法文件路径");
   return target;
-}
-
-function normalizeImageMime(header: string | null, url: string) {
-  const declared = header?.split(";")[0]?.trim().toLowerCase();
-  if (declared?.startsWith("image/")) return declared;
-  if (/\.jpe?g(\?|$)/i.test(url)) return "image/jpeg";
-  if (/\.webp(\?|$)/i.test(url)) return "image/webp";
-  return "image/png";
 }
 
 function extensionFor(mimeType: string) {

@@ -2,7 +2,7 @@
  * 【生成业务层】处理任务、额度、模型调用与产物归档。createJob 与 runJob 是不同入口：前者创建任务，后者包含服务端执行流程。不要把此服务与当前不领取任务的独立生成 Worker 混淆。
  */
 import {cacheExpired} from '../cloud-cache/cache-policy';
-import { ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { MANAGED_QUOTA_CAPABILITY } from "../../common/constants";
 import { getEnvironment } from "../../common/environment";
@@ -17,6 +17,7 @@ import {referenceContext} from '../agent/agent-context';
 import { DocumentContentError, documentMarkdown, documentPrompt, officeFormatSchema, parseDocumentContent, type DocumentContent } from "./document-content";
 import { imageGenerationParametersSchema } from "./generation.contracts";
 import { assertPdfAvailable, PdfExportError } from "./pdf-export";
+import { ImageTransportError } from "./image-transport";
 
 interface QuotaRow {
   daily_limit: number | null;
@@ -31,6 +32,7 @@ class ImageArtifactError extends Error {}
 
 @Injectable()
 export class GenerationService {
+  private readonly logger = new Logger(GenerationService.name);
   constructor(
     private readonly database: DatabaseService,
     private readonly repository: GenerationRepository,
@@ -186,6 +188,7 @@ export class GenerationService {
         artifact: artifact && { fileName: artifact.fileName, mimeType: artifact.mimeType, fileSize: artifact.fileSize, downloadUrl: `/api/generation-jobs/${job.id}/download` },
       };
     } catch (error) {
+      this.logger.error({ event: "generation_failed", jobId: job.id, modelConfigId, jobType: input.jobType, errorCode: providerErrorCode(error), ...(error instanceof ImageTransportError ? { stage: error.stage, attempts: error.attempts, upstreamStatus: error.status, causeCode: error.code } : { errorName: error instanceof Error ? error.name : "UnknownError", causeCode: safeFailureCode(error) }) });
       const reason = providerFailureMessage(error);
       await this.repository.failJob(job.id, reason);
       await this.repository.recordUsage({
@@ -303,20 +306,32 @@ function buildCreationSystemPrompt(jobType: RunGenerationJobInput["jobType"]) {
   return `你是 ArtEdu 艺术教育平台的中文创作助教。${instruction} 输出应简洁、具体、可执行，使用清晰的小标题；信息不足时明确假设。你当前只输出创作方案，不得声称已经生成图片、文件、代码仓库或部署链接。`;
 }
 
+function safeFailureCode(error: unknown) {
+  const failure = error as { code?: unknown; cause?: { code?: unknown } } | null;
+  const code = failure?.cause?.code ?? failure?.code;
+  return typeof code === "string" && /^[A-Z0-9_]{1,80}$/.test(code) ? code : undefined;
+}
+
 function providerErrorCode(error: unknown) {
+  if (error instanceof ImageTransportError) return `image_${error.stage}_${error.code.toLowerCase()}`;
   if (error instanceof ImageArtifactError) return "image_artifact_error";
   if (error instanceof PdfExportError) return "pdf_export_error";
   if (error instanceof DocumentContentError) return "document_content_error";
-  if (error instanceof Error && error.name === "AbortError") return "timeout";
+  if (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name)) return "timeout";
+  const code = safeFailureCode(error);
+  if (code) return `system_${code.toLowerCase()}`;
   const status = error instanceof Error ? error.message.match(/HTTP (\d{3})/)?.[1] : undefined;
   return status ? `provider_${status}` : "provider_error";
 }
 
 function providerFailureMessage(error: unknown) {
+  if (error instanceof ImageTransportError && error.stage === "download") return "图片已生成，但文件下载暂时失败；请联系管理员按任务记录排查";
+  if (error instanceof ImageTransportError && error.status === undefined) return error.code === "TIMEOUT"
+    ? "图片服务响应超时，请联系管理员按任务记录确认状态，避免重复生成" : "图片服务连接暂时失败，请稍后重试";
   if (error instanceof ImageArtifactError) return error.message;
   if (error instanceof DocumentContentError || error instanceof PdfExportError) return error.message;
   if (error instanceof Error && error.message.startsWith("图像生成超时")) return "图片服务排队较久，本次等待超时；请稍后重试当前节点";
-  if (error instanceof Error && error.name === "AbortError") return "模型响应超时，请稍后重试";
+  if (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name)) return "模型响应超时，请稍后重试";
   const status = error instanceof Error ? error.message.match(/HTTP (\d{3})/)?.[1] : undefined;
   return ({
     "401": "模型服务认证失败，请联系管理员更新 API Key",
