@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export const contentLifecycleSchema = z.object({
+  action: z.enum(['archive', 'restore']),
+  reason: z.string().trim().min(2, '请填写至少两个字的操作原因').max(500),
+  expectedStatus: z.enum(['draft', 'pending', 'pending_review', 'published', 'approved', 'rejected', 'archived']),
+}).strict();
+
 export const listUsersQuerySchema = z.object({
   query: z.string().trim().min(1).max(80).optional(),
   status: z.enum(["active", "limited", "suspended", "pending"]).optional(),

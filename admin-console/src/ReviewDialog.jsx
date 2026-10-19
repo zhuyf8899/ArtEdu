@@ -35,7 +35,7 @@ function ReviewDetail({ review, onClose, onDecision, onPrevious, onNext, positio
   useEffect(() => {
     const onKey = event => {
       // 图片预览或最终确认弹窗负责自己的按键，不关闭其背后的审核页。
-      if (document.querySelector(".image-lightbox")) return;
+      if (document.querySelector(".image-lightbox, .document-preview-dialog[open]")) return;
       const confirmation = document.querySelector(".feedback-dialog-layer");
       if (confirmation) {
         if (event.key === "Escape") { event.preventDefault(); confirmation.querySelector('[aria-label="取消操作"]')?.click(); }

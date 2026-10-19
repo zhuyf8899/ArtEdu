@@ -19,7 +19,7 @@ import { uploadTemporaryCreationFile } from "./services/adminApi.js";
 import { archiveArtifacts } from './localArtifacts.js';
 import { LocalArtifact } from './LocalArtifact.jsx';
 import { createDeltaBuffer } from "./chatStream.js";
-import { activityLabel, appendActivity, settleActivity, recoverExecution, visibleActivities } from './agentActivity.js';
+import { activityLabel, appendActivity, settleActivity, recoverExecution, visibleActivities, executionSummary } from './agentActivity.js';
 import { findReplyIndex, mergeFollowupQuestions, parseFollowupQuestions, withSuggestions } from "./followupQuestions.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { useUnsavedChanges } from './useUnsavedChanges.js';
@@ -45,10 +45,11 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   const [pageCount, setPageCount] = useState("");
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [openConversationMenuId, setOpenConversationMenuId] = useState("");
-  // 会话列表常驻左侧栏，可收起；偏好记在本机，刷新后保持。
+  // 首次进入优先留出阅读空间；保留用户明确选择的展开/收起偏好。
   const [historyOpen, setHistoryOpen] = useState(() => {
-    try { return localStorage.getItem("artedu-creation-history-open") !== "0"; } catch { return true; }
+    try { return localStorage.getItem("artedu-creation-history-open") === "1"; } catch { return false; }
   });
+  const historyToggle = useRef(null);
   const [suggestingFor, setSuggestingFor] = useState(null);
   useEffect(() => { if (showHistory) setHistoryOpen(true); }, [showHistory]);
   const { confirmAction } = useFeedback();
@@ -526,9 +527,9 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     <header className="creation-canvas__header">
       <div className="creation-canvas__header-left">
         <button type="button" className="creation-canvas__back" onClick={onBack}><ArrowLeft size={17} weight="bold" />返回</button>
-        {/* 会话列表常驻左侧；收起后必须留按钮，否则用户找不回历史对话。 */}
-        <button type="button" className={`creation-canvas__history-toggle${historyOpen ? " is-open" : ""}`} aria-expanded={historyOpen} aria-controls="artedu-creation-history" aria-label="历史对话" onClick={() => setHistoryOpen((open) => !open)} title={historyOpen ? "收起会话列表" : "展开会话列表"}>
-          <SidebarSimple size={16} weight="bold" /><span>记录</span><b>{conversations.length}</b>
+        {/* 收起后保留固定入口，不改变当前对话、草稿或后台任务。 */}
+        <button ref={historyToggle} type="button" className={`creation-canvas__history-toggle${historyOpen ? " is-open" : ""}`} aria-expanded={historyOpen} aria-controls="artedu-creation-history" aria-label={historyOpen ? "收起创作记录" : "展开创作记录"} onClick={() => setHistoryOpen((open) => !open)} title={historyOpen ? "收起创作记录，扩大对话区" : "展开创作记录"}>
+          <SidebarSimple size={16} weight="bold" /><span>创作记录</span><b>{conversations.length}</b>
         </button>
       </div>
       <div className="creation-canvas__identity"><span>MORPH LAB</span><i />创作空间</div>
@@ -539,8 +540,8 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     </header>
 
     <div className={`creation-canvas__body${historyOpen ? "" : " is-history-collapsed"}`}>
-    <nav className="creation-canvas__history" id="artedu-creation-history" aria-label="历次创作对话" aria-hidden={historyOpen ? undefined : "true"}>
-      <div className="creation-canvas__history-label"><ChatCircleDots size={17} weight="bold" /><span>创作记录</span><b>{conversations.length}</b></div>
+    <nav className="creation-canvas__history" id="artedu-creation-history" aria-label="历次创作对话" hidden={!historyOpen} inert={!historyOpen}>
+      <div className="creation-canvas__history-label"><ChatCircleDots size={17} weight="bold" /><span>创作记录</span><b>{conversations.length}</b><button type="button" className="creation-canvas__history-close" aria-label="收起创作记录侧栏" title="收起侧栏" onClick={() => { setHistoryOpen(false); historyToggle.current?.focus(); }}><SidebarSimple size={17} /></button></div>
       <div className="creation-canvas__history-list">
         {conversations.length ? conversations.map((item) => <div className={`creation-canvas__history-item${item.id === activeId ? " is-active" : ""}`} key={item.id}>
           <button type="button" className="creation-canvas__history-open" onClick={() => openConversation(item.id)} title={item.title}>
@@ -558,10 +559,10 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
 
     <main className="creation-canvas__main">
       <section className="creation-canvas__conversation ai-conversation">
-        <header className="creation-canvas__conversation-title"><div><p>{method.eyebrow}</p><h1>{activeConversation?.title ?? "新的创作对话"}</h1></div><span>建议模式：{method.label}</span></header>
+        <header className="creation-canvas__conversation-title"><div><p>{method.eyebrow}</p><h1 title={activeConversation?.title ?? "新的创作对话"}>{activeConversation?.title ?? "新的创作对话"}</h1></div><span>建议模式：{method.label}</span></header>
         <div className="ai-thread creation-canvas__thread" ref={scrollRef} onScroll={e=>{const node=e.currentTarget;followOutputRef.current=node.scrollHeight-node.scrollTop-node.clientHeight<=160;}} onClickCapture={e=>{if(e.target.closest('summary'))followOutputRef.current=false;}} aria-busy={sending} aria-live="polite">
               {messages.length ? messages.map((message, index) => <ChatMessage
-                key={`${index}-${message.role}`}
+                key={`${activeId}-${index}-${message.role}`}
                 message={message}
                 index={index}
                 suggesting={suggestingFor?.conversationId === activeId && suggestingFor.replyIndex === index}
@@ -585,7 +586,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         <div className="creation-canvas__input">
               <label htmlFor="artedu-thread-prompt" className="sr-only">继续描述你的创作想法</label>
               <textarea ref={promptInput} id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={2} disabled={sending} />
-              <small className="cloud-cache-notice">成果自动随聊天保存在本机。参考附件 20 分钟后过期。</small>
+              <small className="cloud-cache-notice">成果随聊天保存在本机 · 参考附件 20 分钟后过期</small>
               <div className="creation-canvas__toolbar">
                 <div className="creation-canvas__tools">
                 <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx,.txt,.md,.csv" onChange={async (event) => {
@@ -667,12 +668,13 @@ const ChatMessage = memo(function ChatMessage({ message, index, suggesting, onCo
     const card = [...event.currentTarget.querySelectorAll('[data-local-source]')].find(node => node.dataset.localSource === href);
     if (card) { event.preventDefault(); card.querySelector('[data-open-local]')?.click(); }
   };
-  const runActivity=activities.find(event=>event.kind==='run')??activities.at(-1);
+  const execution = executionSummary(activities);
   return <div className={`ai-message ai-message--assistant${message.streaming ? " ai-message--streaming" : ""}`}>
     <span aria-hidden="true"><ChatCircleDots size={21} weight="regular" /></span>
     <div className="ai-message__body" onClickCapture={openLocalLink}>
       <span className="ai-message__author">{message.paused||message.status==='paused' ? "已暂停" : message.status==='partial'?'部分完成':message.status==='needs_confirmation'?'等待确认':message.failed||message.status==='failed' ? "请求未完成" : "ArtEdu 助教"}</span>
-      {!!activities.length && <details className="agent-execution" open={message.streaming||message.status==='partial'||message.status==='failed'}><summary>执行进度 · {activityLabel(runActivity)}</summary><ol className="agent-activity" aria-label="Agent 执行记录">{activities.map(event => <li key={event.id} data-status={event.status}><span aria-hidden="true">{event.status === 'failed' ? '!' : '·'}</span><span>{activityLabel(event)}</span><time dateTime={event.at}>{new Date(event.at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</time></li>)}</ol></details>}
+      {/* 原生 details 保留用户展开状态，流式更新不强制打开日志。失败原因仍在正文显示。 */}
+      {execution && <details className="agent-execution" data-status={execution.status}><summary><span className="agent-execution__dot" aria-hidden="true" /><span>执行记录 · {execution.label}</span><small>{execution.count} 条</small></summary><ol className="agent-activity" aria-label="Agent 执行记录">{activities.map(event => <li key={event.id} data-status={event.status}><span aria-hidden="true">{event.status === 'failed' ? '!' : '·'}</span><span>{activityLabel(event)}</span><time dateTime={event.at}>{new Date(event.at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</time></li>)}</ol></details>}
       <AiMarkdown>{message.content || message.placeholder}</AiMarkdown>
       {!!message.delivery?.artifacts?.length&&<div className="agent-artifacts" aria-label="本轮成果">{message.delivery.artifacts.filter(a=>/^\/api\/(?!\/)/.test(a.openUrl) && !localSources.has(a.openUrl)).map(a=><article key={a.openUrl} className="agent-artifact"><strong>{a.kind==='image'?'AI生成图片 · ':''}{a.path}</strong>{a.kind==='image'&&<ZoomableImage src={a.openUrl} alt="AI生成图片，视觉内容待核验" fileName={a.path}/>}<small>{a.kind==='image'?'视觉内容待核验':a.kind==='webpage'?(a.validation==='pass'?'最新版本检查通过':'尚未通过检查'):'文件已生成'}</small><a href={a.openUrl} target="_blank" rel="noopener noreferrer">打开成果 ↗</a></article>)}</div>}
       {!!message.localArtifacts?.length && <div className="agent-artifacts" aria-label="本机成果">{message.localArtifacts.map(artifact => artifact.localArchiveId ? <LocalArtifact key={artifact.localArchiveId} artifact={artifact}/> : <p key={artifact.openUrl} role="alert">{artifact.path}：本地保存失败，请及时下载。</p>)}</div>}
@@ -682,12 +684,12 @@ const ChatMessage = memo(function ChatMessage({ message, index, suggesting, onCo
         <button type="button" onClick={() => onCopy(message.content)} title="复制回复"><Copy size={14} />复制</button>
         <button type="button" onClick={() => onRetry(index)} title="清除这一轮的回复并重新生成"><ArrowClockwise size={14} />重新输出</button>
       </div>
-      {(message.suggestions?.length > 0 || pendingSuggestions) && <div className="creation-canvas__followups" aria-label="建议提问内容">
-        <span>建议提问内容</span>
+      {(message.suggestions?.length > 0 || pendingSuggestions) && <details className="creation-canvas__followups" aria-label="建议提问内容">
+        <summary>继续探索 <small>{pendingSuggestions ? "正在整理建议…" : `${message.suggestions.length} 个建议`}</small></summary>
         {message.suggestions?.length
           ? <div>{message.suggestions.map((item) => <button type="button" key={item} onClick={() => onPick(item)}>{item}<ArrowRight size={14} weight="bold" /></button>)}</div>
           : <p>正在生成建议提问…</p>}
-      </div>}
+      </details>}
     </div>
   </div>;
 });

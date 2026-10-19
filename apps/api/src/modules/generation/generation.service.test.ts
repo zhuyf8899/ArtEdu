@@ -6,6 +6,27 @@ import type { GenerationJob } from "./generation.repository";
 import { GenerationService } from "./generation.service";
 import type { ModelRequest, ModelResult } from "./model-adapter";
 import { ImageTransportError } from "./image-transport";
+import { ImageConfigurationError } from "../../common/image-configuration";
+
+test("生图缺通道或缺密钥时在创建任务和额度计数前停止，返回不可重试配置错误", async () => {
+  for (const code of ['IMAGE_PROVIDER_NOT_CONFIGURED','IMAGE_PROVIDER_KEY_MISSING'] as const) {
+    let created = false;
+    const registry = {getForJob:(input:{requireConfigured?:boolean})=>{
+      assert.equal(input.requireConfigured,true);
+      throw new ImageConfigurationError(code);
+    }};
+    const service = new GenerationService({} as never,{} as never,registry as never);
+    service.createJob=async()=>{created=true;throw Error('must not create a job');};
+    await assert.rejects(service.runJob(actor,{jobType:'image',prompt:'海浪',parameters:{}}),(error:unknown)=>{
+      assert.ok(error instanceof HttpException);
+      assert.equal(error.getStatus(),503);
+      const response=error.getResponse() as {code:string;retryable:boolean;message:string};
+      assert.equal(response.code,code);assert.equal(response.retryable,false);
+      assert.match(response.message,/图片/);return true;
+    });
+    assert.equal(created,false);
+  }
+});
 
 const actor: Actor = {
   id: "user-student-demo",

@@ -3,6 +3,22 @@ import test from "node:test";
 import { getEnvironment } from "./environment";
 import { AuthService } from "../modules/auth/auth.service";
 import { createCourseSchema } from "../modules/courses/courses.contracts";
+import { Logger, ServiceUnavailableException, type ArgumentsHost } from "@nestjs/common";
+import { ApiExceptionFilter } from "./api-exception.filter";
+
+test("HTTP 仅透传公开生图配置原因码，不透传私有供应商字段", context => {
+  context.mock.method(Logger,'error',()=>undefined);
+  for(const code of ['IMAGE_PROVIDER_KEY_MISSING','UNTRUSTED_PRIVATE_CODE']){
+    let result:any;
+    const reply={sent:false,code:(_status:number)=>reply,send:(body:unknown)=>{result=body;}};
+    const host={switchToHttp:()=>({getRequest:()=>({id:'test-request'}),getResponse:()=>reply})} as unknown as ArgumentsHost;
+    new ApiExceptionFilter().catch(new ServiceUnavailableException({message:'图片服务尚未配置',code,retryable:true,privateKey:'must-not-be-returned'}),host);
+    assert.equal(result.message,'图片服务尚未配置');
+    assert.equal(result.code,code==='IMAGE_PROVIDER_KEY_MISSING'?code:undefined);
+    assert.equal(result.retryable,code==='IMAGE_PROVIDER_KEY_MISSING'?false:undefined);
+    assert.ok(!JSON.stringify(result).includes('must-not-be-returned'));
+  }
+});
 
 const environmentKeys = ["NODE_ENV", "HOST", "CORS_ORIGIN", "ENABLE_LOCAL_AUTH", "LOCAL_SESSION_IDLE_HOURS", "MODEL_EXECUTION_ENABLED", "RAG_ENABLED", "RAG_EMBEDDING_BASE_URL", "DEV_ADMIN_USER_ID"] as const;
 function withEnvironment(values: Partial<Record<(typeof environmentKeys)[number], string>>, callback: () => void) {

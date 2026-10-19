@@ -192,7 +192,7 @@ test("AI 讲堂与设计工具移除重复标题，同时保留课程和工具�
   assert.ok(studio.includes("tool-directory__actions") && studio.includes("tool-directory__list"), "保留工具浏览控制和工具卡片");
 });
 
-test("历次会话是常驻左侧栏，收起后按钮仍在", async () => {
+test("历次会话停靠左侧且可收起，收起后按钮仍在并保留偏好", async () => {
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
   const workspace = await readFile(new URL("../src/CreationWorkspace.jsx", import.meta.url), "utf8");
   // 停靠左侧 + 宽度动画（收起时对话区顺势变宽，而不是盖在消息上）。
@@ -204,7 +204,7 @@ test("历次会话是常驻左侧栏，收起后按钮仍在", async () => {
   assert.ok(workspace.includes("creation-canvas__history-toggle"), "表头要有会话开关按钮");
   assert.ok(workspace.includes('aria-controls="artedu-creation-history"'));
   assert.ok(workspace.includes("const [historyOpen, setHistoryOpen] = useState("));
-  assert.ok(workspace.includes('localStorage.getItem("artedu-creation-history-open") !== "0"'));
+  assert.ok(workspace.includes('localStorage.getItem("artedu-creation-history-open") === "1"'), "首次进入收起，显式展开偏好仍保留");
   assert.ok(workspace.includes('localStorage.setItem("artedu-creation-history-open"'));
 });
 

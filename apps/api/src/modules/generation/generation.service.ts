@@ -18,6 +18,7 @@ import { DocumentContentError, documentMarkdown, documentPrompt, officeFormatSch
 import { imageGenerationParametersSchema } from "./generation.contracts";
 import { assertPdfAvailable, PdfExportError } from "./pdf-export";
 import { ImageTransportError } from "./image-transport";
+import { ImageConfigurationError } from "../../common/image-configuration";
 
 interface QuotaRow {
   daily_limit: number | null;
@@ -96,8 +97,11 @@ export class GenerationService {
     signal?.throwIfAborted();
     let adapter;
     try {
-      adapter = this.models.getForJob({ jobType: input.jobType, modelConfigId: input.modelConfigId });
-    } catch {
+      adapter = this.models.getForJob({ jobType: input.jobType, modelConfigId: input.modelConfigId, requireConfigured: ["image", "pattern"].includes(input.jobType) });
+    } catch (error) {
+      if (error instanceof ImageConfigurationError) throw new ServiceUnavailableException({
+        statusCode: 503, message: error.message, code: error.code, retryable: false,
+      });
       throw new ServiceUnavailableException("所选模型当前未配置或不支持此创作方式");
     }
 

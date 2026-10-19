@@ -12,6 +12,7 @@ import { LearningBindingFields } from "./LearningBindingFields.jsx";
 import { normalizeLearningBindings } from "./learningBindings.js";
 import { ADMIN_COURSE_FILTERS, filterAdminCourses } from './adminCourseCatalog.js';
 import { useUnsavedChanges } from './useUnsavedChanges.js';
+import { ContentLifecycleDialog } from './AdminContentTools.jsx';
 
 const statusNames = { draft: "草稿", pending_review: "待审核", published: "已发布", rejected: "已驳回", archived: "已归档" };
 const editable = (course) => ["draft", "rejected"].includes(course.status);
@@ -22,7 +23,7 @@ const emptyLesson = () => ({
 });
 const splitTags = (value) => value.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
 
-export function AdminCourses({ showToast }) {
+export function AdminCourses({ showToast, canManageContent = false, canReviewCourses = false }) {
   const [courses, setCourses] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [courseEditor, setCourseEditor] = useState(null);
@@ -30,6 +31,7 @@ export function AdminCourses({ showToast }) {
   const [resourceEditor, setResourceEditor] = useState(null);
   const [bindingCourse, setBindingCourse] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [lifecycleTarget, setLifecycleTarget] = useState(null);
   const [query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[category,setCategory]=useState('all');
   const [loading,setLoading]=useState(true),[loadError,setLoadError]=useState('');
   const request=useRef(0);
@@ -38,7 +40,7 @@ export function AdminCourses({ showToast }) {
 
   const load = async () => {
     const requestId=++request.current;setLoading(true);setLoadError('');
-    const [courseResult, reviewResult] = await Promise.allSettled([getAdminCourses(), getCourseReviews()]);
+    const [courseResult, reviewResult] = await Promise.allSettled([getAdminCourses(), canReviewCourses ? getCourseReviews() : Promise.resolve({items:[]})]);
     if(requestId!==request.current)return;
     if (courseResult.status === "fulfilled") setCourses(courseResult.value.items ?? []);
     if (reviewResult.status === "fulfilled") setReviews(reviewResult.value.items ?? []);
@@ -80,19 +82,21 @@ export function AdminCourses({ showToast }) {
             <button disabled={busy || !["draft", "rejected", "published"].includes(course.status)} onClick={() => openCourse(course, "bindings")}>图谱配置</button>
             <button disabled={busy} onClick={() => openCourse(course, "resources")}>管理资料</button>
             <button disabled={busy || !editable(course)} onClick={() => run(() => submitCourseReview(course.id), "课程已提交发布审核")}>提交审核 <ArrowRight size={15} weight="bold" /></button>
+            {canManageContent && <button className="content-remove" disabled={busy} aria-label={`${course.status === 'archived' ? '恢复' : '删除或下架'}课程：${course.title}`} onClick={() => setLifecycleTarget(course)}>{course.status === 'archived' ? '恢复至草稿' : '删除 / 下架'}</button>}
           </div>
         </div>)}
         {loading&&!courses.length?<div className="empty-state" role="status">正在加载课程…</div>:!filtered.length&&<div className="empty-state"><BookOpenText size={34} /><strong>{courses.length?'没有匹配的课程':loadError?'目录暂时不可用':'尚无课程'}</strong><span>{courses.length?'调整关键词或重置筛选，已归档课程不会删除。':loadError?'请使用上方重新加载入口重试。':'点击“新建课程”建立第一门正式课程。'}</span></div>}
       </article>
-      <article className="table-panel course-review-list" data-pending={reviews.some(item=>item.status==='pending')}>
+      {canReviewCourses && <article className="table-panel course-review-list" data-pending={reviews.some(item=>item.status==='pending')}>
         <div className="panel__heading course-admin-heading"><div><p>// PUBLISH REVIEW</p><h2>课程发布审核</h2></div><span>{reviews.filter((item) => item.status === "pending").length} 项待处理</span></div>
         {reviews.slice(0, 8).map((review) => <div className="course-review-row" key={review.id}>
           <div><span><Clock size={13} /> {new Date(review.submittedAt).toLocaleString("zh-CN")}</span><strong>{review.courseTitle}</strong><small>{review.submitterName} · 版本 {review.snapshotVersion}</small></div>
           {review.status === "pending" ? <div><button disabled={busy} onClick={() => run(() => decideCourseReview(review.id, { status: "rejected", note: "请补充课时说明后重新提交" }), "课程审核已驳回")}>驳回</button><button disabled={busy} className="approve" onClick={() => run(() => decideCourseReview(review.id, { status: "approved", note: "审核通过" }), "课程已审核发布")}><Check size={15} /> 发布</button></div> : <em className={`course-state course-state--${review.status === "approved" ? "published" : "rejected"}`}>{review.status === "approved" ? "已通过" : "已驳回"}</em>}
         </div>)}
         {!reviews.length && <div className="empty-state"><Check size={34} /><strong>暂无审核记录</strong><span>课程提交后会出现在这里。</span></div>}
-      </article>
+      </article>}
     </section>
+    {lifecycleTarget && <ContentLifecycleDialog item={lifecycleTarget} kind="course" onClose={() => setLifecycleTarget(null)} onRefresh={() => { setLifecycleTarget(null); void load(); }} onDone={async () => { setLifecycleTarget(null); await load(); showToast('课程状态已更新，学习进度与历史资料已保留'); }} />}
     {bindingCourse && <CourseKnowledgeEditor key={bindingCourse.id} course={bindingCourse} busy={busy} onClose={() => { if (!busy) setBindingCourse(null); }} onSave={(input) => run(async () => {
       await updateCourseKnowledgeBindings(bindingCourse.id, input);
       setBindingCourse(null);

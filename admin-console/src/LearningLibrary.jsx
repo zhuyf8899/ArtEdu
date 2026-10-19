@@ -10,6 +10,7 @@ import { decorateCourse, difficultyName, courseReadiness } from "./coursePresent
 import { TrialLesson } from './morph/TrialLesson.jsx';
 import { learningLabels } from "./learningBindings.js";
 import { ZoomableImage } from "./ImageLightbox.jsx";
+import { DocumentPreviewDialog } from './DocumentPreview.jsx';
 import "./LearningBindings.css";
 import { MorphCourseCatalog } from './morph/MorphCatalog.jsx';
 import { morphCourseLevel } from './morph/morphPresentation.js';
@@ -282,6 +283,7 @@ function VideoMaterial({ resource, source, cover, meta }) {
 }
 
 function CourseMaterial({ resource }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
   const kind = MATERIAL_KINDS[resource.resourceType] ?? MATERIAL_KINDS.other;
   const Icon = kind.icon;
   const preview = resource.previewUrl || resource.externalUrl || "";
@@ -332,10 +334,12 @@ function CourseMaterial({ resource }) {
     <header>
       {meta("用浏览器阅读器打开，可整页缩放、翻页与检索；需要离线使用时再下载原件。")}
       <span className="course-material__actions">
+        <button type="button" className="course-material__preview-button" onClick={() => setPreviewOpen(true)}>在线预览 PDF</button>
         <a className="outline-button course-material__open" href={source} target="_blank" rel="noreferrer"><FilePdf size={16} weight="bold" />在浏览器中打开 PDF</a>
         {downloadLink("下载 PDF")}
       </span>
     </header>
+    {previewOpen && <DocumentPreviewDialog fileName={resource.fileName || `${resource.title}.pdf`} src={source} mimeType={resource.mimeType} downloadUrl={download} onClose={() => setPreviewOpen(false)} />}
   </article>;
 
   // 前端源码课件（.css / .js）：页内查看源码为主，下载只作为备选。
@@ -346,11 +350,13 @@ function CourseMaterial({ resource }) {
     {downloadLink("下载源文件")}
   </article>;
 
-  // 此组件不内嵌渲染 Office 原件，提供下载后用本地办公软件打开的入口。
+  // Office 原件由浏览器本机解析；沿用原有鉴权下载接口，不发送给在线预览服务。
   return <article className="course-material">
     <Icon size={18} weight="bold" />
-    {meta("浏览器不能内嵌渲染 Office 原件：下载后用本机 PowerPoint / WPS 打开。")}
-    {downloadButton("下载课件")}
+    {meta("支持 DOCX / PPTX 在线阅读与翻页；复杂动画与旧版格式请下载原件查看。")}
+    <button type="button" className="course-material__preview-button" onClick={() => setPreviewOpen(true)}>在线预览</button>
+    {downloadLink("下载原件")}
+    {previewOpen && <DocumentPreviewDialog fileName={resource.fileName || resource.title} src={source} mimeType={resource.mimeType} downloadUrl={download} onClose={() => setPreviewOpen(false)} />}
   </article>;
 }
 

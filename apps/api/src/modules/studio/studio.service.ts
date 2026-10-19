@@ -4,6 +4,8 @@ import { ComfyService } from './comfy.service';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { resolveByteRange } from "../../common/byte-range";
 import path from "node:path";
 import type { FastifyRequest } from "fastify";
 import type { PoolClient } from "pg";
@@ -619,7 +621,7 @@ export class StudioService {
     }
   }
 
-  async openWorkAsset(actor: Actor, workId: string, assetId: string) {
+  async openWorkAsset(actor: Actor, workId: string, assetId: string, request: { range?: string; head?: boolean; ifRange?: string } = {}) {
     const result = await this.database.query<{ storage_key: string; file_name: string; mime_type: string; status: string; author_id: string; moderation_status: string; asset_type: string; story_json: Partial<CaseStory> }>(`
       SELECT asset.storage_key,asset.file_name,asset.mime_type,asset.asset_type,asset.moderation_status,work.status,work.author_id,work.story_json
       FROM work_assets asset JOIN works work ON work.id=asset.work_id
@@ -633,7 +635,16 @@ export class StudioService {
     if (asset.asset_type === "document" && asset.author_id !== actor.id && !canReview && !asset.story_json?.allowDocumentDownload) throw new ForbiddenException("作者未开放原件下载");
     const storageKey = asset.storage_key;
     const filePath = await resolveWorkAssetPath(getEnvironment().uploadRoot, storageKey, asset.author_id, workId);
-    return { fileName: asset.file_name, mimeType: asset.mime_type, stream: createReadStream(filePath) };
+    // Authorize and validate the owner/work path before exposing even the file size.
+    const size = (await stat(filePath)).size;
+    // No validator is advertised: If-Range must fall back to a full response.
+    const range = resolveByteRange(size, request.head || request.ifRange ? undefined : request.range);
+    return {
+      fileName: asset.file_name, mimeType: asset.mime_type, size, range,
+      // HEAD/416 never open a stream; large videos are streamed, not buffered in RAM.
+      stream: request.head || range.status === 416 ? undefined : createReadStream(filePath,
+        range.status === 206 ? { start: range.start, end: range.end } : undefined),
+    };
   }
 
   async addComment(actor: Actor, workId: string, content: string) {

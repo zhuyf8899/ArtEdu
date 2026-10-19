@@ -122,7 +122,8 @@ test('视频只显示播放器和下载权限，文件名仅留在文档附件�
   assert.doesNotMatch(view, /<figcaption/);
   assert.doesNotMatch(view, /aria-label=\{asset.file_name\}/);
   assert.match(view, /<video controls preload="metadata" className="case-attachment__video"/);
-  assert.match(view, /className="case-attachment__actions">\{asset.canDownload \?/);
+  assert.match(view, /className="case-attachment__actions">[^\n]*asset.canDownload \?/);
+  assert.match(view, /asset.canDownload && asset.url\?\.startsWith\('\/api\/'\)/, '在线预览与下载使用同样的授权边界');
   assert.match(css, /\.case-related-assets article \{[^}]*grid-template-columns: minmax\(0,1fr\);/);
   assert.match(css, /\.case-attachment__header strong \{[^}]*min-width: 0;[^}]*overflow-wrap: anywhere;/);
   assert.match(css, /\.case-attachment__video \{[^}]*max-width: 100%;/);
@@ -136,6 +137,52 @@ test('已驳回案例在作者详情展示整改意见和审核历史', async ()
   assert.match(library, /修改并保存后，可再次提交审核/);
   assert.match(css, /\.case-review-feedback/);
   assert.match(css, /\.case-review-history/);
+});
+
+test('案例封面不会被 Grid 固有尺寸撑开，MORPH 详情与视频不铺满大屏', async () => {
+  const css = await readFile(new URL('../src/case-story.css',import.meta.url),'utf8');
+  const morph = await readFile(new URL('../src/morph/platform-unified.css',import.meta.url),'utf8');
+  assert.match(css, /\.community-detail \.community-detail__hero \{[^}]*grid-template-rows: minmax\(0,1fr\)/);
+  assert.match(css, /\.community-detail__hero \.case-image-button--hero \{[^}]*min-height: 0;[^}]*overflow: hidden/);
+  assert.match(css, /\.community-detail__hero \.case-image-button--hero img \{[^}]*height: 100%;[^}]*max-height: 100%;[^}]*object-fit: contain/);
+  assert.match(css, /\.case-related-assets \.case-attachment--video \{[^}]*width: min\(100%,800px\);[^}]*box-sizing: border-box;[^}]*justify-self: center/);
+  assert.match(css, /\.case-attachment__video \{[^}]*width: auto; height: auto;[^}]*max-width: 100%;[^}]*max-height: min\(56dvh,480px\)/);
+  assert.match(morph, /body\.morph-platform \.morph-v17 \.community-detail\{[^}]*max-width:1120px/);
+  assert.match(morph, /body\.morph-platform \.morph-v17 \.community-detail--exhibition\{max-width:1040px/);
+});
+
+test('真实案例组件区分视频和文档，保留播放及下载权限且不显示媒体文件名', async () => {
+  const [{createServer},React,{renderToStaticMarkup}] = await Promise.all([import('vite'),import('react'),import('react-dom/server')]);
+  const server = await createServer({server:{middlewareMode:true,hmr:false},appType:'custom'});
+  try {
+    const {CaseStoryView} = await server.ssrLoadModule('/src/CaseStoryView.jsx');
+    for (const exhibition of [false,true]) {
+      const work = {title:'测试作品',status:'approved',previewUrl:'/cover.jpg',story:{},assets:[
+        {id:'video',asset_type:'video',url:'/film.mp4',file_name:'private-video-name.mp4',canDownload:true},
+        {id:'locked',asset_type:'video',url:'/locked.mp4',file_name:'locked-video-name.mp4',canDownload:false},
+        {id:'doc',asset_type:'document',url:'/guide.pdf',file_name:'创作手册.pdf',canDownload:false},
+        {id:'image',asset_type:'image',url:'/image.jpg',file_name:'private-image-name.jpg'},
+      ]};
+      const html = renderToStaticMarkup(React.createElement(CaseStoryView,{work,exhibition}));
+      assert.match(html,/class="case-related-assets case-related-assets--multiple-videos"/);
+      assert.equal((html.match(/class="case-attachment case-attachment--video"/g)??[]).length,2);
+      assert.equal((html.match(/<video controls=""/g)??[]).length,2);
+      assert.match(html,/href="\/film.mp4" download=""/);
+      assert.doesNotMatch(html,/<a[^>]*href="\/locked.mp4"/);
+      assert.ok(html.includes('作者未开放下载'));
+      assert.ok(html.includes('创作手册.pdf'));
+      assert.ok(html.indexOf('作品影像') < html.indexOf('class="case-gallery"'), '视频先于图集展示');
+      assert.ok(html.indexOf('附件资料') > html.indexOf('class="case-gallery"'), '文档不混入视频区');
+      assert.equal((html.match(/src="\/film.mp4"/g)??[]).length,1,'视频不重复渲染');
+      assert.doesNotMatch(html,/private-video-name|locked-video-name|private-image-name/);
+      assert.equal(html.includes('poster="/cover.jpg"'),exhibition);
+      const single = renderToStaticMarkup(React.createElement(CaseStoryView,{work:{...work,assets:work.assets.slice(0,1)},exhibition}));
+      assert.doesNotMatch(single,/case-related-assets--multiple-videos/);
+      assert.doesNotMatch(single,/附件资料/,'没有文档时不展示空附件区');
+      const noVideo = renderToStaticMarkup(React.createElement(CaseStoryView,{work:{...work,assets:work.assets.slice(2)},exhibition}));
+      assert.doesNotMatch(noVideo,/作品影像|<video/,'纯图片案例不留下空影像区');
+    }
+  } finally { await server.close(); }
 });
 
 test('案例社区页头仅保留新建草稿主操作，并沿用 AI 讲堂紧凑布局', async () => {
