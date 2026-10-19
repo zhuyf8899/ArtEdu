@@ -37,7 +37,7 @@ for (const role of ["student", "teacher", "operator", "admin"]) {
     assert.ok(!/sk-[a-zA-Z0-9]{20,}/.test(JSON.stringify(home)), "Home must not expose credentials");
     const result = await (await request("generation-jobs/run", {
       cookie, expected: 201,
-      body: { jobType: "image", modelConfigId: expectedModel, prompt: "请用一个简短标题和两条列表，给出艺术课程卡片的设计建议，60字以内。", parameters: {} },
+      body: { jobType: "chat", modelConfigId: expectedModel, prompt: "请用一个简短标题和两条列表，给出艺术课程卡片的设计建议，60字以内。", parameters: {} },
     })).json();
     assert.equal(result.job.status, "succeeded");
     assert.equal(result.output.kind, "text");

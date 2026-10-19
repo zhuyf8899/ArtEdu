@@ -23,6 +23,7 @@
     "check:runtime": "node scripts/check-runtime.mjs",
     "test:chat:live": "node scripts/verify-demo-chat.mjs",
     "test:documents:live": "node scripts/verify-document-generation.mjs",
+    "test:images:live": "node scripts/verify-image-generation.mjs",
     "check:api": "cd apps/api && npm run typecheck",
     "check:api:test": "npm --prefix apps/api run test:security",
     "check:web": "cd admin-console && npm run build && npm run test:sites && npm run test:chat && npm run test:platform",

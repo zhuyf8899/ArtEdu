@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { HttpException } from "@nestjs/common";
 import type { Actor } from "../auth/auth.service";
 import type { GenerationJob } from "./generation.repository";
 import { GenerationService } from "./generation.service";
-import type { ModelRequest } from "./model-adapter";
+import type { ModelRequest, ModelResult } from "./model-adapter";
 
 const actor: Actor = {
   id: "user-student-demo",
@@ -13,9 +14,44 @@ const actor: Actor = {
   roles: ["student"],
 };
 
+for (const jobType of ["image", "pattern"] as const) {
+  for (const output of [
+    { kind: "text", content: "只有构图方案" },
+    { kind: "asset", content: "generated/fake.svg", mimeType: "image/svg+xml", metadata: { fileSize: 100 } },
+    { kind: "asset", content: "generated/empty.png", mimeType: "image/png", metadata: { fileSize: 0 } },
+  ] satisfies ModelResult[]) {
+    test(`${jobType} 拒绝无效产物 ${output.content}，记录失败且不计为成功`, async () => {
+      let completed = false;
+      let saved = false;
+      let failure = "";
+      const usage: Array<Record<string, unknown>> = [];
+      const repository = {
+        markRunning: async () => true,
+        completeJob: async () => { completed = true; },
+        createOutput: async () => { saved = true; },
+        failJob: async (_id: string, reason: string) => { failure = reason; },
+        recordUsage: async (record: Record<string, unknown>) => { usage.push(record); },
+      };
+      const service = new GenerationService({} as never, repository as never, {
+        getForJob: () => ({ id: "image-model", execute: async () => ({ ...output, metadata: { ...output.metadata, inputTokens: 12, outputTokens: 8 } }) }),
+      } as never);
+      service.createJob = async () => ({ id: "invalid-image-job" } as GenerationJob);
+      await assert.rejects(service.runJob(actor, { jobType, prompt: "海浪", parameters: {} }), /检查图片模型协议与配置/);
+      assert.match(failure, /未返回有效图片文件/);
+      assert.equal(completed, false);
+      assert.equal(saved, false);
+      assert.equal(usage[0].status, "failed");
+      assert.equal(usage[0].errorCode, "image_artifact_error");
+      assert.equal(usage[0].inputUnits, 12);
+      assert.equal(usage[0].outputUnits, 8);
+    });
+  }
+}
+
 test("内部图片路由保留图片产物、上下文和实际模型 ID", async () => {
   let saved: unknown;
   let actualModel: unknown;
+  let jobModel: unknown;
   let request: ModelRequest | undefined;
   const repository = {
     markRunning: async () => true,
@@ -28,13 +64,42 @@ test("内部图片路由保留图片产物、上下文和实际模型 ID", async
     return { kind: "asset", content: "generated/image-job/image.png", mimeType: "image/png", metadata: { fileName: "image.png", fileSize: 123 } };
   } };
   const service = new GenerationService({} as never, repository as never, { getForJob: () => model } as never);
-  service.createJob = async inputActor => ({ id: "image-job", userId: inputActor.id } as GenerationJob);
-  const result = await service.runJob(actor, { jobType: "image", prompt: "海浪", parameters: {}, context: [{ role: "user", content: "蓝白色" }] });
+  service.createJob = async (inputActor, input) => {
+    jobModel = input.modelConfigId;
+    return { id: "image-job", userId: inputActor.id } as GenerationJob;
+  };
+  const result = await service.runJob(actor, { jobType: "image", modelConfigId: "selected-text-model", prompt: "海浪", parameters: {}, context: [{ role: "user", content: "蓝白色" }] });
   assert.equal(actualModel, "internal-image");
+  assert.equal(jobModel, "internal-image");
+  assert.equal(request?.modelConfigId, "internal-image");
   assert.equal(request?.jobId, "image-job");
   assert.equal(request?.messages?.[1].content, "蓝白色");
   assert.equal(result.artifact?.mimeType, "image/png");
   assert.ok(saved);
+});
+
+test("文本模型自动转交生图仍受额度限制，额度不足不调用供应商", async () => {
+  const originalEnabled = process.env.MODEL_EXECUTION_ENABLED;
+  let invoked = false;
+  try {
+    process.env.MODEL_EXECUTION_ENABLED = "true";
+    const client = { query: async (sql: string, parameters: unknown[]) => {
+      if (sql.includes("FROM model_configs")) {
+        assert.equal(parameters[0], "internal-image");
+        return { rows: [{ id: "internal-image" }], rowCount: 1 };
+      }
+      if (sql.includes("WITH limits")) return { rows: [{ daily_limit: 0, daily_used: 0, monthly_limit: null, monthly_used: 0, concurrent_limit: null, in_flight: 0 }] };
+      return { rows: [], rowCount: 0 };
+    } };
+    const database = { transaction: async (work: (connection: typeof client) => unknown) => work(client) };
+    const registry = { getForJob: () => ({ id: "internal-image", execute: async () => { invoked = true; } }) };
+    const service = new GenerationService(database as never, {} as never, registry as never);
+    await assert.rejects(service.runJob(actor, { jobType: "image", modelConfigId: "selected-text-model", prompt: "海浪", parameters: {} }), (error: unknown) => error instanceof HttpException && error.getStatus() === 429);
+    assert.equal(invoked, false);
+  } finally {
+    if (originalEnabled === undefined) delete process.env.MODEL_EXECUTION_ENABLED;
+    else process.env.MODEL_EXECUTION_ENABLED = originalEnabled;
+  }
 });
 
 test("文档结构失败保留实际模型用量，且不创建残缺下载文件", async () => {
@@ -108,7 +173,7 @@ test("同步创作完成后返回模型正文并记录 token 用量", async () =
   const queuedJob: GenerationJob = {
     id: "job-deepseek-test",
     userId: actor.id,
-    jobType: "image",
+    jobType: "chat",
     prompt: "设计一张艺术课程卡片",
     status: "queued",
     errorMessage: null,
@@ -127,7 +192,7 @@ test("同步创作完成后返回模型正文并记录 token 用量", async () =
   const registry = {
     getForJob: () => ({
       id: "model-deepseek-v4-flash",
-      capabilities: ["image"],
+      capabilities: ["chat"],
       execute: async (request: ModelRequest) => {
         invocation = request;
         return { kind: "text" as const, content: "可执行的视觉创作方案", metadata: { inputTokens: 21, outputTokens: 34 } };
@@ -138,7 +203,7 @@ test("同步创作完成后返回模型正文并记录 token 用量", async () =
   service.createJob = async () => queuedJob;
 
   const result = await service.runJob(actor, {
-    jobType: "image",
+    jobType: "chat",
     prompt: queuedJob.prompt,
     modelConfigId: "model-deepseek-v4-flash",
     parameters: {},

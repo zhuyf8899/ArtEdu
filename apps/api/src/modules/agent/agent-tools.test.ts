@@ -16,6 +16,20 @@ function call(name: string, args: Record<string, unknown>): ModelToolCall {
   return { id: `call-${name}`, type: "function", function: { name, arguments: JSON.stringify(args) } };
 }
 
+test("复现截图报错：生成服务返回文字而非图片产物", async () => {
+  const generation = { runJob: async () => ({ job: { id: "text-only", status: "succeeded" }, output: { kind: "text", content: "构图方案" } }) };
+  await assert.rejects(executePlatformTool(call("generate_image", { prompt: "海浪" }), baseContext, {
+    actor, runId: "run-1", database: {} as DatabaseService, agents: {} as AgentService, studio: {} as StudioService, generation: generation as never,
+  }), /^Error: 图片服务没有返回实际私有图片$/);
+});
+
+test("上游服务异常直接传递，不会变成截图中的产物校验报错", async () => {
+  const generation = { runJob: async () => { throw new Error("模型服务认证失败"); } };
+  await assert.rejects(executePlatformTool(call("generate_image", { prompt: "海浪" }), baseContext, {
+    actor, runId: "run-1", database: {} as DatabaseService, agents: {} as AgentService, studio: {} as StudioService, generation: generation as never,
+  }), /^Error: 模型服务认证失败$/);
+});
+
 test("平台 Agent 工具返回已发布课程和课时事实，而不是占位结果", async () => {
   let calls = 0;
   const database = { async query() {

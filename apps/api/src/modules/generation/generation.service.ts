@@ -27,6 +27,8 @@ interface QuotaRow {
   in_flight: number;
 }
 
+class ImageArtifactError extends Error {}
+
 @Injectable()
 export class GenerationService {
   constructor(
@@ -97,7 +99,7 @@ export class GenerationService {
       throw new ServiceUnavailableException("所选模型当前未配置或不支持此创作方式");
     }
 
-    const modelConfigId = input.modelConfigId ?? adapter.id;
+    const modelConfigId = ["image", "pattern"].includes(input.jobType) ? adapter.id : input.modelConfigId ?? adapter.id;
     input = { ...input, modelConfigId };
     const format = input.jobType === "document" ? officeFormatSchema.parse(input.parameters.outputFormat ?? "docx") : "docx";
     // Reject missing PDF dependencies before incurring model usage.
@@ -164,6 +166,11 @@ export class GenerationService {
           output = repaired;
         }
       }
+      if (["image", "pattern"].includes(input.jobType) && (
+        output.kind !== "asset" || !output.content.trim()
+        || !/^image\/(png|jpeg|webp|gif|avif)$/.test(output.mimeType ?? "")
+        || !Number.isFinite(Number(output.metadata?.fileSize)) || Number(output.metadata?.fileSize) <= 0
+      )) throw new ImageArtifactError("图片生成未返回有效图片文件，请联系管理员检查图片模型协议与配置");
       const artifact = document ? await this.createOfficeArtifact(job.id, document, format) : await this.createArtifact(job.id, output);
       const completed = await this.repository.completeJob(job.id);
       await this.repository.recordUsage({
@@ -297,6 +304,7 @@ function buildCreationSystemPrompt(jobType: RunGenerationJobInput["jobType"]) {
 }
 
 function providerErrorCode(error: unknown) {
+  if (error instanceof ImageArtifactError) return "image_artifact_error";
   if (error instanceof PdfExportError) return "pdf_export_error";
   if (error instanceof DocumentContentError) return "document_content_error";
   if (error instanceof Error && error.name === "AbortError") return "timeout";
@@ -305,6 +313,7 @@ function providerErrorCode(error: unknown) {
 }
 
 function providerFailureMessage(error: unknown) {
+  if (error instanceof ImageArtifactError) return error.message;
   if (error instanceof DocumentContentError || error instanceof PdfExportError) return error.message;
   if (error instanceof Error && error.message.startsWith("图像生成超时")) return "图片服务排队较久，本次等待超时；请稍后重试当前节点";
   if (error instanceof Error && error.name === "AbortError") return "模型响应超时，请稍后重试";

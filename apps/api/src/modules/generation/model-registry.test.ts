@@ -44,6 +44,28 @@ const deployedProviders = JSON.stringify([
   { id: "model-modelscope-qwen-image", baseUrl: "https://api-inference.modelscope.cn", model: "Qwen/Qwen-Image", capabilities: ["image", "pattern"], apiKeyEnv: "MODELSCOPE_API", timeoutMs: 120000, protocol: "modelscope-image", internal: true },
 ]);
 
+test("文本协议误报图片能力时使用图片通道，选择文本模型也自动转交生图", async () => {
+  const originalProviders = process.env.MODEL_PROVIDERS_JSON;
+  try {
+    const configs = JSON.parse(deployedProviders);
+    configs[0].capabilities.push("image", "pattern");
+    process.env.MODEL_PROVIDERS_JSON = JSON.stringify(configs);
+    const registry = new ModelRegistry();
+    for (const jobType of ["image", "pattern"] as const) {
+      assert.equal(registry.getForJob({ jobType }).id, "model-modelscope-qwen-image");
+      assert.equal(registry.getForJob({ jobType, modelConfigId: configs[0].id }).id, "model-modelscope-qwen-image");
+      assert.equal(registry.getForJob({ jobType, providerId: configs[0].id }).id, "model-modelscope-qwen-image");
+      assert.equal(registry.list()[0].capabilities.includes(jobType), false);
+      await assert.rejects(registry.getForJob({ jobType: "chat" }).execute({ jobType, prompt: "海浪" }), /不支持任务类型/);
+    }
+    process.env.MODEL_PROVIDERS_JSON = JSON.stringify([configs[0]]);
+    assert.throws(() => new ModelRegistry().getForJob({ jobType: "image" }), /没有找到/);
+  } finally {
+    if (originalProviders === undefined) delete process.env.MODEL_PROVIDERS_JSON;
+    else process.env.MODEL_PROVIDERS_JSON = originalProviders;
+  }
+});
+
 // 曾经的问题：默认能力是"生图"，任何提问都被内置图像通道接走。
 test("问答路由到文本模型，图像/图案路由到内置图像通道", () => {
   const originalProviders = process.env.MODEL_PROVIDERS_JSON;
@@ -58,6 +80,31 @@ test("问答路由到文本模型，图像/图案路由到内置图像通道", (
   } finally {
     if (originalProviders === undefined) delete process.env.MODEL_PROVIDERS_JSON;
     else process.env.MODEL_PROVIDERS_JSON = originalProviders;
+  }
+});
+
+test("生图优先使用有密钥的通道，保留可用的显式图片选择", () => {
+  const original = { providers: process.env.MODEL_PROVIDERS_JSON, missing: process.env.IMAGE_ROUTING_MISSING_KEY, ready: process.env.IMAGE_ROUTING_READY_KEY };
+  try {
+    delete process.env.IMAGE_ROUTING_MISSING_KEY;
+    process.env.IMAGE_ROUTING_READY_KEY = "routing-test-key";
+    process.env.MODEL_PROVIDERS_JSON = JSON.stringify([
+      { id: "missing-image", baseUrl: "https://image.example.edu/v1", model: "image", capabilities: ["image", "pattern"], protocol: "openai-image", apiKeyEnv: "IMAGE_ROUTING_MISSING_KEY" },
+      { id: "ready-image", baseUrl: "https://image.example.edu/v1", model: "image", capabilities: ["image", "pattern"], protocol: "openai-image", apiKeyEnv: "IMAGE_ROUTING_READY_KEY" },
+      { id: "other-ready-image", baseUrl: "https://image.example.edu/v1", model: "image", capabilities: ["image", "pattern"], protocol: "openai-image", apiKeyEnv: "IMAGE_ROUTING_READY_KEY" },
+    ]);
+    const registry = new ModelRegistry();
+    for (const jobType of ["image", "pattern"] as const) {
+      assert.equal(registry.getForJob({ jobType }).id, "ready-image");
+      assert.equal(registry.getForJob({ jobType, modelConfigId: "missing-image" }).id, "ready-image");
+      assert.equal(registry.getForJob({ jobType, modelConfigId: "selected-text-model" }).id, "ready-image");
+      assert.equal(registry.getForJob({ jobType, modelConfigId: "other-ready-image" }).id, "other-ready-image");
+    }
+  } finally {
+    for (const [name, value] of Object.entries({ MODEL_PROVIDERS_JSON: original.providers, IMAGE_ROUTING_MISSING_KEY: original.missing, IMAGE_ROUTING_READY_KEY: original.ready })) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
   }
 });
 

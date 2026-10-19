@@ -119,7 +119,7 @@ class OpenAICompatibleAdapter implements ModelAdapter {
   constructor(private readonly config: ModelProviderConfig) {}
 
   get id() { return this.config.id; }
-  get capabilities() { return this.config.capabilities; }
+  get capabilities(): ModelCapability[] { return this.config.capabilities.filter((capability) => capability !== "image" && capability !== "pattern"); }
 
   async execute(request: ModelRequest): Promise<ModelResult> {
     this.assertSupports(request);
@@ -132,7 +132,7 @@ class OpenAICompatibleAdapter implements ModelAdapter {
   }
 
   private assertSupports(request: ModelRequest) {
-    if (!this.config.capabilities.includes(request.jobType)) {
+    if (!this.capabilities.includes(request.jobType)) {
       throw new Error(`模型 ${this.config.id} 不支持任务类型 ${request.jobType}`);
     }
   }
@@ -347,6 +347,17 @@ export class ModelRegistry {
   getForJob(input: { jobType: ModelCapability; modelConfigId?: string | null; providerId?: string | null }): ModelAdapter {
     const capability = input.jobType;
     const selectedId = input.providerId ?? input.modelConfigId;
+    if (capability === "image" || capability === "pattern") {
+      const supported = this.adapters.filter((candidate) => candidate.capabilities.includes(capability));
+      const configured = supported.filter((candidate) => {
+        const config = this.configsById.get(candidate.id)!;
+        return providerApiKeyEnvNames(config).length === 0 || resolveProviderApiKeys(config).length > 0;
+      });
+      const candidates = configured.length ? configured : supported;
+      const imageAdapter = candidates.find((candidate) => candidate.id === selectedId) ?? candidates[0];
+      if (!imageAdapter) throw new Error(`没有找到支持 ${capability} 的模型适配器`);
+      return imageAdapter;
+    }
     const adapter = this.adapters.find((candidate) =>
       candidate.capabilities.includes(capability) && (!selectedId || candidate.id === selectedId),
     );
