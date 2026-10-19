@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, HttpException, HttpStatus, Logger, type ExceptionFilter } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { isImageConfigurationCode } from "./image-configuration";
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -10,7 +11,11 @@ export class ApiExceptionFilter implements ExceptionFilter {
     if (reply.sent) return;
     const { statusCode, message } = this.toResponse(exception);
     if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) Logger.error(exception, `requestId=${request.id}`, "ApiExceptionFilter");
-    reply.code(statusCode).send({ statusCode, message, requestId: request.id, timestamp: new Date().toISOString() });
+    const response = exception instanceof HttpException ? exception.getResponse() : null;
+    // Only explicitly public configuration codes cross the HTTP boundary; never spread provider errors.
+    const configuration = response && typeof response === "object" && "code" in response && isImageConfigurationCode(response.code)
+      ? { code: response.code, retryable: false } : {};
+    reply.code(statusCode).send({ statusCode, message, ...configuration, requestId: request.id, timestamp: new Date().toISOString() });
   }
 
   private toResponse(exception: unknown) {

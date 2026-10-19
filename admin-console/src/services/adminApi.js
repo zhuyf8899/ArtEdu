@@ -35,6 +35,8 @@ async function request(path, options = {}) {
 
 export const getAdminUsers = () => request("/admin/users");
 export const getAdminReviews = () => request("/admin/reviews");
+export const getManagedCases = () => request('/admin/content/works');
+export const changeContentLifecycle = (kind, id, input) => request(`/admin/content/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/lifecycle`, { method: 'POST', body: JSON.stringify(input) });
 export const getAdminDashboard = () => request("/admin/dashboard");
 export const getApiHealth = () => request("/health");
 export const getCurrentUser = () => request("/auth/me");

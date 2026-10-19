@@ -1,5 +1,6 @@
 import type { ModelAdapter, ModelRequest, ModelResult, ModelMessage, ModelToolDefinition, ModelStreamDelta, ModelToolCall } from '../generation/model-adapter';
 import { assessDelivery, classifyToolOutcome, allowsTaskTool, taskExecutionGuidance } from './agent-policy';
+import { isImageConfigurationCode } from '../../common/image-configuration';
 export interface AgentProgressEvent {
     id: string;
     kind: 'model' | 'tool' | 'run';
@@ -120,6 +121,13 @@ export async function runTaskLoop(options: Options) {
             await progress({ ...te, status: classifyToolOutcome(output) as AgentProgressEvent['status'] });
             messages.push({ role: 'tool', name: call.function.name, toolCallId: call.id, content: JSON.stringify(output) });
             toolCallCount++;
+            if (call.function.name === 'generate_image' && output?.status === 'failed' && output?.retryable === false && isImageConfigurationCode(output.code)) {
+                // A known server setup failure cannot be fixed by changing prompts or tools.
+                // Keep earlier files and finish as failed/partial, not as a user pause.
+                const stopped = finish({kind:'text',content:'图片暂未生成。'}, round);
+                stopped.delivery.reason = output.error;
+                return stopped;
+            }
             if (output?.code === 'PAGE_CHECK_UNAVAILABLE') {
                 const result = finish({kind:'text',content:'页面已保存，检查服务暂不可用。可打开已有成果查看，尚未完成浏览器验证。'}, round);
                 result.delivery.reason = '页面检查服务暂不可用，已有文件已保留';

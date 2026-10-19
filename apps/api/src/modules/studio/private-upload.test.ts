@@ -10,6 +10,8 @@ import { Readable } from "node:stream";
 import { detectUploadMimeType, storePrivateUpload } from "./private-upload";
 import { resolveWorkAssetPath } from "./work-asset-path";
 import { StudioService } from "./studio.service";
+import { StudioController } from "./studio.controller";
+import { resolveByteRange } from "../../common/byte-range";
 
 test('上传已落库后 OCR 审计异常不得删除素材', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(),'artedu-ocr-commit-'));
@@ -88,17 +90,99 @@ test("作品新分层与旧 UUID 路径均可读取；越权、穿越和丢失�
     const stranger = {id:"student-b",roles:["student"]} as any;
     await assert.rejects(service.openWorkAsset(stranger,"work-a","asset-a"), /无权/);
     const output = await service.openWorkAsset(owner,"work-a","asset-a");
+    assert.ok(output.stream);
     const chunks = []; for await (const chunk of output.stream) chunks.push(chunk);
     assert.equal(Buffer.concat(chunks).subarray(0,5).toString(), "%PDF-");
     asset.status = "approved"; asset.moderation_status = "approved";
     await assert.rejects(service.openWorkAsset(stranger,"work-a","asset-a"), /未开放/);
     asset.story_json.allowDocumentDownload = true;
     const permitted = await service.openWorkAsset(stranger,"work-a","asset-a");
+    assert.ok(permitted.stream);
     for await (const chunk of permitted.stream) assert.ok(chunk.length);
     await rm(await resolveWorkAssetPath(root,nested.storageKey,"student-a","work-a"));
     await assert.rejects(service.openWorkAsset(owner,"work-a","asset-a"), /不存在/);
   } finally {
     if (previous === undefined) delete process.env.UPLOAD_ROOT; else process.env.UPLOAD_ROOT = previous;
+    await rm(root,{recursive:true,force:true});
+  }
+});
+
+test("视频范围支持前向/后向/尾部读取，超大整数不溢出，非法或多范围回退完整响应", () => {
+  assert.deepEqual(resolveByteRange(100), {status:200,length:100});
+  for (const header of ['items=0-5','bytes=','bytes=-','bytes=8-2','bytes=0-1,4-5','bytes=abc-9']) {
+    assert.equal(resolveByteRange(100,header).status,200);
+  }
+  assert.deepEqual(resolveByteRange(100,'bytes=20-29'),{status:206,start:20,end:29,length:10});
+  assert.deepEqual(resolveByteRange(100,'bytes=90-'),{status:206,start:90,end:99,length:10});
+  assert.deepEqual(resolveByteRange(100,'bytes=-10'),{status:206,start:90,end:99,length:10});
+  assert.deepEqual(resolveByteRange(100,'bytes=-99999999999999999999'),{status:206,start:0,end:99,length:100});
+  assert.deepEqual(resolveByteRange(100,'bytes=90-99999999999999999999'),{status:206,start:90,end:99,length:10});
+  for (const header of ['bytes=100-','bytes=99999999999999999999-','bytes=-0']) assert.equal(resolveByteRange(100,header).status,416);
+  assert.equal(resolveByteRange(0,'bytes=0-').status,416);
+  assert.equal(resolveByteRange(0,'bytes=-5').status,416);
+  assert.equal(resolveByteRange(0).status,200);
+});
+
+test("案例文件分段流字节准确；HEAD、416 不开流，Range 不能绕过审核和原件权限", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(),'artedu-case-ranges-'));
+  const previous = process.env.UPLOAD_ROOT;
+  process.env.UPLOAD_ROOT = root;
+  try {
+    const bytes = Buffer.from('....ftypisom0123456789');
+    const stored = await storePrivateUpload({fieldname:'file',filename:'case.mp4',mimetype:'video/mp4',file:Readable.from([bytes])} as any,root);
+    const asset = {storage_key:stored.storageKey,file_name:'case.mp4',mime_type:'video/mp4',asset_type:'video',status:'approved',author_id:'owner',moderation_status:'approved',story_json:{allowDocumentDownload:false}};
+    const service = new StudioService({query:async()=>({rows:[asset]})} as any,{} as any);
+    const viewer = {id:'viewer',roles:['student']} as any;
+    const app = Fastify();
+    const controller = new StudioController({getActor:async()=>viewer} as any,service);
+    app.setErrorHandler((error:any,_request,reply)=>reply.code(error.getStatus?.()??500).send({message:error.message}));
+    app.head('/case',(request,reply)=>controller.headWorkAsset(request,reply,'work-a','asset-a'));
+    app.get('/case',(request,reply)=>controller.downloadWorkAsset(request,reply,'work-a','asset-a'));
+    try {
+      const full = await app.inject('/case');
+      assert.equal(full.statusCode,200); assert.deepEqual(full.rawPayload,bytes);
+      assert.equal(full.headers['content-length'],String(bytes.length));
+      assert.equal(full.headers['accept-ranges'],'bytes');
+      assert.equal(full.headers['cache-control'],'private, no-store');
+      assert.match(String(full.headers['content-disposition']),/^inline;/);
+      const partial = await app.inject({url:'/case',headers:{range:'bytes=12-15'}});
+      assert.equal(partial.statusCode,206); assert.equal(partial.headers['content-range'],`bytes 12-15/${bytes.length}`);
+      assert.equal(partial.headers['content-length'],'4'); assert.deepEqual(partial.rawPayload,bytes.subarray(12,16));
+      const tail = await app.inject({url:'/case',headers:{range:'bytes=-4'}});
+      assert.equal(tail.statusCode,206); assert.deepEqual(tail.rawPayload,bytes.subarray(-4));
+      const invalid = await app.inject({url:'/case',headers:{range:'bytes=999-'}});
+      assert.equal(invalid.statusCode,416); assert.equal(invalid.headers['content-range'],`bytes */${bytes.length}`);
+      assert.equal(invalid.rawPayload.length,0);
+      const head = await app.inject({method:'HEAD',url:'/case',headers:{range:'bytes=12-15'}});
+      assert.equal(head.statusCode,200); assert.equal(head.rawPayload.length,0); assert.equal(head.headers['content-length'],String(bytes.length));
+      const fallback = await app.inject({url:'/case',headers:{range:'bytes=12-15','if-range':'"stale"'}});
+      assert.equal(fallback.statusCode,200); assert.deepEqual(fallback.rawPayload,bytes);
+      asset.status='draft';
+      const denied=await app.inject({url:'/case',headers:{range:'bytes=999-'}});
+      assert.equal(denied.statusCode,403); assert.equal(denied.headers['content-range'],undefined);
+      asset.status='approved';
+    } finally {await app.close();}
+    for (const header of ['bytes=12-15','bytes=4-','bytes=-4','bytes=0-999']) {
+      const result = await service.openWorkAsset(viewer,'work-a','asset-a',{range:header});
+      assert.equal(result.range.status,206); assert.ok(result.stream);
+      const chunks=[]; for await(const chunk of result.stream)chunks.push(chunk);
+      if(result.range.status===206) assert.deepEqual(Buffer.concat(chunks),bytes.subarray(result.range.start,result.range.end+1));
+    }
+    const head = await service.openWorkAsset(viewer,'work-a','asset-a',{head:true,range:'bytes=999-'});
+    assert.equal(head.range.status,200); assert.equal(head.range.length,bytes.length); assert.equal(head.stream,undefined);
+    const unsatisfied = await service.openWorkAsset(viewer,'work-a','asset-a',{range:'bytes=999-'});
+    assert.equal(unsatisfied.range.status,416); assert.equal(unsatisfied.stream,undefined);
+    const ifRange = await service.openWorkAsset(viewer,'work-a','asset-a',{range:'bytes=12-15',ifRange:'"stale"'});
+    assert.equal(ifRange.range.status,200); assert.ok(ifRange.stream);
+    for await(const chunk of ifRange.stream)assert.ok(chunk.length);
+    asset.status='draft';
+    await assert.rejects(service.openWorkAsset(viewer,'work-a','asset-a',{range:'bytes=999-'}),/无权/);
+    asset.status='approved'; asset.moderation_status='pending';
+    await assert.rejects(service.openWorkAsset(viewer,'work-a','asset-a',{head:true}),/无权/);
+    asset.moderation_status='approved'; asset.asset_type='document';
+    await assert.rejects(service.openWorkAsset(viewer,'work-a','asset-a',{range:'bytes=0-3'}),/未开放/);
+  } finally {
+    if(previous===undefined)delete process.env.UPLOAD_ROOT;else process.env.UPLOAD_ROOT=previous;
     await rm(root,{recursive:true,force:true});
   }
 });

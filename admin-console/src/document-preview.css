@@ -1,0 +1,27 @@
+.document-preview-dialog{width:min(1280px,96vw);height:92dvh;max-width:96vw;max-height:94dvh;margin:auto;padding:0;border:1px solid #e2e0f6;border-radius:18px;background:#f6f4fb;color:#111838;overflow:hidden;box-shadow:0 28px 100px #17192f33}
+.document-preview-dialog::backdrop{background:#17192f99}
+.document-preview-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;background:#fff;border-bottom:1px solid #e2e0f6;min-height:70px}
+.document-preview-dialog>header>div{display:flex;align-items:center;gap:16px;min-width:0}
+.document-preview-dialog>header>div:first-child{display:grid;gap:3px}
+.document-preview-dialog>header small{font-size:10px;letter-spacing:1px;color:#6554e8}
+.document-preview-dialog>header strong{font-size:15px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.document-preview-dialog>header a{font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:#6554e8}
+.document-preview-dialog>header button{display:grid;place-items:center;min-width:36px;height:36px;background:#f3f0fc;border:1px solid #e2e0f6;border-radius:9px;color:#55506f;cursor:pointer}
+.document-preview{height:100%;min-height:0;display:flex;flex-direction:column;position:relative;background:#efedf6;font-size:14px;color:#111838}
+.document-preview-dialog>.document-preview{height:calc(100% - 70px)}
+.document-preview__toolbar{min-height:48px;padding:8px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;border-bottom:1px solid #e2e0f6;background:#faf9fd;font-size:13px}
+.document-preview__toolbar small{font-size:11px;color:#7b7892}
+.document-preview__paging{display:flex;align-items:center;gap:6px}
+.document-preview__paging button,.document-preview__status button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:30px;min-height:30px;border:1px solid #e2e0f6;border-radius:7px;background:#fff;color:#6554e8;cursor:pointer}
+.document-preview__paging select{min-height:30px;border:1px solid #e2e0f6;border-radius:7px;background:#fff;color:#55506f;padding:0 8px;font-size:12px}
+.document-preview button:disabled{opacity:.4;cursor:not-allowed}
+.document-preview>iframe{width:100%;height:100%;min-height:0;flex:1;border:0;background:#efedf6}
+.document-preview>iframe.is-hidden{display:none}
+.document-preview>pre{margin:0;padding:24px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.8}
+.document-preview__status{margin:0;padding:24px;text-align:center;font-size:14px;line-height:1.8;background:#faf9fd}
+.document-preview__status strong{display:block;font-size:17px}
+.document-preview__status button{padding:6px 14px}
+.document-preview>img,.document-preview>video{display:block;max-width:100%;max-height:calc(100% - 48px);object-fit:contain;margin:auto}
+.document-preview>audio{margin:24px auto;width:min(600px,90%)}
+.document-preview-dialog :is(button,a,select):focus-visible{outline:2px solid #6554e8;outline-offset:3px}
+.course-material__preview-button{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border:1px solid #ded8f6;border-radius:9px;background:#6554e8;color:#fff;font-size:14px;cursor:pointer}

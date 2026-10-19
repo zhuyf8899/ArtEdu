@@ -4,6 +4,27 @@ import path from "node:path";
 import test from "node:test";
 import { getEnvironment } from "../../common/environment";
 import { ModelRegistry, readModelProviderConfigs } from "./model-registry";
+import { ImageConfigurationError } from "../../common/image-configuration";
+
+test("图片通道生产调用需有密钥；缺密钥不回退到文本模型，也不触发网络请求", () => {
+  const saved={providers:process.env.MODEL_PROVIDERS_JSON,key:process.env.IMAGE_CONFIGURATION_TEST_KEY};
+  try {
+    delete process.env.IMAGE_CONFIGURATION_TEST_KEY;
+    process.env.MODEL_PROVIDERS_JSON=JSON.stringify([
+      {id:'chat',baseUrl:'https://text.example.test',model:'text',capabilities:['chat','image'],apiKeyEnv:'IMAGE_CONFIGURATION_TEST_KEY'},
+      {id:'image',baseUrl:'https://image.example.test',model:'image',capabilities:['image','pattern'],protocol:'siliconflow-image',apiKeyEnv:'IMAGE_CONFIGURATION_TEST_KEY',internal:true},
+    ]);
+    const registry=new ModelRegistry();
+    assert.throws(()=>registry.getForJob({jobType:'image',modelConfigId:'chat',requireConfigured:true}),
+      (error:unknown)=>error instanceof ImageConfigurationError&&error.code==='IMAGE_PROVIDER_KEY_MISSING');
+    process.env.IMAGE_CONFIGURATION_TEST_KEY='test-only-key';
+    assert.equal(registry.getForJob({jobType:'image',modelConfigId:'chat',requireConfigured:true}).id,'image');
+    assert.equal(registry.getForJob({jobType:'pattern',requireConfigured:true}).id,'image');
+  } finally {
+    if(saved.providers===undefined)delete process.env.MODEL_PROVIDERS_JSON;else process.env.MODEL_PROVIDERS_JSON=saved.providers;
+    if(saved.key===undefined)delete process.env.IMAGE_CONFIGURATION_TEST_KEY;else process.env.IMAGE_CONFIGURATION_TEST_KEY=saved.key;
+  }
+});
 
 const providers = JSON.stringify([{ id: "school", baseUrl: "https://model.example.edu/v1", model: "chat-v1", capabilities: ["chat"], apiKeyEnv: "SCHOOL_KEY" }]);
 
@@ -59,7 +80,7 @@ test("文本协议误报图片能力时使用图片通道，选择文本模型�
       await assert.rejects(registry.getForJob({ jobType: "chat" }).execute({ jobType, prompt: "海浪" }), /不支持任务类型/);
     }
     process.env.MODEL_PROVIDERS_JSON = JSON.stringify([configs[0]]);
-    assert.throws(() => new ModelRegistry().getForJob({ jobType: "image" }), /没有找到/);
+    assert.throws(() => new ModelRegistry().getForJob({ jobType: "image" }), /图片生成通道尚未接入/);
   } finally {
     if (originalProviders === undefined) delete process.env.MODEL_PROVIDERS_JSON;
     else process.env.MODEL_PROVIDERS_JSON = originalProviders;

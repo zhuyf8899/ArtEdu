@@ -19,6 +19,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
   const [activeImage, setActiveImage] = useState(null);
   const [reportTarget, setReportTarget] = useState(null);
   const [comment, setComment] = useState("");
+  const [discussionOrder, setDiscussionOrder] = useState('newest');
   const [loading, setLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
   const [detailRetry, setDetailRetry] = useState(0);
@@ -129,7 +130,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     {supportError&&<p className="catalog-inline-warning" role="status">{supportError}。<button onClick={()=>refresh().catch(error=>onNotice(error.message))}>重新同步</button></p>}
     <div className="community-detail__hero">{selected.previewUrl ? <button className="case-image-button case-image-button--hero" onClick={() => setActiveImage({ url: selected.previewUrl, fileName: heroAsset?.file_name ?? selected.title, alt: selected.title })} aria-label={`查看并下载图片：${selected.title}`}><img src={selected.previewUrl} alt={selected.title} /></button> : <WorkVisualFallback work={selected} />}</div>
     <div className="community-detail__body">
-      <header><div><span>{selected.discipline} · {exhibition ? "外部艺术案例" : statusName(selected.status)}</span><h2>{selected.title}</h2><p>{exhibition ? "原作者：" : ""}{selected.creators?.join("、") || selected.author}{!exhibition && ` · ${selected.tags?.map(tag => tag.name).join(" / ") || "未添加标签"}`}</p>{exhibition && <div className="case-labels">{selected.tags?.map(tag => <span key={tag.id ?? tag.name}>{tag.name}</span>)}</div>}</div>
+      <header><div><span className="community-detail__category">{selected.discipline} · {exhibition ? "外部艺术案例" : statusName(selected.status)}</span>{exhibition && <p className="community-detail__artist">{selected.creators?.join("、") || selected.author}</p>}<h2>{selected.title}</h2>{!exhibition && <p>{selected.creators?.join("、") || selected.author} · {selected.tags?.map(tag => tag.name).join(" / ") || "未添加标签"}</p>}{exhibition && <div className="case-labels">{selected.tags?.map(tag => <span key={tag.id ?? tag.name}>{tag.name}</span>)}</div>}</div>
         {selected.status === "approved" && <div aria-busy={interactionBusy}><button aria-label="点赞案例" aria-pressed={selected.liked} disabled={interactionBusy} onClick={() => react("like")}><Heart weight={selected.liked ? "fill" : "bold"} /> {selected.likeCount}</button><button aria-label="收藏案例" aria-pressed={selected.favorited} disabled={interactionBusy} onClick={() => react("favorite")}><BookmarkSimple weight={selected.favorited ? "fill" : "bold"} /> {selected.favoriteCount}</button></div>}
       </header>
       {canCurate && selected.status === "approved" && <div className="case-collection-control"><label>案例所属模块<select aria-label="案例所属模块" disabled={collectionBusy} value={selected.collection ?? "community"} onChange={event => changeCollection(event.target.value)}>{Object.entries(CASE_COLLECTIONS).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>{collectionBusy && <span role="status">正在保存…</span>}</div>}
@@ -139,7 +140,14 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
       <p className="community-summary">{selected.summary}</p>
       <CaseStoryView work={selected} onOpenImage={setActiveImage} exhibition={exhibition} />
       {!!selected.workflows?.length && <div className="same-workflow"><span>关联的教学工作流</span>{selected.workflows.map(workflow => <button key={workflow.id} onClick={() => onOpenWorkflow?.(workflow.id)}>查看「{workflow.name}」<ArrowRight size={15} /></button>)}</div>}
-      {selected.status === "approved" && <><div className="community-report-row"><button onClick={() => setReportTarget({ type: "work", id: selected.id, label: selected.title })}><Flag size={16} /> 举报作品</button></div><section className="comment-section"><h3><ChatCircle size={20} /> 创作讨论</h3>{selected.comments?.map(item => <article key={item.id}><div><strong>{item.author}</strong><button className="comment-report" onClick={() => setReportTarget({ type: "comment", id: item.id, label: "这条评论" })}>举报</button></div><p>{item.content}</p></article>)}<form onSubmit={sendComment}><input maxLength={2000} value={comment} onChange={e => setComment(e.target.value)} aria-label="发表创作讨论" placeholder="写下你的建议或问题……" /><button aria-label="发表讨论"><PaperPlaneTilt /></button></form></section></>}
+      {selected.status === "approved" && <><div className="community-report-row"><button onClick={() => setReportTarget({ type: "work", id: selected.id, label: selected.title })}><Flag size={16} /> 举报作品</button></div>
+        <section className="comment-section" aria-labelledby="case-discussion-heading">
+          <header className="comment-section__heading"><div><h3 id="case-discussion-heading"><ChatCircle size={22} />创作讨论 <span>{selected.comments?.length ?? 0}</span></h3><p>交流创作思路，分享具体建议与新的发现。</p></div><label>排序<select aria-label="讨论排序" value={discussionOrder} onChange={event => setDiscussionOrder(event.target.value)}><option value="newest">最新讨论</option><option value="oldest">最早讨论</option></select></label></header>
+          <div className="comment-section__list">{(discussionOrder === 'newest' ? [...(selected.comments ?? [])].reverse() : selected.comments ?? []).map(item => <article key={item.id}>
+            <span className="comment-avatar" aria-hidden="true">{Array.from(item.author || '访').slice(0,1)}</span><div className="comment-content"><header><strong>{item.author}</strong>{(item.createdAt || item.created_at) && <time dateTime={item.createdAt || item.created_at}>{new Date(item.createdAt || item.created_at).toLocaleString('zh-CN', { month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' })}</time>}<button type="button" className="comment-report" aria-label={`举报${item.author}的讨论`} onClick={() => setReportTarget({ type: "comment", id: item.id, label: "这条评论" })}><Flag size={14} />举报</button></header><p>{item.content}</p></div>
+          </article>)}{!selected.comments?.length && <p className="comment-section__empty">还没有讨论，来分享你对这件作品的看法。</p>}</div>
+          <form onSubmit={sendComment} className="comment-composer"><label htmlFor="case-comment">参与讨论</label><textarea id="case-comment" rows={3} maxLength={2000} value={comment} onChange={event => setComment(event.target.value)} disabled={interactionBusy} aria-label="发表创作讨论" aria-describedby="case-comment-help" placeholder="你关注作品的哪个细节？写下你的建议或问题…" onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} /><footer><span id="case-comment-help">友善交流 · {comment.length} / 2000</span><button type="submit" disabled={!comment.trim() || interactionBusy} aria-label="发表讨论"><PaperPlaneTilt size={17} />{interactionBusy ? '正在发表…' : '发表讨论'}</button></footer></form>
+        </section></>}
     </div>
   </section>{activeImage && <ImageViewer image={activeImage} assets={selected.assets} onChange={setActiveImage} onClose={() => setActiveImage(null)} />}{reportTarget && <ReportDialog target={reportTarget} onClose={() => setReportTarget(null)} onSubmit={submitReport} />}{editor}</>;
   }
@@ -184,7 +192,7 @@ function CommunityCaseModule({ id, title, description, works, total, loading, on
   </section>;
 }
 function statusName(status) { return { draft: "草稿", pending: "审核中", approved: "已发布", rejected: "已驳回", archived: "已归档" }[status] ?? status; }
-function reviewActionName(action) { return { submit: "提交审核", approve: "审核通过", reject: "驳回修改" }[action] ?? action; }
+function reviewActionName(action) { return { submit: "提交审核", approve: "审核通过", reject: "驳回修改", archive: "移入回收站", restore: "恢复至草稿" }[action] ?? action; }
 function formatReviewDate(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "时间未知" : new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" }).format(date); }
 const EMPTY_LABEL_GROUPS = { 大类: [], 设计类: [], 使用工具类: [], 艺术类: [] };
 function workLabelGroups(work) { return { 大类: [work.discipline].filter(Boolean), 设计类: work.methods ?? [], 使用工具类: work.tools ?? [], 艺术类: (work.tags ?? []).map(tag => typeof tag === "string" ? tag : tag.name).filter(Boolean) }; }

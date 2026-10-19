@@ -10,6 +10,7 @@ import {
   reviewDecisionSchema,
   reportDecisionSchema,
   workCollectionSchema,
+  contentLifecycleSchema,
 } from "./admin.contracts";
 import { AdminService } from "./admin.service";
 
@@ -19,6 +20,16 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly authService: AuthService,
   ) {}
+
+  @Get('content/works')
+  async managedWorks(@Req() request: FastifyRequest) {
+    return this.adminService.listManagedWorks(await this.authService.getActor(request));
+  }
+
+  @Post('content/:kind/:contentId/lifecycle')
+  async contentLifecycle(@Req() request: FastifyRequest, @Param('kind') kind: string, @Param('contentId') contentId: string, @Body() body: unknown) {
+    return this.adminService.changeContentLifecycle(await this.authService.getActor(request), kind, contentId, parseInput(contentLifecycleSchema, body));
+  }
 
   @Get("dashboard")
   async getDashboard(@Req() request: FastifyRequest) {

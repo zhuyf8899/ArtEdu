@@ -12,6 +12,28 @@
 - 图片和图案任务现在会在标记成功前校验产物类型、MIME、存储键和文件大小。只有文字方案、SVG 或空产物会记录为失败，使用 `image_artifact_error` 错误码。
 - 任务已有图片产物时，继续检查私有下载接口和工作区副本；任务失败时，根据真实 HTTP 错误、鉴权或超时检查供应商。缩短提示词不能解决固定的返回结构错误。
 
+## 通道未接入或缺密钥
+
+数据库中的图片模型目录记录并不等于运行进程已接通图片服务。私有 `.env` 的
+`MODEL_PROVIDERS_JSON` 必须保留文本模型，并加入实际图片通道。例如 SiliconFlow
+Kolors 使用 `protocol: "siliconflow-image"`、`model: "Kwai-Kolors/Kolors"`、
+`baseUrl: "https://api.siliconflow.cn/v1"`，仅通过 `apiKeyEnv: "SILICONFLOW_API_KEY"`
+引用服务端密钥。接口与参数见 [SiliconFlow 官方图片 API](https://api-docs.siliconflow.cn/docs/api/images-generations-post)。
+
+不要在文本通道上添加 `image` 标签冒充生图能力。图片路由会自动选择实际图片
+通道；缺通道返回 `IMAGE_PROVIDER_NOT_CONFIGURED`，缺密钥返回
+`IMAGE_PROVIDER_KEY_MISSING`，均为 `retryable: false`。这两类错误在创建生成任务和
+检查额度之前终止，不请求供应商，不因调整提示词而重复提交。
+
+对话收到这两类配置错误后，只调用一次生图工具并结束为失败或部分完成；此前
+已经保存的网页等成果保留，失败原因与工具结果落库。不会把配置故障显示成用户
+暂停，也不会以 SVG、网页或文字方案冒充图片。普通供应商网络故障不被误判为
+缺配置，仍按下面的分阶段重试规则处理。
+
+密钥只写本地 `apps/api/.env` 的 `SILICONFLOW_API_KEY=...`，不要发到聊天、前端
+环境变量或 Git。保存后重启 API，再执行本文的完整链路检查；仅完成代码测试
+不能声称真实供应商已接通或已经成功出图。
+
 ## 短暂故障自动恢复
 
 图片提交、任务轮询和文件下载均有独立的阶段标记和等待上限，用户取消信号不会覆盖服务端超时。重试最多三次，使用退避与随机间隔，并尊重供应商的 `Retry-After`。
@@ -55,3 +77,12 @@ ARTEDU_TEST_OPERATOR_PASSWORD
 此检查会产生真实图片和文本模型用量，并在本地数据库中保留任务。结果和图片写入被 Git 忽略的 `apps/api/data/image-qa/`。
 
 2026-10-19 的沙箱验证中，现有 Kolors API 曾在约 5 秒内返回有效 PNG；模拟供应商配合真实本地 API、数据库和工作区也完成了上述链路检查。这些结果不能代替对其他云端运行环境的配置核对。
+
+2026-10-19 本机补入私有 SiliconFlow 密钥并重启 API 后，使用真实 Kolors 服务完成
+直接生图与 Agent 对话生图检查，分别得到 2,147,478 与 2,170,767 字节的 PNG。
+对话仅调用一次 `generate_image`，私有工作区副本与生成产物字节一致；匿名下载
+返回 401，其他普通账号读取返回 403。对应检查报告保存在被 Git 忽略的
+`apps/api/data/image-qa/report.json`，测试图片和密钥不提交到仓库。
+
+该 Agent 验收记录为 `partial`，原因是自动视觉核验仍待完成，而非图片生成失败；
+实际生图任务、图片下载与工作区保存已成功。不能为消除提示而伪造视觉验收状态。

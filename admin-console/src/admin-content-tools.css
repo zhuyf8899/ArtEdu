@@ -1,0 +1,42 @@
+.content-lifecycle-dialog{width:min(560px,94vw);max-height:90dvh;padding:0;border:1px solid #e2e0f6;border-radius:18px;color:#111838;background:#fff;overflow:auto;box-shadow:0 25px 80px #17192f33}
+.content-lifecycle-dialog::backdrop{background:#17192f88}
+.content-lifecycle-dialog>header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid #e2e0f6}
+.content-lifecycle-dialog header small{font-size:10px;letter-spacing:1px;color:#6554e8}
+.content-lifecycle-dialog h2{margin:6px 0 0;font-size:23px}
+.content-lifecycle-dialog header button{display:grid;place-items:center;border:0;border-radius:8px;background:#f4f1fc;width:34px;height:34px;color:#6b7094;cursor:pointer}
+.content-lifecycle-dialog form{padding:20px 24px}
+.content-lifecycle-title{font-size:17px;line-height:1.5;overflow-wrap:anywhere}
+.content-lifecycle-dialog p{font-size:14px;line-height:1.8;color:#6b7094;margin:12px 0 20px}
+.content-lifecycle-reason{display:grid;gap:8px;font-size:14px}
+.content-lifecycle-reason textarea{width:100%;padding:12px;border:1px solid #ded8f6;border-radius:10px;font:inherit;line-height:1.7;resize:vertical;min-height:100px}
+.content-lifecycle-reason small{font-size:11px;color:#7b7892}
+.content-lifecycle-ack{display:flex;gap:9px;align-items:flex-start;margin:20px 0;font-size:13px;line-height:1.7}
+.content-lifecycle-ack input{margin-top:5px;accent-color:#6554e8}
+.content-lifecycle-dialog footer{display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #efedf8;padding-top:18px}
+.content-lifecycle-dialog footer button,.admin-content-row__actions button,.admin-case-manager>header button{min-height:36px;padding:7px 12px;border:1px solid #e2e0f6;border-radius:9px;background:#f7f5fc;color:#55506f;display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
+.content-lifecycle-dialog button:disabled{opacity:.45;cursor:not-allowed}
+.content-lifecycle-dialog .is-danger,.admin-content-row__actions .is-danger{background:#fff3f3;color:#a7404b;border-color:#efd3d6}
+.content-lifecycle-dialog .is-restore,.admin-content-row__actions .is-restore{background:#efedf9;color:#6554e8;border-color:#d9d1f5}
+.content-lifecycle-error{color:#a7404b;background:#fff3f3;padding:10px;font-size:13px;line-height:1.7;margin-bottom:15px}
+.content-lifecycle-error button{display:block;color:inherit;text-decoration:underline;border:0;background:transparent;font:inherit;cursor:pointer}
+.content-lifecycle-dialog :is(button,input,textarea):focus-visible,.admin-case-manager :is(button,input,select,a):focus-visible{outline:2px solid #6554e8;outline-offset:3px}
+.admin-content-mode{display:flex;gap:8px;margin:20px 0}
+.admin-content-mode button{padding:10px 18px;border:1px solid #ded8f6;border-radius:10px;color:#6b7094;background:#fff;font-size:14px;cursor:pointer}
+.admin-content-mode button[aria-pressed=true]{background:#17192f;border-color:#17192f;color:#fff}
+.admin-case-manager{border:1px solid #e2e0f6;background:#ffffffc9;border-radius:18px;padding:20px}
+.admin-case-manager>header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+.admin-case-manager h2{font-size:21px;margin:0 0 6px}
+.admin-case-manager>header p{font-size:13px;color:#6b7094;margin:0;line-height:1.7}
+.admin-content-filters{display:flex;gap:12px}
+.admin-content-filters label{flex:1;display:flex;gap:8px;align-items:center;border:1px solid #e2e0f6;border-radius:10px;background:#fff;padding:0 12px;min-width:0}
+.admin-content-filters input{width:100%;min-height:40px;border:0;background:transparent;font:inherit;font-size:14px;color:#111838;min-width:0}
+.admin-content-filters select{border:1px solid #e2e0f6;border-radius:10px;padding:0 10px;color:#55506f;background:#fff;font-size:13px}
+.admin-content-count{font-size:12px;color:#7b7892;margin:16px 0 8px}
+.admin-content-row{display:flex;gap:16px;align-items:center;padding:18px 0;border-bottom:1px solid #efedf8}
+.admin-content-row>div:first-child{min-width:0;flex:1}
+.admin-content-row small,.admin-content-row p{color:#6b7094;font-size:12px;line-height:1.6;margin:5px 0 0}
+.admin-content-row h3{font-size:16px;line-height:1.5;margin:5px 0;overflow-wrap:anywhere}
+.admin-content-row__actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.admin-content-row__actions a{font-size:12px;color:#6554e8;white-space:nowrap}
+body.morph-platform .course-admin-actions .content-remove{color:#a7404b;background:#fff5f5;border-color:#efd3d6}
+@media(max-width:1100px){.admin-content-row{flex-wrap:wrap}.admin-content-row__actions{width:100%;justify-content:flex-end}}

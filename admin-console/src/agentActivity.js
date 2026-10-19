@@ -27,6 +27,16 @@ export function visibleActivities(events = []) {
   }
   return [...calls.values()];
 }
+// The collapsed record shows one truthful status, never the full tool log.
+// A terminal run wins over stale running steps left by an interrupted stream.
+export function executionSummary(events = []) {
+  const records = visibleActivities(events);
+  if (!records.length) return null;
+  const run = records.find(event => event.kind === 'run');
+  const active = [...records].reverse().find(event => event.status === 'running');
+  const current = run && run.status !== 'running' ? run : active ?? run ?? records.at(-1);
+  return { label: activityLabel(current), status: current.status, count: records.length };
+}
 export function appendActivity(events = [], event) {
   if (!event || !['model','tool','run'].includes(event.kind) || !['running','succeeded','failed','paused','partial','needs_confirmation','validation_failed'].includes(event.status)) return events;
   if (typeof event.id !== 'string' || typeof event.name !== 'string') return events;

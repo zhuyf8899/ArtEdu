@@ -32,4 +32,6 @@ jobs:
       - run: cd apps/api && npm audit --omit=dev --audit-level=high
       - run: cd admin-console && npm audit --omit=dev --audit-level=high
       - run: cd apps/api && npm run test:security
+      - name: Verify content lifecycle permissions and recovery
+        run: cd apps/api && npm run test:content
       - run: npm run check

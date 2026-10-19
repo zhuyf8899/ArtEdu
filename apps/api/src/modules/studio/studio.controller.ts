@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req, Res } from "@nestjs/common";
+import { Body, Controller, Get, Head, Param, Patch, Post, Put, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
@@ -143,15 +143,29 @@ export class StudioController {
     return this.studio.uploadWorkAsset(await this.auth.getActor(request), workId, request);
   }
 
+  // Explicit HEAD avoids Fastify's auto-HEAD hook replacing the file length with zero.
+  @Head("works/:workId/assets/:assetId/download")
+  async headWorkAsset(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("workId") workId: string, @Param("assetId") assetId: string) {
+    return this.downloadWorkAsset(request, reply, workId, assetId);
+  }
+
   @Get("works/:workId/assets/:assetId/download")
   async downloadWorkAsset(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("workId") workId: string, @Param("assetId") assetId: string) {
-    const asset = await this.studio.openWorkAsset(await this.auth.getActor(request), workId, assetId);
+    const asset = await this.studio.openWorkAsset(await this.auth.getActor(request), workId, assetId, {
+      range: request.headers.range, head: request.method === "HEAD", ifRange: request.headers["if-range"] ? "present" : undefined,
+    });
     const encodedName = encodeURIComponent(asset.fileName).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
     reply.header("Content-Type", asset.mimeType);
     const disposition = asset.mimeType.startsWith("image/") || asset.mimeType.startsWith("video/") ? "inline" : "attachment";
     reply.header("Content-Disposition", `${disposition}; filename*=UTF-8''${encodedName}`);
     reply.header("Cache-Control", "private, no-store");
     reply.header("X-Content-Type-Options", "nosniff");
+    reply.header("Accept-Ranges", "bytes");
+    reply.header("Content-Length", String(asset.range.length));
+    reply.code(asset.range.status);
+    if (asset.range.status === 206) reply.header("Content-Range", `bytes ${asset.range.start}-${asset.range.end}/${asset.size}`);
+    if (asset.range.status === 416) reply.header("Content-Range", `bytes */${asset.size}`);
+    if (!asset.stream) return reply.send();
     return asset.stream;
   }
 

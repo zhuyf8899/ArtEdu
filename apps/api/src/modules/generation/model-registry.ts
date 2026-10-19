@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import { ModelScopeImageAdapter } from "./modelscope-image.adapter";
 import { OpenAIImageAdapter } from "./openai-image.adapter";
+import { ImageConfigurationError } from "../../common/image-configuration";
 import { ModelHttpError, UNUSABLE_KEY_HTTP_STATUSES, describeProviderApiKeyEnvs, providerApiKeyEnvNames, resolveProviderApiKeys } from "./provider-api-keys";
 import type { ModelAdapter, ModelCapability, ModelInvocationOptions, ModelMessage, ModelProviderConfig, ModelRequest, ModelResult, ModelStreamDelta } from "./model-adapter";
 
@@ -344,15 +345,17 @@ export class ModelRegistry {
     });
   }
 
-  getForJob(input: { jobType: ModelCapability; modelConfigId?: string | null; providerId?: string | null }): ModelAdapter {
+  getForJob(input: { jobType: ModelCapability; modelConfigId?: string | null; providerId?: string | null; requireConfigured?: boolean }): ModelAdapter {
     const capability = input.jobType;
     const selectedId = input.providerId ?? input.modelConfigId;
     if (capability === "image" || capability === "pattern") {
       const supported = this.adapters.filter((candidate) => candidate.capabilities.includes(capability));
+      if (!supported.length) throw new ImageConfigurationError("IMAGE_PROVIDER_NOT_CONFIGURED");
       const configured = supported.filter((candidate) => {
         const config = this.configsById.get(candidate.id)!;
         return providerApiKeyEnvNames(config).length === 0 || resolveProviderApiKeys(config).length > 0;
       });
+      if (input.requireConfigured && !configured.length) throw new ImageConfigurationError("IMAGE_PROVIDER_KEY_MISSING");
       const candidates = configured.length ? configured : supported;
       const imageAdapter = candidates.find((candidate) => candidate.id === selectedId) ?? candidates[0];
       if (!imageAdapter) throw new Error(`没有找到支持 ${capability} 的模型适配器`);

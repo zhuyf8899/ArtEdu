@@ -9,6 +9,8 @@ import { AgentService } from "./agent.service";
 import { CreationStorageService } from "../creation-storage/creation-storage.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
 import { GenerationService } from "../generation/generation.service";
+import { HttpException } from "@nestjs/common";
+import { isImageConfigurationCode } from "../../common/image-configuration";
 import { RagService } from "../rag/rag.service";
 import { extractPageReferences, normalizeRelative, summarizePageCheck, type AssetState } from "./agent-page-check";
 import vm from 'node:vm';
@@ -185,7 +187,16 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
       context.request.signal?.throwIfAborted();
       const input=imageGenerationParametersSchema.extend({prompt:z.string().trim().min(1).max(1500),workspacePath:z.string().trim().min(1).max(500).optional()}).strict().parse(raw);
       const {prompt,workspacePath,...parameters}=input;
-      const result=await dependencies.generation.runJob(dependencies.actor,{jobType:'image',prompt,context:[],parameters:{...parameters,imageCount:1}},context.request.signal);
+      let result;
+      try {
+        result=await dependencies.generation.runJob(dependencies.actor,{jobType:'image',prompt,context:[],parameters:{...parameters,imageCount:1}},context.request.signal);
+      } catch (error) {
+        const response = error instanceof HttpException ? error.getResponse() : null;
+        if (response && typeof response === 'object' && 'code' in response && isImageConfigurationCode(response.code)) {
+          return {status:'failed',code:response.code,retryable:false,error:error instanceof Error ? error.message : '图片服务尚未配置'};
+        }
+        throw error;
+      }
       const image=result.artifact;
       if(!image||!/^image\/(png|jpeg|webp|gif|avif)$/.test(image.mimeType)||!/^\/api\/(?!\/)/.test(image.downloadUrl))throw Error('图片服务没有返回实际私有图片');
       let workspaceAsset;

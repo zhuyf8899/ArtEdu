@@ -8,6 +8,15 @@ import type { Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import { StudioService } from "../studio/studio.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
+import { ServiceUnavailableException } from "@nestjs/common";
+
+test("生图配置错误转换为可审计不可重试结果，不丢失原因码", async () => {
+  const generation={runJob:async()=>{throw new ServiceUnavailableException({message:'图片服务密钥尚未配置',code:'IMAGE_PROVIDER_KEY_MISSING',retryable:false});}};
+  const result=await executePlatformTool(call('generate_image',{prompt:'海浪'}),baseContext,{
+    actor,runId:'run-1',database:{} as DatabaseService,agents:{} as AgentService,studio:{} as StudioService,generation:generation as never,
+  });
+  assert.deepEqual(result,{status:'failed',code:'IMAGE_PROVIDER_KEY_MISSING',retryable:false,error:'图片服务密钥尚未配置'});
+});
 
 const actor: Actor = { id: "student-1", username: "student-1", displayName: "测试学生", accountStatus: "active", roles: ["student"] };
 const baseContext: AgentToolContext = { round: 1, request: { jobType: "chat", prompt: "查询课程" }, messages: [{ role: "user", content: "查询课程" }] };
