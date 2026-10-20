@@ -19,10 +19,11 @@ import { RagModule } from "./modules/rag/rag.module";
 import { StudioModule } from "./modules/studio/studio.module";
 import { AuthenticationGuard } from "./modules/auth/authentication.guard";
 import { MorphModule } from "./modules/morph/morph.module";
+import { AtomicModule } from "./modules/atomic/atomic.module";
 
 // @Module 是 NestJS 的模块说明；Nest 根据它自动创建并连接各服务的依赖。
 @Module({
-  imports: [DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, CreationStorageModule, GenerationModule, LearningModule, KnowledgeModule, PortalModule, RagModule, StudioModule, MorphModule],
+  imports: [DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, CreationStorageModule, GenerationModule, LearningModule, KnowledgeModule, PortalModule, RagModule, StudioModule, MorphModule, AtomicModule],
   controllers: [HealthController],
   providers: [CloudCacheService, { provide: APP_GUARD, useClass: AuthenticationGuard }],
 })

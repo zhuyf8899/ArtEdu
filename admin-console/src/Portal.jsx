@@ -22,6 +22,7 @@ const CommunityLibrary = lazy(() => import("./CommunityLibrary.jsx").then(({ Com
 const MyLearning = lazy(() => import("./MyLearning.jsx").then(({ MyLearning: component }) => ({ default: component })));
 const SearchResults = lazy(() => import("./SearchResults.jsx").then(({ SearchResults: component }) => ({ default: component })));
 const CurriculumComposer = lazy(() => import('./morph/CurriculumComposer.jsx').then(({ CurriculumComposer: component }) => ({ default: component })));
+const AtomicLearningHub = lazy(() => import('./AtomicLearningHub.jsx').then(({ AtomicLearningHub: component }) => ({ default: component })));
 
 const emptyPortalData = {
   courses: [], workflows: [], works: [],
@@ -92,7 +93,7 @@ export function LocalLogin({ onLogin, message = "" }) {
   </main></div>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", communityWorkId = "", curriculumTopic = "", learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationHistoryOpen = false, creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", communityWorkId = "", curriculumTopic = "", learningLibrary = '', learningNodeId = '', learningNodeRevision = '', learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationHistoryOpen = false, creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -262,7 +263,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
-        {section === "courses" && <LearningLibrary variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onCourseChange={syncCourse} onNavigate={onNavigate} onNotice={showToast} />}
+        {section === "courses" && <AtomicLearningHub account={account} library={learningLibrary || (learningCourseId ? 'legacy' : '')} nodeId={learningNodeId} revision={learningNodeRevision} onNavigate={onNavigate} legacy={<LearningLibrary variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onCourseChange={syncCourse} onNavigate={onNavigate} onNotice={showToast} />} />}
         {section === 'curriculum' && <CurriculumComposer courses={data.courses} topic={curriculumTopic} loading={portalLoading} error={portalError} onRetry={loadPortalData} onNavigate={onNavigate} onNotice={showToast}/>}
 
         {section === "studio" && <WorkflowStudio accountId={account.id} variant={morph ? 'morph' : 'classic'} initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}

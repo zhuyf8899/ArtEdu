@@ -35,7 +35,7 @@ export function MorphMySpace({account,data,creation,view,onView,onNavigate,loadi
           <section className="morph-space-section"><SpaceHeading eyebrow="LEARNING PATH" title="我听的课" action="全部课程" onAction={()=>onView('courses')}/><CourseRecords courses={(data.courses||[]).slice(0,2)} onNavigate={onNavigate}/></section>
         </>}
         {view==='portrait'&&<ProfessionalPortrait data={data} onNavigate={onNavigate} onView={onView}/>}
-        {view==='courses'&&<SpaceCourses courses={data.courses||[]} onNavigate={onNavigate}/>}
+        {view==='courses'&&<><section className="morph-space-section"><SpaceHeading eyebrow="ATOMIC LEARNING" title="我的原子学习" action="查看独立学习记录 ↗" onAction={()=>onNavigate('/learning?library=learning')}/><p>新原子的阅读、练习和已完成版本单独记录；下面保留原有课程进度。</p></section><SpaceCourses courses={data.courses||[]} onNavigate={onNavigate}/></>}
         {view==='works'&&<SpaceWorks data={data} onNavigate={onNavigate} onRetry={onRetry}/>}
         {view==='favorites'&&<><SpaceHeading eyebrow="COLLECTIONS" title="收藏案例"/><WorkRecords items={data.favorites||[]} favorite onNavigate={onNavigate}/></>}
         {['plan','notes'].includes(view)&&<div className="morph-space-manager">{children}</div>}

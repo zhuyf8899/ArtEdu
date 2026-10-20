@@ -186,7 +186,7 @@ test("AI 讲堂与设计工具移除重复标题，同时保留课程和工具�
   const portal = await readFile(new URL("../src/Portal.jsx", import.meta.url), "utf8");
   const studio = await readFile(new URL("../src/WorkflowStudio.jsx", import.meta.url), "utf8");
   assert.ok(portal.includes('section !== "courses" && section !== "studio"'), "两页跳过重复的大标题区");
-  assert.ok(portal.includes('{section === "courses" && <LearningLibrary'), "AI 讲堂仍加载课程目录");
+  assert.ok(portal.includes('{section === "courses" && <AtomicLearningHub') && portal.includes('legacy={<LearningLibrary'), "原子学习入口仍保留原有课程目录");
   assert.ok(!portal.includes('<SectionHeading eyebrow="// RESOURCE LIBRARY"'), "AI 讲堂不再显示重复入口标题");
   assert.ok(!studio.includes("// DESIGN TOOLBOX") && !studio.includes("设计工具入口"), "设计工具区不再显示重复入口标题");
   assert.ok(studio.includes("tool-directory__actions") && studio.includes("tool-directory__list"), "保留工具浏览控制和工具卡片");
