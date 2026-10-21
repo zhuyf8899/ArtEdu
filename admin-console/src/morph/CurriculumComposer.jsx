@@ -24,7 +24,7 @@ export function CurriculumComposer({courses=[],topic='',loading,error,onRetry,on
   };
   return <section className="container curriculum-page morph-curriculum" aria-label="AI 编排课程体系">
     <button type="button" className="curriculum-back" onClick={()=>onNavigate('/learning')}><ArrowLeft size={16}/>原子课程</button>
-    <header><span className="eyebrow">CURRICULUM COMPOSER</span><h1>AI 编排课程体系</h1><p>告诉我你想学什么，把分散的课程原子连接成一条学习路径。</p></header>
+    <header><span className="eyebrow">CURRICULUM COMPOSER</span><h1>AI 编排课程体系</h1><p>告诉我你想学什么，把分散的课程原子连接成一条学习路径。</p><button className="button secondary" onClick={()=>onNavigate('/learning?library=courses')}>查看教师编排的完整课程 ↗</button></header>
     <section className="curriculum-conversation" aria-label="课程编排对话" aria-busy={loading}>
       <div id="curriculum-messages" aria-live="polite">
         {!topic?<div className="composer-welcome"><Spinner className="composer-symbol" size={48} weight="thin" aria-hidden="true"/><h2>你想从哪个设计问题开始？</h2><p>选择一个方向，或输入你的学习目标。</p><TopicSuggestions onChoose={recommend}/></div>:<>

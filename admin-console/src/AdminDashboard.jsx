@@ -1,7 +1,7 @@
 /**
  * 【管理后台】按当前栏目显示总览、用户、额度、审核及相关管理页面。先看导出的 AdminDashboard，再追某个栏目使用的 API；表格、抽屉和表单是界面组件，最终写入由后端验证。
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ReviewDialog } from "./ReviewDialog.jsx";
 import { reviewDate, reviewStatusLabels } from "./reviewPresentation.js";
 import { RuntimeStatus } from "./RuntimeStatus.jsx";
@@ -20,6 +20,7 @@ import {
   updateUserQuota,
   updateUsersQuota,
   updateUserStatus,
+  atomicRequest,
 } from "./services/adminApi.js";
 import { AdminCourses } from "./AdminCourses.jsx";
 import { AdminCaseManager } from './AdminContentTools.jsx';
@@ -27,6 +28,7 @@ import { WorkflowAdmin } from "./WorkflowAdmin.jsx";
 import { KnowledgeAdmin } from "./KnowledgeAdmin.jsx";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { quotaDraft, quotaDraftChanges, quotaInputValue, validQuotaDraft } from './adminQuotaModel.js';
+const AtomicReviewPanel=lazy(()=>import('./AtomicLearningHub.jsx').then(module=>({default:module.AtomicReviewPanel})));
 
 const navItems = [
   { id: "overview", label: "总览", icon: ChartBar },
@@ -34,7 +36,7 @@ const navItems = [
   { id: "courses", label: "课程资源", icon: BookOpenText },
   { id: "knowledge", label: "知识图谱", icon: BookOpenText },
   { id: "workflows", label: "工作流管理", icon: CirclesThreePlus },
-  { id: "reviews", label: "作品审核", icon: ShieldCheck },
+  { id: "reviews", label: "内容审核", icon: ShieldCheck },
   { id: "reports", label: "举报处理", icon: Flag },
 ];
 
@@ -73,8 +75,8 @@ function Sidebar({ section, onSectionChange, open, onClose, pendingCount, items,
   </>;
 }
 
-function Topbar({ section, onOpenMenu, actor, onBack, users, reviews, dashboard, onNavigate }) {
-  const titles = { knowledge: ["知识图谱", "维护知识点、资源关联与能力目标"], overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], courses: ["课程资源", "创建课程、配置课时并完成发布审核"], workflows: ["工作流管理", "创建教学与创作路径，编辑版本并发布到学生端"], reviews: ["作品审核", "审核用户提交到资源库的作品与案例"], reports: ["举报处理", "核对社区举报并决定保留或隐藏内容"] };
+function Topbar({ section, onOpenMenu, actor, onBack, users, reviews, dashboard, onNavigate, atomicPending }) {
+  const titles = { knowledge: ["知识图谱", "维护知识点、资源关联与能力目标"], overview: ["管理总览", "查看平台状态、额度消耗与待办事项"], users: ["用户管理", "管理账户状态与每个用户的 API 使用额度"], courses: ["课程资源", "创建课程、配置课时并完成发布审核"], workflows: ["工作流管理", "创建教学与创作路径，编辑版本并发布到学生端"], reviews: ["内容审核", "审核作品、学习原子、课程与心得"], reports: ["举报处理", "核对社区举报并决定保留或隐藏内容"] };
   const [query, setQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const results = useMemo(() => {
@@ -89,10 +91,11 @@ function Topbar({ section, onOpenMenu, actor, onBack, users, reviews, dashboard,
     const pending = reviews.filter((item) => item.status === "pending").length;
     const quotaAlerts = users.filter((user) => user.monthlyLimit > 0 && user.monthlyUsed / user.monthlyLimit >= 0.7).length;
     if (pending) items.push({ id: "reviews", title: `${pending} 项作品等待审核`, detail: "进入审核队列处理投稿", section: "reviews" });
+    if(atomicPending)items.push({id:'atomic',title:`${atomicPending} 项原子、课程或心得等待审核`,detail:'进入“原子 / 课程 / 心得审核”处理',section:'reviews'});
     if (quotaAlerts) items.push({ id: "quota", title: `${quotaAlerts} 个账户额度接近上限`, detail: "检查并调整用户额度", section: "users" });
     if (dashboard && dashboard.activeModels === 0) items.push({ id: "models", title: "模型服务尚未启用", detail: "创作任务会保存草稿，不会调用外部模型", section: "overview" });
     return items;
-  }, [dashboard, reviews, users]);
+  }, [dashboard, reviews, users, atomicPending]);
   return <header className="topbar">
     <button className="icon-button menu-button" onClick={onOpenMenu} aria-label="打开导航"><List size={22} weight="bold" /></button>
     <div className="topbar__title"><p>// CONTROL CENTER</p><div><strong>{titles[section][0]}</strong><span>{titles[section][1]}</span></div></div>
@@ -197,15 +200,15 @@ function BulkQuotaDrawer({ count, onClose, onSave }) {
   return <div className="drawer-layer" role="presentation"><button className="drawer-scrim" onClick={onClose} aria-label="关闭批量额度设置" /><aside className="drawer" aria-label="批量 API 额度设置"><div className="drawer__header"><div><p>// BULK QUOTA POLICY</p><h2>批量设置额度</h2></div><button className="icon-button" onClick={onClose}><X size={21} weight="bold" /></button></div><p className="bulk-quota-summary">将为 <strong>{count}</strong> 个已选用户应用同一套额度策略。</p><form onSubmit={(event) => { event.preventDefault(); onSave({ dailyLimit: Number(daily), monthlyLimit: Number(monthly), concurrentLimit: Number(concurrent) }); }}><div className="field-group"><label htmlFor="bulk-daily">每日额度上限</label><div className="number-field"><input id="bulk-daily" type="number" min="0" value={daily} onChange={(event) => setDaily(event.target.value)} /><span>额度 / 日</span></div></div><div className="field-group"><label htmlFor="bulk-monthly">每月额度上限</label><div className="number-field"><input id="bulk-monthly" type="number" min="0" value={monthly} onChange={(event) => setMonthly(event.target.value)} /><span>额度 / 月</span></div></div><div className="field-group"><label htmlFor="bulk-concurrent">并发任务数</label><div className="number-field"><input id="bulk-concurrent" type="number" min="0" max="100" value={concurrent} onChange={(event) => setConcurrent(event.target.value)} /><span>个任务</span></div></div><div className="policy-note"><Warning size={20} weight="fill" /><p><strong>设置为 0 将立即停止新任务</strong><span>保存后会为每个账户写入独立审计记录。</span></p></div><div className="drawer__actions"><button type="button" className="outline-button" onClick={onClose}>取消</button><button type="submit" className="primary-button">应用到 {count} 个用户 <ArrowRight size={17} /></button></div></form></aside></div>;
 }
 
-function ReviewsPage({ reviews, selectedReview, onSelectReview, canManageContent, showToast, onChanged }) {
+function ReviewsPage({ reviews, selectedReview, onSelectReview, canManageContent, showToast, onChanged, actor, onLearningNavigate, atomicPending, onAtomicPending }) {
   const [mode,setMode] = useState('review');
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
   const visibleReviews = reviews.filter((item) => (filter === "all" || item.status === filter) && `${item.id}${item.title}${item.author}${item.department ?? ""}`.toLowerCase().includes(query.toLowerCase()));
   return <div className="page-content reviews-page">
-    <section className="review-page-heading"><div><p>CONTENT MODERATION</p><h1>作品审核</h1><span>先看作品，再核对署名、授权与内容安全。</span></div><span className="review-pending-count"><Clock size={18} />{reviews.filter(item => item.status === "pending").length} 项待处理</span></section>
-    {canManageContent && <nav className="admin-content-mode" aria-label="案例管理功能"><button aria-pressed={mode === 'review'} onClick={() => setMode('review')}>审核队列</button><button aria-pressed={mode === 'content'} onClick={() => setMode('content')}>案例管理 / 回收站</button></nav>}
-    {mode === 'content' ? <AdminCaseManager showToast={showToast} onChanged={onChanged} /> : <section className="review-workspace"><div className="review-queue">
+    <section className="review-page-heading"><div><p>CONTENT MODERATION</p><h1>内容审核</h1><span>分开处理作品与学习内容，核对正文、附件、来源和学习关联。</span></div><span className="review-pending-count"><Clock size={18} />{atomicPending+reviews.filter(item => item.status === "pending").length} 项待处理</span></section>
+    <nav className="admin-content-mode" aria-label="内容审核与管理"><button aria-pressed={mode === 'review'} onClick={() => setMode('review')}>作品审核队列</button><button aria-pressed={mode === 'atomic'} onClick={() => setMode('atomic')}>原子 / 课程 / 心得审核 · {atomicPending}</button>{canManageContent&&<button aria-pressed={mode === 'content'} onClick={() => setMode('content')}>案例管理 / 回收站</button>}</nav>
+    {mode==='atomic'?<Suspense fallback={<p role="status">正在读取学习内容审核…</p>}><AtomicReviewPanel account={actor} onNavigate={onLearningNavigate} onReviewTotal={onAtomicPending} onReviewed={onChanged}/></Suspense>:mode === 'content' ? <AdminCaseManager showToast={showToast} onChanged={onChanged} /> : <section className="review-workspace"><div className="review-queue">
       <div className="review-queue-toolbar"><div className="review-tabs" aria-label="审核状态筛选">{[["pending", "待审核"], ["approved", "已通过"], ["rejected", "已驳回"], ["all", "全部"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} className={filter === value ? "is-active" : ""} onClick={() => setFilter(value)}>{label}<span>{value === "all" ? reviews.length : reviews.filter(item => item.status === value).length}</span></button>)}</div><label className="queue-search"><MagnifyingGlass size={18} /><input aria-label="搜索审核作品" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索标题、作者或投稿编号" /></label></div>
       <div className="review-queue-caption"><span>{visibleReviews.length} 件作品</span><span>点击作品，打开完整审核工作区</span></div>
       <div className="queue-items">{visibleReviews.map(item => { const image = item.assetLinks?.find(asset => asset.mimeType?.startsWith("image/")); return <button key={item.id} className={selectedReview?.id === item.id ? "is-active" : ""} onClick={() => onSelectReview(item, visibleReviews)}><div className="file-tile">{image ? <img src={image.url} alt="" loading="lazy" /> : <FileImage size={25} />}</div><div className="queue-item__main"><span>{item.kind} · {reviewDate(item.submittedAt)}</span><strong>{item.title}</strong><small>{item.author} / {item.department || "未填写院系"}</small></div><div className="queue-item__meta"><span className={`review-status is-${item.status}`}>{reviewStatusLabels[item.status]}</span><small>{item.machineStatus}</small>{item.editorialIssues?.length > 0 && <em className="is-warning">需核对 {item.editorialIssues.length} 项</em>}</div><CaretDown className="review-queue-arrow" size={18} /></button>; })}{visibleReviews.length === 0 && <div className="empty-state"><ShieldCheck size={32} /><strong>{query ? "没有匹配的作品" : filter === "pending" ? "暂无待审核作品" : "暂无此状态的作品"}</strong><span>{query ? "试试其他标题或作者，或清除搜索条件。" : "切换状态可查看已处理作品。"}</span>{query && <button type="button" onClick={() => setQuery("")}>清除搜索</button>}</div>}</div>
@@ -245,9 +248,10 @@ function QuotaDrawer({ user, onClose, onSave }) {
   </div>;
 }
 
-export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSection = "overview", workflowEditId = "", onWorkflowNavigate }) {
+export function AdminDashboard({ actor, onBack, onNavigate = () => {}, onLearningNavigate, initialSection = "overview", workflowEditId = "", onWorkflowNavigate }) {
   const operatorOnly = actor?.role === "operator";
   const [reviewQueue, setReviewQueue] = useState([]);
+  const [atomicPending,setAtomicPending]=useState(0);
   const canManageQuota = actor?.role === "admin" || actor?.roles?.includes("admin");
   const availableNavItems = operatorOnly ? navItems.filter((item) => item.id === "reviews" || item.id === "reports") : navItems;
   const [section, setSection] = useState(initialSection); const [sidebarOpen, setSidebarOpen] = useState(false); const [users, setUsers] = useState([]); const [reviews, setReviews] = useState([]); const [reports, setReports] = useState([]); const [dashboard, setDashboard] = useState(null); const [quotaUser, setQuotaUser] = useState(null); const [selectedUserIds, setSelectedUserIds] = useState(new Set()); const [bulkQuotaOpen, setBulkQuotaOpen] = useState(false); const [selectedReview, setSelectedReview] = useState(null); const [adminLoading, setAdminLoading] = useState(true); const [adminLoadError, setAdminLoadError] = useState("");
@@ -256,10 +260,11 @@ export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSe
   const changeSection = (nextSection) => { setSection(nextSection); onNavigate(nextSection); };
   const loadAdminData = useCallback(async () => {
     setAdminLoading(true); setAdminLoadError("");
-    const [userResult, reviewResult, reportResult, dashboardResult] = await Promise.allSettled([operatorOnly ? Promise.resolve(null) : getAdminUsers(), getAdminReviews(), getAdminReports(), operatorOnly ? Promise.resolve(null) : getAdminDashboard()]);
+    const [userResult, reviewResult, reportResult, dashboardResult, atomicResult] = await Promise.allSettled([operatorOnly ? Promise.resolve(null) : getAdminUsers(), getAdminReviews(), getAdminReports(), operatorOnly ? Promise.resolve(null) : getAdminDashboard(), atomicRequest('/catalog?view=review&page=1')]);
     const failures = [];
     if (userResult.status === "fulfilled" && userResult.value) setUsers(userResult.value.items ?? []); else if (!operatorOnly) failures.push("用户数据");
     if (reviewResult.status === "fulfilled") setReviews(reviewResult.value.items ?? []); else failures.push("审核数据");
+    if(atomicResult.status==='fulfilled')setAtomicPending(atomicResult.value.total);else failures.push('原子与心得审核');
     if (reportResult.status === "fulfilled") setReports(reportResult.value.items ?? []); else failures.push("举报数据");
     if (dashboardResult.status === "fulfilled" && dashboardResult.value) setDashboard(dashboardResult.value); else if (!operatorOnly) failures.push("统计数据");
     if (failures.length) { const message = `${failures.join("、")}加载失败`; setAdminLoadError(message); showToast(message, "error"); }
@@ -288,15 +293,15 @@ export function AdminDashboard({ actor, onBack, onNavigate = () => {}, initialSe
   const resolveReport = async (id, decision) => { try { const updated = await decideReport(id, decision); setReports((current) => current.map((item) => item.id === id ? updated : item)); showToast(decision.contentAction === "hide" ? "已隐藏被举报内容" : "举报已处理"); } catch (error) { showToast(error.message); } };
   const selectedReviewIndex = reviewQueue.findIndex(item => item.id === selectedReview?.id);
   return <div className="admin-shell">
-    <Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} dashboard={dashboard} />
-    <div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} /><main><RuntimeStatus /><div key={section} className="route-transition">
+    <Sidebar section={section} onSectionChange={changeSection} open={sidebarOpen} onClose={() => setSidebarOpen(false)} pendingCount={atomicPending+reviews.filter((item) => item.status === "pending").length} items={availableNavItems} actor={actor} onBack={onBack} dashboard={dashboard} />
+    <div className="admin-main"><Topbar section={section} onOpenMenu={() => setSidebarOpen(true)} actor={actor} onBack={onBack} users={users} reviews={reviews} atomicPending={atomicPending} dashboard={dashboard} onNavigate={changeSection} /><main><RuntimeStatus /><div key={section} className="route-transition">
       {(adminLoading || adminLoadError) && <div className={`admin-load-state ${adminLoadError ? "is-error" : ""}`} aria-busy={adminLoading}><span>{adminLoading ? "正在同步管理数据…" : adminLoadError}</span>{!adminLoading && <button onClick={loadAdminData}>重新加载</button>}</div>}
       {section === "overview" && <Overview users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} onEditQuota={setQuotaUser} />}
       {section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} selectedIds={selectedUserIds} onSelectionChange={setSelectedUserIds} onOpenBulkQuota={() => setBulkQuotaOpen(true)} canManageQuota={canManageQuota} />}
       {section === "knowledge" && <KnowledgeAdmin showToast={showToast} />}
       {section === "courses" && <AdminCourses showToast={showToast} canManageContent={canManageQuota} canReviewCourses={canManageQuota} />}
       {section === "workflows" && <WorkflowAdmin showToast={showToast} initialWorkflowId={workflowEditId} onWorkflowNavigate={onWorkflowNavigate} />}
-      {section === "reviews" && <ReviewsPage reviews={reviews} selectedReview={selectedReview} canManageContent={canManageQuota || operatorOnly} showToast={showToast} onChanged={loadAdminData} onSelectReview={(item, queue) => { setSelectedReview(item); setReviewQueue(queue); }} />}
+      {section === "reviews" && <ReviewsPage actor={actor} onLearningNavigate={onLearningNavigate} atomicPending={atomicPending} onAtomicPending={setAtomicPending} reviews={reviews} selectedReview={selectedReview} canManageContent={canManageQuota || operatorOnly} showToast={showToast} onChanged={loadAdminData} onSelectReview={(item, queue) => { setSelectedReview(item); setReviewQueue(queue); }} />}
       {section === "reports" && <ReportsPage reports={reports} onDecision={resolveReport} />}
     </div></main></div>
     <QuotaDrawer user={quotaUser} onClose={() => setQuotaUser(null)} onSave={saveQuota} />

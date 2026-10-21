@@ -34,6 +34,8 @@ async function request(path, options = {}) {
 }
 
 export const getAdminUsers = () => request("/admin/users");
+export const atomicRequest = (path, method = 'GET', body) => request(`/atomic${path}`, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+export const uploadAtomicFile = (id, revision, file, options = {}) => uploadFile(`${API_BASE_URL}/atomic/nodes/${encodeURIComponent(id)}/assets?revision=${revision}`, file, options);
 export const getAdminReviews = () => request("/admin/reviews");
 export const getManagedCases = () => request('/admin/content/works');
 export const changeContentLifecycle = (kind, id, input) => request(`/admin/content/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/lifecycle`, { method: 'POST', body: JSON.stringify(input) });

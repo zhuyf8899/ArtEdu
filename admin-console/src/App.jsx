@@ -81,12 +81,12 @@ function AppContent() {
   if (pathname === "/canvas") return <Suspense fallback={<main className="portal-empty"><p>正在打开图片画布…</p></main>}><ImageCanvas onBack={() => navigate("/studio")} /></Suspense>;
   if (!sectionFromPath(pathname) && !adminSection) return <main className="portal-empty"><h1>页面不存在</h1><p>链接可能已失效，请返回首页选择入口。</p><button onClick={() => navigate('/')}>返回首页</button></main>;
   if (adminSection && (!canEnterAdmin(account) || !canViewAdminSection(account, adminSection))) return <main className="portal-empty"><h1>无权访问此管理页面</h1><p>当前账号没有访问权限，可返回学习空间或切换账号。</p><button onClick={() => navigate('/')}>返回学习空间</button><button onClick={signOut}>退出并切换账号</button></main>;
-  if (adminSection) return <Suspense fallback={<main className="portal-empty"><p>正在加载管理台…</p></main>}><AdminDashboard actor={account} initialSection={adminSection} workflowEditId={new URLSearchParams(search).get('edit') ?? ''} onWorkflowNavigate={(id) => navigate('/admin/workflows' + (id ? '?edit=' + encodeURIComponent(id) : ''))} onNavigate={(section) => navigate(adminRoutes[section] ?? '/admin')} onBack={() => navigate('/')} /></Suspense>;
+  if (adminSection) return <Suspense fallback={<main className="portal-empty"><p>正在加载管理台…</p></main>}><AdminDashboard actor={account} initialSection={adminSection} onLearningNavigate={navigate} workflowEditId={new URLSearchParams(search).get('edit') ?? ''} onWorkflowNavigate={(id) => navigate('/admin/workflows' + (id ? '?edit=' + encodeURIComponent(id) : ''))} onNavigate={(section) => navigate(adminRoutes[section] ?? '/admin')} onBack={() => navigate('/')} /></Suspense>;
   // 普通门户页面根据路径选择栏目；?course=... 等参数用于定位课程、课时或对话。
   // 传给组件的这些字段叫 props：由父组件向子组件提供数据和回调函数。
   const query = new URLSearchParams(search);
   // Curriculum queries stay in the URL, so refresh and browser history restore the selected goal.
-  const curriculumProps = { curriculumTopic: (query.get('topic') ?? '').slice(0,200) };
+  const curriculumProps = { curriculumTopic: (query.get('topic') ?? '').slice(0,200), learningLibrary: query.get('library') ?? '', learningNodeId: query.get('node') ?? '', learningNodeRevision: query.get('revision') ?? '' };
   return <UserPortal {...curriculumProps} account={account} section={sectionFromPath(pathname)} communityWorkId={query.get('work') ?? ''} searchQuery={query.get("query") ?? ""} learningCourseId={query.get("course") ?? ""} learningLessonId={query.get("lesson") ?? ""} learningView={query.get("view") ?? ""} learningAtlas={query.get("atlas") ?? ""} learningAtlasCourse={query.get("atlasCourse") ?? ""} studioWorkflowId={query.get("workflow") ?? ""} studioRunId={query.get("run") ?? ""} studioBuilder={query.get("builder") === "1"} studioEditId={query.get("edit") ?? ""} creationHistoryOpen={query.get("history") === "1"} creationStartNew={query.get("new") === "1"} creationId={query.get("id") ?? ""} onNavigate={navigate} onSwitchAccount={signOut} onEnterAdmin={() => navigate("/admin")} />;
 }
 
