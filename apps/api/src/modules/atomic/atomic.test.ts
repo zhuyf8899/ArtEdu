@@ -1,11 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { AtomicService } from './atomic.service';
 import { atomPayload,coursePayload,atomicListSchema,parseAtomic,createAtomicSchema } from './atomic.contracts';
 const teacher={id:'teacher',roles:['teacher']} as any,student={id:'student',roles:['student']} as any;
 const valid={title:'色彩对比',summary:'理解色彩的不同对比关系',objective:'能够运用冷暖对比表达情绪',content:'观察两幅图像的色彩关系，解释它们的区别。',minutes:15,knowledge:['色彩对比'],completion:'read'};
 const auth={requireAnyRole:(a:any,roles:string[])=>{if(!a.roles.some((r:string)=>roles.includes(r)))throw new ForbiddenException();}} as any;
+test('非课程节点提交课程任务返回 400，且不读取课程版本或写入提交',async()=>{
+ for(const kind of ['teaching','reflection']){
+  const calls:string[]=[];
+  const db={transaction:async(fn:any)=>fn({query:async(sql:string)=>{
+   calls.push(sql);
+   return {rows:[sql.includes('atomic_nodes')?{id:'atom',kind,owner_id:'teacher'}:{payload:{completion:'read'}}]};
+  }})};
+  const service=new AtomicService(db as any,auth);
+  await assert.rejects(service.task(student,'atom',{revision:1,atomId:'atom',submission:'这是足够长的课程任务提交说明'}),(error:unknown)=>error instanceof BadRequestException&&error.getStatus()===400);
+  assert.equal(calls.length,1);
+  assert.ok(calls[0].includes('atomic_nodes'));
+ }
+});
 test('原子必须有独立目标、内容和明确练习，拒绝未知字段',()=>{
  assert.deepEqual(parseAtomic(atomicListSchema,{}),{view:'atoms',query:'',page:1});
  assert.deepEqual(parseAtomic(atomPayload,valid).assetIds,[]);

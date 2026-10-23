@@ -133,9 +133,11 @@ export class AtomicService {
   return {ok:true};
  });}
  async task(actor:Actor,id:string,input:{revision:number;atomId:string;submission:string}){return this.db.transaction(async c=>{
-  const n=await this.node(c,id,true),r=await c.query("SELECT payload FROM atomic_versions WHERE node_id=$1 AND revision=$2 AND status='published'",[id,input.revision]);
+  const n=await this.node(c,id,true);
+  if(n.kind!=='course')throw new BadRequestException('不存在此课程专属任务');
+  const r=await c.query("SELECT payload FROM atomic_versions WHERE node_id=$1 AND revision=$2 AND status='published'",[id,input.revision]);
   const s=(r.rows[0]?.payload as CoursePayload)?.steps.find(x=>x.atomId===input.atomId);
-  if(n.kind!=='course'||!s?.task)throw new BadRequestException('不存在此课程专属任务');
+  if(!s?.task)throw new BadRequestException('不存在此课程专属任务');
   await c.query(`INSERT INTO atomic_task_submissions(user_id,course_id,revision,atom_id,submission,stage) VALUES($1,$2,$3,$4,$5,'submitted') ON CONFLICT(user_id,course_id,revision,atom_id) DO UPDATE SET submission=EXCLUDED.submission,stage='submitted',submission_version=atomic_task_submissions.submission_version+1,feedback='',reviewer_id=NULL,updated_at=CURRENT_TIMESTAMP WHERE atomic_task_submissions.stage<>'completed'`,[actor.id,id,input.revision,input.atomId,input.submission]);return {ok:true};
  });}
  async submissions(actor:Actor){

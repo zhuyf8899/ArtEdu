@@ -30,7 +30,7 @@
     "knowledge:import-atlas": "tsx src/scripts/import-knowledge-atlas.ts"
   },
   "overrides": {
-    "fastify": "5.12.5",
+    "fastify": "5.12.6",
     "image-size": "file:vendor/image-size"
   },
   "dependencies": {
@@ -45,7 +45,8 @@
     "puppeteer-core": "^25.10.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "ali-oss": "^6.23.0"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.8",

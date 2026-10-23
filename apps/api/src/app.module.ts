@@ -1,3 +1,4 @@
+import { ObjectStorageModule } from './modules/object-storage/object-storage.module';
 /**
  * 【后端模块总目录】imports 把各领域模块装进应用；controllers 注册本模块的接口；providers 注册可注入的服务。APP_GUARD 将认证守卫设为全局入口检查，具体业务权限仍由业务层验证。
  */
@@ -23,8 +24,9 @@ import { AtomicModule } from "./modules/atomic/atomic.module";
 
 // @Module 是 NestJS 的模块说明；Nest 根据它自动创建并连接各服务的依赖。
 @Module({
-  imports: [DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, CreationStorageModule, GenerationModule, LearningModule, KnowledgeModule, PortalModule, RagModule, StudioModule, MorphModule, AtomicModule],
+  imports: [ObjectStorageModule, DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, CreationStorageModule, GenerationModule, LearningModule, KnowledgeModule, PortalModule, RagModule, StudioModule, MorphModule, AtomicModule],
   controllers: [HealthController],
   providers: [CloudCacheService, { provide: APP_GUARD, useClass: AuthenticationGuard }],
 })
 export class AppModule {}
+

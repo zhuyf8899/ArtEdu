@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => {
       include: ["react", "react-dom/client"],
     },
     server: {
-      host: "0.0.0.0",
+      host: env.VITE_DEV_HOST || "127.0.0.1",
       port: 4173,
       strictPort: true,
       allowedHosts: ["terminal.local"],
