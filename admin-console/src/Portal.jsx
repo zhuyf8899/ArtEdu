@@ -351,7 +351,7 @@ function StudioCard({ icon: Icon, label, title, text, action, accent, onClick })
 function resultContent(result) {
   const output = result?.output ?? {};
   if (output.kind === "asset") {
-    return "已生成图像产物，可在下方直接查看或下载。\n\n生成文件保存在平台私有目录，仅你的账号可以访问；继续输入描述即可调整风格、构图或配色。";
+    return "已生成图像产物，可在下方直接查看或下载。\n\n沿着眼前的形象继续探索，用新的描述调整风格、构图与配色。";
   }
   return output.content ?? "";
 }

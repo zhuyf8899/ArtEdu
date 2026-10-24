@@ -16,7 +16,7 @@ export function KnowledgeEvidence({ graph, source, onGoTo }) {
     || graph.lessons.some((lesson) => lesson.workflowId === item.workflowId && (source.kind === "course" ? lesson.courseId === source.id : lesson.id === source.id))) : graph.runs;
   const boundRuns = runs.filter((item) => learningLabels(item.learningBindings?.tools).length || learningLabels(item.learningBindings?.abilityGoals).length || learningLabels(item.learningBindings?.knowledgePoints).length);
   return <section className="knowledge-bindings" aria-label="知识与实践关联">
-    <header><div><span className="knowledge-kicker">KNOWLEDGE & PRACTICE</span><h4>知识与实践关联</h4><p>来自课程与工作流的明确配置，可回看对应课时和作品；完成记录不等于能力认证。</p></div>{points.length > 6 && <button type="button" onClick={() => setShowAll((current) => !current)} aria-expanded={showAll}>{showAll ? "收起" : `查看全部 ${points.length} 项`}</button>}</header>
+    <header><div><span className="knowledge-kicker">KNOWLEDGE & PRACTICE</span><h4>知识与实践关联</h4><p>知识因实践而生长，实践因回望而清晰。在课时与作品之间，寻找理解的脉络。</p></div>{points.length > 6 && <button type="button" onClick={() => setShowAll((current) => !current)} aria-expanded={showAll}>{showAll ? "收起" : `查看全部 ${points.length} 项`}</button>}</header>
     {points.length ? <div className="knowledge-bindings__grid">{(showAll ? points : points.slice(0, 6)).map((point) => <article className={`knowledge-point is-${point.state}`} key={point.name}>
       <div className="knowledge-point__heading"><BookOpenText size={18} aria-hidden="true" /><h5>{point.name}</h5><span>{states[point.state]}</span></div>
       <p>{point.lessonCount ? `${point.completedCount} / ${point.lessonCount} 个关联课时完成` : "暂无关联课时"}</p>

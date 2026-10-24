@@ -1,3 +1,4 @@
+import { AtomicPortrait as ProfessionalPortrait } from './AtomicPortrait.jsx';
 import { useState } from 'react';
 import { ArrowRight, ArrowClockwise, BookOpenText, BookmarkSimple, CalendarCheck, ChartPolar, Check, House, ImageSquare, NotePencil, Sparkle } from '@phosphor-icons/react';
 import { MorphCourseCard } from './MorphCatalog.jsx';
@@ -45,18 +46,6 @@ export function MorphMySpace({account,data,creation,view,onView,onNavigate,loadi
 }
 
 function SpaceHeading({eyebrow,title,action,onAction}) {return <header className="morph-space-heading"><div><span>{eyebrow}</span><h2>{title}</h2></div>{action&&<button type="button" onClick={onAction}>{action}<ArrowRight size={16}/></button>}</header>;}
-function ProfessionalPortrait({data,onNavigate,onView,compact=false}) {
-  const evidence=spaceEvidence(data), total=Number(data.summary?.totalLessons)||0, done=Number(data.summary?.completedLessons)||0;
-  return <section className="morph-space-section" aria-label="我的专业画像">
-    <SpaceHeading eyebrow="PROFESSIONAL PORTRAIT" title="我的专业画像" action={compact?'查看完整记录':'探索原子课程'} onAction={()=>compact?onView('portrait'):onNavigate('/learning')}/>
-    <div className="morph-portrait-layout"><div className="morph-portrait-progress"><div className="morph-portrait-kicker"><span>LEARNING EVIDENCE</span><span>学习记录</span></div><h3>学习正在形成自己的方向</h3><div className="morph-portrait-total"><strong>{done}<small> / {total}</small></strong><span>已完成课时</span></div>
-      <p>这里呈现学习与实践证据，不把活跃度当作专业能力评分。</p>
-      <div className="morph-portrait-courses">{data.courses?.length?data.courses.slice(0,compact?3:8).map(course=><button type="button" key={course.id} onClick={()=>onNavigate(`/learning?course=${encodeURIComponent(course.id)}`)}><span>{course.title}<small>{course.completedLessons} / {course.lessonCount} 节课时</small></span><progress aria-label={`${course.title}学习进度`} max="100" value={Math.max(0,Math.min(100,Number(course.progressPercent)||0))}/></button>):<button type="button" onClick={()=>onNavigate('/learning')}>从第一门原子课程开始 <ArrowRight size={16}/></button>}</div>
-      <div className="morph-portrait-foot"><span>{evidence.completedRuns.length} 次已完成工作流</span><span>{data.notes?.length||0} 篇学习笔记</span></div>
-    </div><aside className="morph-portrait-evidence"><div><h3><Check size={17}/>已学内容</h3>{evidence.topics.length?<div className="morph-space-chips">{evidence.topics.slice(0,compact?5:20).map(topic=><span key={topic}>{topic}</span>)}</div>:<p>完成课时后，这里会展示对应知识内容。</p>}</div><div><h3>学习方向</h3><p>{evidence.directions.join(' · ')||'尚未选择课程方向'}</p></div><div><h3>工作流工具</h3><p>{evidence.declaredTools.join(' · ')||'暂无可展示的工具配置记录'}</p></div></aside></div>
-    {!compact&&<section className="morph-space-activity"><SpaceHeading eyebrow="GROWTH RECORDS" title="最近成长记录"/>{evidence.activity.length?evidence.activity.slice(0,12).map(item=><button type="button" key={item.id} onClick={()=>item.href?onNavigate(item.href):onView(item.view)}><span>{item.label}</span><strong>{item.title}</strong><time dateTime={item.at}>{new Intl.DateTimeFormat('zh-CN',{month:'short',day:'numeric'}).format(new Date(item.at))}</time><ArrowRight size={16}/></button>):<p>开始学习、记录笔记或完成创作后，这里会留下你的成长足迹。</p>}</section>}
-  </section>;
-}
 function CourseRecords({courses,onNavigate}) {return courses.length?<div className="morph-space-course-grid">{courses.map(course=><MorphCourseCard key={course.id} course={courseForCard(course)} onOpen={id=>onNavigate(`/learning?course=${encodeURIComponent(id)}`)}/>)}</div>:<div className="morph-space-empty"><BookOpenText size={30}/><h3>还没有加入课程</h3><button onClick={()=>onNavigate('/learning')}>发现原子课程<ArrowRight size={16}/></button></div>;}
 function SpaceCourses({courses,onNavigate}) {
   const [status,setStatus]=useState('all'),[query,setQuery]=useState('');

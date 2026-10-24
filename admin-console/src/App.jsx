@@ -60,9 +60,11 @@ function AppContent() {
     if(account?.role === 'operator' && pathname === '/admin') navigate('/admin/reviews', { replace: true });
   }, [account, pathname, navigate]);
 
+  useEffect(() => { if (pathname === '/morph' || pathname === '/morph/') navigate('/' + search, { replace: true }); }, [pathname, search, navigate]);
+
   // 登录后保留当前路径及课程、工作流等参数。
   const signIn = async (username, password) => {
-    const actor = await loginLocal(username, password);
+    const actor = await loginLocal(username.trim(), password);
     setAccount(toPortalAccount(actor));
     setSessionMessage("");
   };

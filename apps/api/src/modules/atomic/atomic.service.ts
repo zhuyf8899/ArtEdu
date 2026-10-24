@@ -20,6 +20,47 @@ const educator=(a:Actor)=>a.roles.some(r=>['admin','teacher'].includes(r));
 @Injectable()
 export class AtomicService {
  constructor(private readonly db:DatabaseService,private readonly auth:AuthService){}
+ async portrait(actor:Actor){
+  // Public teaching atoms plus this learner's historical published versions; never other users' progress.
+  const result=await this.db.query(`SELECT n.id,v.revision,jsonb_build_object('title',v.payload->'title','summary',v.payload->'summary','direction',v.payload->'direction','knowledge',v.payload->'knowledge','minutes',v.payload->'minutes','completion',v.payload->'completion') AS payload,p.stage,p.feedback,p.updated_at AS "updatedAt",n.published_revision AS "publishedRevision"
+   FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id
+   LEFT JOIN atomic_progress p ON p.node_id=n.id AND p.revision=v.revision AND p.user_id=$1
+   WHERE n.kind='teaching' AND v.status='published' AND (v.revision=n.published_revision OR p.user_id=$1)
+   ORDER BY n.id,v.revision DESC`,[actor.id]);
+  return {items:result.rows};
+ }
+ async bindKnowledge(actor:Actor,id:string,input:{revision:number;knowledgeNodeIds:string[]}){
+  return this.db.transaction(async c=>{
+   const n=await this.node(c,id,true);this.owner(actor,n);
+   this.auth.requireAnyRole(actor,['teacher','admin']);
+   if(n.kind!=='teaching')throw new BadRequestException('仅教学原子可关联能力知识点');
+   const version=await c.query('SELECT revision FROM atomic_versions WHERE node_id=$1 AND revision=$2',[id,input.revision]);
+   if(!version.rows.length)throw new NotFoundException('原子版本不存在');
+   const nodes=await c.query("SELECT id FROM knowledge_nodes WHERE id=ANY($1::text[]) AND status='published' ORDER BY id FOR SHARE",[input.knowledgeNodeIds]);
+   if(nodes.rows.length!==input.knowledgeNodeIds.length)throw new BadRequestException('请选择已发布知识点');
+   await c.query('DELETE FROM atomic_knowledge_bindings WHERE atom_id=$1 AND revision=$2',[id,input.revision]);
+   for(const nodeId of [...input.knowledgeNodeIds].sort())await c.query('INSERT INTO atomic_knowledge_bindings(atom_id,revision,knowledge_node_id,created_by) VALUES($1,$2,$3,$4)',[id,input.revision,nodeId,actor.id]);
+   await this.audit(c,actor,n,input.revision,'bind_knowledge',JSON.stringify(input.knowledgeNodeIds));
+   return {id,revision:input.revision,knowledgeNodeIds:input.knowledgeNodeIds};
+  });
+ }
+ async abilities(actor:Actor){
+  const [nodes,evidence,goals]=await Promise.all([
+   this.db.query(`SELECT k.id,k.title,k.domain,a.atom_count AS "atomCount",a.read_count AS "readCount",a.submitted_count AS "submittedCount",a.completed_count AS "completedCount",a.needs_revision_count AS "needsRevisionCount",a.evaluated_count AS "evaluatedCount",a.updated_at AS "updatedAt" FROM user_knowledge_abilities a JOIN knowledge_nodes k ON k.id=a.knowledge_node_id WHERE a.user_id=$1 ORDER BY k.sort_order,k.id`,[actor.id]),
+   this.db.query(`SELECT e.knowledge_node_id AS "knowledgeNodeId",e.atom_id AS "atomId",e.revision,e.stage,e.completion,e.feedback,e.reviewer_id AS "reviewerId",e.learned_at AS "learnedAt",v.payload->>'title' AS title FROM user_atomic_ability_evidence e JOIN atomic_versions v ON v.node_id=e.atom_id AND v.revision=e.revision WHERE e.user_id=$1 ORDER BY e.learned_at DESC,e.atom_id,e.revision DESC`,[actor.id]),
+   this.db.query(`SELECT g.id,g.title,kg.node_id AS "knowledgeNodeId" FROM ability_goals g JOIN knowledge_ability_goals kg ON kg.goal_id=g.id WHERE g.status='published' ORDER BY g.sort_order,g.id`)
+  ]);
+  return {nodes:nodes.rows,evidence:evidence.rows,goals:goals.rows};
+ }
+ async knowledgeLearning(actor:Actor,id:string){
+  const node=await this.db.query("SELECT id,title,description,domain FROM knowledge_nodes WHERE id=$1 AND status='published'",[id]);
+  if(!node.rows.length)throw new NotFoundException('知识点不存在或尚未发布');
+  const [atoms,edges]=await Promise.all([
+   this.db.query(`SELECT n.id,b.revision,v.payload->>'title' AS title,v.payload->>'summary' AS summary,v.payload->'minutes' AS minutes,p.stage,p.feedback FROM atomic_knowledge_bindings b JOIN atomic_nodes n ON n.id=b.atom_id JOIN atomic_versions v ON v.node_id=b.atom_id AND v.revision=b.revision LEFT JOIN atomic_progress p ON p.node_id=b.atom_id AND p.revision=b.revision AND p.user_id=$2 WHERE b.knowledge_node_id=$1 AND v.status='published' AND (n.published_revision=b.revision OR p.user_id=$2) ORDER BY n.id,b.revision DESC`,[id,actor.id]),
+   this.db.query(`SELECT e.from_node_id AS "fromNodeId",e.to_node_id AS "toNodeId",e.relation FROM knowledge_edges e JOIN knowledge_nodes a ON a.id=e.from_node_id JOIN knowledge_nodes b ON b.id=e.to_node_id WHERE (e.from_node_id=$1 OR e.to_node_id=$1) AND a.status='published' AND b.status='published'`,[id])
+  ]);
+  return {node:node.rows[0],atoms:atoms.rows,edges:edges.rows};
+ }
  private async node(client:Queryable,id:string,lock=false):Promise<Node>{const r=await client.query('SELECT * FROM atomic_nodes WHERE id=$1'+(lock?' FOR UPDATE':''),[id]);if(!r.rows[0])throw new NotFoundException('学习内容不存在');return r.rows[0];}
  private owner(actor:Actor,n:Node){if(n.owner_id!==actor.id&&!actor.roles.includes('admin'))throw new ForbiddenException('只能编辑自己创建的学习内容');}
  // Teachers moderate supplements to their own atoms, never unrelated private drafts.

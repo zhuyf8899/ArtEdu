@@ -145,7 +145,7 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
         {['in_progress','completed'].includes(selected.enrollmentStatus) ? <em>{courseCardState(selected).label==='未开始'?'已加入学习':courseCardState(selected).label}</em> : <button disabled={loading||selected.availability==='coming_soon'} onClick={enroll}><PlayCircle size={18} weight="fill" /> {selected.availability==='coming_soon'?'教学资料筹备中':selected.availability==='trial'?'加入试学':'加入课程'}</button>}
       </aside>
     </div>
-    {courseReadiness(selected)&&<p className="catalog-notice">{courseReadiness(selected)}。{selected.availability==='coming_soon'?'课程筹备中，暂未开放选课。':'以下为新编试学讲义与自主练习，尚未通过教研审核；试学进度会保存，但不代表教研认证或专业能力认证。'}</p>}
+    {courseReadiness(selected)&&<p className="catalog-notice">{courseReadiness(selected)}。{selected.availability==='coming_soon'?'课程筹备中，暂未开放选课。':'试学内容正在教研完善中。带着问题阅读，在练习中形成自己的判断；你的学习进度将持续保存。'}</p>}
     {selected.catalog?.tools?.length>0&&<section className="course-tools-links" aria-label="相关技能工具">{selected.catalog.tools.map(tool=><button key={tool} onClick={()=>onNavigate(`/studio?toolQuery=${encodeURIComponent(tool)}`)}>探索 {tool} ↗</button>)}</section>}
     {/* 课时卡把"分步学习 → 练习 → 完成标准 →（可选）关联作品 → 确认完成"整条闭环摆出来。 */}
     {learningLabels(selected.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>这门课涉及的知识</strong><div>{learningLabels(selected.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div><small>课程知识范围；实际学习记录将在“我的空间”的专业画像中呈现。</small></section>}

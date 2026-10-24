@@ -125,8 +125,9 @@ export class KnowledgeService {
   }
 
   async getAbilities(actor: Actor) {
+    const atomicLearning = await this.database.query(`SELECT a.knowledge_node_id AS "knowledgeNodeId",k.title,k.domain,a.atom_count AS "atomCount",a.read_count AS "readCount",a.submitted_count AS "submittedCount",a.completed_count AS "completedCount",a.needs_revision_count AS "needsRevisionCount",a.evaluated_count AS "evaluatedCount",a.updated_at AS "updatedAt" FROM user_knowledge_abilities a JOIN knowledge_nodes k ON k.id=a.knowledge_node_id WHERE a.user_id=$1 ORDER BY k.sort_order,k.id`,[actor.id]);
     const [graph, progress] = await Promise.all([this.graph(false), this.progress(actor.id)]);
-    return { goals: graph.goals.map((goal) => {
+    return { atomicLearning: atomicLearning.rows, goals: graph.goals.map((goal) => {
       const nodeIds = graph.nodeGoals.filter((link) => link.goal_id === goal.id).map((link) => link.node_id);
       const percent = nodeIds.length ? Math.round(nodeIds.reduce((sum, id) => sum + (progress.get(id)?.progress ?? 0), 0) / nodeIds.length) : 0;
       return { ...this.mapGoal(goal), nodeIds, progressPercent: percent, completedNodes: nodeIds.filter((id) => (progress.get(id)?.progress ?? 0) >= 100).length, totalNodes: nodeIds.length };
