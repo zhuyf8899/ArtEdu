@@ -500,6 +500,12 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     }
   };
 
+  const exportConversation = item => {
+    const text = ['# '+item.title,'对话导出 · '+new Date().toLocaleString('zh-CN'),'仅导出文字记录；临时附件与生成文件请分别下载。',...(item.memory?['## 已压缩历史摘要\n\n'+item.memory]:[]),...(item.messages||[]).map(message=>'## '+(message.role==='user'?'我':'创作助手')+'\n\n'+(message.content||''))].join('\n\n');
+    const url=URL.createObjectURL(new Blob([text],{type:'text/markdown;charset=utf-8'}));
+    const link=document.createElement('a');link.href=url;link.download=(item.title||'创作对话').replace(/[<>:"/\\|?*]/g,'-').slice(0,60)+'.md';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setOpenConversationMenuId('');
+  };
+
   const openConversation = (id) => {
     if (id === activeId) return;
     draftsRef.current.set(activeIdRef.current, prompt);
@@ -551,6 +557,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
           </button>
           <button type="button" className="creation-canvas__history-menu-toggle" aria-label={`打开“${item.title}”的更多操作`} aria-expanded={openConversationMenuId === item.id} onClick={() => setOpenConversationMenuId((current) => current === item.id ? "" : item.id)}><DotsThreeVertical size={17} weight="bold" /></button>
           {openConversationMenuId === item.id && <div className="creation-canvas__history-menu" role="menu">
+            <button type="button" role="menuitem" onClick={()=>exportConversation(item)}>导出文字对话</button>
             <button type="button" role="menuitem" onClick={() => { setOpenConversationMenuId(""); void removeConversation(item.id); }}><Trash size={15} />删除对话</button>
           </div>}
         </div>) : <p>还没有创作记录，开始后会自动保存在这里。</p>}
@@ -586,7 +593,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
         <div className="creation-canvas__input">
               <label htmlFor="artedu-thread-prompt" className="sr-only">继续描述你的创作想法</label>
               <textarea ref={promptInput} id="artedu-thread-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={handlePromptKeyDown} placeholder={method.placeholder} rows={2} disabled={sending} />
-              <small className="cloud-cache-notice">成果随聊天保存在本机 · 参考附件 20 分钟后过期</small>
+              <small className="cloud-cache-notice">对话保存在当前浏览器，换设备不会自动同步；成果可下载留存，参考附件 20 分钟后过期。创作记录菜单可导出对话。</small>
               <div className="creation-canvas__toolbar">
                 <div className="creation-canvas__tools">
                 <input ref={referenceInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.pptx,.txt,.md,.csv" onChange={async (event) => {

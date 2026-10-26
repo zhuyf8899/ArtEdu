@@ -67,7 +67,7 @@ const createArtifactSchema = z.object({
   artifactType: z.enum(["brief", "webpage", "pattern", "document"]),
   content: z.string().trim().min(1).max(20_000),
 });
-const startWorkflowSchema = z.object({ workflowId: z.string().trim().min(1).max(160), context: z.record(z.unknown()).default({}) });
+const startWorkflowSchema = z.object({ workflowId: z.string().trim().min(1).max(160), context: z.record(z.string(), z.unknown()).default({}) });
 
 export interface PlatformToolDependencies {
   actor: Actor;

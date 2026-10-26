@@ -4,11 +4,13 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { normalizePath, safeDestination } from './navigationModel.js';
+import { restoreResourceScroll } from './resourceContext.js';
 export { portalRoutes, adminRoutes, normalizePath, sectionFromPath, adminSectionFromPath } from './navigationModel.js';
 
 export function useAppRoute() {
   // use 开头的函数是自定义 Hook：把地址状态和导航行为封装给 App 使用。
   const [location, setLocation] = useState(() => ({ pathname: normalizePath(window.location.pathname), search: window.location.search }));
+  useEffect(()=>restoreResourceScroll(location.pathname+location.search),[location.pathname,location.search]);
 
   useEffect(() => {
     // 浏览器前进/后退触发 popstate；离开组件时移除监听，避免重复订阅。

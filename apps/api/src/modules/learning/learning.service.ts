@@ -37,6 +37,8 @@ interface LearningTaskRow extends QueryResultRow {
   title: string;
   task_type: string;
   target_id: string | null;
+  target_revision?: number | null;
+  course_id?: string | null;
   due_date: string | null;
   status: string;
   completed_at: Date | null;
@@ -136,11 +138,15 @@ export class LearningService {
   }
 
   async createTask(actor: Actor, input: CreateLearningTaskInput) {
+    if(input.targetId&&input.taskType==='atom'){
+      const atom=await this.database.query("SELECT n.id FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=COALESCE($2,n.published_revision) WHERE n.id=$1 AND n.kind<>'course' AND v.status='published'",[input.targetId,input.targetRevision??null]);
+      if(!atom.rows.length)throw new BadRequestException('关联原子不存在或尚未发布');
+    }
     const result = await this.database.query<LearningTaskRow>(`
-      INSERT INTO learning_tasks (id, user_id, title, task_type, target_id, due_date)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO learning_tasks (id, user_id, title, task_type, target_id, due_date,target_revision)
+      VALUES ($1, $2, $3, $4, $5, $6,$7)
       RETURNING *
-    `, [`learning-task-${randomUUID()}`, actor.id, input.title, input.taskType, input.targetId ?? null, input.dueDate ?? null]);
+    `, [`learning-task-${randomUUID()}`, actor.id, input.title, input.taskType, input.targetId ?? null, input.dueDate ?? null,input.targetRevision??null]);
     return this.mapTask(result.rows[0]);
   }
 
@@ -156,7 +162,7 @@ export class LearningService {
           ELSE completed_at
         END,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND user_id = $2 AND task_type<>'lesson'
       RETURNING *
     `, [taskId, actor.id, input.title ?? null, input.dueDate !== undefined, input.dueDate ?? null, input.status ?? null]);
     if (!result.rows[0]) throw new NotFoundException("学习任务不存在");
@@ -164,7 +170,7 @@ export class LearningService {
   }
 
   async deleteTask(actor: Actor, taskId: string) {
-    const result = await this.database.query("DELETE FROM learning_tasks WHERE id = $1 AND user_id = $2 RETURNING id", [taskId, actor.id]);
+    const result = await this.database.query("DELETE FROM learning_tasks WHERE id = $1 AND user_id = $2 AND task_type <> 'lesson' RETURNING id", [taskId, actor.id]);
     if (!result.rows[0]) throw new NotFoundException("学习任务不存在");
     return { id: taskId, deleted: true };
   }
@@ -243,7 +249,7 @@ export class LearningService {
 
   private async listTasks(userId: string) {
     const result = await this.database.query<LearningTaskRow>(`
-      SELECT * FROM learning_tasks
+      SELECT *, (SELECT l.course_id FROM course_lessons l WHERE l.id=learning_tasks.target_id AND learning_tasks.task_type='lesson') AS course_id FROM learning_tasks
       WHERE user_id = $1
       ORDER BY CASE WHEN status = 'pending' THEN 0 ELSE 1 END, due_date NULLS LAST, sort_order, created_at DESC
     `, [userId]);
@@ -319,6 +325,8 @@ export class LearningService {
       title: row.title,
       taskType: row.task_type,
       targetId: row.target_id,
+      targetRevision: row.target_revision??null,
+      courseId: row.course_id??null,
       dueDate: row.due_date,
       status: row.status,
       completedAt: row.completed_at,

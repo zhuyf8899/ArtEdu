@@ -10,6 +10,7 @@ import { morphQueryMatches, toolCategoryName } from './morph/morphPresentation.j
 import { CatalogControls } from './morph/CatalogControls.jsx';
 import { MorphToolCard } from './morph/MorphToolCard.jsx';
 import { ToolRecommendationDialog } from './morph/ToolRecommendationDialog.jsx';
+import { returnContext } from './resourceContext.js';
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
 const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ WorkflowRunner: component }) => ({ default: component })));
@@ -130,6 +131,7 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
   </div>;
   return <section className="workflow-catalog" id="workflow-catalog">
     {variant === 'morph' && <MorphPageBanner title="专项技能工具" eyebrow="SKILL TOOLS"><button className="button morph-recommend-trigger" onClick={()=>setRecommendOpen(true)}>推荐一个工具<ArrowUpRight size={16}/></button></MorphPageBanner>}
+    {returnContext().to&&<button className="learning-back audit-resource-return" onClick={()=>onNavigate(returnContext().to)}><ArrowLeft size={16}/>{returnContext().label}</button>}
     {variant === 'morph' && recommendOpen && <ToolRecommendationDialog accountId={accountId} onClose={()=>setRecommendOpen(false)} onNotice={onNotice}/>}
     <div className={variant === 'morph' ? 'container morph-tool-catalog' : undefined}>
     <ToolDirectory variant={variant} canManage={canManageToolDirectory} onNotice={onNotice} onNavigate={onNavigate} onOpenWorkflowBuilder={openBuilder} />
@@ -155,7 +157,7 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
           <span>{workflow.category}{draft ? " · 草稿" : ""}</span>
           <h3>{workflow.name}</h3>
           <p>{workflow.description}</p>
-          <small className="workflow-card__state">{draft ? "未发布 · 草稿试运行仅自己可见" : workflow.versionNumber ? `V${workflow.versionNumber} · 已发布` : "尚无保存版本"}</small>
+          <small className="workflow-card__state">{draft ? `${workflow.publishedVersionNumber?'已发布 V'+workflow.publishedVersionNumber+' · ':''}最新草稿 V${workflow.versionNumber??0}，草稿试运行仅自己可见` : workflow.versionNumber ? `公开版本 V${workflow.versionNumber} · 已发布` : "尚无保存版本"}</small>
           <button disabled={loading} onClick={() => open(workflow)}>{draft ? "打开草稿画布" : "打开节点画布"} <ArrowRight size={16} weight="bold" /></button>
         </article>;
       })}</section> : catalogState==='ready'&&<div className="empty-state"><Wrench size={28} weight="thin" /><strong>{catalogQuery.trim() ? "没有匹配的节点工作流" : "还没有节点工作流"}</strong><span>{catalogQuery.trim() ? `「${catalogQuery.trim()}」没有匹配到工作流名称或描述，换个关键词试试。` : "进入「管理与新建工作流」搭一个：保存后你就能在这里试运行，发布后其他人也能看到。"}</span></div>}

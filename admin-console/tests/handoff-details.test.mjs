@@ -13,21 +13,21 @@ test('composer restores the handoff entry and a refreshable route without restor
   assert.equal(sectionFromPath('/curriculum/'),'curriculum');
   const source=await read('morph/MorphCatalog.jsx');
   assert.match(source,/onNavigate\('\/curriculum'\)/);
-  assert.match(source,/AI 编排课程体系/);
+  assert.match(source,/课程路径建议/);
   assert.doesNotMatch(source,/my-learning\?view=portrait|使用方法<select|授课作者<select|创作工具<select|个课时.*c\.method/);
   assert.match(source,/<CatalogControls compact/);
   assert.deepEqual(courseDirections,['全部','设计基础','设计方法','美术史','设计史','软件实操','人工智能基础']);
   const app=await read('App.jsx');assert.match(app,/query\.get\('topic'\)/);
   const component=await read('morph/CurriculumComposer.jsx');
-  assert.match(component,/CURRICULUM COMPOSER/);assert.match(component,/模型服务待接入/);
+  assert.match(component,/CURRICULUM COMPOSER/);assert.match(component,/不调用模型/);
   assert.match(component,/createLearningNote/);assert.match(component,/my-learning\?view=notes/);
   assert.doesNotMatch(component,/enrollCourse|updateLessonProgress|runGenerationJob|localStorage/);
 });
-test('recommendations resolve stable codes in editorial order with real IDs and readiness preserved',()=>{
+test('recommendations prioritize available courses while preserving IDs, readiness and planned editorial order',()=>{
   const result=composeCurriculum('我想学习信息图表设计',[...catalog].reverse());
   assert.equal(result.title,'信息图表设计');assert.equal(result.duration,150);
-  assert.deepEqual(result.steps.map(s=>s.course.catalog.code),['DTH-10','COL-01','TYP-02','GRD-03','INF-13']);
-  assert.equal(result.steps[1].course.id,'real-1');assert.equal(result.steps[0].course.availability,'coming_soon');
+  assert.deepEqual(result.steps.map(s=>s.course.catalog.code),['COL-01','DTH-10','TYP-02','GRD-03','INF-13']);
+  assert.equal(result.steps[0].course.id,'real-1');assert.equal(result.steps[1].course.availability,'coming_soon');
   assert.equal(result.steps[0].course.progressPercent,undefined);
   assert.equal(composeCurriculum('海报设计',catalog).steps.at(-1).course.catalog.code,'POS-11');
   assert.deepEqual(composeCurriculum('产品设计',catalog).steps.map(s=>s.course.catalog.code),['DTH-10','CMF-05','PAR-09','PRD-12']);

@@ -16,10 +16,11 @@ import { MorphCourseCatalog } from './morph/MorphCatalog.jsx';
 import { morphCourseLevel } from './morph/morphPresentation.js';
 import { courseProgress, mergeCourseRecord } from './courseProgress.js';
 import { courseCardState } from './morph/curriculumModel.js';
+import { returnContext, withReturnTarget } from './resourceContext.js';
 
 const METHOD_FILTERS = ["全部", "UI 创作", "图案生成", "Vibe Coding"];
 
-export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialCourseId = "", initialLessonId = "", variant = 'classic' }) {
+export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialCourseId = "", initialLessonId = "", variant = 'classic', accountId = '' }) {
   const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +36,8 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
   const lessonNodes = useRef(new Map());
   const courseRequest = useRef(0);
   const catalogRequest = useRef(0);
+  const [openLesson,setOpenLesson]=useState('');
+  const context=returnContext();
 
   const loadCatalog = async () => {
     const requestId = ++catalogRequest.current;
@@ -56,6 +59,7 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
       setCatalogError('');
     }
     setSelected(decorateCourse(course));
+    setOpenLesson(current=>course.lessons?.some(lesson=>lesson.id===current)?current:(initialLessonId||course.lessons?.find(lesson=>lesson.progressPercent<100)?.id||course.lessons?.[0]?.id||''));
     setCourses(current => mergeCourseRecord(current, course));
     onCourseChange?.(course);
   };
@@ -75,11 +79,11 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
   // Deep links focus only a published lesson returned by this course, never another course's ID.
   useEffect(() => {
     const target = selected?.id === initialCourseId && lessonNodes.current.get(initialLessonId);
-    if (target) { target.scrollIntoView({ block: "start" }); target.focus({ preventScroll: true }); }
+    if (target) {setOpenLesson(initialLessonId);requestAnimationFrame(()=>{target.scrollIntoView({ block: "start" }); target.focus({ preventScroll: true });});}
   }, [selected?.id, initialCourseId, initialLessonId]);
 
-  const showCourse = (courseId) => onNavigate ? onNavigate(`/learning?course=${encodeURIComponent(courseId)}`) : openCourse(courseId);
-  const returnToCatalog = () => { courseRequest.current++; setSelected(null); if(onNavigate) onNavigate("/learning"); };
+  const showCourse = (courseId) => onNavigate ? onNavigate(withReturnTarget(`/learning?course=${encodeURIComponent(courseId)}`)) : openCourse(courseId);
+  const returnToCatalog = () => { courseRequest.current++; setSelected(null); if(onNavigate) onNavigate(context.to||"/learning?library=legacy"); };
   const openCourse = async (courseId) => {
     // 请求编号防止快速切换课程时，较早请求的结果覆盖后来选中的课程。
     const requestId = ++courseRequest.current;
@@ -136,7 +140,7 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
   };
 
   if (selected) return <section className="learning-detail">
-    <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} weight="bold" /> 返回课程库</button>
+    <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} weight="bold" /> {context.to?context.label:'返回课程库'}</button>
     <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {variant === 'morph' ? morphCourseLevel(selected) : difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟{selected.availability==='coming_soon'?'（规划时长）':` · ${selected.lessonCount} 个课时`} · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div>
       <aside className={courseProgress(selected)>=100?'is-complete':''} aria-label="课程学习进度">
         <strong>{selected.availability==='coming_soon'?'筹备中':`${courseProgress(selected)}%`}</strong>
@@ -146,19 +150,22 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
       </aside>
     </div>
     {courseReadiness(selected)&&<p className="catalog-notice">{courseReadiness(selected)}。{selected.availability==='coming_soon'?'课程筹备中，暂未开放选课。':'试学内容正在教研完善中。带着问题阅读，在练习中形成自己的判断；你的学习进度将持续保存。'}</p>}
-    {selected.catalog?.tools?.length>0&&<section className="course-tools-links" aria-label="相关技能工具">{selected.catalog.tools.map(tool=><button key={tool} onClick={()=>onNavigate(`/studio?toolQuery=${encodeURIComponent(tool)}`)}>探索 {tool} ↗</button>)}</section>}
+    {selected.catalog?.tools?.length>0&&<section className="course-tools-links" aria-label="相关技能工具">{selected.catalog.tools.map(tool=><button key={tool} onClick={()=>onNavigate(withReturnTarget(`/studio?toolQuery=${encodeURIComponent(tool)}`))}>探索 {tool} ↗</button>)}</section>}
     {/* 课时卡把"分步学习 → 练习 → 完成标准 →（可选）关联作品 → 确认完成"整条闭环摆出来。 */}
-    {learningLabels(selected.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>这门课涉及的知识</strong><div>{learningLabels(selected.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div><small>课程知识范围；实际学习记录将在“我的空间”的专业画像中呈现。</small></section>}
+    {learningLabels(selected.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>这门课涉及的知识</strong><div>{learningLabels(selected.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div><small>本页为既有课程记录，进度保存在“我的课程”。专业画像单独统计新教学原子的学习证据，不将试学进度推断为能力认证。</small></section>}
+    {selected.lessons.length>0&&<nav className="lesson-outline" aria-label="课时目录">{selected.lessons.map((lesson,index)=><button key={lesson.id} aria-current={openLesson===lesson.id?'step':undefined} onClick={()=>{setOpenLesson(lesson.id);requestAnimationFrame(()=>lessonNodes.current.get(lesson.id)?.scrollIntoView({block:'start',behavior:'smooth'}));}}><span>{index+1}</span>{lesson.title}<small>{lesson.progressPercent>=100?'已完成':'继续学习'}</small></button>)}</nav>}
     <div className="lesson-list">{selected.lessons.map((lesson, index) => <article className={`lesson-card ${lesson.id === initialLessonId ? "lesson-card--recommended" : ""}`} key={lesson.id} tabIndex={-1} ref={(node) => { if (node) lessonNodes.current.set(lesson.id, node); else lessonNodes.current.delete(lesson.id); }}>
       {lesson.id === initialLessonId && <span className="lesson-card__recommendation-label">本次推荐课时 · 从这里继续学习</span>}
       {learningLabels(lesson.knowledgePoints).length > 0 && <section className="lesson-knowledge"><strong>本课时知识点</strong><div>{learningLabels(lesson.knowledgePoints).map((point) => <span key={point}>{point}</span>)}</div></section>}
       <div className="lesson-card__heading"><span>{String(index + 1).padStart(2, "0")}</span><div><small>{lesson.lessonType === "workflow" ? "AI 工作流实践" : lesson.lessonType === "practice" ? "动手练习" : lesson.lessonType === "assignment" ? "课时作业" : "课程课时"} · {lesson.estimatedMinutes} 分钟</small><strong>{lesson.title}</strong><p>{lesson.summary}</p></div><em>{lesson.progressPercent >= 100 ? "已完成" : `${lesson.progressPercent ?? 0}%`}</em></div>
+      <button className="lesson-expand" aria-expanded={openLesson===lesson.id} aria-controls={'lesson-body-'+lesson.id} onClick={()=>setOpenLesson(openLesson===lesson.id?'':lesson.id)}>{openLesson===lesson.id?'收起课时':'展开课时与练习'}</button><div id={'lesson-body-'+lesson.id} hidden={openLesson!==lesson.id}>
       <TrialLesson teaching={lesson.teaching}/>
       {!!lesson.learningSteps?.length && <section className="lesson-card__section"><strong>学习步骤</strong><ol>{lesson.learningSteps.map((step, stepIndex) => <li key={`${stepIndex}-${step}`}>{step}</li>)}</ol></section>}
       {lesson.practiceTask && <section className="lesson-card__section"><strong>练习任务</strong><p>{lesson.practiceTask}</p></section>}
       {lesson.completionCriteria && <section className="lesson-card__section"><strong>完成标准</strong><p>{lesson.completionCriteria}</p></section>}
       {lesson.requiresWorkSubmission && <section className="lesson-card__submission"><strong>提交本课作品</strong>{lesson.submission ? <p>已关联作品：{myWorks.find(work => work.id === lesson.submission.workId)?.title ?? lesson.submission.workId}</p> : <><p>先在案例社区保存自己的作品草稿，再关联到本课时。</p><div><select aria-label={`选择${lesson.title}的提交作品`} value="" onChange={event => void saveLessonWork(lesson.id, event.target.value)} disabled={loading}><option value="">选择我的作品</option>{myWorks.filter(work => ["draft", "rejected", "pending", "approved"].includes(work.status)).map(work => <option key={work.id} value={work.id}>{work.title} · {work.status}</option>)}</select><small>还没有作品？先前往案例社区创建草稿，保存后返回本课时。</small></div></>}</section>}
       <footer className="lesson-card__footer">{lesson.progressPercent >= 100 ? <b><CheckCircle size={17} weight="fill" /> 已完成 · 学习时长和今日任务已记录</b> : <><label><input type="checkbox" checked={Boolean(completionChecks[lesson.id])} onChange={event => setCompletionChecks(current => ({ ...current, [lesson.id]: event.target.checked }))} /> 我已完成本课时要求</label><button disabled={loading || !completionChecks[lesson.id] || (lesson.requiresWorkSubmission && !lesson.submission)} onClick={() => completeLesson(lesson.id)}>完成课时 <ArrowRight size={15} /></button></>}</footer>
+      </div>
     </article>)}</div>
     {selected.resources?.length > 0 && <CourseMaterials resources={selected.resources} />}
   </section>;
@@ -166,7 +173,7 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载{variant==='morph'?'原子课程':' AI 讲堂'}</strong><p>正在同步课程、作者和工具标签。</p></section>;
   if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>{variant==='morph'?'原子课程':'AI 讲堂'}暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
 
-  if (variant === 'morph') return <>{detailError&&initialCourseId&&<div className="catalog-notice" role="alert">{detailError}<button onClick={returnToCatalog}>返回原子课程</button></div>}<MorphCourseCatalog courses={courses} onOpen={showCourse} onNavigate={onNavigate} /></>;
+  if (variant === 'morph') return <>{detailError&&initialCourseId&&<div className="catalog-notice" role="alert">{detailError}<button onClick={returnToCatalog}>{context.to?context.label:'返回课程库'}</button></div>}<MorphCourseCatalog embedded accountId={accountId} courses={courses} onOpen={showCourse} onNavigate={onNavigate} /></>;
   return <>
     <section className="learning-library-intro" aria-labelledby="learning-library-title">
       <div className="learning-library-intro__copy">

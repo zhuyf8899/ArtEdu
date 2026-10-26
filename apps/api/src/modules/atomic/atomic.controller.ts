@@ -9,6 +9,7 @@ import { createAtomicSchema,saveAtomicSchema,atomicRevisionSchema,atomicDecision
 @Controller('atomic')
 export class AtomicController {
  constructor(private readonly atomic:AtomicService,private readonly auth:AuthService){}
+ @Post('starter-drafts')async starterDrafts(@Req()req:FastifyRequest){return this.atomic.prepareStarterDrafts(await this.auth.getActor(req));}
  @Get('abilities')async abilities(@Req()req:FastifyRequest){return this.atomic.abilities(await this.auth.getActor(req));}
  @Get('knowledge/:id')async knowledge(@Req()req:FastifyRequest,@Param('id')id:string){return this.atomic.knowledgeLearning(await this.auth.getActor(req),id);}
  @Put('nodes/:id/knowledge')async bindKnowledge(@Req()req:FastifyRequest,@Param('id')id:string,@Body()body:unknown){return this.atomic.bindKnowledge(await this.auth.getActor(req),id,parseInput(atomicKnowledgeSchema,body));}

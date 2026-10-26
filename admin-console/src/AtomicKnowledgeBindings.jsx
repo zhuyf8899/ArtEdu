@@ -1,0 +1,8 @@
+import {useEffect,useState} from 'react';
+import {atomicRequest,getManagedKnowledgeMap} from './services/adminApi.js';
+export function AtomicKnowledgeBindings({detail,onNotice}){
+ const [nodes,setNodes]=useState([]),[selected,setSelected]=useState([]),[query,setQuery]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ useEffect(()=>{let active=true;Promise.all([getManagedKnowledgeMap(),atomicRequest('/nodes/'+encodeURIComponent(detail.id)+'?revision='+detail.revision)]).then(([map,node])=>{if(!active)return;setNodes(map.nodes.filter(n=>n.status==='published'));setSelected(node.knowledgeNodeIds||[]);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[detail.id,detail.revision]);
+ const save=async()=>{setBusy(true);try{await atomicRequest('/nodes/'+encodeURIComponent(detail.id)+'/knowledge','PUT',{revision:detail.revision,knowledgeNodeIds:selected});onNotice('知识点关联已保存，画像仅依据真实学习证据更新');setError('');}catch(e){setError(e.message);}finally{setBusy(false);}};
+ return <details className="atomic-knowledge-binding"><summary>关联能力知识点 · {selected.length} 项</summary><p>仅已发布知识点可关联。关联不会生成学习完成记录或教师评价；修改将按当前版本重新汇总真实证据。</p>{error&&<p role="alert">{error}</p>}<label>筛选知识点<input value={query} onChange={e=>setQuery(e.target.value)}/></label><fieldset disabled={busy}>{nodes.filter(n=>n.title.includes(query)).map(n=><label key={n.id}><input type="checkbox" checked={selected.includes(n.id)} onChange={()=>setSelected(list=>list.includes(n.id)?list.filter(id=>id!==n.id):[...list,n.id])}/>{n.title}</label>)}</fieldset>{!nodes.length&&<p>暂无已发布知识点，请先在管理后台的知识管理中配置。</p>}<button className="atomic-button secondary" disabled={busy||selected.length>20} onClick={save}>{busy?'正在保存…':'保存知识点关联'}</button></details>;
+}

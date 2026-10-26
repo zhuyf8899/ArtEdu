@@ -101,6 +101,7 @@ export class AuthService {
         INSERT INTO auth_sessions (id,user_id,token_hash,expires_at)
         VALUES ($1,$2,$3,$4)
       `, [randomUUID(), user.id, this.hashSessionToken(token), expiresAt]);
+      await client.query('UPDATE users SET last_login_at=CURRENT_TIMESTAMP,last_seen_at=CURRENT_TIMESTAMP WHERE id=$1',[user.id]);
     });
 
     return { actor: this.toActor(user), token, expiresAt };
@@ -141,6 +142,7 @@ export class AuthService {
     if (!user) return undefined;
     if (user.status !== "active") throw new ForbiddenException("当前账户不可用");
     await this.database.query("UPDATE auth_sessions SET last_seen_at = CURRENT_TIMESTAMP WHERE token_hash = $1", [this.hashSessionToken(token)]);
+    await this.database.query('UPDATE users SET last_seen_at=CURRENT_TIMESTAMP WHERE id=$1 AND (last_seen_at IS NULL OR last_seen_at<CURRENT_TIMESTAMP-INTERVAL \'1 minute\')',[user.id]);
     return this.toActor(user);
   }
 

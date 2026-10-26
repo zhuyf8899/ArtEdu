@@ -22,7 +22,7 @@ export function CaseReviewContent({ work }) {
     <h3 id="review-content-title">作品内容</h3>
     <p ref={summaryRef} id="review-case-summary" className={`review-case-summary${expanded ? " is-expanded" : ""}`}>{summary}</p>
     {(hasMore || expanded) && <button type="button" className="review-summary-toggle" aria-expanded={expanded} aria-controls="review-case-summary" onClick={() => setExpanded(value => !value)}>{expanded ? "收起简介" : "展开完整简介"}</button>}
-    <CaseStoryView work={work} showMeta={false} showSource={false} />
+    <CaseStoryView work={work} showMeta={false} showSource={false} showNavigation={false} />
   </section>;
 }
 
@@ -31,7 +31,11 @@ export function CaseReviewChecks({ work, review }) {
   const story = work.story ?? {};
   const issues = [...new Set([...(review.editorialIssues ?? []), ...findCaseEditorialIssues(work).map(issue => issue.message)])];
   const source = safeCaseSourceUrl(story.sourceUrl), original = safeCaseSourceUrl(story.originalUrl);
+  const processed=review.status!=='pending';
+  const decision=work.reviewHistory?.find(event=>event.action===(review.status==='approved'?'approve':'reject'));
+  const decidedAt=decision?.createdAt&&Number.isFinite(Date.parse(decision.createdAt))?new Date(decision.createdAt).toLocaleString('zh-CN'):'历史记录未提供时间';
   return <>
+    {processed&&<section className="review-card"><h3>{review.status==='approved'?'人工审核已通过 · 发布已生效':'人工审核已退回'}</h3><p>{decision?.reviewer||'历史审核记录'} · {decidedAt}</p>{decision?.reason&&<p>{decision.reason}</p>}<p className="review-card-hint">以下机器状态与资料提示为历史核对信息，不表示当前仍在等待审核。</p></section>}
     <section className="review-card" aria-labelledby="review-facts-title">
       <h3 id="review-facts-title">资料核对</h3>
       <dl className="review-meta-list">
@@ -41,9 +45,9 @@ export function CaseReviewChecks({ work, review }) {
         <div><dt>使用工具</dt><dd>{story.tools?.join("、") || "未填写"}</dd></div>
         <div><dt>创作方法</dt><dd>{story.methods?.join("、") || "未填写"}</dd></div>
         <div><dt>生成模型</dt><dd>{review.model}</dd></div>
-        <div><dt>内容检测</dt><dd><span className="review-check-state">{review.machineStatus}</span></dd></div>
+        <div><dt>{processed?'历史机器检测':'内容检测'}</dt><dd><span className="review-check-state">{review.machineStatus}</span></dd></div>
       </dl>
-      {!!issues.length && <div className="review-check-alert" role="note"><strong>需核对 {issues.length} 项</strong><ul>{issues.map(issue => <li key={issue}>{issue}</li>)}</ul></div>}
+      {!!issues.length && (processed?<details className="review-disclosure"><summary>历史资料提示 · {issues.length} 项</summary><p>保留原检测提示供回看；当前发布结论见上方人工审核记录。</p><ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul></details>:<div className="review-check-alert" role="note"><strong>需核对 {issues.length} 项</strong><ul>{issues.map(issue => <li key={issue}>{issue}</li>)}</ul></div>)}
     </section>
     <section className="review-card" aria-labelledby="review-rights-title">
       <h3 id="review-rights-title">署名与展示授权 <span className={`review-status ${story.authorization === "confirmed" ? "is-approved" : "is-pending"}`}>{story.authorization === "confirmed" ? "已确认" : "待确认"}</span></h3>

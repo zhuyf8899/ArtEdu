@@ -23,7 +23,7 @@ const emptyLesson = () => ({
 });
 const splitTags = (value) => value.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
 
-export function AdminCourses({ showToast, canManageContent = false, canReviewCourses = false }) {
+export function AdminCourses({ showToast, canManageContent = false, canReviewCourses = false,onNavigate }) {
   const [courses, setCourses] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [courseEditor, setCourseEditor] = useState(null);
@@ -66,7 +66,8 @@ export function AdminCourses({ showToast, canManageContent = false, canReviewCou
   };
 
   return <div className="page-content">
-    <section className="page-intro"><div><p>// COURSE OPERATIONS</p><h1>课程资源管理</h1><span>创建课程、配置课时与资料，提交发布审核</span></div><button className="primary-button" onClick={() => setCourseEditor({ new: true, lessons: [emptyLesson()] })}><Plus size={18} weight="bold" /> 新建课程</button></section>
+    <section className="page-intro"><div><p>// COURSE OPERATIONS</p><h1>课程资源管理</h1><span>新课程通过已发布原子编排；下方保留既有课程及资料管理。</span></div><button className="primary-button" onClick={()=>onNavigate?.('/learning?library=courses&compose=1')}><Plus size={18} weight="bold" /> 编排完整课程</button></section>
+    <section className="audit-course-transition"><p>目录试学内容保留原进度，发布版本不能直接改写。可先整理为原子草稿，检查内容并由另一位审核人员发布，再引用为完整课程。</p><button onClick={()=>onNavigate?.('/learning?library=atoms')}>整理与管理学习原子 ↗</button><details><summary>维护旧式课时课程</summary><p>仅用于兼容旧课时结构。新课程建议使用上方原子编排。</p><button onClick={() => setCourseEditor({ new: true, lessons: [emptyLesson()] })}>创建旧式课程草稿</button></details></section>
     {loadError&&<p className="catalog-inline-warning" role="alert">{loadError}。已加载的记录仍保留。<button disabled={loading} onClick={load}>重新加载</button></p>}
     <section className="course-admin-grid">
       <article className="table-panel course-admin-list">
@@ -78,10 +79,11 @@ export function AdminCourses({ showToast, canManageContent = false, canReviewCou
           <em className={`course-state course-state--${course.status}`}>{course.catalog?.bundleId&&course.status==='published'?(course.availability==='trial'?'试学 · 教研待审':'目录 · 筹备中'):statusNames[course.status] ?? course.status}</em>
           <div className="course-admin-actions">
             {course.catalog?.bundleId&&<a href={`/learning?course=${encodeURIComponent(course.id)}`} target="_blank" rel="noopener noreferrer">预览目录 / 试学讲义</a>}
-            <button disabled={busy || !editable(course)} onClick={() => openCourse(course, "course")}>编辑课程</button>
+            <button title={!editable(course)?(course.status==='archived'?'课程已归档，恢复至草稿后编辑':'公开版本不可直接改写，请整理为原子草稿后审核发布'):undefined} disabled={busy || !editable(course)} onClick={() => openCourse(course, "course")}>编辑课程</button>
             <button disabled={busy || !["draft", "rejected", "published"].includes(course.status)} onClick={() => openCourse(course, "bindings")}>图谱配置</button>
             <button disabled={busy} onClick={() => openCourse(course, "resources")}>管理资料</button>
-            <button disabled={busy || !editable(course)} onClick={() => run(() => submitCourseReview(course.id), "课程已提交发布审核")}>提交审核 <ArrowRight size={15} weight="bold" /></button>
+            <button title={!editable(course)?'只有草稿或退回版本可以提交审核':undefined} disabled={busy || !editable(course)} onClick={() => run(() => submitCourseReview(course.id), "课程已提交发布审核")}>提交审核 <ArrowRight size={15} weight="bold" /></button>
+            {!editable(course)&&<small className="admin-course-lock-reason">{course.status==='archived'?'已归档：恢复为草稿后可编辑。':'公开版本只读；新内容请整理为原子草稿审核。'}</small>}
             {canManageContent && <button className="content-remove" disabled={busy} aria-label={`${course.status === 'archived' ? '恢复' : '删除或下架'}课程：${course.title}`} onClick={() => setLifecycleTarget(course)}>{course.status === 'archived' ? '恢复至草稿' : '删除 / 下架'}</button>}
           </div>
         </div>)}

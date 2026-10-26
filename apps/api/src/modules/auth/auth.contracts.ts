@@ -7,7 +7,7 @@ export const localLoginSchema = z.object({
   password: z.string().max(128),
 }).superRefine(({ username, password }, context) => {
   if (password.length < 12 && !(localDemoUsernames.has(username) && password === "123456")) {
-    context.addIssue({ code: z.ZodIssueCode.too_small, minimum: 12, inclusive: true, type: "string", path: ["password"], message: "密码至少需要 12 位" });
+    context.addIssue({ code: z.ZodIssueCode.too_small, minimum: 12, inclusive: true, origin: "string", path: ["password"], message: "密码至少需要 12 位" });
   }
 });
 

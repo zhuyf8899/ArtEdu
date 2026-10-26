@@ -164,7 +164,7 @@ export class AdminRepository {
         jv.monthly_used,
         jv.active_jobs,
         wv.works,
-        u.updated_at AS last_active
+        GREATEST(u.last_seen_at,u.last_login_at) AS last_active
       FROM users u
       LEFT JOIN departments d ON d.id = u.department_id
       LEFT JOIN role_values rv ON rv.user_id = u.id
@@ -435,8 +435,8 @@ export class AdminRepository {
       monthlyUsed,
       concurrentLimit,
       works: Number(row.works ?? 0),
-      // last_active 来自 users.updated_at，表示用户资料更新时间，不是 auth_sessions 的登录或活跃时间。
-      lastActive: row.last_active.toISOString(),
+      // No historical login time is fabricated from a profile update.
+      lastActive: row.last_active?.toISOString() ?? '',
     };
   }
 

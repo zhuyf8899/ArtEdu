@@ -4,8 +4,9 @@ const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式必�
 
 export const createLearningTaskSchema = z.object({
   title: z.string().trim().min(1, "任务名称不能为空").max(120),
-  taskType: z.enum(["course", "workflow", "review", "note", "custom"]).default("custom"),
+  taskType: z.enum(["course", "workflow", "review", "note", "custom", "atom"]).default("custom"),
   targetId: z.string().trim().max(160).optional(),
+  targetRevision: z.number().int().positive().optional(),
   dueDate: dateOnlySchema.optional(),
 });
 

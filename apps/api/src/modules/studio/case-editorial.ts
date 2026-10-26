@@ -14,6 +14,24 @@ const editorialPatterns = [
   /验证作品创建、工作流关联、标签、审核、评论与互动完整链路/,
 ];
 
+/** Move only explicit platform/import notes, preserving the author prefix and a private copy. */
+export function separateEditorialText(value:string){
+ const markers=['资料整理说明：','资料整理说明:','本案例根据作者提供的','本文为依据原作说明整理','本次导入','本轮导入','视频待作者补充'];
+ const publicParts:string[]=[],notes:string[]=[];
+ for(const paragraph of String(value??'').split(/\n\s*\n/)){
+  const positions=markers.map(m=>paragraph.indexOf(m)).filter(i=>i>=0);
+  if(!positions.length){publicParts.push(paragraph);continue;}
+  const cut=Math.min(...positions);let prefix=paragraph.slice(0,cut);
+  // A sentence beginning before a marker still belongs to the import note.
+  if(paragraph.includes('视频待作者补充')&&cut===paragraph.indexOf('视频待作者补充')){
+   const sentence=Math.max(prefix.lastIndexOf('。'),prefix.lastIndexOf('\n'))+1;
+   notes.push(paragraph.slice(sentence));prefix=paragraph.slice(0,sentence);
+  }else notes.push(paragraph.slice(cut));
+  if(prefix.trim())publicParts.push(prefix.trim());
+ }
+ return {text:publicParts.join('\n\n').trim(),notes:notes.join('\n\n').trim()};
+}
+
 export function findCaseEditorialIssues(input: PublicCopy): { field: string; message: string }[] {
   const fields: [string, string | undefined][] = [["案例名称", input.title], ["项目简介", input.summary], ["经验与反思", input.story?.reflection]];
   input.story?.creators?.forEach(value => fields.push(["原作者署名", value]));

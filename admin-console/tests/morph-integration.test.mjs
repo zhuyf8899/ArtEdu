@@ -76,7 +76,7 @@ test('all imported CSS rules stay namespaced including body tokens and media rul
 test('integration keeps real business services, legacy rollback, and excludes demo storage',async()=>{
   const portal=await readFile(new URL('../src/Portal.jsx',import.meta.url),'utf8');
   assert.match(portal,/VITE_PORTAL_UI/); assert.match(portal,/getCourses\(\), getWorks\(\)/);
-  assert.match(portal,/<LearningLibrary variant=/);assert.match(portal,/<CommunityLibrary variant=/);
+  assert.match(portal,/<LearningLibrary\b[^>]*variant=/);assert.match(portal,/<CommunityLibrary variant=/);
   const dir=new URL('../src/morph/',import.meta.url);
   for(const file of (await readdir(dir)).filter(n=>/\.(jsx|js)$/.test(n))){
     const source=await readFile(new URL(file,dir),'utf8');
