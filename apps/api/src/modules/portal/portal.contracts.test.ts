@@ -25,7 +25,7 @@ test('search keeps public authors, precise detail routes and full matching total
   const queries: string[]=[];
   const base={title:'测试',summary:'',category:'艺术',author:'上传账号',tags:[],updated_at:new Date('2026-10-18'),match_count:12};
   const rows=[{...base,id:'course one',catalog_json:{authorLabel:'课程作者'}},{...base,id:'flow one'}, {...base,id:'work one',creators:['Robin Champenois']}, {...base,id:'tool one',directory_name:'工具名称'}];
-  const database={query:async(sql:string)=>{queries.push(sql);return {rows:[rows[queries.length-1]]};}};
+  const database={query:async(sql:string)=>{queries.push(sql);return {rows:rows[queries.length-1]?[rows[queries.length-1]]:[]};}};
   const service=new PortalService(database as any,{} as any);
   const result=await service.search({} as any,{query:'测试',type:'all'});
   assert.equal(result.matchCount,48);assert.equal(result.items.length,4);

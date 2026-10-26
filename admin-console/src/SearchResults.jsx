@@ -1,3 +1,5 @@
+import { withReturnTarget } from './resourceContext.js';
+import { useScopedViewState } from './useScopedViewState.js';
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, BookOpenText, CirclesThreePlus, Funnel, ImageSquare,
@@ -10,12 +12,14 @@ import { morphModuleLabel, morphCourseCover, morphCourseLevel, toolCategoryName 
 
 const TYPE_FILTERS = [
   ["all", "全部"],
+  ["atomic", "学习原子与完整课程"],
   ["course", "AI 讲堂"],
   ["workflow", "设计工具"],
   ["work", "案例社区"],
 ];
 
 const TYPE_META = {
+  atomic: {label:"学习原子与完整课程",Icon:BookOpenText,route:"/learning?library=atoms"},
   course: { label: "AI 讲堂", Icon: BookOpenText, route: "/learning" },
   workflow: { label: "设计工具", Icon: CirclesThreePlus, route: "/studio" },
   work: { label: "案例社区", Icon: ImageSquare, route: "/community" },
@@ -37,24 +41,21 @@ function normalizePayload(result) {
   return { ...result, items, availableTags: [...new Set(items.flatMap((item) => item.tags))].filter((value) => !MODULE_LABELS.has(value)) };
 }
 
-export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate, variant = 'classic' }) {
+export function SearchResults({ accountId='anonymous', initialQuery, fallbackData, onSearch, onNavigate, variant = 'classic' }) {
   const [draft, setDraft] = useState(initialQuery);
   const [payload, setPayload] = useState(() => normalizePayload(fallbackSearch(initialQuery, fallbackData)));
-  const [type, setType] = useState("all");
-  const [tag, setTag] = useState("");
-  const [author, setAuthor] = useState("");
-  const [method, setMethod] = useState("");
-  const [tool, setTool] = useState("");
-  const [sort, setSort] = useState("relevance");
+  const [type, setType] = useScopedViewState(accountId+':search:'+initialQuery+':type',"all");
+  const [tag, setTag] = useScopedViewState(accountId+':search:'+initialQuery+':tag',"");
+  const [author, setAuthor] = useScopedViewState(accountId+':search:'+initialQuery+':author',"");
+  const [method, setMethod] = useScopedViewState(accountId+':search:'+initialQuery+':method',"");
+  const [tool, setTool] = useScopedViewState(accountId+':search:'+initialQuery+':tool',"");
+  const [sort, setSort] = useScopedViewState(accountId+':search:'+initialQuery+':sort',"relevance");
   const [loading, setLoading] = useState(false);
   const [offline, setOffline] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     setDraft(initialQuery);
-    setType("all");
-    setTag("");
-    setAuthor(""); setMethod(""); setTool(""); setSort("relevance");
     if (!initialQuery.trim()) {
       setPayload(normalizePayload(fallbackSearch("", fallbackData)));
       setLoading(false);setOffline(false);
@@ -99,6 +100,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
 
   const counts = useMemo(() => ({
     all: facetFilteredItems.length,
+    atomic: facetFilteredItems.filter(item=>item.type==="atomic").length,
     course: facetFilteredItems.filter((item) => item.type === "course").length,
     workflow: facetFilteredItems.filter((item) => item.type === "workflow").length,
     work: facetFilteredItems.filter((item) => item.type === "work").length,
@@ -106,7 +108,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
 
   const activeFilters = Boolean(type !== "all" || tag || author || method || tool);
   const clearFilters = () => { setType("all"); setTag(""); setAuthor(""); setMethod(""); setTool(""); };
-  const groupedItems = type === "all" ? ["course", "workflow", "work"].map(group => ({ type: group, items: visibleItems.filter(item => item.type === group) })).filter(group => group.items.length) : [{ type, items: visibleItems }];
+  const groupedItems = type === "all" ? ["atomic", "course", "workflow", "work"].map(group => ({ type: group, items: visibleItems.filter(item => item.type === group) })).filter(group => group.items.length) : [{ type, items: visibleItems }];
   // 首屏只显示常用标签；若当前标签原本藏在“更多”里，仍把它置于可见区域。
   const primaryTags = payload.availableTags.slice(0, 6);
   if (tag && primaryTags.length && payload.availableTags.includes(tag) && !primaryTags.includes(tag)) primaryTags[primaryTags.length - 1] = tag;
@@ -145,7 +147,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
 
       <div className="search-results">
         <header><div><span>// RESULTS</span><h2>{loading ? "正在整理结果…" : `${visibleItems.length} 项匹配内容`}</h2><small>{variant === 'morph' ? '按原子课程、技能工具与案例社区分组' : '按 AI 讲堂、设计工具与案例社区分组'} · {payload.matchCount ?? payload.items.length} 条原始匹配</small></div><label className="search-sort">排序<select value={sort} onChange={event => setSort(event.target.value)}><option value="relevance">匹配度</option><option value="latest">最近更新</option><option value="title">标题 A–Z</option></select></label></header>
-        {loading ? <div className="search-state"><SpinnerGap className="spin" size={34} /><strong>正在搜索 ArtEdu</strong><p>正在汇总课程、工作流与案例内容。</p></div> : visibleItems.length ? <div className="search-result-groups">{groupedItems.map(group => <section className="search-result-group" key={group.type}><h3>{morphModuleLabel(TYPE_META[group.type].label,variant)}<span>{group.items.length} 项</span></h3><div className="search-result-list">{group.items.map((item, index) => <SearchCard variant={variant} key={`${item.type}-${item.id}`} item={item} index={index} onOpen={() => onNavigate(item.route ?? TYPE_META[item.type].route)} />)}</div></section>)}</div> : <div className="search-state"><MagnifyingGlass size={38} weight="thin" /><strong>没有找到匹配内容</strong><p>尝试减少筛选条件，或搜索“AI 设计”“传统纹样”“网页”等关键词。</p><button onClick={() => { clearFilters(); setDraft(""); onSearch(""); }}>重置关键词与筛选</button></div>}
+        {loading ? <div className="search-state"><SpinnerGap className="spin" size={34} /><strong>正在搜索 ArtEdu</strong><p>正在汇总课程、工作流与案例内容。</p></div> : visibleItems.length ? <div className="search-result-groups">{groupedItems.map(group => <section className="search-result-group" key={group.type}><h3>{morphModuleLabel(TYPE_META[group.type].label,variant)}<span>{group.items.length} 项</span></h3><div className="search-result-list">{group.items.map((item, index) => <SearchCard variant={variant} key={`${item.type}-${item.id}`} item={item} index={index} onOpen={() => onNavigate(withReturnTarget(item.route ?? TYPE_META[item.type].route))} />)}</div></section>)}</div> : <div className="search-state"><MagnifyingGlass size={38} weight="thin" /><strong>没有找到匹配内容</strong><p>尝试减少筛选条件，或搜索“AI 设计”“传统纹样”“网页”等关键词。</p><button onClick={() => { clearFilters(); setDraft(""); onSearch(""); }}>重置关键词与筛选</button></div>}
       </div>
     </div>
   </section>;
@@ -153,7 +155,7 @@ export function SearchResults({ initialQuery, fallbackData, onSearch, onNavigate
 
 function SearchCard({ item, index, onOpen, variant }) {
   const { Icon, label: originalLabel } = TYPE_META[item.type];
-  const label = morphModuleLabel(originalLabel,variant);
+  const label = item.typeLabel&&item.type==="atomic"?item.typeLabel:morphModuleLabel(originalLabel,variant);
   // 无上传封面的课程生成与卡片同宽高的标题图，避免 object-fit 裁掉中英文标题。
   const visual = item.type === "course" ? (variant === 'morph' ? coverImageFor({...item,coverImageUrl:morphCourseCover(item)}, 220, 230) : coverImageFor(item, 220, 230)) : item.type === "work" ? item.previewUrl : item.coverUrl || null;
   const visibleTags = [...new Set([item.category, ...(item.methods ?? []), ...(item.tags ?? [])].filter((value) => value && !MODULE_LABELS.has(value)))].slice(0, 4);
@@ -164,7 +166,7 @@ function SearchCard({ item, index, onOpen, variant }) {
       <h3>{item.title}</h3>{item.type==='course'&&courseReadiness(item)&&<span className="catalog-notice">{courseReadiness(item)}</span>}<p>{item.summary || "该内容暂未填写简介。"}</p>
       <div className="search-card__tags">{visibleTags.map((itemTag) => <span key={itemTag}>{itemTag}</span>)}</div>
       <div className="search-card__details"><span><strong>{item.type === "course" ? "授课作者" : item.directoryName || item.catalog?.bundleId?'条目来源':"创作者"}</strong>{item.author}</span>{item.tools?.length > 0 && <span><strong>创作工具</strong>{item.tools.slice(0, 3).join(" · ")}{item.tools.length > 3 ? ` 等 ${item.tools.length} 种` : ""}</span>}</div>
-      <footer><button onClick={onOpen}>{item.type === "course" ? "查看课程" : item.type === "work" ? "查看案例" : (variant === 'morph' ? '查看技能工具' : '查看设计工具')} <ArrowRight size={16} weight="bold" /></button></footer>
+      <footer><button onClick={onOpen}>{item.type === "atomic" ? "打开学习内容" : item.type === "course" ? "查看课程" : item.type === "work" ? "查看案例" : (variant === 'morph' ? '查看技能工具' : '查看设计工具')} <ArrowRight size={16} weight="bold" /></button></footer>
     </div>
   </article>;
 }

@@ -20,6 +20,28 @@ const educator=(a:Actor)=>a.roles.some(r=>['admin','teacher'].includes(r));
 @Injectable()
 export class AtomicService {
  constructor(private readonly db:DatabaseService,private readonly auth:AuthService){}
+ async prepareStarterDrafts(actor:Actor){
+  this.auth.requireAnyRole(actor,['teacher','admin']);
+  return this.db.transaction(async c=>{
+   await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',['atomic-starter:'+actor.id]);
+   const lessons=await c.query(`SELECT l.*,c.title AS course_title,c.category,c.catalog_json FROM course_lessons l JOIN courses c ON c.id=l.course_id WHERE c.status='published' AND l.status='published' AND c.catalog_json->>'availability'='trial' ORDER BY c.id,l.sort_order`);
+   const items=[];
+   for(const lesson of lessons.rows){
+    const exists=await c.query('SELECT node_id FROM atomic_starter_sources WHERE owner_id=$1 AND lesson_id=$2',[actor.id,lesson.id]);
+    if(exists.rows.length){items.push({id:exists.rows[0].node_id,created:false});continue;}
+    const n:Node={id:randomUUID(),kind:'teaching',owner_id:actor.id,parent_id:null,published_revision:null};
+    const teaching=lesson.teaching_json??{};
+    const content=[`# ${lesson.title}`,'> 试学参考内容，仍待教研完善。学习记录用于回顾，不代表能力认证。',lesson.summary,teaching.notice,Array.isArray(teaching.sections)?teaching.sections.map((section:{heading:string;text:string})=>`## ${section.heading}\n${section.text}`).join('\n\n'):'',Array.isArray(lesson.learning_steps)?lesson.learning_steps.map((s:string,i:number)=>`${i+1}. ${s}`).join('\n'):'',lesson.practice_task&&`## 实践任务\n${lesson.practice_task}`,lesson.completion_criteria&&`## 完成标准\n${lesson.completion_criteria}`].filter(Boolean).join('\n\n');
+    const payload=parseInput(atomPayload,{title:lesson.title,summary:lesson.summary||`来自《${lesson.course_title}》的独立学习单元，等待教师确认。`,objective:lesson.completion_criteria||`理解并尝试应用“${lesson.title}”的核心方法。`,content,...(['color','type','grid'].includes(teaching.visual)?{visual:teaching.visual}:{}),minutes:Math.max(1,Math.min(480,lesson.estimated_minutes||15)),direction:['设计基础','设计方法','美术史','设计史','软件实操','人工智能基础'].includes(lesson.category)?lesson.category:'设计基础',knowledge:lesson.knowledge_points??[],tools:lesson.catalog_json?.tools??[],completion:lesson.practice_task?'practice':'read',exercise:lesson.practice_task||'',source:`整理自平台试学课程《${lesson.course_title}》 / 课时 ${lesson.id}。原试学内容仍待教研确认；整理不代表审核发布或能力认证。`,assetIds:[]});
+    await c.query("INSERT INTO atomic_nodes(id,kind,owner_id) VALUES($1,'teaching',$2)",[n.id,actor.id]);
+    await c.query('INSERT INTO atomic_versions(node_id,revision,payload) VALUES($1,1,$2)',[n.id,JSON.stringify(payload)]);
+    await c.query('INSERT INTO atomic_starter_sources(owner_id,lesson_id,node_id) VALUES($1,$2,$3)',[actor.id,lesson.id,n.id]);
+    await this.audit(c,actor,n,1,'prepare_starter',`来自试学课时 ${lesson.id}；需作者检查并提交另一位审核人员审核`);
+    items.push({id:n.id,created:true});
+   }
+   return {items,created:items.filter(item=>item.created).length};
+  });
+ }
  async portrait(actor:Actor){
   // Public teaching atoms plus this learner's historical published versions; never other users' progress.
   const result=await this.db.query(`SELECT n.id,v.revision,jsonb_build_object('title',v.payload->'title','summary',v.payload->'summary','direction',v.payload->'direction','knowledge',v.payload->'knowledge','minutes',v.payload->'minutes','completion',v.payload->'completion') AS payload,p.stage,p.feedback,p.updated_at AS "updatedAt",n.published_revision AS "publishedRevision"
@@ -148,6 +170,7 @@ export class AtomicService {
  }
  async detail(actor:Actor,id:string,revision?:number){
   const {n,v}=await this.visible(actor,id,revision);
+  const knowledge=await this.db.query('SELECT knowledge_node_id FROM atomic_knowledge_bindings WHERE atom_id=$1 AND revision=$2 ORDER BY knowledge_node_id',[id,v.revision]);
   const canReview=v.status==='pending_review'&&n.owner_id!==actor.id&&(reviewer(actor)||await this.responsibleTeacher(this.db,actor,n));
   const parent=n.parent_id?await this.db.query(`SELECT v.payload->>'title' AS title FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision WHERE n.id=$1`,[n.parent_id]):null;
   const progress=await this.db.query('SELECT stage,submission,feedback,updated_at AS "updatedAt" FROM atomic_progress WHERE user_id=$1 AND node_id=$2 AND revision=$3',[actor.id,id,v.revision]);
@@ -162,7 +185,7 @@ export class AtomicService {
    const task=await this.db.query('SELECT stage,submission,feedback FROM atomic_task_submissions WHERE user_id=$1 AND course_id=$2 AND revision=$3 AND atom_id=$4',[actor.id,id,v.revision,s.atomId]);
    steps.push({...s,...r.rows[0],available:Boolean(r.rows[0]),taskProgress:task.rows[0]??null});
   }
-  return {id,kind:n.kind,ownerId:n.owner_id,parentId:n.parent_id,parentTitle:parent?.rows[0]?.title??'',canReview,publishedRevision:n.published_revision,revision:v.revision,status:v.status,payload:v.payload,progress:progress.rows[0]??null,assets:assets.rows.map(a=>({...a,url:`/api/atomic/nodes/${id}/assets/${a.id}?revision=${v.revision}`})),branches:branches.rows,usedBy:usedBy.rows,versions:history.rows,feedback:feedback.rows.filter(x=>['publish','reject'].includes(x.action)),steps};
+  return {id,kind:n.kind,ownerId:n.owner_id,parentId:n.parent_id,parentTitle:parent?.rows[0]?.title??'',canReview,knowledgeNodeIds:knowledge.rows.map(row=>row.knowledge_node_id),publishedRevision:n.published_revision,revision:v.revision,status:v.status,payload:v.payload,progress:progress.rows[0]??null,assets:assets.rows.map(a=>({...a,url:`/api/atomic/nodes/${id}/assets/${a.id}?revision=${v.revision}`})),branches:branches.rows,usedBy:usedBy.rows,versions:history.rows,feedback:feedback.rows.filter(x=>['publish','reject'].includes(x.action)),steps};
  }
  async progress(actor:Actor,id:string,input:{revision:number;action:string;submission:string}){return this.db.transaction(async c=>{
   const n=await this.node(c,id,true),r=await c.query('SELECT * FROM atomic_versions WHERE node_id=$1 AND revision=$2',[id,input.revision]);const v:Version=r.rows[0];

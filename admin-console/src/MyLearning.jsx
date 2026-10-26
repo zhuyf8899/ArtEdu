@@ -21,6 +21,7 @@ import { CurriculumAtlas } from "./CurriculumAtlas.jsx";
 import { MorphMySpace } from "./morph/MorphMySpace.jsx";
 import { mySpaceView, enrichFavoriteRecords } from "./morph/mySpaceModel.js";
 import { useUnsavedChanges } from './useUnsavedChanges.js';
+import { PlanManager,NotesManager } from './LearningManagers.jsx';
 
 const COURSE_IMAGES = {
   "course-ai-design-foundation": "/assets/learning/ai-design-foundations.jpg",
@@ -154,8 +155,8 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
     const safeData = data.profile?.id === account.id ? data : EMPTY_DATA;
     return <MorphMySpace account={account} data={{...safeData,favorites:enrichFavoriteRecords(safeData.favorites,caseCatalog)}} creation={creation} view={currentView} onView={onView} onNavigate={onNavigate}
       loading={loading} error={loadError} onRetry={load}>
-      {currentView === 'plan' && <PlanView tasks={safeData.tasks} form={taskForm} setForm={setTaskForm} saving={saving} onSubmit={addTask} onToggle={toggleTask} onDelete={removeTask}/>}
-      {currentView === 'notes' && <NotesView notes={safeData.notes} courses={safeData.courses} form={noteForm} setForm={setNoteForm} saving={saving} onSubmit={addNote} onDelete={removeNote}/>}
+      {currentView === 'plan' && <PlanManager data={safeData} onSaved={task=>setData(current=>({...current,tasks:current.tasks.some(t=>t.id===task.id)?current.tasks.map(t=>t.id===task.id?task:t):[task,...current.tasks]}))} onToggle={toggleTask} onDelete={removeTask} onNavigate={onNavigate} onNotice={onNotice}/>}
+      {currentView === 'notes' && <NotesManager notes={safeData.notes} courses={safeData.courses} onSaved={note=>setData(current=>({...current,notes:current.notes.some(n=>n.id===note.id)?current.notes.map(n=>n.id===note.id?note:n):[note,...current.notes]}))} onDelete={removeNote} onNavigate={onNavigate} onNotice={onNotice}/>}
     </MorphMySpace>;
   }
 

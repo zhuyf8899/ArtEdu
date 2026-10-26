@@ -7,11 +7,13 @@ import { ComfyService } from './comfy.service';
 import { ComfyController } from './comfy.controller';
 import { StudioController } from "./studio.controller";
 import { StudioService } from "./studio.service";
+// Tool submissions have a separate moderated queue; accepting does not publish a directory entry.
+import { ToolRecommendationsController,ToolRecommendationsService } from './tool-recommendations';
 
 @Module({
   imports: [AuthModule, DatabaseModule, GenerationModule, CreationStorageModule],
-  controllers: [StudioController, ComfyController],
-  providers: [StudioService, ComfyService],
+  controllers: [StudioController, ComfyController, ToolRecommendationsController],
+  providers: [StudioService, ComfyService, ToolRecommendationsService],
   exports: [StudioService, ComfyService],
 })
 export class StudioModule {}

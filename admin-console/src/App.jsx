@@ -19,6 +19,7 @@ import { FeedbackProvider, useFeedback } from "./FeedbackCenter.jsx";
 import { getCurrentUser, loginLocal, logoutLocal } from "./services/adminApi.js";
 import { canEnterAdmin } from "./testAccounts.js";
 import { adminSectionFromPath, sectionFromPath, useAppRoute } from "./routing.js";
+import './platform-audit-polish.css';
 
 // lazy 延迟加载较大的页面：进入对应页面时才下载；Suspense 显示等待界面。
 const AdminDashboard = lazy(() => import("./AdminDashboard.jsx").then(({ AdminDashboard: component }) => ({ default: component })));

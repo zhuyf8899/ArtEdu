@@ -199,7 +199,7 @@ export class PortalService {
     const limit = 60;
     const include = (type: PortalSearchQuery["type"]) => query.type === "all" || query.type === type;
 
-    const [courses, workflows, works, directory] = await Promise.all([
+    const [courses, workflows, works, directory, atomic] = await Promise.all([
       include("course") ? this.database.query<SearchRow>(`
         SELECT c.id, c.title, c.summary, c.category, creator.display_name AS author, c.catalog_json,
           c.difficulty AS metadata,
@@ -319,16 +319,28 @@ export class PortalService {
           AND ($2::text IS NULL OR category=$2 OR COALESCE(catalog_json->'tags','[]'::jsonb) ? $2)
         ORDER BY sort_order LIMIT $3
       `,[patterns,tag,limit]) : Promise.resolve({rows:[] as SearchRow[]}),
+      include("atomic") ? this.database.query<Record<string,any>>(`
+        SELECT n.id,n.kind,v.revision,v.payload,u.display_name AS author,v.created_at,
+          COUNT(*) OVER()::int AS match_count
+        FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision
+        JOIN users u ON u.id=n.owner_id
+        WHERE v.status='published'
+          AND (v.payload->>'title' ILIKE ANY($1::text[]) OR v.payload->>'summary' ILIKE ANY($1::text[]) OR v.payload->>'knowledge' ILIKE ANY($1::text[]) OR v.payload->>'objective' ILIKE ANY($1::text[]))
+          AND ($2::text IS NULL OR v.payload->>'direction'=$2 OR COALESCE(v.payload->'knowledge','[]'::jsonb) ? $2)
+        ORDER BY v.created_at DESC,n.id LIMIT $3
+      `,[patterns,tag,limit]) : Promise.resolve({rows:[] as Record<string,any>[]}),
     ]);
 
     const items = [
+      ...atomic.rows.map(row=>({id:row.id,directoryName:null,type:'atomic' as const,typeLabel:row.kind==='course'?'完整课程':row.kind==='reflection'?'学习心得':'学习原子',title:row.payload.title,summary:row.payload.summary,category:row.payload.direction||(row.kind==='course'?'完整课程':'学习补充'),author:row.author,methods:[],tools:row.payload.tools||[],tags:[row.payload.direction,...(row.payload.knowledge||[])].filter(Boolean),route:`/learning?library=${row.kind==='course'?'courses':'atoms'}&node=${encodeURIComponent(row.id)}&revision=${row.revision}`,updatedAt:row.created_at.toISOString()})),
       ...courses.rows.map((row) => this.mapSearchResult("course", row)),
       ...workflows.rows.map((row) => this.mapSearchResult("workflow", row)),
       ...works.rows.map((row) => this.mapSearchResult("work", row)),
       ...directory.rows.map((row) => this.mapSearchResult("workflow", row)),
     ].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     const counts = {
-      all: Number(courses.rows[0]?.match_count ?? 0) + Number(workflows.rows[0]?.match_count ?? 0) + Number(directory.rows[0]?.match_count ?? 0) + Number(works.rows[0]?.match_count ?? 0),
+      all: Number(atomic.rows[0]?.match_count??0) + Number(courses.rows[0]?.match_count ?? 0) + Number(workflows.rows[0]?.match_count ?? 0) + Number(directory.rows[0]?.match_count ?? 0) + Number(works.rows[0]?.match_count ?? 0),
+      atomic: Number(atomic.rows[0]?.match_count??0),
       course: Number(courses.rows[0]?.match_count ?? 0),
       workflow: Number(workflows.rows[0]?.match_count ?? 0) + Number(directory.rows[0]?.match_count ?? 0),
       work: Number(works.rows[0]?.match_count ?? 0),

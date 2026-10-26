@@ -27,5 +27,6 @@ export function composeCurriculum(text,catalog=[]) {
     const course=available.find(item=>item.catalog?.code===code);
     return course ? [{course,reason:config.reasons[index]}] : [];
   });
-  return {title:config.title,steps,missing:config.codes.filter(code=>!steps.some(step=>step.course.catalog?.code===code)),duration:steps.reduce((sum,{course})=>sum+Math.max(0,Number(course.estimatedMinutes)||0),0)};
+  const ordered=[...steps].sort((a,b)=>Number(a.course.availability==='coming_soon')-Number(b.course.availability==='coming_soon')||Number(courseProgress(a.course)>=100)-Number(courseProgress(b.course)>=100));
+  return {title:config.title,steps:ordered,missing:config.codes.filter(code=>!steps.some(step=>step.course.catalog?.code===code)),duration:steps.reduce((sum,{course})=>sum+Math.max(0,Number(course.estimatedMinutes)||0),0)};
 }

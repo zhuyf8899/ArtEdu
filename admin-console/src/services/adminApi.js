@@ -34,6 +34,9 @@ async function request(path, options = {}) {
 }
 
 export const getAdminUsers = () => request("/admin/users");
+export const getToolRecommendations=(managed=false)=>request(managed?'/admin/tool-recommendations':'/me/tool-recommendations');
+export const submitToolRecommendation=input=>request('/me/tool-recommendations',{method:'POST',body:JSON.stringify(input)});
+export const decideToolRecommendation=(id,input)=>request('/admin/tool-recommendations/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(input)});
 export const atomicRequest = (path, method = 'GET', body) => request(`/atomic${path}`, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
 export const uploadAtomicFile = (id, revision, file, options = {}) => uploadFile(`${API_BASE_URL}/atomic/nodes/${encodeURIComponent(id)}/assets?revision=${revision}`, file, options);
 export const getAdminReviews = () => request("/admin/reviews");

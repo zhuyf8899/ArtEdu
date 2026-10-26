@@ -6,6 +6,7 @@ import { CatalogControls } from './CatalogControls.jsx';
 import { dailyQuotaLabel, creationModeDescription } from './morphPresentation.js';
 import { isCollectedWork, spaceEvidence, spaceCourseForCard, spaceCourseStatus } from './mySpaceModel.js';
 import './my-space.css';
+import { withReturnTarget } from '../resourceContext.js';
 
 const VIEWS=[['overview','空间总览',House],['portrait','我的专业画像',ChartPolar],['courses','我的课程',BookOpenText],['plan','学习计划',CalendarCheck],['notes','学习笔记',NotePencil],['works','我的作品',ImageSquare],['favorites','收藏案例',BookmarkSimple]];
 const statusName=value=>({draft:'草稿',pending:'审核中',approved:'已发布',rejected:'待修改',archived:'已归档'}[value]||'作品记录');
@@ -58,7 +59,7 @@ function SpaceCourses({courses,onNavigate}) {
 }
 function WorkRecords({items,onNavigate,error,onRetry,favorite=false}) {
   if(error)return <div className="morph-space-empty" role="alert"><p>作品记录暂时无法加载：{error}</p><button onClick={onRetry}>重新加载作品</button></div>;
-  return items.length?<div className="morph-space-work-grid">{items.map(work=><article key={work.id}><button type="button" className="morph-space-work-open" onClick={()=>onNavigate(`/community?work=${encodeURIComponent(work.id)}`)}>{work.previewUrl?<img src={work.previewUrl} alt={work.title} loading="lazy"/>:<div className="morph-space-work-empty"><ImageSquare size={32}/><span>暂无封面</span></div>}<div><small>{favorite?'已收藏案例':isCollectedWork(work)?'我整理的案例':statusName(work.status)}</small><h3>{work.title}</h3><p>{favorite?(work.creators?.length?`原作者：${work.creators.join('、')}`:'查看案例与原作者信息'):isCollectedWork(work)?`原作者：${work.creators?.join('、')||'查看案例署名'}`:work.discipline||'创作记录'}</p><span>查看记录<ArrowRight size={15}/></span></div></button></article>)}</div>:<div className="morph-space-empty"><ImageSquare size={30}/><h3>{favorite?'还没有收藏案例':'还没有相关作品记录'}</h3><button onClick={()=>onNavigate(favorite?'/community':'/create')}>{favorite?'浏览案例社区':'开始一次创作'}<ArrowRight size={16}/></button></div>;
+  return items.length?<div className="morph-space-work-grid">{items.map(work=><article key={work.id}><button type="button" className="morph-space-work-open" onClick={()=>onNavigate(withReturnTarget(`/community?work=${encodeURIComponent(work.id)}`))}>{work.previewUrl?<img src={work.previewUrl} alt={work.title} loading="lazy"/>:<div className="morph-space-work-empty"><ImageSquare size={32}/><span>暂无封面</span></div>}<div><small>{favorite?'已收藏案例':isCollectedWork(work)?'我整理的案例':statusName(work.status)}</small><h3>{work.title}</h3><p>{favorite?(work.creators?.length?`原作者：${work.creators.join('、')}`:'查看案例与原作者信息'):isCollectedWork(work)?`原作者：${work.creators?.join('、')||'查看案例署名'}`:work.discipline||'创作记录'}</p><span>查看记录<ArrowRight size={15}/></span></div></button></article>)}</div>:<div className="morph-space-empty"><ImageSquare size={30}/><h3>{favorite?'还没有收藏案例':'还没有相关作品记录'}</h3><button onClick={()=>onNavigate(favorite?'/community':'/create')}>{favorite?'浏览案例社区':'开始一次创作'}<ArrowRight size={16}/></button></div>;
 }
 function SpaceWorks({data,onNavigate,onRetry}) {
   const [kind,setKind]=useState('all');

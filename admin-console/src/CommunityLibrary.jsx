@@ -9,6 +9,9 @@ import "./case-story.css";
 import { MorphPageBanner, MorphCaseCard } from './morph/MorphCatalog.jsx';
 import { CatalogControls } from './morph/CatalogControls.jsx';
 import { loadCommunityCatalog, mergeWorkRecord } from './communityData.js';
+import { returnContext, withReturnTarget } from './resourceContext.js';
+import { useScopedViewState } from './useScopedViewState.js';
+import { useDialogFocus } from './useDialogFocus.js';
 
 export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate, initialWorkId = '', variant = 'classic' }) {
   const [works, setWorks] = useState([]);
@@ -29,9 +32,9 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
   const [catalogError, setCatalogError] = useState("");
   const [supportError, setSupportError] = useState('');
   const catalogRequest = useRef(0);
-  const [search, setSearch] = useState("");
-  const [activeTag, setActiveTag] = useState("");
-  const [activeGroup, setActiveGroup] = useState("大类");
+  const [search, setSearch] = useScopedViewState(account.id+":community:search","");
+  const [activeTag, setActiveTag] = useScopedViewState(account.id+":community:tag","");
+  const [activeGroup, setActiveGroup] = useScopedViewState(account.id+":community:group","大类");
   // 轻量、可解释的本地排序：优先复用用户已点赞/收藏作品的学科、工具与方法，
   // 新用户则退化为社区互动与发布时间，不需要画像上传或外部追踪。
   const recommendations = useMemo(() => recommendWorks(works), [works]);
@@ -56,7 +59,8 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     getWork(encodeURIComponent(initialWorkId)).then(work => { if (active) setSelected(work); }).catch(error => { if (active) { setDetailError(error.message); onNotice(error.message); } }).finally(() => { if(active) setLoading(false); });
     return () => { active = false; };
   }, [initialWorkId, detailRetry]);
-  const returnToCatalog = () => { setSelected(null); setActiveImage(null); setDetailError(''); onNavigate?.('/community'); };
+  const context = returnContext();
+  const returnToCatalog = () => { setSelected(null); setActiveImage(null); setDetailError(''); onNavigate?.(context.to || '/community'); };
   // Refresh matching records only; a delayed interaction cannot reopen a different work.
   const syncWork = work => {
     setSelected(current => current?.id === work.id ? work : current);
@@ -64,7 +68,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     setMyWorks(current => mergeWorkRecord(current, work));
   };
   const openWork = async work => {
-    if(onNavigate) { onNavigate('/community?work='+encodeURIComponent(work.id)); return; }
+    if(onNavigate) { onNavigate(withReturnTarget('/community?work='+encodeURIComponent(work.id))); return; }
     setLoading(true);
     try { setSelected(await getWork(work.id)); }
     catch (error) { onNotice(error.message); }
@@ -119,14 +123,14 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
   const hasFilters = Boolean(search || activeTag);
   const clearFilters = () => { setSearch(""); setActiveTag(""); };
   const editor = editing !== undefined && <CaseStoryEditor key={editing?.id ?? "new"} initial={editing} workflows={workflows} onNotice={onNotice} onClose={() => { setEditing(undefined); refresh().catch(error => onNotice(error.message)); }} onSaved={saved => { setEditing(undefined); if(onNavigate) void openWork(saved); else setSelected(saved); refresh().catch(error => onNotice(error.message)); onNotice("草稿已保存，尚未提交审核或发布"); }} />;
-  if (initialWorkId && !selected) return <section className="resource-load-state" aria-busy={loading||!detailError}><strong>{detailError?'案例暂时无法打开':'正在打开案例…'}</strong>{detailError&&<><p role="alert">{detailError}</p><button onClick={()=>setDetailRetry(value=>value+1)}>重新加载案例</button></>}<button onClick={returnToCatalog}>返回案例社区</button></section>;
+  if (initialWorkId && !selected) return <section className="resource-load-state" aria-busy={loading||!detailError}><strong>{detailError?'案例暂时无法打开':'正在打开案例…'}</strong>{detailError&&<><p role="alert">{detailError}</p><button onClick={()=>setDetailRetry(value=>value+1)}>重新加载案例</button></>}<button onClick={returnToCatalog}>{context.to?context.label:'返回案例社区'}</button></section>;
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载案例社区</strong></section>;
   if (catalogError && !works.length && !myWorks.length) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} /><strong>案例社区暂时无法加载</strong><p>{catalogError}</p><button onClick={() => refresh(true).catch(error => onNotice(error.message))}>重新加载</button></section>;
   if (selected) {
     const exhibition = selected.story?.origin === "collected" && selected.story?.displayStyle === "exhibition";
     const heroAsset = selected.assets?.find(asset => asset.asset_type === "image" && asset.url === selected.previewUrl) ?? selected.assets?.find(asset => asset.asset_type === "image");
     return <><section className={`community-detail${exhibition ? " community-detail--exhibition" : ""}`}>
-    <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} /> 返回案例社区</button>
+    <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} /> {context.to ? context.label : '返回案例社区'}</button>
     {supportError&&<p className="catalog-inline-warning" role="status">{supportError}。<button onClick={()=>refresh().catch(error=>onNotice(error.message))}>重新同步</button></p>}
     <div className="community-detail__hero">{selected.previewUrl ? <button className="case-image-button case-image-button--hero" onClick={() => setActiveImage({ url: selected.previewUrl, fileName: heroAsset?.file_name ?? selected.title, alt: selected.title })} aria-label={`查看并下载图片：${selected.title}`}><img src={selected.previewUrl} alt={selected.title} /></button> : <WorkVisualFallback work={selected} />}</div>
     <div className="community-detail__body">
@@ -224,5 +228,9 @@ function ImageViewer({ image, assets = [], onChange, onClose }) {
 function ReportDialog({ target, onClose, onSubmit }) {
   const [reason, setReason] = useState("other");
   const [description, setDescription] = useState("");
-  return <div className="case-image-viewer" role="dialog" aria-modal="true" aria-label="提交举报"><button className="case-image-viewer__backdrop" onClick={onClose} aria-label="关闭举报" /><form className="report-dialog" onSubmit={event => { event.preventDefault(); onSubmit({ reason, description }); }}><h3>举报{target.label}</h3><label>举报类型<select value={reason} onChange={event => setReason(event.target.value)}><option value="violence">暴力内容</option><option value="pornography">色情内容</option><option value="harassment">辱骂或骚扰</option><option value="spam">广告或垃圾信息</option><option value="other">其他问题</option></select></label><label>说明<textarea required minLength={2} maxLength={1000} value={description} onChange={event => setDescription(event.target.value)} placeholder="请简要说明举报原因" /></label><div><button type="button" onClick={onClose}>取消</button><button type="submit">提交举报</button></div></form></div>;
+  const root=useRef(null),[sending,setSending]=useState(false);
+  const close=useRef(onClose);close.current=onClose;
+  const stableClose=useRef(()=>close.current());
+  useDialogFocus(root,stableClose.current);
+  return <div ref={root} className="case-image-viewer" role="dialog" aria-modal="true" aria-labelledby="report-dialog-title"><button className="case-image-viewer__backdrop" onClick={onClose} aria-label="关闭举报" tabIndex={-1}/><form className="report-dialog" onSubmit={async event => { event.preventDefault(); if(sending)return;setSending(true);try{await onSubmit({ reason, description });}finally{setSending(false);} }}><h3 id="report-dialog-title">举报{target.label}</h3><label>举报类型<select value={reason} onChange={event => setReason(event.target.value)}><option value="violence">暴力内容</option><option value="pornography">色情内容</option><option value="harassment">辱骂或骚扰</option><option value="spam">广告或垃圾信息</option><option value="other">其他问题</option></select></label><label>说明<textarea required minLength={2} maxLength={1000} value={description} onChange={event => setDescription(event.target.value)} placeholder="请简要说明举报原因" /></label><div><button type="button" onClick={onClose}>取消</button><button type="submit" disabled={sending}>{sending?'正在提交…':'提交举报'}</button></div></form></div>;
 }

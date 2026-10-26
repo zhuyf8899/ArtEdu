@@ -1,0 +1,45 @@
+/* Shared desktop details for the 24 platform audit follow-ups. Scope overrides to the integrated theme. */
+.morph-platform [hidden]{display:none!important}
+.morph-platform .audit-empty-actions,.morph-platform .audit-filter-tabs{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.morph-platform .audit-empty-actions button,.morph-platform .audit-filter-tabs button,.morph-platform .lesson-expand,.morph-platform .case-process-heading button{min-height:40px;padding:9px 16px;border:1px solid #ddd9ed;border-radius:12px;background:#fff;color:#26233c;font:inherit;cursor:pointer}
+.morph-platform .audit-filter-tabs button[aria-pressed=true]{background:#202039;color:#fff;border-color:#202039}
+.morph-platform .audit-empty-actions button:disabled{opacity:.5;cursor:not-allowed}
+.morph-platform .audit-resource-return{margin:18px max(24px,calc((100vw - 1150px)/2))}
+.morph-platform .lesson-outline{position:sticky;top:64px;z-index:5;display:flex;gap:10px;padding:12px;background:#f4f1fcf5;backdrop-filter:blur(12px);border:1px solid #ddd9ed;border-radius:14px;overflow:auto;margin:20px 0}
+.morph-platform .lesson-outline button{min-width:180px;flex:1;padding:12px;text-align:left;border:1px solid #e5e1ef;border-radius:10px;background:#fff;color:#343047;display:grid;gap:6px;font:inherit}
+.morph-platform .lesson-outline button[aria-current=step]{border-color:#7865d6;background:#eee9ff}
+.morph-platform .lesson-outline small{font-size:12px;color:#736992}.morph-platform .lesson-card{scroll-margin-top:175px}.morph-platform .lesson-expand{margin:14px 0}
+.morph-platform .case-reading-nav{position:sticky;top:64px;z-index:4;display:flex;flex-wrap:wrap;gap:10px;padding:12px 16px;border:1px solid #e3dff0;border-radius:14px;background:#fbfafff5;backdrop-filter:blur(10px);margin:22px 0}
+.morph-platform .case-reading-nav a{padding:8px;color:#6556ac;font-size:14px;text-decoration:none}.morph-platform #case-gallery,.morph-platform #case-video,.morph-platform #case-process,.morph-platform #case-reflection,.morph-platform #case-discussion-heading{scroll-margin-top:155px}
+.morph-platform .case-process-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.morph-platform details.case-step{border:1px solid #e4dfef;border-radius:16px;padding:20px;margin:14px 0;background:#fcfbff}
+.morph-platform details.case-step>summary{cursor:pointer;display:flex;align-items:center;gap:16px;flex-wrap:wrap;list-style:none}
+.morph-platform details.case-step>summary h4{flex:1;margin:0;font-size:18px}.morph-platform details.case-step>summary small{font-size:12px;color:#777087}
+.morph-platform details.case-step .case-gallery{grid-template-columns:repeat(auto-fit,minmax(160px,240px))}
+.morph-platform .search-filters>.search-facet-select{margin:0;padding:14px 18px;border-top:1px solid #ebe7f2;gap:8px;font-size:13px}
+.morph-platform .search-facet-select select{width:100%;min-height:40px;font-size:13px;box-sizing:border-box}
+.morph-platform .search-card{min-height:0;grid-template-columns:180px minmax(0,1fr)}
+.morph-platform .search-card__visual{min-height:210px;max-height:270px}.morph-platform .search-card__body{padding:20px;gap:10px}.morph-platform .search-card__body h3{font-size:21px}.morph-platform .search-card__body>p{font-size:14px;line-height:1.8}.morph-platform .search-card__body footer{margin-top:14px}
+.morph-platform .workflow-catalog__list{border:1px solid #e0dbee;border-radius:22px;padding:24px;background:#ffffffb3;margin:32px auto}
+.morph-platform .workflow-catalog__toolbar{border:0;padding-bottom:18px}.morph-platform .workflow-card{border:1px solid #dfdaec;border-radius:18px;padding:22px;background:#fff;box-shadow:0 5px 20px #22203c05}
+.morph-platform .workflow-card h3{font-size:20px}.morph-platform .workflow-card>p{font-size:14px;line-height:1.8}.morph-platform .workflow-card__state{display:block;padding:9px 12px;border-radius:10px;background:#f1edf9;color:#6f6094;font-size:12px;line-height:1.8;margin:14px 0}
+.morph-platform .workflow-card>button{min-height:40px;border-radius:10px;border:1px solid #ddd7ee;background:#f8f5ff;color:#4c426a;font-size:14px}
+.morph-platform .portrait-legacy-record,.morph-platform .audit-course-transition{padding:18px 22px;border:1px solid #dfd8ef;border-radius:16px;background:#f9f7ff;margin:18px 0;font-size:14px;line-height:1.8}
+.morph-platform .portrait-legacy-record button,.morph-platform .audit-course-transition button{font:inherit;padding:8px 12px;background:#fff;border:1px solid #ddd8ec;border-radius:10px;color:#6656a4;cursor:pointer}
+.morph-platform .admin-course-lock-reason{flex-basis:100%;max-width:100%;font-size:12px;color:#7d718e;white-space:normal}
+.morph-platform .audit-panel-empty{margin:20px;color:#736c86;font-size:14px}
+.morph-platform .learning-manager>header h2{font-size:30px;margin:10px 0}.morph-platform .learning-manager>header p{font-size:15px;color:#746c85;line-height:1.8}
+.morph-platform .audit-manager-form{padding:24px;background:#ffffffc9;border:1px solid #e1daef;border-radius:20px;margin:22px 0}
+.morph-platform .audit-manager-form fieldset{border:0;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:18px}.morph-platform .audit-manager-form label,.morph-platform .audit-note-search{display:grid;gap:9px;font-size:14px;color:#6f6384}.morph-platform .audit-manager-form .full-width{grid-column:1/-1}
+.morph-platform .audit-manager-form input,.morph-platform .audit-manager-form select,.morph-platform .audit-manager-form textarea,.morph-platform .audit-note-search input{border:1px solid #ddd5ef;border-radius:12px;padding:12px;font:inherit;background:#fff;box-sizing:border-box;min-width:0;width:100%;color:#29233c}.morph-platform .audit-manager-form textarea{min-height:160px}
+.morph-platform .audit-manager-form button,.morph-platform .note-grid button{font:inherit;padding:9px 14px;border:1px solid #ddd5ef;border-radius:10px;background:#fff;color:#5d4c92;cursor:pointer}
+.morph-platform .audit-task-list{display:grid;gap:12px}.morph-platform .audit-task-list article{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#ffffffc9;border:1px solid #e3ddf0;border-radius:16px;padding:20px}.morph-platform .audit-task-list article>div:first-child{flex:1}.morph-platform .audit-task-list p{font-size:13px;color:#7b708e}.morph-platform .note-grid article>p{white-space:pre-wrap;line-height:1.9;font-size:15px}.morph-platform .note-grid header{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.morph-platform .knowledge-live{max-width:1250px;color:#2b263e}.morph-platform .knowledge-live__layout{grid-template-columns:260px minmax(0,1fr);gap:24px}.morph-platform .knowledge-live aside,.morph-platform .knowledge-live form,.morph-platform .knowledge-live article{background:#ffffffd9;border-color:#e0d9ef;border-radius:18px}
+.morph-platform .knowledge-live label{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px;align-items:start;margin:18px 0;font-size:14px}.morph-platform .knowledge-live input:not([type=checkbox]),.morph-platform .knowledge-live select,.morph-platform .knowledge-live textarea{width:100%;box-sizing:border-box;min-height:42px;padding:12px;color:#2a243e;border:1px solid #ddd6ed;border-radius:10px}.morph-platform .knowledge-live aside label{grid-template-columns:1fr}.morph-platform .knowledge-live button{color:#61528c;border-color:#ddd6ed}.morph-platform .knowledge-live aside>button{width:100%;text-align:left}
+.morph-platform .tool-recommendation-history article,.morph-platform .tool-recommendation-review article{padding:20px;border:1px solid #e2dbee;border-radius:16px;background:#fff;margin:14px 0;line-height:1.8}.morph-platform .tool-recommendation-history span{display:block;font-size:13px;color:#75698d}.morph-platform .tool-recommendation-review textarea{display:block;width:100%;min-height:90px;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #ded6ee;font:inherit}
+@media(max-width:800px){.morph-platform .search-card{grid-template-columns:130px minmax(0,1fr)}.morph-platform .audit-manager-form fieldset,.morph-platform .knowledge-live__layout{grid-template-columns:1fr}.morph-platform .audit-task-list article{display:block}}
+.morph-tool-recommendation .atomic-edit-fields{border:0;margin:0;padding:0;min-width:0}
+.morph-tool-recommendation .audit-empty-actions .secondary{background:#fff;color:#5a4f86;border:1px solid #ddd7ee}
+.morph-platform .atomic-hub--legacy>.atomic-heading{display:block;padding:8px 0 22px}
+.morph-platform .atomic-hub--legacy>.atomic-heading h1{font-size:30px;margin:10px 0 0}
+.morph-platform .atomic-hub--legacy>.atomic-heading p,.morph-platform .atomic-hub--legacy>.atomic-heading .atomic-header-mark{display:none}

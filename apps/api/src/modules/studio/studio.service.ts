@@ -124,7 +124,7 @@ export class StudioService {
     const result = await this.database.query(`
       SELECT w.id, w.name, w.description, w.category, w.entry_type, w.entry_url, w.status,
         latest.id AS version_id, latest.version_number, latest.definition_json,
-        latest.published_at,
+        latest.published_at,(SELECT MAX(pv.version_number) FROM workflow_versions pv WHERE pv.workflow_id=w.id AND pv.published_at IS NOT NULL) AS published_version_number,
         COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN LATERAL (
@@ -190,7 +190,7 @@ export class StudioService {
       SELECT w.id,w.name,w.description,w.category,w.entry_type,w.entry_url,w.status,w.created_by,
         w.created_at,w.updated_at,creator.display_name AS creator_name,
         latest.id AS version_id,latest.version_number,latest.definition_json,latest.prompt_template,
-        latest.published_at,
+        latest.published_at,(SELECT MAX(pv.version_number) FROM workflow_versions pv WHERE pv.workflow_id=w.id AND pv.published_at IS NOT NULL) AS published_version_number,
         COALESCE(jsonb_array_length(latest.definition_json->'nodes'), jsonb_array_length(latest.definition_json->'steps'), 0)::int AS step_count
       FROM workflows w
       LEFT JOIN users creator ON creator.id = w.created_by
@@ -768,6 +768,8 @@ export class StudioService {
       status: row.status ?? null,
       versionId: row.version_id,
       versionNumber: row.version_number,
+      // A newer private draft does not replace the public release.
+      publishedVersionNumber: row.published_version_number??null,
       // null = 这次查询没带版本发布状态（例如管理端列表自己另算），
       // false = 最新版本还是草稿，true = 最新版本已发布。
       publishedAt: row.published_at ?? null,
