@@ -59,7 +59,8 @@ node scripts/prepare-trial-atoms.mjs --apply --publish-trial
 ## 验证结果
 
 - 前端完整回归：238 项通过。
-- 后端业务 / 安全回归 253 项通过；新增工具推荐与正文清理测试已接入 CI，原子校验 10 项与内容生命周期 4 项另行通过。
+- 后端业务 / 安全回归 254 项通过；新增工具推荐、正文清理和局部更新默认值保护已接入 CI，原子校验 10 项与内容生命周期 4 项另行通过。
+- 提交前生产依赖审计发现 Zod 高危公告 [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)，已升级 Zod 4.6.7、Puppeteer Core 25.16.0 和兼容的 fast-uri 修复版。局部更新不会带入创建默认值，避免仅修改名称时清空原有内容；前后端生产依赖审计均为 0 项漏洞。
 - 前后端生产构建通过。PPTX 渲染器仍有既有的大分块提示，已按需加载；它不是构建失败。
 - `scripts/verify-platform-followups.mjs`：真实 PostgreSQL 回滚验证整理幂等、任务编辑与版本回链、笔记编辑 / 隔离、工具投稿 → 审核 → 反馈、公开原子搜索。
 - `scripts/verify-atomic-learning.mjs`：27 项真实 Fastify HTTP / session / 契约 / 文件流检查；包含附件上传、HEAD、206 / 416；数据库覆盖两门课程复用、学生草稿 → 负责教师 / 管理员 / 运营 → 退回 → 修改 → 并发旧审核拒绝 → 发布分支及练习评价。

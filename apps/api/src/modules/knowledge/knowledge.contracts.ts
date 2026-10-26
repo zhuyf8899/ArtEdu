@@ -12,7 +12,7 @@ export const nodeInputSchema = z.object({
   sortOrder: z.number().int().min(0).max(100000).default(0),
   status: status.default("draft"),
 }).strict();
-export const nodeUpdateSchema = nodeInputSchema.partial().refine((value) => Object.keys(value).length > 0);
+export const nodeUpdateSchema = nodeInputSchema.extend({description:nodeInputSchema.shape.description.unwrap(),domain:nodeInputSchema.shape.domain.unwrap(),sortOrder:nodeInputSchema.shape.sortOrder.unwrap(),status:nodeInputSchema.shape.status.unwrap()}).partial().refine((value) => Object.keys(value).length > 0);
 export const nodeLinksSchema = z.object({
   edges: z.array(edge).max(200),
   bindings: z.array(binding).max(200),
@@ -24,7 +24,7 @@ export const goalInputSchema = z.object({
   sortOrder: z.number().int().min(0).max(100000).default(0),
   status: status.default("draft"),
 }).strict();
-export const goalUpdateSchema = goalInputSchema.partial().refine((value) => Object.keys(value).length > 0);
+export const goalUpdateSchema = goalInputSchema.extend({description:goalInputSchema.shape.description.unwrap(),sortOrder:goalInputSchema.shape.sortOrder.unwrap(),status:goalInputSchema.shape.status.unwrap()}).partial().refine((value) => Object.keys(value).length > 0);
 export const activityInputSchema = z.object({
   nodeId: id,
   activityType: z.enum(["learn", "practice", "create"]),

@@ -22,7 +22,7 @@
     "import:course-library": "tsx src/scripts/import-course-library.ts",
     "harness:model": "tsx src/modules/generation/model-harness.ts",
     "harness:agent": "tsx src/modules/agent/agent-harness.ts",
-    "test:security": "tsx --test src/modules/generation/image-transport.test.ts src/modules/generation/openai-image.adapter.test.ts src/modules/cloud-cache/cloud-cache.test.ts src/common/security.test.ts src/modules/health/health.test.ts src/modules/auth/password.test.ts src/modules/auth/auth.service.test.ts src/modules/admin/admin.contracts.test.ts src/modules/learning/learning.contracts.test.ts src/modules/portal/portal.contracts.test.ts src/modules/courses/courses.contracts.test.ts src/modules/courses/courses.service.test.ts src/modules/rag/rag.contracts.test.ts src/modules/rag/rag.service.test.ts src/modules/rag/rag.ocr.test.ts src/modules/courses/courses.material-access.test.ts src/modules/studio/private-upload.test.ts src/modules/studio/studio.contracts.test.ts src/modules/studio/workflow-execution.test.ts src/modules/studio/content-moderation.test.ts src/modules/generation/generation.contracts.test.ts src/modules/generation/generation.service.test.ts src/modules/generation/office-export.service.test.ts src/modules/generation/model-registry.test.ts src/modules/generation/modelscope-image.adapter.test.ts src/modules/agent/agent.scanner.test.ts src/modules/agent/agent-runtime.test.ts src/modules/agent/agent-delivery.test.ts src/modules/agent/agent-message.test.ts src/modules/agent/agent-image-routing.test.ts src/modules/agent/agent-prompt-repair.test.ts src/modules/agent/agent-tools.test.ts src/modules/agent/workspace-preview-csp.test.ts src/modules/agent/agent-page-check.test.ts src/modules/agent/agent-workspace-content-type.test.ts src/modules/agent/deepseek-web-search.test.ts src/modules/studio/comfy-contracts.test.ts src/modules/studio/comfy.service.test.ts src/modules/studio/tool-recommendations.test.ts src/modules/studio/case-editorial-cleanup.test.ts",
+    "test:security": "tsx --test src/modules/generation/image-transport.test.ts src/modules/generation/openai-image.adapter.test.ts src/modules/cloud-cache/cloud-cache.test.ts src/common/security.test.ts src/modules/health/health.test.ts src/modules/auth/password.test.ts src/modules/auth/auth.service.test.ts src/modules/admin/admin.contracts.test.ts src/modules/learning/learning.contracts.test.ts src/modules/portal/portal.contracts.test.ts src/modules/courses/courses.contracts.test.ts src/modules/courses/courses.service.test.ts src/modules/rag/rag.contracts.test.ts src/modules/rag/rag.service.test.ts src/modules/rag/rag.ocr.test.ts src/modules/courses/courses.material-access.test.ts src/modules/studio/private-upload.test.ts src/modules/studio/studio.contracts.test.ts src/modules/studio/workflow-execution.test.ts src/modules/studio/content-moderation.test.ts src/modules/generation/generation.contracts.test.ts src/modules/generation/generation.service.test.ts src/modules/generation/office-export.service.test.ts src/modules/generation/model-registry.test.ts src/modules/generation/modelscope-image.adapter.test.ts src/modules/agent/agent.scanner.test.ts src/modules/agent/agent-runtime.test.ts src/modules/agent/agent-delivery.test.ts src/modules/agent/agent-message.test.ts src/modules/agent/agent-image-routing.test.ts src/modules/agent/agent-prompt-repair.test.ts src/modules/agent/agent-tools.test.ts src/modules/agent/workspace-preview-csp.test.ts src/modules/agent/agent-page-check.test.ts src/modules/agent/agent-workspace-content-type.test.ts src/modules/agent/deepseek-web-search.test.ts src/modules/studio/comfy-contracts.test.ts src/modules/studio/comfy.service.test.ts src/modules/studio/tool-recommendations.test.ts src/modules/studio/case-editorial-cleanup.test.ts src/common/partial-update.test.ts",
     "typecheck": "tsc --noEmit",
     "test:content": "npm run build && node --test dist/modules/admin/content-lifecycle.test.js",
     "test:morph": "tsx --test src/modules/morph/morph.contracts.test.ts",
@@ -38,15 +38,15 @@
     "@nestjs/common": "^11.0.11",
     "@nestjs/core": "^11.0.11",
     "@nestjs/platform-fastify": "^11.2.5",
+    "ali-oss": "^6.23.0",
     "docx": "^9.7.1",
     "dotenv": "^16.4.7",
     "pg": "^8.13.3",
     "pptxgenjs": "^4.0.1",
-    "puppeteer-core": "^25.10.0",
+    "puppeteer-core": "^25.16.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "zod": "^3.24.2",
-    "ali-oss": "^6.23.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.8",

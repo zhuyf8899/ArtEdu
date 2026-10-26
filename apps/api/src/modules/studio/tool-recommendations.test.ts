@@ -3,7 +3,7 @@ import test from 'node:test';
 import {recommendationSchema,recommendationDecision,ToolRecommendationsService} from './tool-recommendations';
 test('工具推荐只接受无凭据 HTTPS 官网及明确的审核反馈',()=>{
  assert.ok(recommendationSchema.safeParse({title:'Figma',url:'https://figma.com',reason:'用于原型设计练习'}).success);
- for(const url of ['javascript:alert(1)','http://example.com','https://a:b@example.com'])assert.equal(recommendationSchema.safeParse({title:'工具',url,reason:'用于原型设计练习'}).success,false);
+ for(const url of ['javascript:alert(1)','http://example.com','https://a:b@example.com','not-a-url',''])assert.equal(recommendationSchema.safeParse({title:'工具',url,reason:'用于原型设计练习'}).success,false);
  assert.equal(recommendationDecision.safeParse({status:'accepted',feedback:''}).success,false);
  assert.equal(recommendationDecision.safeParse({status:'published',feedback:'不能通过投稿接口发布目录'}).success,false);
 });

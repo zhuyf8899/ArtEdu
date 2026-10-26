@@ -6,7 +6,7 @@ import {parseInput} from '../../common/validation';
 import {AuthService,type Actor} from '../auth/auth.service';
 import {DatabaseService} from '../database/database.service';
 
-export const recommendationSchema=z.object({title:z.string().trim().min(2).max(80),url:z.string().trim().max(2048).url().refine(value=>{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password;},'请填写不含凭据的 HTTPS 官网地址'),reason:z.string().trim().min(5).max(2000)}).strict();
+export const recommendationSchema=z.object({title:z.string().trim().min(2).max(80),url:z.string().trim().max(2048).url().refine(value=>{try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password;}catch{return false;}},'请填写不含凭据的 HTTPS 官网地址'),reason:z.string().trim().min(5).max(2000)}).strict();
 export const recommendationDecision=z.object({status:z.enum(['accepted','rejected']),feedback:z.string().trim().min(2).max(1000)}).strict();
 @Injectable()
 export class ToolRecommendationsService{

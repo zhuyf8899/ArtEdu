@@ -34,7 +34,7 @@ const resourceMetadataFields = {
 };
 
 export const uploadCourseResourceMetadataSchema = z.object(resourceMetadataFields);
-export const updateCourseResourceMetadataSchema = z.object(resourceMetadataFields).partial().refine(
+export const updateCourseResourceMetadataSchema = z.object({...resourceMetadataFields,summary:resourceMetadataFields.summary.unwrap(),tags:resourceMetadataFields.tags.unwrap()}).partial().refine(
   (value) => Object.keys(value).length > 0,
   { message: "至少提供一个要更新的资料字段" },
 );
@@ -71,7 +71,7 @@ export const createCourseSchema = z.object({
   lessons: z.array(lessonSchema).max(100).default([]),
 });
 
-export const updateCourseSchema = createCourseSchema.partial().refine(
+export const updateCourseSchema = createCourseSchema.extend({summary:createCourseSchema.shape.summary.unwrap(),difficulty:createCourseSchema.shape.difficulty.unwrap(),isFeatured:createCourseSchema.shape.isFeatured.unwrap(),lessons:createCourseSchema.shape.lessons.unwrap()}).partial().refine(
   (value) => Object.keys(value).length > 0,
   { message: "至少提供一个要更新的字段" },
 );

@@ -28,7 +28,7 @@ export const workflowInputSchema = z.object({
   }, "入口地址必须是无凭据的 HTTP(S) 地址").optional(),
 });
 
-export const workflowUpdateSchema = workflowInputSchema.partial();
+export const workflowUpdateSchema = workflowInputSchema.extend({entryType:workflowInputSchema.shape.entryType.unwrap()}).partial();
 
 const workflowStepSchema = z.object({
   id: z.string().trim().min(1).max(80),
@@ -174,7 +174,7 @@ export const workflowVersionInputSchema = z.object({
 
 export const workflowRunInputSchema = z.object({
   versionId: z.string().trim().min(1).max(160).optional(),
-  context: z.record(z.unknown()).default({}),
+  context: z.record(z.string(), z.unknown()).default({}),
 });
 
 export const workflowRunProgressSchema = z.object({

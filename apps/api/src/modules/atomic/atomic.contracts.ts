@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { parseInput } from '../../common/validation';
 // Preserve Zod output types (defaults are present after parsing).
-export function parseAtomic<S extends z.ZodTypeAny>(schema:S,input:unknown):z.output<S>{return parseInput<z.output<S>>(schema,input);}
+export function parseAtomic<S extends z.ZodTypeAny>(schema:S,input:unknown):z.output<S>{return parseInput(schema,input) as z.output<S>;}
 const text=(max:number)=>z.string().trim().max(max);
 const id=z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/);
 const step=z.object({atomId:id,revision:z.number().int().positive(),context:text(1000).default(''),task:text(2000).default(''),required:z.boolean().default(true),prerequisites:z.array(id).max(50).default([])}).strict();
