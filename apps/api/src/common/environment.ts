@@ -20,6 +20,8 @@ const environmentSchema = z.object({
   LOCAL_BRIDGE_TOKEN_DAYS: z.coerce.number().int().min(1).max(90).default(30),
   ENABLE_FILE_UPLOADS: z.enum(["true", "false"]).default("false"),
   UPLOAD_ROOT: z.string().trim().min(1).optional(),
+  TEMPORARY_WORKFLOW_USER_MB: z.coerce.number().int().min(8).max(2048).default(20),
+  TEMPORARY_WORKFLOW_TOTAL_MB: z.coerce.number().int().min(16).max(8192).default(128),
   TEMPORARY_UPLOAD_QUOTA_MB: z.coerce.number().int().min(10).max(2048).default(200),
   MODEL_EXECUTION_ENABLED: z.enum(["true", "false"]).default("false"),
   MODEL_PROVIDERS_JSON: z.string().optional(),
@@ -52,6 +54,8 @@ export interface Environment {
   fileUploadsEnabled: boolean;
   uploadRoot: string;
   temporaryUploadQuotaBytes: number;
+  temporaryWorkflowUserBytes: number;
+  temporaryWorkflowTotalBytes: number;
   modelExecutionEnabled: boolean;
   modelProvidersJson?: string;
   ragEnabled: boolean;
@@ -118,6 +122,8 @@ export function getEnvironment(): Environment {
     localBridgeTokenDays: parsed.LOCAL_BRIDGE_TOKEN_DAYS,
     fileUploadsEnabled: parsed.ENABLE_FILE_UPLOADS === "true",
     uploadRoot,
+    temporaryWorkflowUserBytes: parsed.TEMPORARY_WORKFLOW_USER_MB * 1024 * 1024,
+    temporaryWorkflowTotalBytes: parsed.TEMPORARY_WORKFLOW_TOTAL_MB * 1024 * 1024,
     temporaryUploadQuotaBytes: parsed.TEMPORARY_UPLOAD_QUOTA_MB * 1024 * 1024,
     modelExecutionEnabled: parsed.MODEL_EXECUTION_ENABLED === "true",
     modelProvidersJson: parsed.MODEL_PROVIDERS_JSON,

@@ -1,4 +1,5 @@
 const toolLabels = {
+  create_temporary_workflow:'生成临时节点图',edit_temporary_workflow:'编辑本人草稿',read_temporary_workflow:'读取临时节点图',load_own_workflow_draft:'载入本人未发布草稿',list_own_workflow_drafts:'列出本人草稿',
   search_web: '联网搜索', search_platform: '搜索平台内容', list_published_content: '读取已发布内容',
   'model.invoke': '调用模型', 'agent.execute': '执行任务', 'request.prepare': '准备任务',
   'artifact.generate': '生成产物',

@@ -1,6 +1,9 @@
 /**
  * 【生成业务层】处理任务、额度、模型调用与产物归档。createJob 与 runJob 是不同入口：前者创建任务，后者包含服务端执行流程。不要把此服务与当前不领取任务的独立生成 Worker 混淆。
  */
+import { BadRequestException, Optional } from "@nestjs/common";
+import { CreationStorageService } from "../creation-storage/creation-storage.service";
+import { imageEditForm } from "./image-edit";
 import {cacheExpired} from '../cloud-cache/cache-policy';
 import { ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type { PoolClient } from "pg";
@@ -39,6 +42,7 @@ export class GenerationService {
     private readonly repository: GenerationRepository,
     private readonly models: ModelRegistry,
     private readonly officeExports: OfficeExportService = new OfficeExportService(),
+    @Optional() private readonly creationStorage?: CreationStorageService,
   ) {}
 
   async createJob(actor: Actor, input: CreateGenerationJobInput) {
@@ -93,12 +97,23 @@ export class GenerationService {
     return { output, data: await this.officeExports.read(output.storageKey) };
   }
 
-  async runJob(actor: Actor, input: RunGenerationJobInput, signal?: AbortSignal) {
+  async runJob(actor: Actor, input: RunGenerationJobInput, signal?: AbortSignal, transient?: { imageEdit?: import("./image-edit").ImageEditInput; capture: (output: ModelResult) => Promise<{fileName:string;mimeType:string;fileSize:number;downloadUrl:string} | undefined> }) {
     signal?.throwIfAborted();
+    const editing = ["image", "pattern"].includes(input.jobType) && Boolean(input.parameters.referenceFileId);
+    const imageOptions = ["image", "pattern"].includes(input.jobType) ? imageGenerationParametersSchema.parse(input.parameters) : undefined;
+    if (imageOptions?.maskFileId && !imageOptions.referenceFileId) throw new BadRequestException("遮罩需要原图");
+    let imageEdit: import("./image-edit").ImageEditInput | undefined;
+    if (transient?.imageEdit) imageEdit = transient.imageEdit;
+    if (editing && !imageEdit) {
+      if (!this.creationStorage) throw new ServiceUnavailableException("图片编辑文件服务尚未配置");
+      imageEdit = { image: await this.creationStorage.readImageForVision(actor, imageOptions!.referenceFileId!), ...(imageOptions?.maskFileId ? { mask: await this.creationStorage.readImageForVision(actor, imageOptions.maskFileId) } : {}) };
+      try { imageEditForm(imageEdit, "validate", input.prompt); } catch (error) { throw new BadRequestException(error instanceof Error ? error.message : "无效图片编辑输入"); }
+    }
     let adapter;
     try {
-      adapter = this.models.getForJob({ jobType: input.jobType, modelConfigId: input.modelConfigId, requireConfigured: ["image", "pattern"].includes(input.jobType) });
+      adapter = this.models.getForJob({ jobType: input.jobType, modelConfigId: input.modelConfigId, requireConfigured: ["image", "pattern"].includes(input.jobType), imageEditing: editing });
     } catch (error) {
+      if (editing) throw new ServiceUnavailableException("图片编辑 API 尚未配置：需要支持编辑的通道并启用 imageEditing");
       if (error instanceof ImageConfigurationError) throw new ServiceUnavailableException({
         statusCode: 503, message: error.message, code: error.code, retryable: false,
       });
@@ -112,7 +127,7 @@ export class GenerationService {
     if (format === "pdf") {
       try { assertPdfAvailable(); } catch (error) { throw new ServiceUnavailableException(providerFailureMessage(error)); }
     }
-    const job = await this.createJob(actor, input);
+    const job = await this.createJob(actor, transient ? {...input,prompt:"[temporary-workflow]",context:[],parameters:{source:"temporary-workflow"}} : input);
     if (!await this.repository.markRunning(job.id)) throw new ConflictException("生成任务已被执行或当前不可执行");
     const pageCount = input.jobType === "document" && format === "pptx" ? input.parameters.pageCount as number | undefined : undefined;
     const systemPrompt = input.jobType === "document" ? documentPrompt(format, pageCount) : buildCreationSystemPrompt(input.jobType);
@@ -124,11 +139,11 @@ export class GenerationService {
         ...referenceContext(input.context ?? []),
         { role: "user", content: input.prompt },
       ];
-      const imageOptions = ["image", "pattern"].includes(input.jobType)
-        ? imageGenerationParametersSchema.parse(input.parameters)
-        : undefined;
+
       const invokeModel = (nextMessages: ModelMessage[]) => adapter.execute({
         signal,
+        imageEdit,
+        transient: Boolean(transient),
         jobType: input.jobType,
         modelConfigId: input.modelConfigId,
         // 产物类适配器（图像/视频）需要 jobId 决定文件落盘目录。
@@ -177,7 +192,7 @@ export class GenerationService {
         || !/^image\/(png|jpeg|webp|gif|avif)$/.test(output.mimeType ?? "")
         || !Number.isFinite(Number(output.metadata?.fileSize)) || Number(output.metadata?.fileSize) <= 0
       )) throw new ImageArtifactError("图片生成未返回有效图片文件，请联系管理员检查图片模型协议与配置");
-      const artifact = document ? await this.createOfficeArtifact(job.id, document, format) : await this.createArtifact(job.id, output);
+      const artifact = transient ? await transient.capture(output) : document ? await this.createOfficeArtifact(job.id, document, format) : await this.createArtifact(job.id, output);
       const completed = await this.repository.completeJob(job.id);
       await this.repository.recordUsage({
         userId: actor.id,
@@ -189,12 +204,12 @@ export class GenerationService {
       });
       return {
         job: completed ?? { ...job, status: "succeeded" }, output: document ? { ...output, content: documentMarkdown(document) } : output,
-        artifact: artifact && { fileName: artifact.fileName, mimeType: artifact.mimeType, fileSize: artifact.fileSize, downloadUrl: `/api/generation-jobs/${job.id}/download` },
+        artifact: artifact && { fileName: artifact.fileName, mimeType: artifact.mimeType, fileSize: artifact.fileSize, downloadUrl: "downloadUrl" in artifact ? String(artifact.downloadUrl) : `/api/generation-jobs/${job.id}/download` },
       };
     } catch (error) {
       this.logger.error({ event: "generation_failed", jobId: job.id, modelConfigId, jobType: input.jobType, errorCode: providerErrorCode(error), ...(error instanceof ImageTransportError ? { stage: error.stage, attempts: error.attempts, upstreamStatus: error.status, causeCode: error.code } : { errorName: error instanceof Error ? error.name : "UnknownError", causeCode: safeFailureCode(error) }) });
       const reason = providerFailureMessage(error);
-      await this.repository.failJob(job.id, reason);
+      await this.repository.failJob(job.id, transient ? "临时工作流节点执行失败" : reason);
       await this.repository.recordUsage({
         userId: actor.id,
         modelConfigId,

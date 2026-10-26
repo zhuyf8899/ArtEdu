@@ -1,0 +1,901 @@
+{
+  "id": "10-mixed-controlnets",
+  "title": "多 ControlNet 混合",
+  "sourcePath": "archived/mixing_controlnets.json",
+  "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/mixing_controlnets.json",
+  "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/mixing_controlnets.json",
+  "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/controlnet/#mixing-controlnets",
+  "sourceSha256": "a0addbddf84f3c0a0147d796915cfbb4f3d1c3c64e7f20b2e652e63d361aea49",
+  "nodes": [
+    {
+      "id": 15,
+      "type": "VAELoader",
+      "position": [
+        -1500,
+        260
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 0,
+          "links": [
+            28
+          ]
+        }
+      ],
+      "widgets": [
+        "vae-ft-mse-840000-ema-pruned.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "vae-ft-mse-840000-ema-pruned.safetensors",
+            "url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors?download=true",
+            "directory": "vae"
+          }
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "type": "LoadImage",
+      "position": [
+        -380,
+        -380
+      ],
+      "size": [
+        328,
+        360
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            55
+          ]
+        },
+        {
+          "label": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "widgets": [
+        "mixing_controlnets_scribble_input.png",
+        "image"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      }
+    },
+    {
+      "id": 21,
+      "type": "LoadImage",
+      "position": [
+        -1140,
+        -380
+      ],
+      "size": [
+        344,
+        368
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            57
+          ]
+        },
+        {
+          "label": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": null
+        }
+      ],
+      "widgets": [
+        "mixing_controlnets_pose_input.png",
+        "image"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      }
+    },
+    {
+      "id": 26,
+      "type": "ControlNetLoader",
+      "position": [
+        -380,
+        -490
+      ],
+      "size": [
+        328,
+        64
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "CONTROL_NET",
+          "name": "CONTROL_NET",
+          "type": "CONTROL_NET",
+          "slot_index": 0,
+          "links": [
+            51
+          ]
+        }
+      ],
+      "widgets": [
+        "control_v11p_sd15_scribble_fp16.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ControlNetLoader",
+        "models": [
+          {
+            "name": "control_v11p_sd15_scribble_fp16.safetensors",
+            "url": "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_scribble_fp16.safetensors?download=true",
+            "directory": "controlnet"
+          }
+        ]
+      }
+    },
+    {
+      "id": 34,
+      "type": "ControlNetApplyAdvanced",
+      "position": [
+        -760,
+        -480
+      ],
+      "size": [
+        315,
+        186
+      ],
+      "inputs": [
+        {
+          "label": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 47
+        },
+        {
+          "label": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 46
+        },
+        {
+          "label": "control_net",
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": 56
+        },
+        {
+          "label": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 57
+        },
+        {
+          "label": "vae",
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            49
+          ]
+        },
+        {
+          "label": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "slot_index": 1,
+          "links": [
+            50
+          ]
+        }
+      ],
+      "widgets": [
+        1,
+        0,
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ControlNetApplyAdvanced"
+      }
+    },
+    {
+      "id": 35,
+      "type": "ControlNetLoader",
+      "position": [
+        -1140,
+        -480
+      ],
+      "size": [
+        340,
+        60
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "CONTROL_NET",
+          "name": "CONTROL_NET",
+          "type": "CONTROL_NET",
+          "slot_index": 0,
+          "links": [
+            56
+          ]
+        }
+      ],
+      "widgets": [
+        "control_v11p_sd15_openpose_fp16.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ControlNetLoader",
+        "models": [
+          {
+            "name": "control_v11p_sd15_openpose_fp16.safetensors",
+            "url": "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_openpose_fp16.safetensors",
+            "directory": "controlnet"
+          }
+        ]
+      }
+    },
+    {
+      "id": 36,
+      "type": "ControlNetApplyAdvanced",
+      "position": [
+        -30,
+        -350
+      ],
+      "size": [
+        315,
+        186
+      ],
+      "inputs": [
+        {
+          "label": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 49
+        },
+        {
+          "label": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 50
+        },
+        {
+          "label": "control_net",
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": 51
+        },
+        {
+          "label": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 55
+        },
+        {
+          "label": "vae",
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            53
+          ]
+        },
+        {
+          "label": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "slot_index": 1,
+          "links": [
+            54
+          ]
+        }
+      ],
+      "widgets": [
+        1,
+        0,
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ControlNetApplyAdvanced"
+      }
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "position": [
+        -1150,
+        320
+      ],
+      "size": [
+        425.27801513671875,
+        180.6060791015625
+      ],
+      "inputs": [
+        {
+          "label": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 42
+        }
+      ],
+      "outputs": [
+        {
+          "label": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            46
+          ]
+        }
+      ],
+      "widgets": [
+        "(hands), text, error, cropped, (worst quality:1.2), (low quality:1.2), normal quality, (jpeg artifacts:1.3), signature, watermark, username, blurry, artist name, monochrome, sketch, censorship, censor, (copyright:1.2), extra legs, (forehead mark) (depth of field) (emotionless) (penis)"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      }
+    },
+    {
+      "id": 24,
+      "type": "CLIPTextEncode",
+      "position": [
+        -1150,
+        110
+      ],
+      "size": [
+        422.84503173828125,
+        164.31304931640625
+      ],
+      "inputs": [
+        {
+          "label": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 43
+        }
+      ],
+      "outputs": [
+        {
+          "label": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            47
+          ]
+        }
+      ],
+      "widgets": [
+        "Masterpiece, Top Quality, Best Quality, Official Art, Aesthetics: 1.2, Raytrace 1.4), Solo, Shut up, Stand Up, full_body, 1girl, Shadow, Animal, Blush sticker, Cat, animal_focus, White Cat, Hover EV,"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      }
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "position": [
+        -1150,
+        600
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            2
+          ]
+        }
+      ],
+      "widgets": [
+        1024,
+        1024,
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      }
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "position": [
+        -690,
+        80
+      ],
+      "size": [
+        315,
+        474
+      ],
+      "inputs": [
+        {
+          "label": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 41
+        },
+        {
+          "label": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 53
+        },
+        {
+          "label": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 54
+        },
+        {
+          "label": "latent_image",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "label": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            7
+          ]
+        }
+      ],
+      "widgets": [
+        1021287240057524,
+        "randomize",
+        20,
+        6,
+        "dpmpp_sde",
+        "karras",
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "KSampler"
+      }
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "position": [
+        -690,
+        600
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "inputs": [
+        {
+          "label": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 7
+        },
+        {
+          "label": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 28
+        }
+      ],
+      "outputs": [
+        {
+          "label": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            9
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      }
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "position": [
+        -350,
+        80
+      ],
+      "size": [
+        680,
+        600
+      ],
+      "inputs": [
+        {
+          "label": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "widgets": [
+        "ComfyUI"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      }
+    },
+    {
+      "id": 31,
+      "type": "CheckpointLoaderSimple",
+      "position": [
+        -1500,
+        110
+      ],
+      "size": [
+        315,
+        98
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "label": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            41
+          ]
+        },
+        {
+          "label": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 1,
+          "links": [
+            42,
+            43
+          ]
+        },
+        {
+          "label": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": null
+        }
+      ],
+      "widgets": [
+        "awpainting_v14.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple",
+        "models": [
+          {
+            "name": "awpainting_v14.safetensors",
+            "url": "https://civitai.com/api/download/models/624939?type=Model&format=SafeTensor&size=full&fp=fp16",
+            "directory": "checkpoints"
+          }
+        ]
+      }
+    },
+    {
+      "id": 37,
+      "type": "MarkdownNote",
+      "position": [
+        -1520,
+        -530
+      ],
+      "size": [
+        336,
+        152
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "### Learn more about this workflow\n> \n> \n> [ControlNets - ComfyUI_examples](https://comfyanonymous.github.io/ComfyUI_examples/controlnet/#mixing-controlnets) — Overview\n\n> [Mixing ControlNets - docs.comfy.org](https://docs.comfy.org/tutorials/controlnet/mixing-controlnets) — Explanation of concepts and step-by-step tutorial "
+      ],
+      "mode": 0,
+      "properties": {}
+    }
+  ],
+  "links": [
+    [
+      2,
+      5,
+      0,
+      3,
+      3,
+      "LATENT"
+    ],
+    [
+      7,
+      3,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      9,
+      8,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      28,
+      15,
+      0,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      41,
+      31,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      42,
+      31,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      43,
+      31,
+      1,
+      24,
+      0,
+      "CLIP"
+    ],
+    [
+      46,
+      7,
+      0,
+      34,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      47,
+      24,
+      0,
+      34,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      49,
+      34,
+      0,
+      36,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      50,
+      34,
+      1,
+      36,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      51,
+      26,
+      0,
+      36,
+      2,
+      "CONTROL_NET"
+    ],
+    [
+      53,
+      36,
+      0,
+      3,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      54,
+      36,
+      1,
+      3,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      55,
+      20,
+      0,
+      36,
+      3,
+      "IMAGE"
+    ],
+    [
+      56,
+      35,
+      0,
+      34,
+      2,
+      "CONTROL_NET"
+    ],
+    [
+      57,
+      21,
+      0,
+      34,
+      3,
+      "IMAGE"
+    ]
+  ],
+  "groups": 5,
+  "nodeTypes": [
+    "VAELoader",
+    "LoadImage",
+    "ControlNetLoader",
+    "ControlNetApplyAdvanced",
+    "CLIPTextEncode",
+    "EmptyLatentImage",
+    "KSampler",
+    "VAEDecode",
+    "SaveImage",
+    "CheckpointLoaderSimple",
+    "MarkdownNote"
+  ],
+  "review": "保留多个控制图和顺序应用的条件链。",
+  "dependencies": [
+    {
+      "id": 15,
+      "type": "VAELoader",
+      "mode": 0,
+      "widgets": [
+        "vae-ft-mse-840000-ema-pruned.safetensors"
+      ],
+      "models": [
+        {
+          "name": "vae-ft-mse-840000-ema-pruned.safetensors",
+          "url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors?download=true",
+          "directory": "vae"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "LoadImage",
+      "mode": 0,
+      "widgets": [
+        "mixing_controlnets_scribble_input.png",
+        "image"
+      ],
+      "models": []
+    },
+    {
+      "id": 21,
+      "type": "LoadImage",
+      "mode": 0,
+      "widgets": [
+        "mixing_controlnets_pose_input.png",
+        "image"
+      ],
+      "models": []
+    },
+    {
+      "id": 26,
+      "type": "ControlNetLoader",
+      "mode": 0,
+      "widgets": [
+        "control_v11p_sd15_scribble_fp16.safetensors"
+      ],
+      "models": [
+        {
+          "name": "control_v11p_sd15_scribble_fp16.safetensors",
+          "url": "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_scribble_fp16.safetensors?download=true",
+          "directory": "controlnet"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "ControlNetLoader",
+      "mode": 0,
+      "widgets": [
+        "control_v11p_sd15_openpose_fp16.safetensors"
+      ],
+      "models": [
+        {
+          "name": "control_v11p_sd15_openpose_fp16.safetensors",
+          "url": "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_openpose_fp16.safetensors",
+          "directory": "controlnet"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "CheckpointLoaderSimple",
+      "mode": 0,
+      "widgets": [
+        "awpainting_v14.safetensors"
+      ],
+      "models": [
+        {
+          "name": "awpainting_v14.safetensors",
+          "url": "https://civitai.com/api/download/models/624939?type=Model&format=SafeTensor&size=full&fp=fp16",
+          "directory": "checkpoints"
+        }
+      ]
+    }
+  ],
+  "exactRoundTrip": true,
+  "difference": ""
+}

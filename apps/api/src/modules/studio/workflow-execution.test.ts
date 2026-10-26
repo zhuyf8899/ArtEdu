@@ -39,6 +39,26 @@ const actor = { id: "student-a", username: "student-a", displayName: "学生", r
 
 const graphNode = (id: string, type: string, value = '') => ({ id, type, position: { x: 0, y: 0 }, data: { label: id, value } });
 const graphEdge = (source: string, target: string) => ({ id: `${source}-${target}`, source, target });
+
+test('ComfyUI 离线交换源数据通过服务端契约与读取归一化后仍完整保留',()=>{
+ const source={version:1,nodes:[{id:1,type:'Plugin',widgets_values:['opaque'],properties:{plugin:'keep'}}],links:[],definitions:{subgraphs:[{id:'nested'}]},extra:{custom:true}};
+ const definition={engine:'comfyui',nodes:[{id:'1',type:'comfy',position:{x:10,y:20},data:{label:'插件',classType:'Plugin',widgets:{},comfyUI:source.nodes[0]}}],edges:[],comfyExchange:{format:'ui',source,edges:[],groups:[],collapsedReroutes:['reroute-1']}};
+ const parsed=workflowVersionInputSchema.parse({publish:false,definition}).definition!;
+ const normalized=(new StudioService({} as any,{} as any) as any).normalizeWorkflowDefinition(JSON.parse(JSON.stringify(parsed)));
+ assert.deepEqual(normalized.comfyExchange.source,source);
+ assert.deepEqual(normalized.comfyExchange.collapsedReroutes,['reroute-1']);
+ assert.deepEqual(normalized.nodes[0].data.comfyUI.properties,{plugin:'keep'});
+});
+
+test('图片输入的原图和遮罩沿分支传到图片编辑 API，产物继续预览保存',async()=>{
+ const definition={nodes:[graphNode('image','load_image'),graphNode('prompt','prompt','改变选区颜色'),graphNode('generate','ksampler'),graphNode('out','save_image')],edges:[graphEdge('image','prompt'),graphEdge('prompt','generate'),graphEdge('generate','out')]};
+ const calls:any[]=[];
+ const f=executionFixture(definition,{runJob:async(_actor:any,input:any)=>{calls.push(input);return {job:{id:'edit'},artifact:{id:'edited',downloadUrl:'/private/edited.png'}};}});
+ await f.service.executeRun(actor,f.row.id,{referenceFileId:'private-original',maskFileId:'private-mask'});
+ await f.finish();
+ assert.equal(calls.length,1);assert.equal(calls[0].parameters.referenceFileId,'private-original');assert.equal(calls[0].parameters.maskFileId,'private-mask');
+ assert.equal(f.row.context_json.artifact.downloadUrl,'/private/edited.png');
+});
 function executionFixture(definition: any, generation?: any, models?: any) {
   const row: any = { id: 'regression-run', user_id: actor.id, status: 'in_progress', current_step: 0, total_steps: definition.nodes.length, definition_json: definition,
     context_json: { initialPrompt: '', initialSize: '1024x1024', nodeResults: {}, nodeStates: {} } };
@@ -171,14 +191,15 @@ test('文字转负向与文字转正向汇合后可以生图，不携带相互�
   assert.equal(input.parameters.negativePrompt, '文字、水印');
 });
 
-test('结果选择采用指定端口完整图片结果，清楚保留两次上游模型执行', async () => {
+test('结果选择采用指定端口完整图片结果，跳过未选择分支的模型执行', async () => {
   const calls: string[] = [];
   const generation = { runJob: async (_actor: any, input: any) => { calls.push(input.prompt); return { job: { id: input.prompt }, artifact: { id: `image-${input.prompt}` } }; } };
   const definition = { nodes: [graphNode('a', 'input', '方案A'), graphNode('b', 'input', '方案B'), graphNode('ga', 'ksampler'), graphNode('gb', 'ksampler'), { ...graphNode('choose', 'result_select'), data: { label: '选择', selection: 'b' } }, graphNode('out', 'save_image')], edges: [graphEdge('a', 'ga'), graphEdge('b', 'gb'), { ...graphEdge('ga', 'choose'), targetHandle: 'a' }, { ...graphEdge('gb', 'choose'), targetHandle: 'b' }, graphEdge('choose', 'out')] };
   const f = executionFixture(definition, generation);
   (f.service as any).assertExecutableDefinition(definition);
   const result = await f.finish();
-  assert.deepEqual(calls, ['方案A', '方案B']);
+  assert.deepEqual(calls, ['方案B']);
+  assert.equal(result.context.nodeResults.ga.kind, 'skipped');
   assert.equal(result.context.artifact.id, 'image-方案B');
   assert.equal(result.context.nodeResults.choose.sourceNodeId, 'gb');
 });
@@ -418,4 +439,24 @@ test("图像节点调用统一生成服务并持久化真实产物", async () =>
   assert.equal(result.context.artifact.id, "image-asset");
   assert.equal(result.context.nodeResults.negative.negativePrompt, "文字、水印");
   assert.equal(result.context.nodeResults.save.kind, "saved_asset");
+});
+
+
+test('动态条件只运行匹配分支，失败路由不会执行正常下游', async () => {
+  const node = {...graphNode('condition','condition','红'),data:{label:'条件',field:'prompt',operator:'contains',value:'红'}};
+  const definition={nodes:[graphNode('source','prompt','红色'),node,graphNode('yes','ksampler'),graphNode('no','ksampler'),graphNode('done','preview')],edges:[graphEdge('source','condition'),{...graphEdge('condition','yes'),sourceHandle:'true'},{...graphEdge('condition','no'),sourceHandle:'false'},graphEdge('yes','done'),graphEdge('no','done')]};
+  const calls:any[]=[];
+  const f=executionFixture(definition,{runJob:async (_:any,input:any)=>{calls.push(input);return {job:{id:'generated'},artifact:{id:'image'}};}});
+  const result=await f.finish();assert.equal(calls.length,1);assert.equal(result.context.nodeResults.no.kind,'skipped');assert.equal(result.context.nodeResults.yes.kind,'generation');
+  const failure={nodes:[graphNode('source','prompt','海报'),graphNode('generate','ksampler'),graphNode('normal','save_image'),graphNode('recover','text_preview')],edges:[graphEdge('source','generate'),graphEdge('generate','normal'),{...graphEdge('generate','recover'),sourceHandle:'error'}]};
+  const failed=executionFixture(failure,{runJob:async()=>{throw Error('供应商失败');}});
+  const recovered=await failed.finish();assert.equal(recovered.context.nodeResults.generate.kind,'failed');assert.equal(recovered.context.nodeResults.normal.kind,'skipped');assert.equal(recovered.context.nodeResults.recover.text,'供应商失败');
+});
+
+test('有界循环支持模板、提前终止并拒绝无界参数', async () => {
+  const loop={...graphNode('loop','loop','{text}-{index}'),data:{label:'循环',operation:'text_template',iterations:5,value:'{text}-{index}',until:'-2'}};
+  const definition={nodes:[graphNode('source','text_constant','开始'),loop,graphNode('out','text_preview')],edges:[graphEdge('source','loop'),graphEdge('loop','out')]};
+  const f=executionFixture(definition);(f.service as any).assertExecutableDefinition(definition);
+  const result=await f.finish();assert.equal(result.context.text,'开始-1-2');assert.equal(result.context.nodeResults.loop.iterations,2);
+  assert.equal(workflowVersionInputSchema.safeParse({definition:{...definition,nodes:[{...loop,data:{...loop.data,iterations:21}}]}}).success,false);
 });

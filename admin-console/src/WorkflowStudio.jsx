@@ -1,3 +1,4 @@
+import { skipNode } from '../../shared/workflowGraph.mjs';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, MagnifyingGlass, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
 import { hasDownstreamPrompt } from './workflowExecution.js';
@@ -105,8 +106,8 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
     // 正向/负向提示词都直接读节点里配好的默认值。
     // 只有「非现场给不可」的两种情况才停下来：要上传的参考图片；
     // 以及整条链路里一句提示词都没有时，创作需求必须问一句（否则没东西可生成）。
-    if (run.context?.engine === "comfyui" || !node || node.type === "load_image") return;
-    if (node.type === "input" && !String(node.data?.value ?? "").trim() && !nodesCarryPrompt(run.nodes, run.edges, node.id)) return;
+    if (run.context?.engine === "comfyui" || !node || (node.type === "load_image" && !skipNode(run.definition,node.id,run.context?.nodeResults))) return;
+    if (!skipNode(run.definition,node.id,run.context?.nodeResults) && node.type === "input" && !String(node.data?.value ?? "").trim() && !nodesCarryPrompt(run.nodes, run.edges, node.id)) return;
     const key = `${run.id}:${run.currentStep}`;
     if (advancing.current === key) return;
     advancing.current = key;

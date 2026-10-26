@@ -1,3 +1,4 @@
+import { requiredNodes, activeEdge, matchesCondition, assertControlParameters } from './workflow-control';
 import {cacheExpired} from '../cloud-cache/cache-policy';
 import { assertTextNodeParameters, textProcessingTypes } from './workflow-text-nodes';
 import { ComfyService } from './comfy.service';
@@ -262,6 +263,9 @@ export class StudioService {
     } else if (input.publish) this.assertExecutableDefinition(definition);
     const version = await this.database.transaction(async (client) => {
       await client.query('SELECT id FROM workflows WHERE id=$1 FOR UPDATE', [workflowId]);
+      const expectedVersionId=(input as WorkflowVersionInput & {expectedVersionId?:string}).expectedVersionId;
+      if(expectedVersionId){const latest=await client.query('SELECT id,published_at FROM workflow_versions WHERE workflow_id=$1 ORDER BY version_number DESC LIMIT 1',[workflowId]);if(latest.rows[0]?.id!==expectedVersionId||latest.rows[0]?.published_at)throw new ConflictException('正式草稿已变化，请重新载入后保存');}
+
       const next = await client.query<{ number: number }>("SELECT COALESCE(MAX(version_number), 0)::int + 1 AS number FROM workflow_versions WHERE workflow_id = $1", [workflowId]);
       const id = `workflow-version-${randomUUID()}`;
       await client.query(`
@@ -367,14 +371,18 @@ export class StudioService {
     try {
     const saved = this.workflowContext(current.context);
     delete (saved as any).executing;
-    const incoming = current.edges.filter((edge: Record<string, any>) => edge.target === node.id);
+    const allIncoming = current.edges.filter((edge: Record<string, any>) => edge.target === node.id);
+    if (allIncoming.some((e: any) => !saved.nodeResults[e.source])) throw new ConflictException('上游节点尚未全部执行');
+    const incoming = allIncoming.filter((edge: Record<string, any>) => activeEdge(edge, saved.nodeResults));
+    const cached = saved.nodeResults[node.id] as any;
+    const shouldSkip = !requiredNodes(current.definition).has(node.id) || (allIncoming.length > 0 && incoming.length === 0);
     let parents = incoming.map((edge: Record<string, any>) => edge.source);
     if (node.type === 'result_select') {
       const chosen = incoming.filter((edge: Record<string, any>) => edge.targetHandle === (node.data?.selection ?? 'a'));
-      if (chosen.length !== 1) throw new BadRequestException('结果选择需要在所选端口连接一路上游结果');
-      parents = [chosen[0].source];
+      if (!shouldSkip && chosen.length !== 1) throw new BadRequestException('结果选择需要在所选端口连接一路上游结果');
+      parents = chosen.map((edge: any) => edge.source);
     }
-    if (node.type === 'text_join') parents = ['a', 'b'].map(port => {
+    if (!shouldSkip && node.type === 'text_join') parents = ['a', 'b'].map(port => {
       const matches = incoming.filter((edge: Record<string, any>) => edge.targetHandle === port);
       if (matches.length !== 1) throw new BadRequestException('文本拼接的 A、B 端口各需要连接一路文字');
       return matches[0].source;
@@ -382,20 +390,33 @@ export class StudioService {
     // 起跑时约定的需求为空时要留空（undefined），不能写成空字符串：
     // 空字符串会让输入节点判空失败，把「节点里已经配好默认值」的草稿试运行挡在门外。
     const receivesInitialPrompt = node.type === 'input' || (!current.nodes.some((item: Record<string, any>) => item.type === 'input') && ['prompt', 'skill'].includes(node.type));
-    const context = parents.length
+    const context = cached && cached.kind !== 'skipped' ? this.workflowContext(saved.nodeStates[node.id]) : !shouldSkip && parents.length
       ? this.mergeNodeStates(saved, parents, node.type === 'text_join')
       : this.workflowContext({ prompt: receivesInitialPrompt ? saved.initialPrompt || undefined : undefined, size: saved.initialSize });
     context.inputNodeIds = parents;
     if (input.prompt && node.type !== "input") throw new BadRequestException("只可在输入节点填写创作需求");
     if (input.negativePrompt !== undefined && node.type !== "negative_prompt") throw new BadRequestException("只可在负向提示词节点填写排除内容");
+    if (input.maskFileId && (node.type !== "load_image" || !input.referenceFileId)) throw new BadRequestException("遮罩需要在图片输入节点与原图一起提交");
     if (input.referenceFileId && node.type !== "load_image") throw new BadRequestException("只可在参考素材节点上传图片");
     if (input.prompt) context.prompt = input.prompt;
     if (input.negativePrompt !== undefined) { context.negativePrompt = input.negativePrompt; context.negativePromptParts = { [node.id]: input.negativePrompt }; }
-    if (input.referenceFileId) context.referenceFileId = input.referenceFileId;
-    const output = await this.executeNode(actor, node, context);
+    if (input.referenceFileId) { context.referenceFileId = input.referenceFileId; context.maskFileId = input.maskFileId; }
+    let output: any;
+    if (cached && cached.kind !== 'skipped') output = cached;
+    else if (shouldSkip) output = {kind:'skipped', reason:'未选择的分支'};
+    else {
+      try { output = await this.executeNode(actor, node, context); }
+      catch (error) {
+        if (!current.edges.some((e: any) => e.source === node.id && e.sourceHandle === 'error')) throw error;
+        context.error = error instanceof Error ? error.message : '节点执行失败';
+        context.text = context.error;
+        context.fieldSources ??= {}; context.fieldSources.text = node.id;
+        output = {kind:'failed',error:context.error};
+      }
+    }
     saved.nodeResults[node.id] = output;
     saved.nodeStates[node.id] = this.snapshotNodeState(context);
-    Object.assign(saved, this.snapshotNodeState(context));
+    if (!shouldSkip) Object.assign(saved, this.snapshotNodeState(context));
     const nextStep = Math.min(current.currentStep + 1, current.totalSteps);
     const completed = nextStep >= current.totalSteps;
     await this.database.transaction(async (client) => {
@@ -417,10 +438,32 @@ export class StudioService {
     }
   }
 
+  async rerunNode(actor: Actor, runId: string, nodeId: string) {
+    const current = await this.getRun(actor,runId) as Record<string,any>;
+    if(current.expired || current.definition.engine === 'comfyui') throw new ConflictException('该运行无法节点重跑，请重新发起平台任务');
+    const index = current.steps.findIndex((s:any)=>s.id===nodeId);
+    if(index<0) throw new BadRequestException('节点不存在');
+    if(index>current.currentStep) throw new ConflictException('只能重跑已执行或当前节点');
+    const saved=this.workflowContext(current.context);
+    const invalid=new Set<string>([nodeId]);
+    let changed=true;
+    while(changed){changed=false;for(const e of current.edges)if(invalid.has(e.source)&&!invalid.has(e.target)){invalid.add(e.target);changed=true;}}
+    for(const id of invalid){delete saved.nodeResults[id];delete saved.nodeStates[id];}
+    delete (saved as any).executing;
+    // Restore output from the nearest still valid predecessor; stale artifacts must disappear.
+    for(const key of ['text','prompt','negativePrompt','artifact','error','promptParts','negativePromptParts','fieldSources','lineage']) delete (saved as any)[key];
+    const result=await this.database.query(`UPDATE workflow_runs SET context_json=$3::jsonb,current_step=$4,status='in_progress',completed_at=NULL,updated_at=CURRENT_TIMESTAMP
+      WHERE id=$1 AND user_id=$2 AND current_step=$5 AND status=$6 AND (context_json->'executing' IS NULL OR (context_json->'executing'->>'at')::timestamptz<CURRENT_TIMESTAMP-INTERVAL '10 minutes') RETURNING id`,
+      [runId,actor.id,JSON.stringify(saved),index,current.currentStep,current.status]);
+    if(!result.rowCount)throw new ConflictException('运行正在执行或进度已变化，请刷新后重试');
+    await this.database.query("INSERT INTO workflow_run_events(id,run_id,step_index,event_type,note) VALUES($1,$2,$3,'note',$4)",[`workflow-event-${randomUUID()}`,runId,index,`重跑节点 ${nodeId}，已清除下游结果`]);
+    return this.getRun(actor,runId);
+  }
+
   private assertExecutableDefinition(definition: { nodes: Array<Record<string, any>>; edges: Array<Record<string, any>> }) {
     if (!definition.nodes.length) throw new BadRequestException("工作流至少需要一个节点");
     const unsupported = definition.nodes.find((node) => ["lora", "controlnet", "upscale", "text_encode", "load_checkpoint", "vae_decode"].includes(node.type));
-    if (unsupported) throw new BadRequestException(`“${unsupported.data?.label ?? unsupported.type}”尚无真实执行服务，不能发布`);
+    if (unsupported) throw new BadRequestException(`“${unsupported.data?.label ?? unsupported.type}”尚无真实执行服务（API 能力未接入），不能发布`);
     if (definition.nodes.every((node) => node.type === "note")) return;
     if (!definition.nodes.some((node) => ['preview', 'save_image', 'text_preview'].includes(node.type))) throw new BadRequestException("可执行工作流需要成果预览或保存节点");
     const available = new Map<string, Set<string>>();
@@ -429,9 +472,10 @@ export class StudioService {
       const incoming = definition.edges.filter(e => e.target === node.id);
       const parents = incoming.filter(e => node.type !== 'result_select' || e.targetHandle === (node.data?.selection ?? 'a')).map(e => e.source);
       const fields = new Set(parents.flatMap(id => [...(available.get(id) ?? [])]));
+      if (incoming.some(e => e.sourceHandle === 'error')) fields.add('text');
       const value = String(node.data?.value ?? '').trim();
       const need = (field: string, message: string) => { if (!fields.has(field)) throw new BadRequestException(`“${node.data?.label ?? node.id}”${message}`); };
-      assertTextNodeParameters(node);
+      assertTextNodeParameters(node); assertControlParameters(node);
       if (node.type === 'text_constant') fields.add('text');
       if (['text_join', 'result_select'].includes(node.type) && ['a', 'b'].some(port => incoming.filter(e => e.targetHandle === port).length !== 1)) throw new BadRequestException(`“${node.data?.label ?? node.id}”的 A、B 端口需要各连接一路输入`);
       if (node.type === 'text_join') {
@@ -447,6 +491,7 @@ export class StudioService {
         else if (node.type === 'text_to_negative') { fields.delete('text'); fields.delete('prompt'); fields.add('negativePrompt'); }
         else fields.add('text');
       }
+      if (node.type === 'loop') { if (!fields.has('text') && !fields.has('prompt')) throw new BadRequestException('循环节点需要上游文字'); fields.add('text'); fields.add('prompt'); }
       if (node.type === 'negative_prompt') fields.add('negativePrompt');
       if (node.type === 'reroute' && incoming.length !== 1) throw new BadRequestException('数据转接需要且只能连接一路输入');
       if (['prompt', 'skill'].includes(node.type) && !value) throw new BadRequestException(`“${node.data?.label ?? node.id}”需要填写提示词或创作约束`);
@@ -786,7 +831,7 @@ export class StudioService {
       return {
         schemaVersion: 2,
         learning: definition.learning ?? { knowledgePoints: [], tools: [], abilityGoals: [] },
-        engine: definition.engine, comfyPrompt: definition.comfyPrompt,
+        engine: definition.engine, comfyPrompt: definition.comfyPrompt, comfyExchange: definition.comfyExchange,
         nodes: definition.nodes,
         edges: Array.isArray(definition.edges) ? definition.edges : [],
         groups: Array.isArray(definition.groups) ? definition.groups : [],
@@ -896,13 +941,14 @@ export class StudioService {
     context.adapters ??= [];
     context.size ??= "1024x1024";
     return context as {
-      prompt?: string; negativePrompt?: string; initialPrompt?: string; initialSize?: string; text?: string; size: string; modelConfigId?: string;
+      error?: string; prompt?: string; negativePrompt?: string; initialPrompt?: string; initialSize?: string; text?: string; size: string; modelConfigId?: string;
       promptParts?: Record<string, string>; negativePromptParts?: Record<string, string>;
       fieldSources?: Record<string, string>; lineage?: string[];
       inputNodeIds?: string[];
       trialRun?: boolean; versionNumber?: number;
       adapters: Array<{ type: string; value: string }>;
       referenceFileId?: string;
+      maskFileId?: string;
       artifact?: { downloadUrl?: string; fileName?: string; mimeType?: string; fileSize?: number };
       nodeResults: Record<string, unknown>;
       nodeStates: Record<string, Record<string, any>>;
@@ -911,8 +957,8 @@ export class StudioService {
 
   private snapshotNodeState(context: ReturnType<StudioService["workflowContext"]>) {
     return {
-      prompt: context.prompt, negativePrompt: context.negativePrompt, text: context.text, size: context.size,
-      modelConfigId: context.modelConfigId, referenceFileId: context.referenceFileId,
+      error: context.error, prompt: context.prompt, negativePrompt: context.negativePrompt, text: context.text, size: context.size,
+      modelConfigId: context.modelConfigId, referenceFileId: context.referenceFileId, maskFileId: context.maskFileId,
       artifact: context.artifact, adapters: context.adapters,
       promptParts: context.promptParts, negativePromptParts: context.negativePromptParts,
       fieldSources: context.fieldSources, lineage: context.lineage,
@@ -934,14 +980,14 @@ export class StudioService {
     }
     merged.fieldSources = {};
     merged.lineage = [...new Set(states.flatMap(state => state.lineage ?? []))];
-    for (const key of ['text', 'size', 'modelConfigId', 'referenceFileId', 'artifact'] as const) {
+    for (const key of ['error', 'text', 'size', 'modelConfigId', 'referenceFileId', 'maskFileId', 'artifact'] as const) {
       if (joiningText && key === 'text') continue;
       let candidates = states.filter(state => state[key] !== undefined || state.fieldSources?.[key]);
       const explicit = candidates.filter(state => state.fieldSources?.[key]);
       if (explicit.length) candidates = explicit;
       // An explicit downstream setting supersedes its ancestor's setting.
       candidates = candidates.filter(state => !candidates.some(other => other.fieldSources?.[key] !== state.fieldSources?.[key] && state.fieldSources?.[key] && other.lineage?.includes(state.fieldSources[key])));
-      if (new Set(candidates.map(state => JSON.stringify(state[key]))).size > 1) throw new ConflictException(`上游分支的${({ text: '生成文字', size: '图片尺寸', modelConfigId: '图片模型', referenceFileId: '参考图片', artifact: '图片产物' })[key]}冲突，请明确选择一个来源`);
+      if (new Set(candidates.map(state => JSON.stringify(state[key]))).size > 1) throw new ConflictException(`上游分支的${({ error: '错误信息', text: '生成文字', size: '图片尺寸', modelConfigId: '图片模型', referenceFileId: '参考图片', maskFileId: '图片遮罩', artifact: '图片产物' })[key]}冲突，请明确选择一个来源`);
       if (candidates.length) {
         (merged as any)[key] = candidates[0][key];
         if (candidates[0].fieldSources?.[key]) merged.fieldSources[key] = candidates[0].fieldSources[key];
@@ -951,7 +997,43 @@ export class StudioService {
     return merged;
   }
 
-  private async executeNode(actor: Actor, node: Record<string, any>, context: ReturnType<StudioService["workflowContext"]>) {
+  validateTemporaryDefinition(definition: any) {
+    if (definition.engine === 'comfyui' || definition.nodes.some((n:any)=>n.type==='comfy')) throw new BadRequestException('临时执行只支持平台 API 节点图');
+    this.assertExecutableDefinition(definition);
+    return definition;
+  }
+
+  async executeTemporaryGraph(actor: Actor, definition: any, bindings: Record<string,any>, invoke: (input:any, state:any)=>Promise<any>, progress: (id:string, state:any)=>void, signal: AbortSignal) {
+    this.validateTemporaryDefinition(definition);
+    const saved=this.workflowContext({});
+    for(const step of this.definitionToSteps(definition)) {
+      signal.throwIfAborted();
+      const node=definition.nodes.find((n:any)=>n.id===step.id);
+      const allIncoming=definition.edges.filter((e:any)=>e.target===node.id);
+      const incoming=allIncoming.filter((e:any)=>activeEdge(e,saved.nodeResults));
+      if (!requiredNodes(definition).has(node.id) || (allIncoming.length && !incoming.length)) {
+        saved.nodeResults[node.id]={kind:'skipped'}; progress(node.id,saved); continue;
+      }
+      const parents=(node.type==='result_select'?incoming.filter((e:any)=>e.targetHandle===(node.data.selection??'a')):node.type==='text_join'?['a','b'].flatMap(port=>incoming.filter((e:any)=>e.targetHandle===port)):incoming).map((e:any)=>e.source);
+      const state=parents.length?this.mergeNodeStates(saved,parents,node.type==='text_join'):this.workflowContext({});
+      state.inputNodeIds=parents;
+      if(node.type==='load_image') {state.referenceFileId=bindings[node.id]?.referenceFileId;state.maskFileId=bindings[node.id]?.maskFileId;}
+      let output:any;
+      try { output=await this.executeNode(actor,node,state,input=>{signal.throwIfAborted();return invoke(input,state);}); }
+      catch(error) {
+        signal.throwIfAborted();
+        if(!definition.edges.some((e:any)=>e.source===node.id&&e.sourceHandle==='error')) throw error;
+        state.error=error instanceof Error?error.message:'节点执行失败';state.text=state.error;state.fieldSources??={};state.fieldSources.text=node.id;
+        output={kind:'failed',error:state.error};
+      }
+      signal.throwIfAborted();
+      saved.nodeResults[node.id]=output;saved.nodeStates[node.id]=this.snapshotNodeState(state);
+      Object.assign(saved,this.snapshotNodeState(state));progress(node.id,saved);
+    }
+    return saved;
+  }
+
+  private async executeNode(actor: Actor, node: Record<string, any>, context: ReturnType<StudioService["workflowContext"]>, invoke?: (input: any) => Promise<any>) {
     const value = String(node.data?.value ?? "").trim();
     const label = String(node.data?.label ?? node.type);
     context.lineage = [...new Set([...(context.lineage ?? []), node.id])];
@@ -972,8 +1054,28 @@ export class StudioService {
       context.fieldSources!.text = node.id;
       return { kind: 'text', text };
     };
-    assertTextNodeParameters(node);
+    assertTextNodeParameters(node); assertControlParameters(node);
     switch (node.type) {
+      case 'condition':
+        return {kind:'condition',matched:matchesCondition(node.data,context)};
+      case 'loop': {
+        let text = inputText();
+        const outputs: string[] = [];
+        for (let index = 1; index <= node.data.iterations; index++) {
+          if (node.data.operation === 'text_replace') text = text.split(node.data.find).join(node.data.replacement ?? '');
+          else if (node.data.operation === 'text_template') text = String(node.data.value).replace(/\{(text|index)\}/g, (_: string, key: string) => key === 'text' ? text : String(index));
+          else {
+            const state = this.workflowContext({...this.snapshotNodeState(context), prompt:text, promptParts:{[node.id]:text}});
+            await this.executeNode(actor, {...node,type:'text_generate'},state,invoke);
+            text = state.text ?? '';
+          }
+          if (text.length > 10000) throw new BadRequestException('循环结果不能超过 10000 字');
+          outputs.push(text);
+          if (node.data.until && text.includes(node.data.until)) break;
+        }
+        setText(text); context.prompt = text; context.promptParts = {[node.id]:text};
+        return {kind:'loop',text,iterations:outputs.length,outputs};
+      }
       case 'text_constant':
         return setText(String(node.data?.value ?? ''));
       case 'text_join': {
@@ -1054,7 +1156,7 @@ export class StudioService {
         if (!context.prompt) throw new BadRequestException("文本生成节点需要连接创作输入");
         if (!this.generation || !this.models) throw new ConflictException("文本生成服务尚未装配");
         const modelConfigId = this.models.getForJob({ jobType: "chat" }).id;
-        const generated = await this.generation.runJob(actor, {
+        const generated = await (invoke ?? ((input:any)=>this.generation!.runJob(actor,input)))({
           jobType: "chat", prompt: value ? `${value}\n\n用户需求：${context.prompt}` : context.prompt,
           modelConfigId, parameters: { source: "workflow-canvas", workflowNodeId: node.id },
         });
@@ -1069,7 +1171,7 @@ export class StudioService {
         context.modelConfigId = value;
         return { kind: "model", modelConfigId: value };
       case "lora": case "controlnet":
-        throw new BadRequestException(`${label} 尚无可用的 GPU 执行服务，请移除该节点后运行`);
+        throw new BadRequestException(`${label} 尚未接入对应的 API 运算能力，请移除该节点后运行`);
       case "empty_latent": {
         context.size = /^\d{3,4}x\d{3,4}$/.test(value) ? value : context.size;
         if (value && !/^\d{3,4}x\d{3,4}$/.test(value)) throw new BadRequestException('图片尺寸格式应为 1024x1024');
@@ -1079,18 +1181,10 @@ export class StudioService {
       case "ksampler": {
         if (!context.prompt) throw new BadRequestException("KSampler 前必须连接输入或提示词节点");
         if (!this.generation) throw new ConflictException("生成服务尚未装配");
-        const reference = context.referenceFileId
-          ? await this.creationStorage?.readImageForVision(actor, context.referenceFileId)
-          : undefined;
-        if (context.referenceFileId && !reference) throw new ConflictException("参考图片服务尚未装配");
-        if (reference && !this.models?.getForJob({ jobType: "image", modelConfigId: context.modelConfigId }).capabilities.includes("vision")) {
-          throw new BadRequestException("当前图片模型不支持参考图；请切换支持视觉输入的模型，或移除参考素材节点");
-        }
-        const generated = await this.generation.runJob(actor, {
+        const generated = await (invoke ?? ((input:any)=>this.generation!.runJob(actor,input)))({
           jobType: "image", prompt: context.prompt,
-          context: reference ? [{ role: "user", content: `这是用户已授权的参考图片“${reference.fileName}”。仅用于提取构图、色彩、材质或风格特征，不复制具体作品。`, images: [{ dataUrl: reference.dataUrl, detail: "high" }] }] : [],
           modelConfigId: context.modelConfigId,
-          parameters: { size: context.size, negativePrompt: context.negativePrompt, source: "workflow-canvas", workflowNodeId: node.id, adapters: context.adapters },
+          parameters: { referenceFileId: context.referenceFileId, maskFileId: context.maskFileId, size: context.size, negativePrompt: context.negativePrompt, source: "workflow-canvas", workflowNodeId: node.id, adapters: context.adapters },
         });
         if (!generated.artifact) throw new ConflictException("图片服务未返回可保存产物");
         context.artifact = generated.artifact;
@@ -1101,7 +1195,7 @@ export class StudioService {
         if (!context.artifact) throw new BadRequestException("VAE 解码前必须先完成 KSampler 生成");
         return { kind: "decoded_image", artifact: context.artifact };
       case "upscale":
-        throw new BadRequestException("超分节点尚无可用执行服务，请移除该节点后运行");
+        throw new BadRequestException("超分节点尚未接入对应的 API 运算能力，请移除该节点后运行");
       case "preview":
         return { kind: "preview", artifact: context.artifact ?? null, text: context.text ?? context.prompt ?? "" };
       case "save_image":

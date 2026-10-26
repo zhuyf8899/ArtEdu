@@ -1,0 +1,579 @@
+{
+  "id": "11-esrgan",
+  "title": "模型超分",
+  "sourcePath": "archived/esrgan_example.json",
+  "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/esrgan_example.json",
+  "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/esrgan_example.json",
+  "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/upscale_models/",
+  "sourceSha256": "8d253128d05ddf8324c3e150db2452cd38f0f7c7174e473db125aaf0f7bbc361",
+  "nodes": [
+    {
+      "id": 14,
+      "type": "ImageUpscaleWithModel",
+      "position": [
+        1510,
+        50
+      ],
+      "size": [
+        221.98203125,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "upscale_model",
+          "type": "UPSCALE_MODEL",
+          "link": 14
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            16
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ImageUpscaleWithModel",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "position": [
+        850,
+        50
+      ],
+      "size": [
+        310,
+        480
+      ],
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 4
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            7
+          ]
+        }
+      ],
+      "widgets": [
+        479320868631054,
+        "randomize",
+        20,
+        8,
+        "euler",
+        "normal",
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "KSampler",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "position": [
+        370,
+        50
+      ],
+      "size": [
+        423.1099853515625,
+        201.5616455078125
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 17
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            4
+          ]
+        }
+      ],
+      "widgets": [
+        "A rainy city street at night, neon signs illuminating the wet pavement, reflections of streetlights on puddles, pedestrians with umbrellas, hyper-realistic details, atmospheric, cinematic lighting, soft focus"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "position": [
+        370,
+        290
+      ],
+      "size": [
+        423.1099853515625,
+        180.61000061035156
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            6
+          ]
+        }
+      ],
+      "widgets": [
+        "bad hands,(worst quality),(low quality),(normal quality:),lowres,bad anatomy,(bad hands),((monochrome)),((grayscale)) watermark,moles,many fingers,(broken hands),nsfw, "
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "position": [
+        1180,
+        50
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 19
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            15,
+            20
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEDecode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "position": [
+        1510,
+        150
+      ],
+      "size": [
+        455.989990234375,
+        553.0900268554688
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 16
+        }
+      ],
+      "outputs": [],
+      "widgets": [
+        "ComfyUI"
+      ],
+      "mode": 0,
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 16,
+      "type": "PreviewImage",
+      "position": [
+        1180,
+        150
+      ],
+      "size": [
+        290,
+        330
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 20
+        }
+      ],
+      "outputs": [],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "PreviewImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "position": [
+        10,
+        370
+      ],
+      "size": [
+        310,
+        110
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            2
+          ]
+        }
+      ],
+      "widgets": [
+        512,
+        512,
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 13,
+      "type": "UpscaleModelLoader",
+      "position": [
+        10,
+        60
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "UPSCALE_MODEL",
+          "type": "UPSCALE_MODEL",
+          "slot_index": 0,
+          "links": [
+            14
+          ]
+        }
+      ],
+      "widgets": [
+        "RealESRGAN_x4plus.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "UpscaleModelLoader",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43",
+        "models": [
+          {
+            "name": "RealESRGAN_x4plus.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors",
+            "directory": "upscale_models"
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "position": [
+        10,
+        160
+      ],
+      "size": [
+        315,
+        98
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 1,
+          "links": [
+            17,
+            18
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 2,
+          "links": [
+            19
+          ]
+        }
+      ],
+      "widgets": [
+        "DreamShaper_8_pruned.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43",
+        "models": [
+          {
+            "name": "DreamShaper_8_pruned.safetensors",
+            "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+            "directory": "checkpoints"
+          }
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "type": "MarkdownNote",
+      "title": "Tutorials",
+      "position": [
+        -490,
+        10
+      ],
+      "size": [
+        470,
+        410
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "[Docs](https://docs.comfy.org/tutorials/basic/upscale) \n\n## Workflow Overview\n[Upscale Models - ComfyUI_examples](https://comfyanonymous.github.io/ComfyUI_examples/upscale_models/) \n\n\n## Model links\n\n**checkpoints**\n\n- [DreamShaper_8_pruned.safetensors](https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors)\n\n**upscale_models**\n\n- [RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors)\n\n\nModel Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 checkpoints/\n│   │      └── DreamShaper_8_pruned.safetensors\n│   └── 📂 upscale_models/\n│          └── RealESRGAN_x4plus.safetensors\n```\n\n## Report issue\nIf you have any problems running this workflow, please report template-related issues via this link: [report the template issue here](https://github.com/Comfy-Org/workflow_templates/issues)"
+      ],
+      "mode": 0,
+      "properties": {}
+    }
+  ],
+  "links": [
+    [
+      1,
+      4,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      5,
+      0,
+      3,
+      3,
+      "LATENT"
+    ],
+    [
+      4,
+      6,
+      0,
+      3,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      7,
+      0,
+      3,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      3,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      14,
+      13,
+      0,
+      14,
+      0,
+      "UPSCALE_MODEL"
+    ],
+    [
+      15,
+      8,
+      0,
+      14,
+      1,
+      "IMAGE"
+    ],
+    [
+      16,
+      14,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      4,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      18,
+      4,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      19,
+      4,
+      2,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      20,
+      8,
+      0,
+      16,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": 5,
+  "nodeTypes": [
+    "ImageUpscaleWithModel",
+    "KSampler",
+    "CLIPTextEncode",
+    "VAEDecode",
+    "SaveImage",
+    "PreviewImage",
+    "EmptyLatentImage",
+    "UpscaleModelLoader",
+    "CheckpointLoaderSimple",
+    "MarkdownNote"
+  ],
+  "review": "保留 UpscaleModelLoader 和 ImageUpscaleWithModel 的真实模型引用。",
+  "dependencies": [
+    {
+      "id": 13,
+      "type": "UpscaleModelLoader",
+      "mode": 0,
+      "widgets": [
+        "RealESRGAN_x4plus.safetensors"
+      ],
+      "models": [
+        {
+          "name": "RealESRGAN_x4plus.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors",
+          "directory": "upscale_models"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "mode": 0,
+      "widgets": [
+        "DreamShaper_8_pruned.safetensors"
+      ],
+      "models": [
+        {
+          "name": "DreamShaper_8_pruned.safetensors",
+          "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+          "directory": "checkpoints"
+        }
+      ]
+    }
+  ],
+  "exactRoundTrip": true,
+  "difference": ""
+}

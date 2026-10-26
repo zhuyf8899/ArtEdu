@@ -16,11 +16,12 @@ export interface AgentDelivery {
     budgetExhausted: boolean;
 }
 // Task planning and delivery checks. Only actual tool results establish completion.
-const writingTools = new Set(['write_workspace_file', 'write_workspace_files', 'create_workspace_directory', 'change_workspace_directory', 'create_agent_artifact', 'generate_document', 'generate_image', 'start_workflow_run']);
+const writingTools = new Set(['write_workspace_file', 'write_workspace_files', 'create_workspace_directory', 'change_workspace_directory', 'create_agent_artifact', 'generate_document', 'generate_image', 'start_workflow_run','create_temporary_workflow','edit_temporary_workflow','load_own_workflow_draft']);
 export const isMutation = (name: string) => writingTools.has(name);
 // Image-only jobs cannot silently substitute a generated program for a raster image.
 export function allowsTaskTool(contract: AgentTask, name: string) {
     if (['answer', 'clarify'].includes(contract.action)) return !isMutation(name);
+    if (contract.deliverables.some(d=>d.kind==='workflow') && isMutation(name)) return ['create_temporary_workflow','edit_temporary_workflow','load_own_workflow_draft'].includes(name);
     const imageOnly = contract.deliverables.length > 0 && contract.deliverables.every(d => d.kind === 'image');
     if (imageOnly) return (!isMutation(name) && name !== 'check_page') || name === 'generate_image';
     return true;
@@ -47,6 +48,7 @@ export function planTask({ prompt, previousTask = null }: {
         return { action: 'answer', deliverables: [], reason: '用户要求解释、讨论或明确不交付文件' };
     const affirmative = clauses.map(s => s.replace(/(?:不要|不想|不用|无需|先别|别|不需要|暂不)[^，,。；;]*?(?:但|而是)/g, '').replace(/(?:不要|不想|不用|无需|先别|别|不需要|暂不)[^，,。；;]*$/g, '')).filter(s => !/^(?:请)?(?:不要|不想|不用|无需|先别|别|不需要|暂不)/.test(s)).join('，');
     const create = /(生成|制作|创建|导出|搭建|做个|做一个|设计(?:一套|一个|一款)|生图|出图|画|绘制)|\b(build|create|make|generate|export)\b/i.test(affirmative);
+    if (/工作流|节点图|workflow/i.test(affirmative) && (create || /修改|编辑|调整|修复|连接/.test(affirmative))) return {action:/修改|编辑|调整|修复/.test(affirmative)?'modify':'create',deliverables:[{kind:'workflow',format:'json'}],reason:'生成或修改本人草稿，执行必须由用户点击'};
     const deliverables = [];
     const imageApi = /生图|出图|(?:调用|使用|用).*(?:图片生成|图像生成|生图|generate_image)/i.test(affirmative);
     const visualMockup = /(?:网页|页面|网站|首页|前端界面|UI界面|UI).*(?:设计图|效果图|截图)|(?:设计图|效果图|截图).*(?:网页|页面|网站|首页|前端界面|UI界面|UI)/i.test(affirmative);
@@ -143,6 +145,7 @@ export function assessDelivery({ contract, ledger = [], content = '', finishReas
                 }
             }
         }
+        if (['create_temporary_workflow','edit_temporary_workflow'].includes(entry.name) && entry.output?.temporaryWorkflow) { const w=entry.output.temporaryWorkflow; artifacts.set(w.id,{path:w.name,kind:'workflow',openUrl:'/api/temporary-workflows/'+w.id,workflowId:w.id,revision:w.revision}); }
         if (entry.name === 'generate_document' && entry.output?.openUrl)
             artifacts.set(entry.output.openUrl, { path: entry.output.document?.fileName || '文档', openUrl: entry.output.openUrl, kind: 'document' });
         if (entry.name === 'generate_image' && entry.output?.openUrl && entry.output?.image?.mimeType?.startsWith('image/'))

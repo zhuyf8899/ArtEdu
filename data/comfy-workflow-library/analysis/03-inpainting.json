@@ -1,0 +1,608 @@
+{
+  "id": "03-inpainting",
+  "title": "局部重绘",
+  "sourcePath": "archived/inpaint_example.json",
+  "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/inpaint_example.json",
+  "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/inpaint_example.json",
+  "tutorialUrl": "https://docs.comfy.org/tutorials/basic/inpaint",
+  "sourceSha256": "b5cc720dcc1b41bb772fbadac2fbda1202c2bd955cd13bb61ce59b86006ba0b8",
+  "nodes": [
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "position": [
+        432,
+        158
+      ],
+      "size": [
+        422.8500061035156,
+        164.30999755859375
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 81
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            4
+          ]
+        }
+      ],
+      "widgets": [
+        "teacup on pink tablecloth, Anime style"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.18"
+      }
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "position": [
+        434,
+        371
+      ],
+      "size": [
+        425.2799987792969,
+        180.61000061035156
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 82
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            6
+          ]
+        }
+      ],
+      "widgets": [
+        "watermark, text\n"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.18"
+      }
+    },
+    {
+      "id": 20,
+      "type": "LoadImage",
+      "position": [
+        80,
+        660
+      ],
+      "size": [
+        385,
+        365
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            85
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": [
+            79
+          ]
+        }
+      ],
+      "widgets": [
+        "inpaint_example_input_image.png",
+        "image"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.18"
+      }
+    },
+    {
+      "id": 33,
+      "type": "ImageScaleToTotalPixels",
+      "position": [
+        490,
+        660
+      ],
+      "size": [
+        260,
+        82
+      ],
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 85
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            86
+          ]
+        }
+      ],
+      "widgets": [
+        "nearest-exact",
+        0.25
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ImageScaleToTotalPixels",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.64"
+      }
+    },
+    {
+      "id": 32,
+      "type": "MarkdownNote",
+      "title": "About Scale Image to Total Pixels",
+      "position": [
+        490,
+        790
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "The model this template uses is trained based on a 512*512 image dataset. So if you use an input image that's too large, it might cause some issues. We've added the Scale image to total pixels node to scale images. If you're quite familiar with this model, you can remove it."
+      ],
+      "mode": 0,
+      "properties": {}
+    },
+    {
+      "id": 34,
+      "type": "MarkdownNote",
+      "title": "About how to draw mask",
+      "position": [
+        490,
+        930
+      ],
+      "size": [
+        260,
+        90
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "Click on the **Load Image** node, then use the right-click menu to open the mask editor to draw a mask."
+      ],
+      "mode": 0,
+      "properties": {}
+    },
+    {
+      "id": 26,
+      "type": "VAEEncodeForInpaint",
+      "position": [
+        890,
+        650
+      ],
+      "size": [
+        226.8000030517578,
+        98
+      ],
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 86
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 83
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 79
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            72
+          ]
+        }
+      ],
+      "widgets": [
+        6
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEEncodeForInpaint",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.18"
+      }
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "position": [
+        1240,
+        120
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 42
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 84
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            22
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEDecode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.18"
+      }
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "position": [
+        900,
+        120
+      ],
+      "size": [
+        315,
+        262
+      ],
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 80
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 4
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 72
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            42
+          ]
+        }
+      ],
+      "widgets": [
+        808369199502636,
+        "randomize",
+        20,
+        8,
+        "uni_pc_bh2",
+        "normal",
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "KSampler",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.18"
+      }
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "position": [
+        1240,
+        220
+      ],
+      "size": [
+        410,
+        430
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 22
+        }
+      ],
+      "outputs": [],
+      "widgets": [
+        "ComfyUI"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.18"
+      }
+    },
+    {
+      "id": 29,
+      "type": "CheckpointLoaderSimple",
+      "position": [
+        80,
+        150
+      ],
+      "size": [
+        315,
+        98
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            80
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 1,
+          "links": [
+            81,
+            82
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 2,
+          "links": [
+            83,
+            84
+          ]
+        }
+      ],
+      "widgets": [
+        "512-inpainting-ema.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.18",
+        "models": [
+          {
+            "name": "512-inpainting-ema.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/stable_diffusion_2.1_repackaged/resolve/main/512-inpainting-ema.safetensors",
+            "directory": "checkpoints"
+          }
+        ]
+      }
+    },
+    {
+      "id": 31,
+      "type": "MarkdownNote",
+      "title": "Tutorial links",
+      "position": [
+        -320,
+        110
+      ],
+      "size": [
+        380,
+        310
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "[Tutorial](https://docs.comfy.org/tutorials/basic/inpaint) \n\n## Model link\n**checkpoint**\n\n[512-inpainting-ema.safetensors](https://huggingface.co/Comfy-Org/stable_diffusion_2.1_repackaged/resolve/main/512-inpainting-ema.safetensors)\n\n\nModel Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 checkpoints/\n│   │   └── 512-inpainting-ema.safetensors\n\n```\n\n\n\n## Report issue\nIf you have any problems running this workflow, please report template-related issues via this link: [report the template issue here](https://github.com/Comfy-Org/workflow_templates/issues)"
+      ],
+      "mode": 0,
+      "properties": {}
+    }
+  ],
+  "links": [
+    [
+      4,
+      6,
+      0,
+      3,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      7,
+      0,
+      3,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      22,
+      8,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      42,
+      3,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      72,
+      26,
+      0,
+      3,
+      3,
+      "LATENT"
+    ],
+    [
+      79,
+      20,
+      1,
+      26,
+      2,
+      "MASK"
+    ],
+    [
+      80,
+      29,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      81,
+      29,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      82,
+      29,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      83,
+      29,
+      2,
+      26,
+      1,
+      "VAE"
+    ],
+    [
+      84,
+      29,
+      2,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      85,
+      20,
+      0,
+      33,
+      0,
+      "IMAGE"
+    ],
+    [
+      86,
+      33,
+      0,
+      26,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": 3,
+  "nodeTypes": [
+    "CLIPTextEncode",
+    "LoadImage",
+    "ImageScaleToTotalPixels",
+    "MarkdownNote",
+    "VAEEncodeForInpaint",
+    "VAEDecode",
+    "KSampler",
+    "SaveImage",
+    "CheckpointLoaderSimple"
+  ],
+  "review": "保留原图透明遮罩及重绘编码链，不改成普通文字生图。",
+  "dependencies": [
+    {
+      "id": 20,
+      "type": "LoadImage",
+      "mode": 0,
+      "widgets": [
+        "inpaint_example_input_image.png",
+        "image"
+      ],
+      "models": []
+    },
+    {
+      "id": 29,
+      "type": "CheckpointLoaderSimple",
+      "mode": 0,
+      "widgets": [
+        "512-inpainting-ema.safetensors"
+      ],
+      "models": [
+        {
+          "name": "512-inpainting-ema.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/stable_diffusion_2.1_repackaged/resolve/main/512-inpainting-ema.safetensors",
+          "directory": "checkpoints"
+        }
+      ]
+    }
+  ],
+  "exactRoundTrip": true,
+  "difference": ""
+}

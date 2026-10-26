@@ -91,6 +91,7 @@ export class AgentController {
       const run = await this.harness.execute(actor, runId, input, {
         signal: controller.signal,
         onDelta: (text) => send("delta", { text }),
+        onTemporaryWorkflow: (workflow) => send("temporary_workflow",{workflow}),
         onProgress: (event) => send("progress", event),
       });
       send("done", { run });

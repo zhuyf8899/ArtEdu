@@ -1,0 +1,2098 @@
+[
+  {
+    "moduleName": "default",
+    "type": "image",
+    "category": null,
+    "icon": null,
+    "title": "Getting Started",
+    "templates": [
+      {
+        "name": "gligen_textbox_example",
+        "title": "Gligen Textbox",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate images by precisely placing objects via textboxes.",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/gligen/",
+        "tags": ["Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "size": 2974264852
+      },
+      {
+        "name": "area_composition_square_area_for_subject",
+        "title": "Area Composition: Subject Square Area",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate images with consistent subject placement using area composition.",
+        "tags": ["Text-to-Image", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/area_composition/#increasing-consistency-of-images-with-area-composition",
+        "size": 2469606195
+      },
+      {
+        "name": "latent_upscale_different_prompt_model",
+        "title": "Latent Upscale with Different Prompts",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Change prompts during generation to upscale images.",
+        "thumbnailVariant": "zoomHover",
+        "tags": ["Upscale", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/2_pass_txt2img/#more-examples",
+        "size": 4262755041
+      },
+      {
+        "name": "embedding_example",
+        "title": "Embedding",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Use textual inversion to generate images with a consistent style.",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/textual_inversion_embeddings/",
+        "tags": ["Text-to-Image", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "size": 5218385265
+      },
+      {
+        "name": "area_composition",
+        "title": "Area Composition",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate images by defining and controlling composition areas.",
+        "tags": ["Text-to-Image", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/area_composition/",
+        "size": 2469606195
+      },
+      {
+        "name": "hiresfix_latent_workflow",
+        "title": "Upscale",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Upscale images by enhancing quality in latent space.",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["Upscale", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/2_pass_txt2img/",
+        "size": 2136746230
+      },
+      {
+        "name": "esrgan_example",
+        "title": "ESRGAN",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Upscale images using the ESRGAN model for higher quality.",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["Upscale", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/upscale_models/",
+        "size": 2201170739
+      },
+      {
+        "name": "hiresfix_esrgan_workflow",
+        "title": "HiresFix ESRGAN Workflow",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Use the ESRGAN model for upscaling during intermediate generation steps.",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["Upscale", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/2_pass_txt2img/#non-latent-upscaling",
+        "size": 2201170739
+      },
+      {
+        "name": "2_pass_pose_worship",
+        "title": "Pose ControlNet Two-Pass",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Use ControlNet to guide image generation with pose references.",
+        "thumbnailVariant": "hoverDissolve",
+        "tags": ["ControlNet", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/controlnet/#pose-controlnet",
+        "size": 4660039516
+      },
+      {
+        "name": "depth_t2i_adapter",
+        "title": "Depth T2I Adapter",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Guide image generation using T2I Adapter with depth information.",
+        "thumbnailVariant": "hoverDissolve",
+        "tags": ["ControlNet", "Image", "Text-to-Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/controlnet/#t2i-adapter-vs-controlnets",
+        "size": 2523293286
+      },
+      {
+        "name": "mixing_controlnets",
+        "title": "Mixing ControlNets",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate images by combining multiple ControlNet models.",
+        "thumbnailVariant": "hoverDissolve",
+        "tags": ["ControlNet", "Image", "Text-to-Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/controlnet/#mixing-controlnets",
+        "size": 3328599654
+      },
+      {
+        "name": "image2image",
+        "title": "Image-to-Image",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Transform an existing image with a text prompt.",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/basic/image-to-image",
+        "tags": ["Image-to-Image", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "size": 2136746230,
+        "thumbnailVariant": "hoverDissolve"
+      },
+      {
+        "name": "lora",
+        "title": "LoRA",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate images with professional style or subject using LoRA models.",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/basic/lora",
+        "tags": ["Text-to-Image", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "size": 2437393940
+      },
+      {
+        "name": "lora_multiple",
+        "title": "Multiple LoRA",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate images by combining multiple LoRA models.",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/basic/lora",
+        "tags": ["Text-to-Image", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "size": 2437393940
+      },
+      {
+        "name": "inpaint_model_outpainting",
+        "title": "Outpainting",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Expand images beyond their original boundaries.",
+        "thumbnailVariant": "compareSlider",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/basic/inpaint",
+        "tags": ["Outpainting", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "size": 5218385265
+      },
+      {
+        "name": "controlnet_example",
+        "title": "Scribble ControlNet",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Guide image generation via ControlNet using scribble reference images.",
+        "thumbnailVariant": "hoverDissolve",
+        "tags": ["ControlNet", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/controlnet/",
+        "size": 3189013217
+      },
+      {
+        "name": "depth_controlnet",
+        "title": "Depth ControlNet",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Guide image generation using ControlNet with depth information.",
+        "thumbnailVariant": "hoverDissolve",
+        "tags": ["ControlNet", "Image", "Text-to-Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/controlnet/#t2i-adapter-vs-controlnets",
+        "size": 2888365507
+      },
+      {
+        "name": "inpaint_example",
+        "title": "Inpaint",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Edit specific parts of images seamlessly.",
+        "thumbnailVariant": "compareSlider",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/basic/inpaint",
+        "tags": ["Inpainting", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "size": 5218385265,
+        "usage": 88
+      },
+      {
+        "name": "gsl_starter_1_1",
+        "title": "1.1 Starter – Text to Image",
+        "description": "Learn the basics of image generation in ComfyUI — load a model, write prompts, and generate your first image.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image", "Text to Image"],
+        "models": ["SD1.5"],
+        "date": "2026-02-12",
+        "openSource": true,
+        "includeOnDistributions": ["local"],
+        "size": 2147483648,
+        "usage": 28,
+        "searchRank": 0,
+        "username": "ComfyUI"
+      },
+      {
+        "name": "gsc_starter_1",
+        "title": "1.1 Starter - Text to Image",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Learn how to generate an image, connect nodes, run a workflow and download an image using Z-Image Turbo.",
+        "models": ["Z-Image-Turbo"],
+        "date": "2026-02-11",
+        "searchRank": 3,
+        "includeOnDistributions": ["cloud"],
+        "size": 20723217203,
+        "usage": 260,
+        "io": {
+          "outputs": [
+            {
+              "nodeId": 76,
+              "nodeType": "SaveImage",
+              "file": "gsc_starter_1_output.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "tags": ["Image", "Text to Image"],
+        "openSource": true,
+        "username": "ComfyUI",
+        "thumbnail": ["output/gsc_starter_1_output.png"]
+      },
+      {
+        "name": "gsl_starter_1_2",
+        "title": "1.2 Starter – Image to Video",
+        "description": "Learn how to load images,  generate a video and how to find a node using Wan 2.2",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Video", "FLF2V"],
+        "models": ["Wan2.2"],
+        "date": "2026-02-10",
+        "openSource": true,
+        "includeOnDistributions": ["local"],
+        "size": 36829344563,
+        "usage": 28,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 122,
+              "nodeType": "LoadImage",
+              "file": "gs2_image1.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 124,
+              "nodeType": "LoadImage",
+              "file": "gs2_image2.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 126,
+              "nodeType": "LoadImage",
+              "file": "gs2_image3.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 130,
+              "nodeType": "LoadImage",
+              "file": "gs2_image4.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "gsc_starter_2",
+        "title": "1.2 Starter - Image to Video",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Learn how to load images,  generate a video and how to find a node using Wan 2.2.",
+        "models": ["Wan2.2", "Wan"],
+        "date": "2026-02-09",
+        "searchRank": 3,
+        "includeOnDistributions": ["cloud"],
+        "size": 0,
+        "requiresCustomNodes": ["comfyui_essentials"],
+        "usage": 33,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 213,
+              "nodeType": "LoadImage",
+              "file": "gs2_image1.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 214,
+              "nodeType": "LoadImage",
+              "file": "gs2_image2.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 215,
+              "nodeType": "LoadImage",
+              "file": "gs2_image3.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 217,
+              "nodeType": "LoadImage",
+              "file": "gs2_image4.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "tags": ["Video", "FLF2V"]
+      },
+      {
+        "name": "gsl_starter_1_3",
+        "title": "1.3 Starter – Product Photography",
+        "description": "Learn how to relight a product, enter a subgraph, unbypass a node using Qwen Image Edit.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image", "Image Edit"],
+        "models": ["Flux.2 Klein"],
+        "date": "2026-02-08",
+        "openSource": true,
+        "includeOnDistributions": ["local"],
+        "size": 12455405158,
+        "usage": 38,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 3,
+              "nodeType": "LoadImage",
+              "file": "gsc3_landscape.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 7,
+              "nodeType": "LoadImage",
+              "file": "gsc3_car.jpeg",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 2,
+              "nodeType": "SaveImage",
+              "file": "gsl_starter_1_2.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "thumbnail": ["output/gsl_starter_1_2.png"]
+      },
+      {
+        "name": "gsc_starter_3",
+        "title": "1.3 Starter - Product Photography",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Learn how to create a product photography with image inputs, enter a subgraph, unbypass a node and get to know partner nodes using Nano Banana Pro.",
+        "models": ["Nano Banana Pro", "Google"],
+        "date": "2026-02-07",
+        "searchRank": 3,
+        "includeOnDistributions": ["cloud"],
+        "size": 0,
+        "requiresCustomNodes": ["comfyui-kjnodes", "comfyui_essentials"],
+        "usage": 30,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 3,
+              "nodeType": "LoadImage",
+              "file": "gsc3_landscape.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 7,
+              "nodeType": "LoadImage",
+              "file": "gsc3_car.jpeg",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "tags": ["API", "Image", "Image Edit"]
+      },
+      {
+        "name": "gsc_creator_2_1",
+        "title": "2.1 Creator - Diffusion Basics",
+        "description": "Learn the diffusion basics using Z-Image-Turbo.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Text to Image"],
+        "models": ["Z-Image-Turbo"],
+        "date": "2026-02-06",
+        "openSource": true,
+        "includeOnDistributions": ["cloud"],
+        "size": 20723217203,
+        "usage": 36,
+        "searchRank": 0,
+        "io": {
+          "outputs": [
+            {
+              "nodeId": 100,
+              "nodeType": "SaveImage",
+              "file": "gsc_creator_2_1.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "thumbnail": ["output/gsc_creator_2_1.png"]
+      },
+      {
+        "name": "gsl_creator_2",
+        "title": "2.2 Creator - Image Editing",
+        "description": "Load an image, draw a mask over the area to edit, and input a prompt. Generate a new image where only the masked region is redrawn according to your prompt.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["Inpainting"],
+        "models": ["Z-Image-Turbo"],
+        "date": "2026-02-05",
+        "openSource": true,
+        "includeOnDistributions": ["local"],
+        "size": 27380416512,
+        "usage": 0,
+        "searchRank": 0,
+        "username": "ComfyUI",
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 137,
+              "nodeType": "LoadImage",
+              "file": "old_school_style_girl.png",
+              "mediaType": "image"
+            }
+          ]
+        }
+      },
+      {
+        "name": "gsc_creator_2_2",
+        "title": "2.2 Creator - Diffusion Guidance",
+        "description": "Learn how to guide diffusion for precise image editing with inpainting and controlnet using Z Image Turbo.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["Inpainting", "Image"],
+        "models": ["Z-Image-Turbo"],
+        "date": "2026-02-04",
+        "openSource": true,
+        "includeOnDistributions": ["cloud"],
+        "size": 27380416512,
+        "usage": 41,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 107,
+              "nodeType": "LoadImage",
+              "file": "gsc_creator_2_2_input.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 100,
+              "nodeType": "SaveImage",
+              "file": "gsc_creator_2_2_output.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "thumbnail": ["input/gsc_creator_2_2_input.png", "output/gsc_creator_2_2_output.png"]
+      },
+      {
+        "name": "gsc_creator_2_3",
+        "title": "2.3 Creator: Image Upscale & Analysis",
+        "description": "Learn how to upscale an image and auto-generate a prompt using Z Image Turbo.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["Image", "Image Upscale"],
+        "models": ["Z-Image-Turbo"],
+        "date": "2026-02-03",
+        "openSource": true,
+        "includeOnDistributions": ["cloud"],
+        "size": 20723217203,
+        "usage": 92,
+        "searchRank": 0,
+        "username": "ComfyUI",
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 132,
+              "nodeType": "LoadImage",
+              "file": "dragon_fruit_cream.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 143,
+              "nodeType": "SaveImage",
+              "file": "gsc_creator_2_3.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "thumbnail": ["input/dragon_fruit_cream.png", "output/gsc_creator_2_3.png"]
+      },
+      {
+        "name": "gsc_advanced_3_1",
+        "title": "3.1 Advanced:  Multi-Shot Video",
+        "description": "Learn how to create a UGC video with your character and product in app mode.",
+        "mediaType": "image",
+        "includeOnDistributions": ["cloud"],
+        "mediaSubtype": "webp",
+        "tags": ["API", "Image to Video", "Video"],
+        "models": ["Kling 3.0", "Nano Banana 2"],
+        "logos": [
+          {
+            "provider": ["Google", "Kling"]
+          }
+        ],
+        "date": "2026-02-02",
+        "openSource": false,
+        "size": 0,
+        "usage": 77,
+        "searchRank": 0,
+        "username": "ComfyUI",
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 483,
+              "nodeType": "LoadImage",
+              "file": "close_up_portrait.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 1185,
+              "nodeType": "LoadImage",
+              "file": "product_photo.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 1237,
+              "nodeType": "SaveVideo",
+              "file": "gsc_advanced_3_1.mp4",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "thumbnail": ["output/gsc_advanced_3_1.mp4"]
+      },
+      {
+        "name": "gsc_advanced_3_2",
+        "title": "3.2 Advanced: Control Video Generation",
+        "description": "Learn how to control a video with Pose Estimation and Wan Animate.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["Video", "Text to Video"],
+        "models": ["wan2.2 Animate"],
+        "date": "2026-02-01",
+        "openSource": true,
+        "size": 28346784154,
+        "usage": 12,
+        "searchRank": 0,
+        "username": "ComfyUI",
+        "includeOnDistributions": ["cloud"],
+        "requiresCustomNodes": ["comfyui_controlnet_aux"],
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 420,
+              "nodeType": "LoadVideo",
+              "file": "gsc_input_video_3_2.mp4",
+              "mediaType": "video"
+            },
+            {
+              "nodeId": 479,
+              "nodeType": "LoadImage",
+              "file": "gsc_input_image_3_2.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 471,
+              "nodeType": "SaveVideo",
+              "file": "gsc_advanced_3_2.mp4",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "thumbnail": ["output/gsc_advanced_3_2.mp4"]
+      },
+      {
+        "name": "01_get_started_text_to_image",
+        "title": "Text to Image",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate images from text prompts using the Z-Image-Turbo model.",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/image/z-image/z-image-turbo",
+        "tags": ["Image", "Text to Image"],
+        "models": ["Z-Image-Turbo"],
+        "date": "2025-10-17",
+        "size": 20830591386,
+        "usage": 68,
+        "io": {
+          "outputs": [
+            {
+              "nodeId": 60,
+              "nodeType": "SaveImage",
+              "file": "01_get_started_text_to_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "openSource": true,
+        "searchRank": 0,
+        "thumbnail": ["output/01_get_started_text_to_image.png"]
+      },
+      {
+        "name": "02_qwen_Image_edit_subgraphed",
+        "title": "Image Editing",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Edit your images with Qwen-Image-Edit, the latest OSS model",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/image/qwen/qwen-image-edit",
+        "tags": ["ControlNet", "Image Edit"],
+        "models": ["Qwen-Image-Edit"],
+        "date": "2025-10-17",
+        "size": 31782757990,
+        "usage": 154,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 78,
+              "nodeType": "LoadImage",
+              "file": "02_qwen_Image_edit_subgraphed_input_image.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 60,
+              "nodeType": "SaveImage",
+              "file": "02_qwen_Image_edit_subgraphed.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "thumbnailVariant": "compareSlider",
+        "openSource": true,
+        "searchRank": 0,
+        "thumbnail": ["input/02_qwen_Image_edit_subgraphed_input_image.png", "output/02_qwen_Image_edit_subgraphed.png"]
+      },
+      {
+        "name": "03_video_wan2_2_14B_i2v_subgraphed",
+        "title": "Image to Video",
+        "description": "Generate videos from an input image using Wan2.2 14B",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/video/wan/wan2_2",
+        "tags": ["Image to Video", "Video"],
+        "models": ["Wan", "Wan2.2"],
+        "date": "2025-10-17",
+        "size": 38010460570,
+        "usage": 1722,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 97,
+              "nodeType": "LoadImage",
+              "file": "03_video_wan2_2_14B_i2v_subgraphed_input_image.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 108,
+              "nodeType": "SaveVideo",
+              "file": "03_video_wan2_2_14B_i2v_subgraphed.mp4",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "openSource": true,
+        "searchRank": 0,
+        "thumbnail": ["output/03_video_wan2_2_14B_i2v_subgraphed.mp4"]
+      },
+      {
+        "name": "04_hunyuan_3d_2.1_subgraphed",
+        "title": "Image to 3D",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate 3D models from single images using Hunyuan3D 2.1.",
+        "tags": ["Image to 3D", "3D"],
+        "models": ["Hunyuan3D"],
+        "date": "2025-10-17",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/3d/hunyuan3D-2",
+        "size": 4939212390,
+        "usage": 368,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 2,
+              "nodeType": "LoadImage",
+              "file": "04_hunyuan_3d_2.1_subgraphed_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "openSource": true,
+        "searchRank": 0
+      },
+      {
+        "name": "05_audio_ace_step_1_t2a_song_subgraphed",
+        "title": "Text to Song",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate songs from text prompts using ACE-Step v1",
+        "tags": ["Audio", "Text to Audio"],
+        "models": ["ACE-Step"],
+        "date": "2025-10-17",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/audio/ace-step/ace-step-v1",
+        "size": 7730941133,
+        "usage": 9,
+        "username": "ComfyUI",
+        "openSource": true,
+        "searchRank": 0
+      },
+      {
+        "name": "default",
+        "title": "Image Generation",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate images from text prompts.",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/basic/text-to-image",
+        "tags": ["Text to Image", "Image"],
+        "models": ["SD1.5", "Stability"],
+        "date": "2025-03-01",
+        "size": 2147483648,
+        "usage": 341,
+        "username": "ComfyUI",
+        "openSource": true,
+        "searchRank": 0
+      }
+    ]
+  },
+  {
+    "moduleName": "default",
+    "type": "video",
+    "category": "Generation Type",
+    "icon": "icon-[lucide--film]",
+    "title": "Video",
+    "templates": [
+      {
+        "name": "api_pika_i2v",
+        "title": "Pika: Image-to-Video",
+        "description": "Use Pika AI to generate smooth animated videos from a single still image.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image-to-Video", "Video", "API"],
+        "models": ["Pika"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0
+      },
+      {
+        "name": "api_pika_scene",
+        "title": "Pika Scene: Image-to-Video",
+        "description": "Use Pika Scene to generate videos containing multiple input images.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image-to-Video", "Video", "API"],
+        "models": ["Pika"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0
+      },
+      {
+        "name": "mochi_text_to_video_example",
+        "title": "Mochi Text-to-Video",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate videos from text prompts using the Mochi model.",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/mochi/",
+        "tags": ["Text-to-Video", "Video"],
+        "models": ["Mochi"],
+        "date": "2025-03-01",
+        "size": 30762703258
+      },
+      {
+        "name": "image_to_video",
+        "title": "SVD Image-to-Video",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "description": "Generate video from a still image.",
+        "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/video/#image-to-video",
+        "tags": ["Image-to-Video", "Video"],
+        "models": ["SVD", "Stability"],
+        "date": "2025-03-01",
+        "size": 9556302234
+      }
+    ]
+  },
+  {
+    "moduleName": "default",
+    "type": "video",
+    "category": "GENERATION TYPE",
+    "icon": "icon-[lucide--film]",
+    "title": "Video",
+    "templates": [
+      {
+        "name": "api_moonvalley_image_to_video",
+        "title": "Moonvalley: Image to Video",
+        "description": "Generate cinematic, 1080p videos with an image through a model trained exclusively on licensed data.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image to Video", "Video", "API"],
+        "models": ["Moonvalley"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 4,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 29,
+              "nodeType": "LoadImage",
+              "file": "api_moonvalley_image_to_video_input_image.jpg",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 27,
+              "nodeType": "SaveVideo",
+              "file": "",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_moonvalley_video_to_video_motion_transfer",
+        "title": "Moonvalley: Motion Transfer",
+        "description": "Apply motion from one video to another.",
+        "mediaType": "image",
+        "thumbnailVariant": "hoverDissolve",
+        "mediaSubtype": "webp",
+        "tags": ["Video to Video", "Video", "API"],
+        "models": ["Moonvalley"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 4,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 31,
+              "nodeType": "LoadVideo",
+              "file": "api_moonvalley_video_to_video_motion_transfer_input_video.mp4",
+              "mediaType": "video"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 32,
+              "nodeType": "SaveVideo",
+              "file": "",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_moonvalley_video_to_video_pose_control",
+        "title": "Moonvalley: Pose Control",
+        "description": "Apply human pose and movement from one video to another.",
+        "mediaType": "image",
+        "thumbnailVariant": "hoverDissolve",
+        "mediaSubtype": "webp",
+        "tags": ["Video to Video", "Video", "API"],
+        "models": ["Moonvalley"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 7,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 31,
+              "nodeType": "LoadVideo",
+              "file": "api_moonvalley_video_to_video_pose_control_input_video.mp4",
+              "mediaType": "video"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 32,
+              "nodeType": "SaveVideo",
+              "file": "",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_moonvalley_text_to_video",
+        "title": "Moonvalley: Text to Video",
+        "description": "Generate cinematic, 1080p videos from text prompts through a model trained exclusively on licensed data.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Text to Video", "Video", "API"],
+        "models": ["Moonvalley"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 2,
+        "io": {
+          "outputs": [
+            {
+              "nodeId": 27,
+              "nodeType": "SaveVideo",
+              "file": "",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_openai_sora_video",
+        "title": "Sora 2: Text & Image to Video",
+        "description": "OpenAI's Sora-2 and Sora-2 Pro video generation with synchronized audio.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image to Video", "Text to Video", "API"],
+        "models": ["OpenAI"],
+        "date": "2025-10-08",
+        "openSource": false,
+        "size": 0,
+        "usage": 89,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 12,
+              "nodeType": "LoadImage",
+              "file": "api_openai_sora_video_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_runway_first_last_frame",
+        "title": "Runway: First Last Frame to Video",
+        "description": "Generate smooth video transitions between two keyframes with Runway's precision.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Video", "API", "FLF2V"],
+        "models": ["Runway"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 33,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 10,
+              "nodeType": "LoadImage",
+              "file": "api_runway_first_last_frame_first_frame.jpg",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 11,
+              "nodeType": "LoadImage",
+              "file": "api_runway_first_last_frame_last_frame.jpg",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_runway_gen3a_turbo_image_to_video",
+        "title": "Runway: Gen3a Turbo Image to Video",
+        "description": "Generate cinematic videos from static images using Runway Gen3a Turbo.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image to Video", "Video", "API"],
+        "models": ["Runway"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 57,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 4,
+              "nodeType": "LoadImage",
+              "file": "api_runway_gen3a_turbo_image_to_video_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_kling_flf",
+        "title": "Kling1.6: FLF2V",
+        "description": "Generate videos through controlling the first and last frames.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Video", "API", "FLF2V"],
+        "models": ["Kling", "Kling 1.6"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 33,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 40,
+              "nodeType": "LoadImage",
+              "file": "api_kling_flf_first_frame.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 42,
+              "nodeType": "LoadImage",
+              "file": "api_kling_flf_last_frame.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_kling_i2v",
+        "title": "Kling2.0: Image to Video",
+        "description": "Generate videos with excellent prompt adherence for actions, expressions, and camera movements using Kling.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image to Video", "Video", "API"],
+        "models": ["Kling", "Kling 2.0"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 121,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 40,
+              "nodeType": "LoadImage",
+              "file": "api_kling_i2v_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_kling_dual_characters_effects",
+        "title": "Kling: Dual Character Effect",
+        "description": "Upload two character images side - by - side. Generate a video in which the characters hug, kiss, or form a heart gesture together.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Video"],
+        "models": ["Kling 1.6", "Kling"],
+        "logos": [
+          {
+            "provider": "Kling"
+          }
+        ],
+        "date": "2026-03-02",
+        "openSource": false,
+        "size": 0,
+        "usage": 11,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 13,
+              "nodeType": "LoadImage",
+              "file": "deep_curl_portrait.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 14,
+              "nodeType": "LoadImage",
+              "file": "blue_tone_woman.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 17,
+              "nodeType": "SaveVideo",
+              "file": "api_kling_dual_characters_effects.mp4",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "thumbnail": ["output/api_kling_dual_characters_effects.mp4"]
+      },
+      {
+        "name": "api_kling_effects",
+        "title": "Kling 1.6: Video Effects",
+        "description": "Generate dynamic videos by applying visual effects to images using Kling.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Video", "API"],
+        "models": ["Kling", "Kling 1.6"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 1,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 2,
+              "nodeType": "LoadImage",
+              "file": "api_kling_effects_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_hailuo_minimax_i2v",
+        "title": "MiniMax: Image to Video",
+        "description": "Generate refined videos from images and text with CGI integration using MiniMax.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image to Video", "Video", "API"],
+        "models": ["MiniMax"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 6,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 2,
+              "nodeType": "LoadImage",
+              "file": "api_hailuo_minimax_i2v_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_hailuo_minimax_t2v",
+        "title": "MiniMax: Text to Video",
+        "description": "Generate high-quality videos directly from text prompts. Explore MiniMax's advanced AI capabilities to create diverse visual narratives with professional CGI effects and stylistic elements to bring your descriptions to life.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Text to Video", "Video", "API"],
+        "models": ["MiniMax"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 8,
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_hailuo_minimax_video",
+        "title": "MiniMax: Video",
+        "description": "Generate high-quality videos from text prompts with optional first-frame control using MiniMax Hailuo-02 model. Supports multiple resolutions (768P/1080P) and durations (6/10s) with intelligent prompt optimization.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Text to Video", "Video"],
+        "models": ["MiniMax"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 6,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 13,
+              "nodeType": "LoadImage",
+              "file": "api_hailuo_minimax_video_first_frame.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 14,
+              "nodeType": "SaveVideo",
+              "file": "api_hailuo_minimax_video.mp4",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "logos": [
+          {
+            "provider": "MiniMax"
+          }
+        ],
+        "searchRank": 0,
+        "thumbnail": ["output/api_hailuo_minimax_video.mp4"]
+      },
+      {
+        "name": "api_ltxv_image_to_video",
+        "title": "LTX-2: Image to Video",
+        "description": "Transform static images into dynamic videos with LTX-2 Pro. Generate cinematic video sequences with natural motion, synchronized audio, and support for up to 4K resolution at 50fps.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image to Video", "Video", "API"],
+        "models": ["LTX-2", "Lightricks"],
+        "date": "2025-10-28",
+        "status": "archived",
+        "openSource": false,
+        "size": 0,
+        "usage": 177,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 47,
+              "nodeType": "LoadImage",
+              "file": "api_ltxv_image_to_video_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_ltxv_text_to_video",
+        "title": "LTX-2: Text to Video",
+        "description": "Generate high-quality videos from text prompts using Lightricks LTX-2 with synchronized audio. Supports up to 4K resolution at 50fps with Fast, Pro, and Ultra modes for various production needs.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Text to Video", "Video", "API"],
+        "models": ["LTX-2", "Lightricks"],
+        "date": "2025-10-28",
+        "status": "archived",
+        "openSource": false,
+        "size": 0,
+        "usage": 27,
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_kling_avatar2",
+        "status": "archived",
+        "title": "Kling: Avatar 2.0",
+        "description": "Upload a portrait and an audio file to generate a talking avatar video with synchronized lip movements and natural facial expressions.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Lip Sync", "API"],
+        "models": ["Kling"],
+        "logos": [
+          {
+            "provider": "Kling"
+          }
+        ],
+        "date": "2026-02-26",
+        "openSource": false,
+        "size": 0,
+        "usage": 17,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 3,
+              "nodeType": "LoadImage",
+              "file": "woman_in_red.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 4,
+              "nodeType": "LoadAudio",
+              "file": "kling_avatar_input.mp3",
+              "mediaType": "audio"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 5,
+              "nodeType": "SaveVideo",
+              "file": "api_kling_avatar2.mp4",
+              "mediaType": "video"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "thumbnail": ["output/api_kling_avatar2.mp4"]
+      },
+      {
+        "name": "api_veo2_i2v",
+        "title": "Veo2: Image to Video",
+        "description": "Generate videos from images using Google Veo2 API.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image to Video", "Video", "API"],
+        "models": ["Veo", "Google"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 19,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 61,
+              "nodeType": "LoadImage",
+              "file": "api_veo2_i2v_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "minComfyUIVersion": "0.3.32",
+        "status": "archived"
+      },
+      {
+        "name": "api_veo3",
+        "status": "archived",
+        "title": "Veo3: Image to Video",
+        "description": "Generate high-quality 8-second videos from text prompts or images using Google's advanced Veo 3 API. Features audio generation, prompt enhancement, and dual model options for speed or quality.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Image to Video", "Text to Video"],
+        "models": ["Google", "Veo"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 67,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 11,
+              "nodeType": "LoadImage",
+              "file": "api_veo3_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "searchRank": 0,
+        "minComfyUIVersion": "0.3.49"
+      }
+    ]
+  },
+  {
+    "moduleName": "default",
+    "type": "3d",
+    "category": "GENERATION TYPE",
+    "icon": "icon-[lucide--box]",
+    "title": "3D Model",
+    "templates": [
+      {
+        "name": "api_hunyuan3d_texture_edit",
+        "title": "Hunyuan3D: 3D Texture Edit",
+        "description": "Upload a 3D model and input a text prompt to edit its material texture. Generate an updated 3D model with the modified texture applied.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "3D Model"],
+        "models": ["Hunyuan3D"],
+        "logos": [
+          {
+            "provider": "Hunyuan"
+          }
+        ],
+        "date": "2026-02-13",
+        "openSource": false,
+        "size": 0,
+        "usage": 0,
+        "searchRank": 0
+      }
+    ]
+  },
+  {
+    "moduleName": "default",
+    "type": "image",
+    "category": "GENERATION TYPE",
+    "icon": "icon-[lucide--image]",
+    "title": "Image",
+    "templates": [
+      {
+        "name": "image_flux2_klein_9b_kv_image_edit",
+        "title": "FLUX.2 Klein KV: Image Edit",
+        "description": "Upload reference images and a text prompt. Generate multiple edited images using cached image data for faster processing.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["Image Edit", "Image"],
+        "models": ["Flux.2 Klein"],
+        "date": "2026-03-12",
+        "openSource": true,
+        "size": 18790481920,
+        "usage": 0,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 76,
+              "nodeType": "LoadImage",
+              "file": "man_in_street.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 81,
+              "nodeType": "LoadImage",
+              "file": "safari_outfit.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 94,
+              "nodeType": "SaveImage",
+              "file": "image_flux2_klein_9b_kv_image_edit.png",
+              "mediaType": "image"
+            }
+          ]
+        }
+      },
+      {
+        "name": "api_stability_ai_i2i",
+        "title": "Stability AI: Image to Image",
+        "description": "Transform images with high-quality generation using Stability AI, perfect for professional editing and style transfer.",
+        "mediaType": "image",
+        "thumbnailVariant": "compareSlider",
+        "mediaSubtype": "webp",
+        "tags": ["Image", "API"],
+        "models": ["Stability"],
+        "date": "2025-03-01",
+        "openSource": false,
+        "size": 0,
+        "usage": 93,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 5,
+              "nodeType": "LoadImage",
+              "file": "api_stability_ai_i2i_input_image.jpg",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_stability_ai_sd3.5_i2i",
+        "title": "Stability AI: SD3.5 Image to Image",
+        "description": "Generate high quality images with excellent prompt adherence. Perfect for professional image-to-image generation at 1 megapixel resolution.",
+        "mediaType": "image",
+        "thumbnailVariant": "compareSlider",
+        "mediaSubtype": "webp",
+        "tags": ["Image", "API"],
+        "models": ["Stability"],
+        "date": "2025-03-01",
+        "openSource": false,
+        "size": 0,
+        "usage": 18,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 11,
+              "nodeType": "LoadImage",
+              "file": "api_stability_ai_sd3.5_i2i_input_image.jpg",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_stability_ai_stable_image_ultra_t2i",
+        "title": "Stability AI: Stable Image Ultra Text to Image",
+        "description": "Generate high quality images with excellent prompt adherence. Perfect for professional text-to-image generation at 1 megapixel resolution.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Image", "Text to Image"],
+        "models": ["Stability"],
+        "date": "2025-03-01",
+        "openSource": false,
+        "size": 0,
+        "usage": 10,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 57,
+              "nodeType": "LoadImage",
+              "file": "example.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 43,
+              "nodeType": "SaveImage",
+              "file": "api_stability_ai_stable_image_ultra_t2i.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "logos": [
+          {
+            "provider": "Stability"
+          }
+        ],
+        "searchRank": 0,
+        "thumbnail": ["output/api_stability_ai_stable_image_ultra_t2i.png"]
+      },
+      {
+        "name": "api_stability_ai_sd3.5_t2i",
+        "title": "Stability AI: SD3.5 Text to Image",
+        "description": "Generate high quality images with excellent prompt adherence. Perfect for professional text-to-image generation at 1 megapixel resolution.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Image", "Text to Image"],
+        "models": ["Stability"],
+        "date": "2025-03-01",
+        "openSource": false,
+        "size": 0,
+        "usage": 12,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 4,
+              "nodeType": "LoadImage",
+              "file": "example.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 2,
+              "nodeType": "SaveImage",
+              "file": "api_stability_ai_sd3.5_t2i.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "logos": [
+          {
+            "provider": "Stability"
+          }
+        ],
+        "searchRank": 0,
+        "thumbnail": ["output/api_stability_ai_sd3.5_t2i.png"]
+      },
+      {
+        "name": "api_ideogram_v3_t2i",
+        "title": "Ideogram V3: Text to Image",
+        "description": "Generate professional-quality images with excellent prompt alignment, photorealism, and text rendering using Ideogram V3.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Image", "Text to Image"],
+        "models": ["Ideogram"],
+        "date": "2025-03-01",
+        "openSource": false,
+        "size": 0,
+        "usage": 65,
+        "io": {
+          "outputs": [
+            {
+              "nodeId": 59,
+              "nodeType": "SaveImage",
+              "file": "api_ideogram_v3_t2i.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "logos": [
+          {
+            "provider": "Ideogram"
+          }
+        ],
+        "searchRank": 0,
+        "thumbnail": ["output/api_ideogram_v3_t2i.png"]
+      },
+      {
+        "name": "api_stability_upscale_fast",
+        "title": "Stability AI: Image Upscale fast",
+        "description": "Upload an image to quickly upscale it 4x via the Stability AI API, ideal for enhancing low-quality or compressed images.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["API", "Image Upscale"],
+        "models": ["Stability"],
+        "logos": [
+          {
+            "provider": "Stability"
+          }
+        ],
+        "date": "2026-02-26",
+        "openSource": false,
+        "size": 0,
+        "usage": 82,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 9,
+              "nodeType": "LoadImage",
+              "file": "woman_with_red_hat.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 4,
+              "nodeType": "SaveImage",
+              "file": "api_stability_upscale_fast.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "thumbnail": ["input/woman_with_red_hat.png", "output/api_stability_upscale_fast.png"]
+      },
+      {
+        "name": "api_recraft_v4_1_image_to_vector",
+        "title": "Recraft 4.1: Image to Vector",
+        "description": "Convert a standard image into a bold, expressive vector using Recraft 4.1's illustration engine, taking 1 image input and producing 1 clean vector output. Ideal for logo redesign, flat character illustration, and creating consistent character reference sheets for animation or branding.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Vector"],
+        "models": ["Recraft"],
+        "logos": [
+          {
+            "provider": "Recraft"
+          }
+        ],
+        "date": "2026-07-28",
+        "openSource": false,
+        "size": 0,
+        "usage": 0,
+        "searchRank": 0,
+        "username": "ComfyUI",
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 26,
+              "nodeType": "LoadImage",
+              "file": "comfy_poster.png",
+              "mediaType": "image"
+            }
+          ]
+        }
+      },
+      {
+        "name": "api_reve_image_create",
+        "title": "Reve: Text to Image",
+        "description": "Input text prompts to generate high-quality images with detailed aesthetics and accurate text rendering.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Text to Image"],
+        "models": ["Reve"],
+        "logos": [
+          {
+            "provider": "Reve"
+          }
+        ],
+        "date": "2026-03-13",
+        "openSource": false,
+        "size": 0,
+        "usage": 15,
+        "searchRank": 0,
+        "io": {
+          "outputs": [
+            {
+              "nodeId": 2,
+              "nodeType": "SaveImage",
+              "file": "api_reve_image_create.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "thumbnail": ["output/api_reve_image_create.png"]
+      },
+      {
+        "name": "api_reve_image_edit",
+        "title": "Reve: Image Edit",
+        "description": "Upload an image and provide text instructions to edit it. Generate a modified output image using Reve's advanced editing model for tasks like object removal, restoration, or recomposition.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["API", "Image Edit"],
+        "models": ["Reve"],
+        "logos": [
+          {
+            "provider": "Reve"
+          }
+        ],
+        "date": "2026-03-14",
+        "openSource": false,
+        "size": 0,
+        "usage": 15,
+        "searchRank": 0,
+        "username": "ComfyUI",
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 4,
+              "nodeType": "LoadImage",
+              "file": "woman_running_in_field.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 5,
+              "nodeType": "SaveImage",
+              "file": "api_reve_image_edit.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "thumbnail": ["input/woman_running_in_field.png", "output/api_reve_image_edit.png"]
+      },
+      {
+        "name": "api_reve_image_remix",
+        "title": "Reve: Image Remix And Edit",
+        "description": "Remix and edit images using Reve's advanced model. Combine multiple reference images into a single output",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image Edit", "API"],
+        "models": ["Reve"],
+        "logos": [
+          {
+            "provider": "Reve"
+          }
+        ],
+        "date": "2026-03-14",
+        "openSource": false,
+        "size": 0,
+        "usage": 10,
+        "searchRank": 0,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 2,
+              "nodeType": "LoadImage",
+              "file": "iced_drink_cup.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 4,
+              "nodeType": "LoadImage",
+              "file": "casual_male_portrait.png",
+              "mediaType": "image"
+            },
+            {
+              "nodeId": 5,
+              "nodeType": "LoadImage",
+              "file": "japanese_street_alley.png",
+              "mediaType": "image"
+            }
+          ],
+          "outputs": [
+            {
+              "nodeId": 3,
+              "nodeType": "SaveImage",
+              "file": "api_reve_image_remix.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "thumbnail": ["thumbnail/api_reve_image_remix.png"]
+      },
+      {
+        "name": "api_openai_dall_e_2_inpaint",
+        "title": "OpenAI: Dall-E 2 Inpaint",
+        "description": "Edit images using inpainting with OpenAI Dall-E 2 API.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "thumbnailVariant": "compareSlider",
+        "tags": ["Inpainting", "Image", "API"],
+        "models": ["OpenAI"],
+        "date": "2025-03-01",
+        "status": "archived",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/partner-nodes/openai/dall-e-2",
+        "openSource": false,
+        "size": 0,
+        "usage": 7,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 19,
+              "nodeType": "LoadImage",
+              "file": "api_openai_dall_e_2_inpaint_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "minComfyUIVersion": "0.3.30"
+      },
+      {
+        "name": "api_openai_dall_e_2_t2i",
+        "title": "OpenAI: Dall-E 2 Text to Image",
+        "description": "Generate images from text prompts using OpenAI Dall-E 2 API.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Image", "Text to Image"],
+        "models": ["OpenAI"],
+        "date": "2025-03-01",
+        "status": "archived",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/partner-nodes/openai/dall-e-2",
+        "openSource": false,
+        "size": 0,
+        "usage": 6,
+        "io": {
+          "outputs": [
+            {
+              "nodeId": 20,
+              "nodeType": "SaveImage",
+              "file": "api_openai_dall_e_2_t2i.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "logos": [
+          {
+            "provider": "OpenAI"
+          }
+        ],
+        "searchRank": 0,
+        "thumbnail": ["output/api_openai_dall_e_2_t2i.png"],
+        "minComfyUIVersion": "0.3.30"
+      },
+      {
+        "name": "api_openai_dall_e_3_t2i",
+        "title": "OpenAI: Dall-E 3 Text to Image",
+        "description": "Generate images from text prompts using OpenAI Dall-E 3 API.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Image", "Text to Image"],
+        "models": ["OpenAI"],
+        "date": "2025-03-01",
+        "status": "archived",
+        "tutorialUrl": "https://docs.comfy.org/tutorials/partner-nodes/openai/dall-e-3",
+        "openSource": false,
+        "size": 0,
+        "usage": 10,
+        "io": {
+          "outputs": [
+            {
+              "nodeId": 24,
+              "nodeType": "SaveImage",
+              "file": "api_openai_dall_e_3_t2i.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "logos": [
+          {
+            "provider": "OpenAI"
+          }
+        ],
+        "searchRank": 0,
+        "thumbnail": ["output/api_openai_dall_e_3_t2i.png"],
+        "minComfyUIVersion": "0.3.30"
+      }
+    ]
+  },
+  {
+    "moduleName": "default",
+    "type": "audio",
+    "category": "GENERATION TYPE",
+    "icon": "icon-[lucide--volume-2]",
+    "title": "Audio",
+    "templates": [
+      {
+        "name": "api_stability_ai_audio_to_audio",
+        "title": "Stable Audio 2.5: Audio to Audio",
+        "description": "Transform audio into new compositions using Stable Audio 2.5. Upload audio and AI creates complete tracks.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Audio", "Audio to Audio"],
+        "date": "2025-09-09",
+        "models": ["Stability", "Stable Audio"],
+        "openSource": false,
+        "size": 0,
+        "usage": 93,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 11,
+              "nodeType": "LoadAudio",
+              "file": "api_stability_ai_audio_to_audio_input_audio.mp3",
+              "mediaType": "audio"
+            }
+          ]
+        },
+        "searchRank": 0,
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_stability_ai_text_to_audio",
+        "title": "Stable Audio 2.5: Text to Audio",
+        "description": "Generate music from text using Stable Audio 2.5. Create minutes-long tracks in seconds.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Audio", "Text to Audio"],
+        "date": "2025-09-09",
+        "models": ["Stability", "Stable Audio"],
+        "openSource": false,
+        "size": 0,
+        "usage": 15,
+        "logos": [
+          {
+            "provider": "Stability"
+          }
+        ],
+        "searchRank": 0,
+        "username": "ComfyUI"
+      },
+      {
+        "name": "api_stability_ai_audio_inpaint",
+        "title": "Stability Audio 2.5: Audio Inpainting",
+        "description": "Complete or extend audio tracks using Stable Audio 2.5. Upload audio and AI generates the rest.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["API", "Audio", "Audio to Audio"],
+        "date": "2025-09-09",
+        "models": ["Stability", "Stable Audio"],
+        "openSource": false,
+        "size": 0,
+        "usage": 18,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 11,
+              "nodeType": "LoadAudio",
+              "file": "api_stability_ai_audio_inpaint_input_audio.wav",
+              "mediaType": "audio"
+            }
+          ]
+        },
+        "logos": [
+          {
+            "provider": "Stability"
+          }
+        ],
+        "searchRank": 0,
+        "username": "ComfyUI"
+      }
+    ]
+  },
+  {
+    "moduleName": "default",
+    "type": "video",
+    "category": "Foundation",
+    "icon": "icon-[lucide--film]",
+    "title": "Video",
+    "templates": [
+      {
+        "name": "api_luma_i2v",
+        "status": "archived",
+        "title": "Luma: Image to Video",
+        "description": "Take static images and instantly create magical high quality animations.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Image to Video", "Video", "API"],
+        "models": ["Luma"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 11,
+        "io": {
+          "inputs": [
+            {
+              "nodeId": 9,
+              "nodeType": "LoadImage",
+              "file": "api_luma_i2v_input_image.png",
+              "mediaType": "image"
+            }
+          ]
+        },
+        "username": "ComfyUI",
+        "minComfyUIVersion": "0.3.32"
+      },
+      {
+        "name": "api_luma_t2v",
+        "status": "archived",
+        "title": "Luma: Text to Video",
+        "description": "High-quality videos can be generated using simple prompts.",
+        "mediaType": "image",
+        "mediaSubtype": "webp",
+        "tags": ["Text to Video", "Video", "API"],
+        "models": ["Luma"],
+        "date": "2025-03-01",
+        "tutorialUrl": "",
+        "openSource": false,
+        "size": 0,
+        "usage": 1,
+        "username": "ComfyUI",
+        "minComfyUIVersion": "0.3.32"
+      }
+    ]
+  }
+]

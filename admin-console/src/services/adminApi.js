@@ -191,6 +191,7 @@ export const executeAgentRunStream = async (runId, input = {}, options = {}) => 
         try { payload = JSON.parse(payloadText); } catch { payload = null; }
         if (event === "delta" && typeof payload?.text === "string") onDelta?.(payload.text);
         else if (event === "progress" && payload?.id && payload?.status) onProgress?.(payload);
+        else if (event === "temporary_workflow" && payload?.workflow?.id) onProgress?.({kind:"temporary_workflow",workflow:payload.workflow});
         else if (event === "done") completed = payload?.run ?? null;
         else if (event === "error") throw new Error(payload?.message || "生成失败");
       }
@@ -319,3 +320,14 @@ export const createAbilityGoal=input=>request('/admin/ability-goals',{method:'PO
 export const updateAbilityGoal=(id,input)=>request('/admin/ability-goals/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(input)});
 
 export const recordKnowledgeToolUsage=toolId=>request('/me/tool-usage',{method:'POST',body:JSON.stringify({toolId})});
+
+// Temporary workflows: graphs and files are held only in process memory.
+export const getTemporaryWorkflow = id => request(`/temporary-workflows/${encodeURIComponent(id)}`);
+export const removeTemporaryWorkflow = id => request(`/temporary-workflows/${encodeURIComponent(id)}`,{method:'DELETE'});
+export const restoreTemporaryWorkflow = input => request('/temporary-workflows/restore',{method:'POST',body:JSON.stringify(input)});
+export const startTemporaryWorkflow = (id,input) => request(`/temporary-workflows/${encodeURIComponent(id)}/execute`,{method:'POST',body:JSON.stringify(input)});
+export const saveTemporaryWorkflowDraft = (id,revision) => request(`/temporary-workflows/${encodeURIComponent(id)}/save-draft`,{method:'POST',body:JSON.stringify({revision})});
+export const bindTemporaryWorkflowImage = (id,node,input) => request(`/temporary-workflows/${encodeURIComponent(id)}/bindings/${encodeURIComponent(node)}`,{method:'PUT',body:JSON.stringify(input)});
+export const uploadTemporaryWorkflowImage = (id,file) => {const form=new FormData();form.append('file',file);return request(`/temporary-workflows/${encodeURIComponent(id)}/assets`,{method:'POST',body:form});};
+
+export const rerunWorkflowNode = (runId, nodeId) => request(`/workflow-runs/${encodeURIComponent(runId)}/nodes/${encodeURIComponent(nodeId)}/rerun`, {method:'POST'});

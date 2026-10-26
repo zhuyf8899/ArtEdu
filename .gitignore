@@ -236,3 +236,8 @@ __marimo__/
 
 # Local review artifacts and recovered Desktop files
 local-artifacts/
+
+# Local validation outputs and private runtime uploads
+/outputs/
+/data/uploads/
+/data/comfy-workflow-library/installed.json

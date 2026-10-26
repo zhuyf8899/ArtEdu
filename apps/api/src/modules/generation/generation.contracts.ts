@@ -7,6 +7,8 @@ import type { ModelMessage } from "./model-adapter";
  * 供应商不支持的字段由适配器明确忽略，而不是把私有 API 参数暴露给浏览器。
  */
 export const imageGenerationParametersSchema = z.object({
+  referenceFileId: z.string().trim().min(1).max(160).optional(),
+  maskFileId: z.string().trim().min(1).max(160).optional(),
   size: z.string().regex(/^\d{3,4}x\d{3,4}$/).optional(),
   aspectRatio: z.enum(["1:1", "4:3", "3:4", "16:9", "9:16"]).optional(),
   imageCount: z.coerce.number().int().min(1).max(4).optional(),

@@ -43,6 +43,7 @@ export class ModelScopeImageAdapter implements ModelAdapter {
     const taskId = submitted.taskId;
     const imageUrl = await this.waitForImage(submitted.apiKey, taskId, deadline, request.signal);
     const { bytes, mimeType } = await downloadGeneratedImage(imageUrl, Math.max(1, deadline - Date.now()), request.signal);
+    if (request.transient) return {kind:"asset",content:"memory",mimeType,metadata:{bytes,fileSize:bytes.length,fileName:"workflow-image."+extensionFor(mimeType),inputTokens:0,outputTokens:0}};
     const storageKey = path.posix.join("generated", jobId, `${randomUUID()}.${extensionFor(mimeType)}`);
     const absolutePath = safeJoin(path.resolve(getEnvironment().uploadRoot), storageKey);
     await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o700 });

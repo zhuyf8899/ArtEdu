@@ -1,3 +1,4 @@
+import { imageEditForm } from "./image-edit";
 import { randomUUID } from "node:crypto";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -23,11 +24,13 @@ export class OpenAIImageAdapter implements ModelAdapter {
     if (!apiKeys.length) throw new Error(`模型 ${this.id} 未配置环境变量 ${describeProviderApiKeyEnvs(this.config)}`);
     const prompt = this.prompt(request);
     const options = (request.parameters?.providerOptions ?? {}) as Record<string, unknown>;
+    const editing = Boolean(request.imageEdit);
+    if (editing && (this.config.protocol !== "openai-image" || !this.config.imageEditing)) throw new Error("当前图片 API 未启用图片编辑能力");
     const siliconFlow = this.config.protocol === "siliconflow-image";
-    const body = await withImageApiKeys(apiKeys, apiKey => imageRequest(new URL("images/generations", this.baseUrl()), {
+    const body = await withImageApiKeys(apiKeys, apiKey => imageRequest(new URL(editing ? "images/edits" : "images/generations", this.baseUrl()), {
       method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify(siliconFlow
+      headers: { ...(editing ? {} : { "content-type": "application/json" }), authorization: `Bearer ${apiKey}` },
+      body: request.imageEdit ? imageEditForm(request.imageEdit, this.config.model, prompt) : JSON.stringify(siliconFlow
         ? {
           model: this.config.model,
           prompt,
@@ -50,6 +53,7 @@ export class OpenAIImageAdapter implements ModelAdapter {
       ? { bytes: Buffer.from(image.b64_json, "base64"), mimeType: "image/png" }
       : await downloadGeneratedImage(image.url!, this.config.timeoutMs, request.signal);
     if (bytes.length === 0) throw new Error("图片接口返回空文件");
+    if (request.transient) return {kind:"asset",content:"memory",mimeType,metadata:{bytes,fileSize:bytes.length,fileName:"workflow-image."+extensionFor(mimeType),inputTokens:0,outputTokens:0}};
     const jobId = request.jobId ?? randomUUID();
     const storageKey = path.posix.join("generated", jobId, `${randomUUID()}.${extensionFor(mimeType)}`);
     const target = safeJoin(path.resolve(getEnvironment().uploadRoot), storageKey);
@@ -69,7 +73,7 @@ export class OpenAIImageAdapter implements ModelAdapter {
     const message = [...(request.messages ?? [])].reverse().find((item) => item.role === "user")?.content;
     const prompt = (message ?? request.prompt ?? "").replace(/\s+/g, " ").trim();
     if (!prompt) throw new Error("图像生成至少需要一段提示词");
-    return prompt.slice(0, 1500);
+    return prompt.slice(0, request.imageEdit ? 10000 : 1500);
   }
 
   private baseUrl() { return this.config.baseUrl.endsWith("/") ? this.config.baseUrl : `${this.config.baseUrl}/`; }

@@ -184,6 +184,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
           sources: searchSourcesFromRun(completed.toolCalls),
           status:completed.delivery?.status??completed.status,
           delivery:completed.delivery,
+          temporaryWorkflows:completed.temporaryWorkflows??[],
         };
       }
       if (!data.creation.enabled) throw new Error('平台模型服务暂不可用，请稍后重试');

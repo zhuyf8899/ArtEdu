@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { WorkflowImageInput } from "./WorkflowImageInput.jsx";
 import { createPortal } from "react-dom";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, FlowArrow, Play, SpinnerGap } from "@phosphor-icons/react";
@@ -102,14 +103,15 @@ function NodeExecutionPanel({ step, node, output, loading, onExecute }) {
   const needsNegativePrompt = node?.type === "negative_prompt";
   const needsReference = node?.type === "load_image";
   const execute = async () => {
-    if (needsReference && !referenceFile) return;
+    if (needsReference && (!referenceFile?.imageFile || referenceFile.maskPending)) return;
     try {
       setUploading(true);
-      const reference = needsReference ? await uploadTemporaryCreationFile(referenceFile) : null;
+      const reference = needsReference ? await uploadTemporaryCreationFile(referenceFile.imageFile) : null;
+      const mask = needsReference && referenceFile.maskFile ? await uploadTemporaryCreationFile(referenceFile.maskFile) : null;
       setUploadError("");
-      await onExecute({ ...(needsPrompt && prompt.trim() ? { prompt: prompt.trim() } : {}), ...(needsNegativePrompt ? { negativePrompt: negativePrompt.trim() } : {}), ...(reference ? { referenceFileId: reference.id } : {}) });
+      await onExecute({ ...(needsPrompt && prompt.trim() ? { prompt: prompt.trim() } : {}), ...(needsNegativePrompt ? { negativePrompt: negativePrompt.trim() } : {}), ...(reference ? { referenceFileId: reference.id, ...(mask ? { maskFileId: mask.id } : {}) } : {}) });
     } catch (error) { setUploadError(error instanceof Error ? error.message : "参考图片上传失败"); }
     finally { setUploading(false); }
   };
-  return <article className="workflow-step workflow-step--node"><span>当前节点 · {node?.type || "note"}</span><h3>{step.title}</h3>{needsPrompt && <label className="workflow-run-prompt">创作需求<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="输入本次要生成的内容" /></label>}{needsNegativePrompt && <label className="workflow-run-prompt">负向提示词<textarea value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="例如：文字、水印、模糊" maxLength={1500} /></label>}{needsReference && <label className="workflow-reference-upload">参考图片<input type="file" disabled={uploading} accept="image/jpeg,image/png,image/gif,image/webp" onChange={(event) => { setReferenceFile(event.target.files?.[0] ?? null); setUploadError(""); }} /><small>{referenceFile ? `已选择：${referenceFile.name}` : "支持 JPEG、PNG、GIF、WebP，最大 8 MB；仅在本次运行中授权使用。"}</small>{uploadError && <em>{uploadError}</em>}</label>}<footer>{needsPrompt || needsReference ? <button disabled={loading || uploading || (needsPrompt && !prompt.trim() && !String(node?.data?.value ?? "").trim()) || (needsReference && !referenceFile)} onClick={execute}>{loading || uploading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} {uploading ? "上传参考图片…" : needsPrompt ? "开始生成" : "提交并继续"}</button> : needsNegativePrompt ? <button disabled={loading} onClick={execute}>{loading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} 用这组负向词继续</button> : <span className="workflow-step__auto">{loading ? "正在执行…" : "自动执行"}</span>}</footer></article>;
+  return <article className="workflow-step workflow-step--node"><span>当前节点 · {node?.type || "note"}</span><h3>{step.title}</h3>{needsPrompt && <label className="workflow-run-prompt">创作需求<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="输入本次要生成的内容" /></label>}{needsNegativePrompt && <label className="workflow-run-prompt">负向提示词<textarea value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="例如：文字、水印、模糊" maxLength={1500} /></label>}{needsReference && <WorkflowImageInput value={referenceFile} onChange={setReferenceFile} disabled={loading || uploading} />}{uploadError && <p role="alert">{uploadError}</p>}<footer>{needsPrompt || needsReference ? <button disabled={loading || uploading || (needsPrompt && !prompt.trim() && !String(node?.data?.value ?? "").trim()) || (needsReference && (!referenceFile?.imageFile || referenceFile.maskPending))} onClick={execute}>{loading || uploading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} {uploading ? "上传参考图片…" : needsPrompt ? "开始生成" : "提交并继续"}</button> : needsNegativePrompt ? <button disabled={loading} onClick={execute}>{loading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} 用这组负向词继续</button> : <span className="workflow-step__auto">{loading ? "正在执行…" : "自动执行"}</span>}</footer></article>;
 }

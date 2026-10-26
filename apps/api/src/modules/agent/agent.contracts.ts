@@ -47,6 +47,7 @@ export const modelInvocationOptionsSchema = z.object({
 });
 
 export const executeAgentRunSchema = z.object({
+  temporaryWorkflowId:z.string().min(1).max(160).optional(),
   /** 模型仅在云端执行；不再支持本地 Bridge。 */
   mode: z.enum(["mock", "server"]).default("server"),
   providerId: z.string().trim().min(1).max(80).optional(),

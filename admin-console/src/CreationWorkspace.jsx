@@ -1,3 +1,5 @@
+import {TemporaryWorkflowCard} from "./TemporaryWorkflowCard.jsx";
+import {saveLocalWorkflow,ensureRemoteWorkflow} from "./temporaryWorkflowStore.js";
 /**
  * 【创作对话页】管理对话选择、输入、流式回复和暂停；通过上层回调请求执行，通过 conversationStore 保存浏览器对话。阅读时先追发送与暂停流程，再看消息渲染和布局。
  */
@@ -240,6 +242,10 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     let activityWrites = Promise.resolve();
     const onProgress = (event) => {
       if (controller.signal.aborted) return;
+      if(event.kind==='temporary_workflow'&&event.workflow?.id){
+        activityWrites=activityWrites.then(async()=>{await saveLocalWorkflow(account.id,conversation.id,event.workflow);const last=rendered.at(-1);rendered=[...rendered.slice(0,-1),{...last,temporaryWorkflowIds:[...new Set([...(last.temporaryWorkflowIds||[]),event.workflow.id])]}];displayMessages(rendered);await persist(conversation.id,{messages:rendered,temporaryWorkflowId:event.workflow.id});}).catch(()=>onNotice?.('临时图未能保存到本机，请及时下载','error'));
+        return;
+      }
       const last = rendered[rendered.length - 1];
       const activity = appendActivity(last.activity, event);
       if (activity === last.activity&&(!event.runId||event.runId===last.runId)) return;
@@ -253,18 +259,23 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
     try {
       await persist(conversation.id, { pending: null, methodId: usedMethodId, messages: rendered });
       onProgress({id:'run',kind:'run',name:'agent.execute',status:'running'});
+      const selectedWorkflowId=conversationsRef.current.find(item=>item.id===conversation.id)?.temporaryWorkflowId;
+      if(selectedWorkflowId)await ensureRemoteWorkflow(account.id,selectedWorkflowId);
       const result = await onCreate({
         jobType: operationDefinition.jobType,
         // 生图模式下只在提示词尾部补一句「用户可能希望生成图片」：不强制、也不改路由判定，
         // 服务端仍按文本推断交付类型。
         prompt: promptForOperation(content, usedMethodId),
         modelConfigId: modelId ?? undefined,
-        parameters: {...buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),conversationLocalId: conversation.id, previousTask:taskStateFor(baseMessages,conversation.memoryState)},
+        parameters: {...buildCreationParameters({ methodId: operationDefinition.id, advisoryMethodId: usedMethodId, modelId, searchEnabled: usedSearch, reference: usedReference, pageCount: usedPageCount }),conversationLocalId: conversation.id, temporaryWorkflowId:selectedWorkflowId, previousTask:taskStateFor(baseMessages,conversation.memoryState)},
         context,
       }, controller.signal, onDelta, onProgress);
+      await activityWrites;
+      const temporaryWorkflowIds=[...(rendered.at(-1)?.temporaryWorkflowIds||[])];
+      for(const workflow of result?.temporaryWorkflows??[]){await saveLocalWorkflow(account.id,conversation.id,workflow);if(!temporaryWorkflowIds.includes(workflow.id))temporaryWorkflowIds.push(workflow.id);}
       let localArtifacts = [];
       if (result) {
-        const artifacts = [...(result.delivery?.artifacts ?? [])];
+        const artifacts = [...(result.delivery?.artifacts ?? [])].filter(a=>a.kind!=="workflow");
         if (result.localFile?.downloadUrl && !artifacts.some(a => a.openUrl === result.localFile.downloadUrl)) artifacts.push({ path: result.localFile.fileName, openUrl: result.localFile.downloadUrl, kind: isImageArtifact(result.localFile) ? 'image' : 'document' });
         const archived = await archiveArtifacts(account.id, conversation.id, artifacts);
         localArtifacts = archived.artifacts;
@@ -275,10 +286,10 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       await activityWrites;
       // 最终正文以服务端返回为准，尚未画出的那一帧不必再补。
       deltaBuffer.cancelFrame();
-      const finalMessages = [...rendered.slice(0, -1), { role: "assistant", status, delivery:result?.delivery, localArtifacts, activity: settleActivity(rendered[rendered.length-1]?.activity, status), content: responseText(result, operationDefinition), sources: result?.sources ?? null, localFile: result?.localFile ?? null }];
+      const finalMessages = [...rendered.slice(0, -1), { role: "assistant", status, delivery:result?.delivery, localArtifacts, temporaryWorkflowIds, activity: settleActivity(rendered[rendered.length-1]?.activity, status), content: responseText(result, operationDefinition), sources: result?.sources ?? null, localFile: result?.localFile ?? null }];
       displayMessages(finalMessages);
       if (isActive()) { setFailed(!result); if (!result) setPrompt(content); }
-      await persist(conversation.id, { messages: finalMessages, methodId: usedMethodId, pageCount: usedPageCount ?? "", savedArtifacts: [...(conversationsRef.current.find(item => item.id === conversation.id)?.savedArtifacts ?? []), ...localArtifacts.filter(item => item.localArchiveId)] });
+      await persist(conversation.id, { ...(temporaryWorkflowIds.length?{temporaryWorkflowId:temporaryWorkflowIds.at(-1)}:{}), messages: finalMessages, methodId: usedMethodId, pageCount: usedPageCount ?? "", savedArtifacts: [...(conversationsRef.current.find(item => item.id === conversation.id)?.savedArtifacts ?? []), ...localArtifacts.filter(item => item.localArchiveId)] });
       if (result&&status==='succeeded') {
         const replyIndex = finalMessages.length - 1;
         const replyContent = finalMessages[replyIndex].content;
@@ -319,7 +330,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
       deltaBuffer.cancelFrame();
       if (isActive()) { setFailed(true); setPrompt(content); }
       else draftsRef.current.set(conversation.id, content);
-      const failedMessages = [...rendered.slice(0, -1), { role: "assistant", activity: settleActivity(rendered[rendered.length-1]?.activity, 'failed'), content: error.message || "请求失败，请重试", failed: true }];
+      const failedMessages = [...rendered.slice(0, -1), { temporaryWorkflowIds:rendered.at(-1)?.temporaryWorkflowIds, role: "assistant", activity: settleActivity(rendered[rendered.length-1]?.activity, 'failed'), content: error.message || "请求失败，请重试", failed: true }];
       displayMessages(failedMessages);
       await persist(conversation.id, { pending: null, messages: failedMessages }).catch(() => {});
       console.error("[creation] 生成失败", error);
@@ -566,6 +577,9 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
                 message={message}
                 index={index}
                 suggesting={suggestingFor?.conversationId === activeId && suggestingFor.replyIndex === index}
+                userId={account.id}
+                conversationId={activeId}
+                onWorkflowSelect={(id,name)=>{void persist(activeId,{temporaryWorkflowId:id});setPrompt(`修改工作流“${name}”：`);promptInput.current?.focus();}}
                 onCopy={copyReply}
                 onRetry={retryReply}
                 onEdit={editPrompt}
@@ -651,7 +665,7 @@ function artifactImageOf(file) {
  * 历史消息的对象引用与 props 都没变，可以直接跳过重渲染；再配合 memo 化的
  * AiMarkdown，历史正文的 Markdown 解析也不会被反复触发（这是长对话发卡的主因）。
  */
-const ChatMessage = memo(function ChatMessage({ message, index, suggesting, onCopy, onRetry, onEdit, onPick }) {
+const ChatMessage = memo(function ChatMessage({ message, index, suggesting, onCopy, onRetry, onEdit, onPick, userId, conversationId, onWorkflowSelect }) {
   if (message.role === "user") return <div className="ai-message--user" aria-label="你的问题">
     <span className="ai-message__author">你</span>
     <p>{message.content}</p>
@@ -676,7 +690,8 @@ const ChatMessage = memo(function ChatMessage({ message, index, suggesting, onCo
       {/* 原生 details 保留用户展开状态，流式更新不强制打开日志。失败原因仍在正文显示。 */}
       {execution && <details className="agent-execution" data-status={execution.status}><summary><span className="agent-execution__dot" aria-hidden="true" /><span>执行记录 · {execution.label}</span><small>{execution.count} 条</small></summary><ol className="agent-activity" aria-label="Agent 执行记录">{activities.map(event => <li key={event.id} data-status={event.status}><span aria-hidden="true">{event.status === 'failed' ? '!' : '·'}</span><span>{activityLabel(event)}</span><time dateTime={event.at}>{new Date(event.at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</time></li>)}</ol></details>}
       <AiMarkdown>{message.content || message.placeholder}</AiMarkdown>
-      {!!message.delivery?.artifacts?.length&&<div className="agent-artifacts" aria-label="本轮成果">{message.delivery.artifacts.filter(a=>/^\/api\/(?!\/)/.test(a.openUrl) && !localSources.has(a.openUrl)).map(a=><article key={a.openUrl} className="agent-artifact"><strong>{a.kind==='image'?'AI生成图片 · ':''}{a.path}</strong>{a.kind==='image'&&<ZoomableImage src={a.openUrl} alt="AI生成图片，视觉内容待核验" fileName={a.path}/>}<small>{a.kind==='image'?'视觉内容待核验':a.kind==='webpage'?(a.validation==='pass'?'最新版本检查通过':'尚未通过检查'):'文件已生成'}</small><a href={a.openUrl} target="_blank" rel="noopener noreferrer">打开成果 ↗</a></article>)}</div>}
+      {message.temporaryWorkflowIds?.map(id=><TemporaryWorkflowCard key={id} id={id} userId={userId} conversationId={conversationId} onSelect={onWorkflowSelect}/>)}
+      {!!message.delivery?.artifacts?.length&&<div className="agent-artifacts" aria-label="本轮成果">{message.delivery.artifacts.filter(a=>a.kind!=="workflow"&&/^\/api\/(?!\/)/.test(a.openUrl) && !localSources.has(a.openUrl)).map(a=><article key={a.openUrl} className="agent-artifact"><strong>{a.kind==='image'?'AI生成图片 · ':''}{a.path}</strong>{a.kind==='image'&&<ZoomableImage src={a.openUrl} alt="AI生成图片，视觉内容待核验" fileName={a.path}/>}<small>{a.kind==='image'?'视觉内容待核验':a.kind==='webpage'?(a.validation==='pass'?'最新版本检查通过':'尚未通过检查'):'文件已生成'}</small><a href={a.openUrl} target="_blank" rel="noopener noreferrer">打开成果 ↗</a></article>)}</div>}
       {!!message.localArtifacts?.length && <div className="agent-artifacts" aria-label="本机成果">{message.localArtifacts.map(artifact => artifact.localArchiveId ? <LocalArtifact key={artifact.localArchiveId} artifact={artifact}/> : <p key={artifact.openUrl} role="alert">{artifact.path}：本地保存失败，请及时下载。</p>)}</div>}
       {!localSources.has(message.localFile?.downloadUrl) && artifactImageOf(message.localFile)}
       {(message.sources?.length ?? 0) > 0 && <SourcesBlock sources={message.sources} />}

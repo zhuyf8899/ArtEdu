@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import { ModelScopeImageAdapter } from "./modelscope-image.adapter";
 import { OpenAIImageAdapter } from "./openai-image.adapter";
+import { WanxImageEditAdapter } from "./wanx-image-edit.adapter";
 import { ImageConfigurationError } from "../../common/image-configuration";
 import { ModelHttpError, UNUSABLE_KEY_HTTP_STATUSES, describeProviderApiKeyEnvs, providerApiKeyEnvNames, resolveProviderApiKeys } from "./provider-api-keys";
 import type { ModelAdapter, ModelCapability, ModelInvocationOptions, ModelMessage, ModelProviderConfig, ModelRequest, ModelResult, ModelStreamDelta } from "./model-adapter";
@@ -18,9 +19,10 @@ const providerSchema = z.object({
   // Agent 可经历工具调用和视觉理解；三分钟是单次上游模型调用的硬上限。
   timeoutMs: z.coerce.number().int().min(1000).max(180000).default(30000),
   // 默认沿用 OpenAI 兼容的 chat/completions；图像等专用协议在此显式声明。
-  protocol: z.enum(["openai-chat", "openai-image", "modelscope-image", "siliconflow-image"]).default("openai-chat"),
+  protocol: z.enum(["openai-chat", "openai-image", "modelscope-image", "siliconflow-image", "wanx-image-edit"]).default("openai-chat"),
   // 内部通道（如平台内置图像生成）：只用于后端路由，不出现在前台模型列表。
   internal: z.boolean().default(false),
+  imageEditing: z.boolean().default(false),
 });
 
 export function readModelProviderConfigs(raw = process.env.MODEL_PROVIDERS_JSON): ModelProviderConfig[] {
@@ -322,6 +324,7 @@ export class ModelRegistry {
     const configs = readModelProviderConfigs();
     this.configsById = new Map(configs.map((config) => [config.id, config]));
     this.adapters = configs.map((config) => {
+      if (config.protocol === "wanx-image-edit") return new WanxImageEditAdapter(config);
       if (config.protocol === "modelscope-image") return new ModelScopeImageAdapter(config);
       if (config.protocol === "openai-image" || config.protocol === "siliconflow-image") return new OpenAIImageAdapter(config);
       return new OpenAICompatibleAdapter(config);
@@ -345,11 +348,16 @@ export class ModelRegistry {
     });
   }
 
-  getForJob(input: { jobType: ModelCapability; modelConfigId?: string | null; providerId?: string | null; requireConfigured?: boolean }): ModelAdapter {
+  getForJob(input: { jobType: ModelCapability; modelConfigId?: string | null; providerId?: string | null; requireConfigured?: boolean; imageEditing?: boolean }): ModelAdapter {
     const capability = input.jobType;
     const selectedId = input.providerId ?? input.modelConfigId;
     if (capability === "image" || capability === "pattern") {
-      const supported = this.adapters.filter((candidate) => candidate.capabilities.includes(capability));
+      const supported = this.adapters.filter((candidate) => {
+        const config = this.configsById.get(candidate.id)!;
+        return candidate.capabilities.includes(capability) && (input.imageEditing
+          ? config.imageEditing === true && ["openai-image", "wanx-image-edit"].includes(config.protocol ?? "")
+          : config.protocol !== "wanx-image-edit");
+      });
       if (!supported.length) throw new ImageConfigurationError("IMAGE_PROVIDER_NOT_CONFIGURED");
       const configured = supported.filter((candidate) => {
         const config = this.configsById.get(candidate.id)!;
