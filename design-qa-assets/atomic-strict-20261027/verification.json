@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "errors": [],
+  "checks": [
+    "reference graph source geometry",
+    "reference topic → public resource dialog",
+    "menu → teacher editor and attachments",
+    "live search and clear",
+    "scoped local bookmark toggle",
+    "details Escape",
+    "reflection source and attachments",
+    "desktop overflow 1280/1440/1920"
+  ]
+}

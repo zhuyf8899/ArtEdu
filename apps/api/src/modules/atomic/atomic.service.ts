@@ -106,19 +106,65 @@ export class AtomicService {
   if(p.assetIds.length){const r=await client.query('SELECT id FROM atomic_assets WHERE node_id=$1 AND id=ANY($2::text[])',[n.id,p.assetIds]);if(r.rows.length!==p.assetIds.length)throw new ForbiddenException('附件不属于此原子');}
   return p;
  }
- async list(actor:Actor,input:{view:string;query:string;page:number}){
+ async list(actor:Actor,input:{view:string;query:string;page:number;direction?:string;stage?:string}){
   if(input.view==='review')this.auth.requireAnyRole(actor,['admin','operator','teacher']);
-  if(input.view==='learning'){
-   const r=await this.db.query(`SELECT n.id,n.kind,u.display_name AS author,v.revision,v.status,p.stage,v.payload->>'title' AS title,v.payload->>'summary' AS summary,v.payload->'knowledge' AS knowledge,v.payload->'minutes' AS minutes,COUNT(*) OVER()::int AS total FROM atomic_progress p JOIN atomic_nodes n ON n.id=p.node_id JOIN atomic_versions v ON v.node_id=p.node_id AND v.revision=p.revision JOIN users u ON u.id=n.owner_id WHERE p.user_id=$1 AND v.status='published' AND (v.payload->>'title' ILIKE $2 OR v.payload->>'summary' ILIKE $2 OR v.payload->>'objective' ILIKE $2 OR v.payload->>'knowledge' ILIKE $2) ORDER BY p.updated_at DESC,n.id,p.revision DESC LIMIT 24 OFFSET $3`,[actor.id,`%${input.query}%`,(input.page-1)*24]);
-   return {items:r.rows.map(({total,...row})=>row),total:r.rows[0]?.total??0,page:input.page};
-  }
-  const result=await this.db.query(`SELECT n.id,n.kind,n.owner_id AS "ownerId",n.parent_id AS "parentId",n.published_revision AS "publishedRevision",u.display_name AS author,v.revision,v.status,p.stage,v.payload->>'title' AS title,v.payload->>'summary' AS summary,v.payload->'knowledge' AS knowledge,v.payload->'minutes' AS minutes,COUNT(*) OVER()::int AS total
+  // One visibility scope powers rows, counts and facets. Filtering happens before pagination,
+  // so the category badges never count another user's drafts or just the current page.
+  const result=await this.db.query(`WITH visible AS (
+   SELECT n.id,n.kind,n.owner_id AS "ownerId",n.parent_id AS "parentId",n.published_revision AS "publishedRevision",u.display_name AS author,v.revision,v.status,p.stage,v.payload,
+   n.created_at,p.updated_at AS learned_at,
+   (SELECT parent.payload->>'title' FROM atomic_versions parent WHERE parent.node_id=n.parent_id AND parent.revision=source.published_revision) AS "parentTitle"
    FROM atomic_nodes n JOIN users u ON u.id=n.owner_id LEFT JOIN atomic_nodes source ON source.id=n.parent_id JOIN LATERAL(SELECT * FROM atomic_versions av WHERE av.node_id=n.id AND CASE WHEN $1='mine' OR $1='review' THEN TRUE ELSE av.revision=n.published_revision END ORDER BY av.revision DESC LIMIT 1)v ON TRUE
    LEFT JOIN atomic_progress p ON p.node_id=n.id AND p.revision=v.revision AND p.user_id=$2
-   WHERE CASE WHEN $1='mine' THEN n.owner_id=$2 WHEN $1='review' THEN v.status='pending_review' AND n.owner_id<>$2 AND ($5 OR (n.kind='reflection' AND source.owner_id=$2)) WHEN $1='courses' THEN n.kind='course' ELSE n.kind<>'course' END
-   AND (v.payload->>'title' ILIKE $3 OR v.payload->>'summary' ILIKE $3 OR v.payload->>'objective' ILIKE $3 OR v.payload->>'knowledge' ILIKE $3)
-   ORDER BY n.created_at DESC,n.id LIMIT 24 OFFSET $4`,[input.view,actor.id,`%${input.query}%`,(input.page-1)*24,reviewer(actor)]);
-  return {items:result.rows.map(({total,...row})=>row),total:result.rows[0]?.total??0,page:input.page};
+   WHERE CASE WHEN $1='mine' THEN n.owner_id=$2 WHEN $1='review' THEN v.status='pending_review' AND n.owner_id<>$2 AND ($5 OR (n.kind='reflection' AND source.owner_id=$2)) WHEN $1='courses' THEN n.kind='course' WHEN $1='learning' THEN FALSE ELSE n.kind<>'course' END
+   UNION ALL
+   SELECT n.id,n.kind,n.owner_id,n.parent_id,n.published_revision,u.display_name,v.revision,v.status,p.stage,v.payload,n.created_at,p.updated_at,
+   (SELECT parent.payload->>'title' FROM atomic_nodes source JOIN atomic_versions parent ON parent.node_id=source.id AND parent.revision=source.published_revision WHERE source.id=n.parent_id)
+   FROM atomic_progress p JOIN atomic_nodes n ON n.id=p.node_id JOIN atomic_versions v ON v.node_id=p.node_id AND v.revision=p.revision JOIN users u ON u.id=n.owner_id
+   WHERE $1='learning' AND p.user_id=$2 AND v.status='published'
+  ), searched AS (
+   SELECT * FROM visible v WHERE
+   (v.payload->>'title' ILIKE $3 OR v.payload->>'summary' ILIKE $3 OR v.payload->>'objective' ILIKE $3 OR v.payload->>'knowledge' ILIKE $3)
+  ), decorated AS (
+   SELECT v.*,COALESCE(v.payload->>'direction','其他') AS direction,
+   CASE WHEN v.kind='course' THEN course_progress.completed ELSE CASE WHEN v.stage='completed' THEN 1 ELSE 0 END END AS completed,
+   CASE WHEN v.kind='course' THEN course_progress.required ELSE 1 END AS required,
+   CASE WHEN v.kind='course' THEN course_progress.started>0 ELSE v.stage IS NOT NULL END AS started
+   FROM searched v LEFT JOIN LATERAL (
+    SELECT count(*) FILTER(WHERE COALESCE((s->>'required')::boolean,true))::int AS required,
+    count(*) FILTER(WHERE COALESCE((s->>'required')::boolean,true) AND av.status='published' AND ap.stage='completed' AND (COALESCE(s->>'task','')='' OR t.stage='completed'))::int AS completed,
+    count(*) FILTER(WHERE ap.stage IS NOT NULL OR t.stage IS NOT NULL)::int AS started
+    FROM jsonb_array_elements(COALESCE(v.payload->'steps','[]')) s
+    LEFT JOIN atomic_versions av ON av.node_id=s->>'atomId' AND av.revision=(s->>'revision')::int
+    LEFT JOIN atomic_progress ap ON ap.node_id=av.node_id AND ap.revision=av.revision AND ap.user_id=$2
+    LEFT JOIN atomic_task_submissions t ON t.course_id=v.id AND t.revision=v.revision AND t.atom_id=s->>'atomId' AND t.user_id=$2
+   ) course_progress ON v.kind='course'
+  ), filtered AS (
+   SELECT * FROM decorated WHERE ($6='' OR direction=$6) AND ($7='' OR CASE WHEN required>0 AND completed=required THEN 'completed' WHEN started THEN 'in_progress' ELSE 'not_started' END=$7)
+  ), page_rows AS (
+   SELECT id,kind,"ownerId","parentId","parentTitle","publishedRevision",author,revision,status,stage,direction,
+    payload->>'title' AS title,payload->>'summary' AS summary,payload->'knowledge' AS knowledge,payload->'tools' AS tools,payload->'minutes' AS minutes,payload->>'visual' AS visual,payload->>'completion' AS completion,
+    jsonb_array_length(COALESCE(payload->'assetIds','[]')) AS "assetCount",completed,required,started
+   FROM filtered ORDER BY CASE WHEN $1='learning' THEN learned_at END DESC,created_at DESC,id,revision DESC LIMIT 24 OFFSET $4
+  ) SELECT COALESCE((SELECT jsonb_agg(row_to_json(page_rows)) FROM page_rows),'[]') AS items,
+    (SELECT count(*)::int FROM filtered) AS total,
+    COALESCE((SELECT jsonb_object_agg(direction,count) FROM (SELECT direction,count(*)::int AS count FROM decorated GROUP BY direction) f),'{}') AS facets`,
+   [input.view,actor.id,`%${input.query}%`,(input.page-1)*24,reviewer(actor),input.direction??'',input.stage??'']);
+  return {...result.rows[0],page:input.page};
+ }
+ async network(actor:Actor){
+  // A published course pins an atom version; include that exact public version as well
+  // as today's version. Private drafts and other learners' progress never enter the map.
+  const result=await this.db.query(`SELECT n.id,n.kind,v.revision,u.display_name AS author,n.parent_id AS "parentId",n.published_revision AS "publishedRevision",v.payload->>'title' AS title,v.payload->>'summary' AS summary,v.payload->>'direction' AS direction,v.payload->>'visual' AS visual,p.stage,
+   CASE WHEN n.kind='course' THEN (SELECT jsonb_agg(jsonb_build_object('atomId',s->>'atomId','revision',s->'revision','required',s->'required','prerequisites',s->'prerequisites')) FROM jsonb_array_elements(v.payload->'steps') s) ELSE '[]'::jsonb END AS steps,COUNT(*) OVER()::int AS total
+   FROM atomic_nodes n JOIN users u ON u.id=n.owner_id JOIN atomic_versions v ON v.node_id=n.id
+   LEFT JOIN atomic_progress p ON p.node_id=n.id AND p.revision=v.revision AND p.user_id=$1
+   WHERE v.status='published' AND (v.revision=n.published_revision OR EXISTS (
+    SELECT 1 FROM atomic_nodes cn JOIN atomic_versions cv ON cv.node_id=cn.id AND cv.revision=cn.published_revision
+    CROSS JOIN LATERAL jsonb_array_elements(cv.payload->'steps') s
+    WHERE cn.kind='course' AND cv.status='published' AND s->>'atomId'=n.id AND (s->>'revision')::int=v.revision
+   )) ORDER BY (n.kind='course') DESC,n.created_at DESC,n.id,v.revision DESC LIMIT 300`,[actor.id]);
+  return {items:result.rows.map(({total,...row})=>row),total:result.rows[0]?.total??0};
  }
  async create(actor:Actor,input:{kind:Node['kind'];parentId?:string;payload?:unknown}){
   if(input.kind!=='reflection'&&!educator(actor))throw new ForbiddenException('只有教师和管理员可以创建教学原子或课程');

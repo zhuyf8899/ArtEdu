@@ -113,6 +113,30 @@ try{
  await assert.rejects(service.save(actors.teacher,create.id,{expectedRevision:1,payload:base}),/内容已变化/);
  for(const view of ['atoms','courses','mine','review','learning'])assert.ok((await service.list(actors.admin,{view,query:'',page:1})).items);
  assert.ok((await service.list(actors.student,{view:'learning',query:'',page:1})).items.some(item=>item.id===create.id&&item.revision===1&&item.stage==='completed'));
+ const courseCards=await service.list(actors.student,{view:'courses',query:'海报设计主线',page:1});
+ assert.equal(courseCards.items.find(item=>item.id===courses[0].id).completed,1,'course task passed and pinned atom complete');
+ assert.equal(courseCards.items.find(item=>item.id===courses[0].id).required,1);
+ const isolated=await service.list(actors.otherStudent,{view:'courses',query:'海报设计主线',page:1});
+ assert.equal(isolated.items[0].completed,0,'another learner does not inherit completion');
+ const noMatches=await service.list(actors.student,{view:'atoms',query:'no-match-'+randomUUID(),page:8});
+ assert.equal(noMatches.total,0);assert.deepEqual(noMatches.items,[]);
+ assert.ok(!(await service.list(actors.student,{view:'atoms',query:'',page:1,direction:'人工智能基础',stage:'completed'})).items.some(item=>item.id===create.id));
+ const network=await service.network(actors.student);
+ assert.ok(network.items.some(item=>item.id===create.id&&item.revision===1),'course-pinned previous public version included');
+ assert.ok(network.items.some(item=>item.id===create.id&&item.revision===2),'latest public version included');
+ assert.ok(!network.items.some(item=>item.id===pendingTeaching.id),'pending content never enters public graph');
+ assert.ok(network.items.find(item=>item.id===courses[0].id).steps.some(step=>step.atomId===create.id&&step.revision===1));
+ assert.equal(network.items.find(item=>item.id===create.id&&item.revision===1).stage,'completed');
+ assert.equal((await service.network(actors.otherStudent)).items.find(item=>item.id===create.id&&item.revision===1).stage,null);
+ const catalogFixture='分页验收-'+randomUUID();
+ const fixturePayload={...base,title:catalogFixture,direction:'软件实操'};
+ await client.query(`WITH n AS (INSERT INTO atomic_nodes(id,kind,owner_id,published_revision) SELECT 'qa-catalog-'||gen_random_uuid(),'teaching',$1,1 FROM generate_series(1,26) RETURNING id) INSERT INTO atomic_versions(node_id,revision,status,payload) SELECT id,1,'published',$2::jsonb FROM n`,[actors.teacher.id,JSON.stringify(fixturePayload)]);
+ await service.create(actors.otherTeacher,{kind:'teaching',payload:fixturePayload});
+ const firstPage=await service.list(actors.student,{view:'atoms',query:catalogFixture,direction:'软件实操',page:1});
+ const secondPage=await service.list(actors.student,{view:'atoms',query:catalogFixture,direction:'软件实操',page:2});
+ assert.equal(firstPage.total,26);assert.equal(firstPage.items.length,24);assert.equal(secondPage.items.length,2);
+ assert.equal(secondPage.facets['软件实操'],26,'facets count all accessible matches, not a page or a private draft');
+ assert.equal((await service.list(actors.student,{view:'atoms',query:catalogFixture,direction:'软件实操',stage:'completed',page:1})).total,0);
  // Exercise the real Nest/Fastify controller, contract parsing, session auth and file streams.
  // Sessions and role assignments are transaction-local; no existing session is touched.
  const cookies={};
@@ -129,6 +153,10 @@ try{
  let requests=0;
  const http=async(role,method,url,payload,expected=200,headers={})=>{requests++;const result=await server.inject({method,url:'/api/atomic'+url,headers:{...(role?{cookie:cookies[role]}:{}),...(payload===undefined?{}:{'content-type':'application/json'}),...headers},payload});assert.equal(result.statusCode,expected,method+' '+url);return result;};
  await http(null,'GET','/catalog?view=atoms',undefined,401);
+ await http(null,'GET','/network',undefined,401);
+ assert.ok((await http('student','GET','/network')).json().items.length>0);
+ await http('student','GET','/catalog?view=atoms&stage=invalid',undefined,400);
+ assert.equal((await http('student','GET','/catalog?view=courses&query=海报设计主线&stage=completed')).json().items[0].completed,1);
  await http('student','GET','/catalog?view=review',undefined,403);
  await http('student','POST','/nodes',{kind:'reflection',parentId:courses[0].id,payload:base},400);
  const draft=(await http('otherStudent','POST','/nodes',{kind:'reflection',parentId:create.id,payload:{...base,title:'HTTP 回滚验收学习心得'}},201)).json();

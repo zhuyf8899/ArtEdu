@@ -14,6 +14,7 @@ export class AtomicController {
  @Get('knowledge/:id')async knowledge(@Req()req:FastifyRequest,@Param('id')id:string){return this.atomic.knowledgeLearning(await this.auth.getActor(req),id);}
  @Put('nodes/:id/knowledge')async bindKnowledge(@Req()req:FastifyRequest,@Param('id')id:string,@Body()body:unknown){return this.atomic.bindKnowledge(await this.auth.getActor(req),id,parseInput(atomicKnowledgeSchema,body));}
  @Get('portrait')async portrait(@Req()req:FastifyRequest){return this.atomic.portrait(await this.auth.getActor(req));}
+ @Get('network')async network(@Req()req:FastifyRequest){return this.atomic.network(await this.auth.getActor(req));}
  @Get('catalog')async list(@Req()req:FastifyRequest,@Query()query:unknown){return this.atomic.list(await this.auth.getActor(req),parseInput(atomicListSchema,query));}
  @Get('submissions')async submissions(@Req()req:FastifyRequest){return this.atomic.submissions(await this.auth.getActor(req));}
  @Post('nodes')async create(@Req()req:FastifyRequest,@Body()body:unknown){return this.atomic.create(await this.auth.getActor(req),parseInput(createAtomicSchema,body));}
