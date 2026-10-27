@@ -1,0 +1,3333 @@
+{
+  "tag": "div",
+  "props": {
+    "data-node-id": "728:2345",
+    "data-name": "学院课程知识网络 / AI个性化编排",
+    "className": "knowledge-network",
+    "style": {
+      "backgroundImage": "linear-gradient(142.479deg, rgba(213, 215, 238, 0.267) 12.371%, rgba(172, 172, 230, 0.267) 87.621%)",
+      "backdropFilter": "blur(14px)",
+      "borderTopWidth": "1px",
+      "borderRightWidth": "1px",
+      "borderBottomWidth": "1px",
+      "borderLeftWidth": "1px",
+      "borderTopColor": "rgba(255, 255, 255, 0.2)",
+      "borderRightColor": "rgba(255, 255, 255, 0.2)",
+      "borderBottomColor": "rgba(255, 255, 255, 0.2)",
+      "borderLeftColor": "rgba(255, 255, 255, 0.2)",
+      "borderTopStyle": "solid",
+      "borderRightStyle": "solid",
+      "borderBottomStyle": "solid",
+      "borderLeftStyle": "solid",
+      "alignContent": "stretch",
+      "display": "flex",
+      "rowGap": "20px",
+      "columnGap": "20px",
+      "alignItems": "flex-start",
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "paddingTop": "25px",
+      "paddingRight": "25px",
+      "paddingBottom": "25px",
+      "paddingLeft": "25px",
+      "position": "relative",
+      "borderTopLeftRadius": "20px",
+      "borderTopRightRadius": "20px",
+      "borderBottomRightRadius": "20px",
+      "borderBottomLeftRadius": "20px",
+      "width": "100%",
+      "height": "400px"
+    }
+  },
+  "children": [
+    {
+      "tag": "div",
+      "props": {
+        "data-node-id": "728:2371",
+        "data-name": "我的课程，我定义 / 教师、AI与我共创",
+        "className": "network-intro",
+        "style": {
+          "alignContent": "stretch",
+          "display": "flex",
+          "flexDirection": "column",
+          "rowGap": "12px",
+          "columnGap": "12px",
+          "height": "500px",
+          "alignItems": "flex-start",
+          "justifyContent": "center",
+          "overflowX": "hidden",
+          "overflowY": "hidden",
+          "position": "relative",
+          "flexShrink": "0",
+          "width": "258px"
+        }
+      },
+      "children": [
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2372",
+            "data-name": "编排标题",
+            "style": {
+              "overflowWrap": "break-word",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "rowGap": "3px",
+              "columnGap": "3px",
+              "height": "81px",
+              "alignItems": "flex-start",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "position": "relative",
+              "flexShrink": "0",
+              "width": "258px",
+              "whiteSpaceCollapse": "collapse",
+              "textWrapMode": "nowrap"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2373",
+                "style": {
+                  "fontWeight": "400",
+                  "lineHeight": "18px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "fontSize": "12px",
+                  "color": "var(--brand-primary,#6554e8)"
+                }
+              },
+              "children": [
+                "学院课程知识网络"
+              ]
+            },
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2374",
+                "style": {
+                  "fontWeight": "700",
+                  "lineHeight": "36px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "fontSize": "24px",
+                  "color": "var(--text-primary,#171a2f)"
+                }
+              },
+              "children": [
+                "我的课程，我定义"
+              ]
+            },
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "734:2345",
+                "style": {
+                  "fontWeight": "400",
+                  "lineHeight": "18px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(140, 129, 155)",
+                  "fontSize": "11px"
+                }
+              },
+              "children": [
+                "教师、AI 与我，一起共创培养方案"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2375",
+            "data-name": "共创课程插画 / 教师课表＋我的选择＋AI推荐",
+            "style": {
+              "backgroundImage": "linear-gradient(136.597deg, rgba(250, 248, 255, 0.73) 0%, rgba(238, 231, 246, 0.37) 71.429%)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgba(255, 255, 255, 0.6)",
+              "borderRightColor": "rgba(255, 255, 255, 0.6)",
+              "borderBottomColor": "rgba(255, 255, 255, 0.6)",
+              "borderLeftColor": "rgba(255, 255, 255, 0.6)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "height": "244px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "position": "relative",
+              "borderTopLeftRadius": "21px",
+              "borderTopRightRadius": "21px",
+              "borderBottomRightRadius": "21px",
+              "borderBottomLeftRadius": "21px",
+              "flexShrink": "0",
+              "width": "258px"
+            }
+          },
+          "children": [
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "735:2345",
+                "data-name": "纸片装饰 / 圆形、星芒与游走曲线",
+                "style": {
+                  "position": "absolute",
+                  "height": "204px",
+                  "left": "-1px",
+                  "top": "39px",
+                  "width": "258px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "img",
+                  "props": {
+                    "alt": "",
+                    "src": "/morph-course-network/strict/network-img.svg",
+                    "style": {
+                      "position": "absolute",
+                      "display": "block",
+                      "top": "0px",
+                      "right": "0px",
+                      "bottom": "0px",
+                      "left": "0px",
+                      "maxWidth": "none",
+                      "width": "100%",
+                      "height": "100%"
+                    }
+                  },
+                  "children": []
+                }
+              ]
+            },
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2378",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "position": "absolute",
+                  "fontWeight": "400",
+                  "lineHeight": "16px",
+                  "left": "14px",
+                  "color": "rgb(122, 109, 143)",
+                  "fontSize": "10px",
+                  "top": "11px",
+                  "whiteSpaceCollapse": "collapse",
+                  "textWrapMode": "nowrap"
+                }
+              },
+              "children": [
+                "我想学习做一个"
+              ]
+            },
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2379",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "position": "absolute",
+                  "fontWeight": "400",
+                  "lineHeight": "18px",
+                  "left": "14px",
+                  "color": "rgb(75, 59, 103)",
+                  "fontSize": "12px",
+                  "top": "27px",
+                  "whiteSpaceCollapse": "collapse",
+                  "textWrapMode": "nowrap"
+                }
+              },
+              "children": [
+                "数据可视化交互装置"
+              ]
+            },
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "728:2396",
+                "style": {
+                  "position": "absolute",
+                  "display": "flex",
+                  "height": "64.82px",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "left": "69.23px",
+                  "top": "115px",
+                  "width": "172.698px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "props": {
+                    "style": {
+                      "flexGrow": "0",
+                      "flexShrink": "0",
+                      "flexBasis": "auto",
+                      "transform": "rotate(3deg)"
+                    }
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "props": {
+                        "data-name": "我的选择 / 纸片",
+                        "style": {
+                          "backgroundImage": "initial",
+                          "backgroundPositionX": "initial",
+                          "backgroundPositionY": "initial",
+                          "backgroundSize": "initial",
+                          "backgroundRepeat": "initial",
+                          "backgroundAttachment": "initial",
+                          "backgroundOrigin": "initial",
+                          "backgroundClip": "initial",
+                          "backgroundColor": "rgb(244, 239, 255)",
+                          "borderTopWidth": "1px",
+                          "borderRightWidth": "1px",
+                          "borderBottomWidth": "1px",
+                          "borderLeftWidth": "1px",
+                          "borderTopColor": "rgb(215, 200, 239)",
+                          "borderRightColor": "rgb(215, 200, 239)",
+                          "borderBottomColor": "rgb(215, 200, 239)",
+                          "borderLeftColor": "rgb(215, 200, 239)",
+                          "borderTopStyle": "solid",
+                          "borderRightStyle": "solid",
+                          "borderBottomStyle": "solid",
+                          "borderLeftStyle": "solid",
+                          "alignContent": "stretch",
+                          "display": "flex",
+                          "flexDirection": "column",
+                          "rowGap": "4px",
+                          "columnGap": "4px",
+                          "alignItems": "flex-start",
+                          "overflowX": "hidden",
+                          "overflowY": "hidden",
+                          "paddingInlineStart": "10px",
+                          "paddingInlineEnd": "10px",
+                          "paddingBlockStart": "7px",
+                          "paddingBlockEnd": "7px",
+                          "position": "relative",
+                          "borderTopLeftRadius": "10px",
+                          "borderTopRightRadius": "10px",
+                          "borderBottomRightRadius": "10px",
+                          "borderBottomLeftRadius": "10px",
+                          "width": "170px"
+                        }
+                      },
+                      "children": [
+                        {
+                          "tag": "p",
+                          "props": {
+                            "data-node-id": "735:2356",
+                            "style": {
+                              "overflowWrap": "break-word",
+                              "fontWeight": "400",
+                              "lineHeight": "14px",
+                              "position": "relative",
+                              "flexShrink": "0",
+                              "color": "rgb(109, 84, 152)",
+                              "fontSize": "9px",
+                              "whiteSpaceCollapse": "preserve",
+                              "textWrapMode": "nowrap"
+                            }
+                          },
+                          "children": [
+                            "◉ 我 我的选择"
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "props": {
+                            "data-node-id": "735:2355",
+                            "data-name": "自主选择节点",
+                            "style": {
+                              "alignContent": "stretch",
+                              "display": "flex",
+                              "rowGap": "5px",
+                              "columnGap": "5px",
+                              "alignItems": "flex-start",
+                              "overflowX": "hidden",
+                              "overflowY": "hidden",
+                              "position": "relative",
+                              "flexShrink": "0"
+                            }
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "props": {
+                                "data-node-id": "728:2397",
+                                "data-name": "组合节点 3",
+                                "style": {
+                                  "backgroundImage": "initial",
+                                  "backgroundPositionX": "initial",
+                                  "backgroundPositionY": "initial",
+                                  "backgroundSize": "initial",
+                                  "backgroundRepeat": "initial",
+                                  "backgroundAttachment": "initial",
+                                  "backgroundOrigin": "initial",
+                                  "backgroundClip": "initial",
+                                  "backgroundColor": "rgb(234, 225, 250)",
+                                  "borderTopWidth": "1px",
+                                  "borderRightWidth": "1px",
+                                  "borderBottomWidth": "1px",
+                                  "borderLeftWidth": "1px",
+                                  "borderTopColor": "rgb(208, 189, 233)",
+                                  "borderRightColor": "rgb(208, 189, 233)",
+                                  "borderBottomColor": "rgb(208, 189, 233)",
+                                  "borderLeftColor": "rgb(208, 189, 233)",
+                                  "borderTopStyle": "solid",
+                                  "borderRightStyle": "solid",
+                                  "borderBottomStyle": "solid",
+                                  "borderLeftStyle": "solid",
+                                  "alignContent": "stretch",
+                                  "display": "flex",
+                                  "alignItems": "center",
+                                  "overflowX": "hidden",
+                                  "overflowY": "hidden",
+                                  "paddingInlineStart": "5px",
+                                  "paddingInlineEnd": "5px",
+                                  "paddingBlockStart": "2px",
+                                  "paddingBlockEnd": "2px",
+                                  "position": "relative",
+                                  "borderTopLeftRadius": "5px",
+                                  "borderTopRightRadius": "5px",
+                                  "borderBottomRightRadius": "5px",
+                                  "borderBottomLeftRadius": "5px",
+                                  "flexShrink": "0"
+                                }
+                              },
+                              "children": [
+                                {
+                                  "tag": "p",
+                                  "props": {
+                                    "data-node-id": "728:2399",
+                                    "style": {
+                                      "overflowWrap": "break-word",
+                                      "fontWeight": "400",
+                                      "lineHeight": "16px",
+                                      "position": "relative",
+                                      "flexShrink": "0",
+                                      "color": "rgb(110, 88, 140)",
+                                      "fontSize": "10px",
+                                      "whiteSpaceCollapse": "collapse",
+                                      "textWrapMode": "nowrap"
+                                    }
+                                  },
+                                  "children": [
+                                    "✓ 多模态交互"
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "div",
+                              "props": {
+                                "data-node-id": "728:2400",
+                                "data-name": "组合节点 4",
+                                "style": {
+                                  "backgroundImage": "initial",
+                                  "backgroundPositionX": "initial",
+                                  "backgroundPositionY": "initial",
+                                  "backgroundSize": "initial",
+                                  "backgroundRepeat": "initial",
+                                  "backgroundAttachment": "initial",
+                                  "backgroundOrigin": "initial",
+                                  "backgroundClip": "initial",
+                                  "backgroundColor": "rgb(234, 225, 250)",
+                                  "borderTopWidth": "1px",
+                                  "borderRightWidth": "1px",
+                                  "borderBottomWidth": "1px",
+                                  "borderLeftWidth": "1px",
+                                  "borderTopColor": "rgb(208, 189, 233)",
+                                  "borderRightColor": "rgb(208, 189, 233)",
+                                  "borderBottomColor": "rgb(208, 189, 233)",
+                                  "borderLeftColor": "rgb(208, 189, 233)",
+                                  "borderTopStyle": "solid",
+                                  "borderRightStyle": "solid",
+                                  "borderBottomStyle": "solid",
+                                  "borderLeftStyle": "solid",
+                                  "alignContent": "stretch",
+                                  "display": "flex",
+                                  "alignItems": "center",
+                                  "overflowX": "hidden",
+                                  "overflowY": "hidden",
+                                  "paddingInlineStart": "5px",
+                                  "paddingInlineEnd": "5px",
+                                  "paddingBlockStart": "2px",
+                                  "paddingBlockEnd": "2px",
+                                  "position": "relative",
+                                  "borderTopLeftRadius": "5px",
+                                  "borderTopRightRadius": "5px",
+                                  "borderBottomRightRadius": "5px",
+                                  "borderBottomLeftRadius": "5px",
+                                  "flexShrink": "0"
+                                }
+                              },
+                              "children": [
+                                {
+                                  "tag": "p",
+                                  "props": {
+                                    "data-node-id": "728:2402",
+                                    "style": {
+                                      "overflowWrap": "break-word",
+                                      "fontWeight": "400",
+                                      "lineHeight": "16px",
+                                      "position": "relative",
+                                      "flexShrink": "0",
+                                      "color": "rgb(110, 88, 140)",
+                                      "fontSize": "10px",
+                                      "whiteSpaceCollapse": "collapse",
+                                      "textWrapMode": "nowrap"
+                                    }
+                                  },
+                                  "children": [
+                                    "＋ 自选"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "728:2385",
+                "style": {
+                  "position": "absolute",
+                  "display": "flex",
+                  "height": "65.972px",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "left": "11px",
+                  "top": "47.95px",
+                  "width": "194.668px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "props": {
+                    "style": {
+                      "transform": "rotate(-3deg)",
+                      "flexGrow": "0",
+                      "flexShrink": "0",
+                      "flexBasis": "auto"
+                    }
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "props": {
+                        "data-name": "教师课表 / 纸片",
+                        "style": {
+                          "backgroundImage": "none",
+                          "backgroundPositionX": "0%",
+                          "backgroundPositionY": "0%",
+                          "backgroundSize": "auto",
+                          "backgroundRepeat": "repeat",
+                          "backgroundAttachment": "scroll",
+                          "backgroundOrigin": "padding-box",
+                          "backgroundClip": "border-box",
+                          "backgroundColor": "rgb(255, 255, 255)",
+                          "borderTopWidth": "1px",
+                          "borderRightWidth": "1px",
+                          "borderBottomWidth": "1px",
+                          "borderLeftWidth": "1px",
+                          "borderTopColor": "rgb(232, 222, 244)",
+                          "borderRightColor": "rgb(232, 222, 244)",
+                          "borderBottomColor": "rgb(232, 222, 244)",
+                          "borderLeftColor": "rgb(232, 222, 244)",
+                          "borderTopStyle": "solid",
+                          "borderRightStyle": "solid",
+                          "borderBottomStyle": "solid",
+                          "borderLeftStyle": "solid",
+                          "alignContent": "stretch",
+                          "display": "flex",
+                          "flexDirection": "column",
+                          "rowGap": "4px",
+                          "columnGap": "4px",
+                          "alignItems": "flex-start",
+                          "overflowX": "hidden",
+                          "overflowY": "hidden",
+                          "paddingInlineStart": "10px",
+                          "paddingInlineEnd": "10px",
+                          "paddingBlockStart": "7px",
+                          "paddingBlockEnd": "7px",
+                          "position": "relative",
+                          "borderTopLeftRadius": "10px",
+                          "borderTopRightRadius": "10px",
+                          "borderBottomRightRadius": "10px",
+                          "borderBottomLeftRadius": "10px",
+                          "width": "192px"
+                        }
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "props": {
+                            "data-node-id": "728:2386",
+                            "data-name": "AI回复标题",
+                            "style": {
+                              "alignContent": "stretch",
+                              "display": "flex",
+                              "rowGap": "5px",
+                              "columnGap": "5px",
+                              "height": "14px",
+                              "alignItems": "flex-start",
+                              "overflowX": "hidden",
+                              "overflowY": "hidden",
+                              "position": "relative",
+                              "flexShrink": "0",
+                              "width": "172px"
+                            }
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "props": {
+                                "data-node-id": "735:2353",
+                                "data-name": "书本图标",
+                                "style": {
+                                  "position": "relative",
+                                  "flexShrink": "0",
+                                  "width": "12px",
+                                  "height": "12px"
+                                }
+                              },
+                              "children": [
+                                {
+                                  "tag": "img",
+                                  "props": {
+                                    "alt": "",
+                                    "src": "/morph-course-network/strict/network-img1.svg",
+                                    "style": {
+                                      "position": "absolute",
+                                      "display": "block",
+                                      "top": "0px",
+                                      "right": "0px",
+                                      "bottom": "0px",
+                                      "left": "0px",
+                                      "maxWidth": "none",
+                                      "width": "100%",
+                                      "height": "100%"
+                                    }
+                                  },
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "p",
+                              "props": {
+                                "data-node-id": "728:2387",
+                                "style": {
+                                  "overflowWrap": "break-word",
+                                  "fontWeight": "400",
+                                  "lineHeight": "16.5px",
+                                  "position": "relative",
+                                  "flexShrink": "0",
+                                  "color": "rgb(119, 101, 139)",
+                                  "fontSize": "9px",
+                                  "whiteSpaceCollapse": "collapse",
+                                  "textWrapMode": "nowrap"
+                                }
+                              },
+                              "children": [
+                                "教师课表"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "props": {
+                            "data-node-id": "728:2389",
+                            "data-name": "推荐节点 1",
+                            "style": {
+                              "alignContent": "stretch",
+                              "display": "flex",
+                              "rowGap": "5px",
+                              "columnGap": "5px",
+                              "height": "22px",
+                              "alignItems": "flex-start",
+                              "overflowX": "hidden",
+                              "overflowY": "hidden",
+                              "position": "relative",
+                              "flexShrink": "0",
+                              "width": "172px"
+                            }
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "props": {
+                                "data-node-id": "728:2390",
+                                "data-name": "组合节点 1",
+                                "style": {
+                                  "backgroundImage": "initial",
+                                  "backgroundPositionX": "initial",
+                                  "backgroundPositionY": "initial",
+                                  "backgroundSize": "initial",
+                                  "backgroundRepeat": "initial",
+                                  "backgroundAttachment": "initial",
+                                  "backgroundOrigin": "initial",
+                                  "backgroundClip": "initial",
+                                  "backgroundColor": "rgb(246, 242, 255)",
+                                  "borderTopWidth": "1px",
+                                  "borderRightWidth": "1px",
+                                  "borderBottomWidth": "1px",
+                                  "borderLeftWidth": "1px",
+                                  "borderTopColor": "rgb(228, 218, 239)",
+                                  "borderRightColor": "rgb(228, 218, 239)",
+                                  "borderBottomColor": "rgb(228, 218, 239)",
+                                  "borderLeftColor": "rgb(228, 218, 239)",
+                                  "borderTopStyle": "solid",
+                                  "borderRightStyle": "solid",
+                                  "borderBottomStyle": "solid",
+                                  "borderLeftStyle": "solid",
+                                  "alignContent": "stretch",
+                                  "display": "flex",
+                                  "alignItems": "center",
+                                  "overflowX": "hidden",
+                                  "overflowY": "hidden",
+                                  "paddingInlineStart": "5px",
+                                  "paddingInlineEnd": "5px",
+                                  "paddingBlockStart": "2px",
+                                  "paddingBlockEnd": "2px",
+                                  "position": "relative",
+                                  "borderTopLeftRadius": "5px",
+                                  "borderTopRightRadius": "5px",
+                                  "borderBottomRightRadius": "5px",
+                                  "borderBottomLeftRadius": "5px",
+                                  "flexShrink": "0"
+                                }
+                              },
+                              "children": [
+                                {
+                                  "tag": "p",
+                                  "props": {
+                                    "data-node-id": "728:2392",
+                                    "style": {
+                                      "overflowWrap": "break-word",
+                                      "fontWeight": "400",
+                                      "lineHeight": "16px",
+                                      "position": "relative",
+                                      "flexShrink": "0",
+                                      "color": "rgb(110, 88, 140)",
+                                      "fontSize": "10px",
+                                      "whiteSpaceCollapse": "collapse",
+                                      "textWrapMode": "nowrap"
+                                    }
+                                  },
+                                  "children": [
+                                    "✓ 数据可视化"
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "tag": "div",
+                              "props": {
+                                "data-node-id": "728:2393",
+                                "data-name": "组合节点 2",
+                                "style": {
+                                  "backgroundImage": "initial",
+                                  "backgroundPositionX": "initial",
+                                  "backgroundPositionY": "initial",
+                                  "backgroundSize": "initial",
+                                  "backgroundRepeat": "initial",
+                                  "backgroundAttachment": "initial",
+                                  "backgroundOrigin": "initial",
+                                  "backgroundClip": "initial",
+                                  "backgroundColor": "rgb(246, 242, 255)",
+                                  "borderTopWidth": "1px",
+                                  "borderRightWidth": "1px",
+                                  "borderBottomWidth": "1px",
+                                  "borderLeftWidth": "1px",
+                                  "borderTopColor": "rgb(228, 218, 239)",
+                                  "borderRightColor": "rgb(228, 218, 239)",
+                                  "borderBottomColor": "rgb(228, 218, 239)",
+                                  "borderLeftColor": "rgb(228, 218, 239)",
+                                  "borderTopStyle": "solid",
+                                  "borderRightStyle": "solid",
+                                  "borderBottomStyle": "solid",
+                                  "borderLeftStyle": "solid",
+                                  "alignContent": "stretch",
+                                  "display": "flex",
+                                  "alignItems": "center",
+                                  "overflowX": "hidden",
+                                  "overflowY": "hidden",
+                                  "paddingInlineStart": "5px",
+                                  "paddingInlineEnd": "5px",
+                                  "paddingBlockStart": "2px",
+                                  "paddingBlockEnd": "2px",
+                                  "position": "relative",
+                                  "borderTopLeftRadius": "5px",
+                                  "borderTopRightRadius": "5px",
+                                  "borderBottomRightRadius": "5px",
+                                  "borderBottomLeftRadius": "5px",
+                                  "flexShrink": "0"
+                                }
+                              },
+                              "children": [
+                                {
+                                  "tag": "p",
+                                  "props": {
+                                    "data-node-id": "728:2395",
+                                    "style": {
+                                      "overflowWrap": "break-word",
+                                      "fontWeight": "400",
+                                      "lineHeight": "16px",
+                                      "position": "relative",
+                                      "flexShrink": "0",
+                                      "color": "rgb(110, 88, 140)",
+                                      "fontSize": "10px",
+                                      "whiteSpaceCollapse": "collapse",
+                                      "textWrapMode": "nowrap"
+                                    }
+                                  },
+                                  "children": [
+                                    "✓ Vibe Coding"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "728:2377",
+                "style": {
+                  "position": "absolute",
+                  "display": "flex",
+                  "height": "58.285px",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "left": "14px",
+                  "top": "177.68px",
+                  "width": "182.705px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "props": {
+                    "style": {
+                      "transform": "rotate(-2deg)",
+                      "flexGrow": "0",
+                      "flexShrink": "0",
+                      "flexBasis": "auto"
+                    }
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "props": {
+                        "data-name": "AI推荐 / 可选纸片",
+                        "style": {
+                          "overflowWrap": "break-word",
+                          "backgroundImage": "initial",
+                          "backgroundPositionX": "initial",
+                          "backgroundPositionY": "initial",
+                          "backgroundSize": "initial",
+                          "backgroundRepeat": "initial",
+                          "backgroundAttachment": "initial",
+                          "backgroundOrigin": "initial",
+                          "backgroundClip": "initial",
+                          "backgroundColor": "rgba(250, 248, 252, 0.9)",
+                          "borderTopWidth": "1px",
+                          "borderRightWidth": "1px",
+                          "borderBottomWidth": "1px",
+                          "borderLeftWidth": "1px",
+                          "borderTopColor": "rgb(232, 222, 244)",
+                          "borderRightColor": "rgb(232, 222, 244)",
+                          "borderBottomColor": "rgb(232, 222, 244)",
+                          "borderLeftColor": "rgb(232, 222, 244)",
+                          "borderTopStyle": "dashed",
+                          "borderRightStyle": "dashed",
+                          "borderBottomStyle": "dashed",
+                          "borderLeftStyle": "dashed",
+                          "alignContent": "stretch",
+                          "display": "flex",
+                          "flexDirection": "column",
+                          "fontWeight": "400",
+                          "rowGap": "4px",
+                          "columnGap": "4px",
+                          "alignItems": "flex-start",
+                          "lineHeight": "16px",
+                          "overflowX": "hidden",
+                          "overflowY": "hidden",
+                          "paddingInlineStart": "10px",
+                          "paddingInlineEnd": "10px",
+                          "paddingBlockStart": "7px",
+                          "paddingBlockEnd": "7px",
+                          "position": "relative",
+                          "borderTopLeftRadius": "10px",
+                          "borderTopRightRadius": "10px",
+                          "borderBottomRightRadius": "10px",
+                          "borderBottomLeftRadius": "10px",
+                          "color": "rgb(155, 139, 169)",
+                          "width": "181px",
+                          "whiteSpaceCollapse": "collapse",
+                          "textWrapMode": "nowrap"
+                        }
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "props": {
+                            "data-node-id": "735:2559",
+                            "data-name": "推荐标题",
+                            "style": {
+                              "alignContent": "stretch",
+                              "display": "flex",
+                              "alignItems": "flex-start",
+                              "justifyContent": "space-between",
+                              "overflowX": "hidden",
+                              "overflowY": "hidden",
+                              "position": "relative",
+                              "flexShrink": "0",
+                              "width": "161px"
+                            }
+                          },
+                          "children": [
+                            {
+                              "tag": "p",
+                              "props": {
+                                "data-node-id": "735:2560",
+                                "style": {
+                                  "position": "relative",
+                                  "flexShrink": "0",
+                                  "fontSize": "9px"
+                                }
+                              },
+                              "children": [
+                                "✧ AI 推荐"
+                              ]
+                            },
+                            {
+                              "tag": "p",
+                              "props": {
+                                "data-node-id": "735:2561",
+                                "style": {
+                                  "position": "relative",
+                                  "flexShrink": "0",
+                                  "fontSize": "8px"
+                                }
+                              },
+                              "children": [
+                                "可选"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "tag": "div",
+                          "props": {
+                            "data-node-id": "735:2562",
+                            "data-name": "可选推荐节点",
+                            "style": {
+                              "alignContent": "stretch",
+                              "display": "flex",
+                              "alignItems": "flex-start",
+                              "justifyContent": "space-between",
+                              "overflowX": "hidden",
+                              "overflowY": "hidden",
+                              "position": "relative",
+                              "flexShrink": "0",
+                              "width": "161px"
+                            }
+                          },
+                          "children": [
+                            {
+                              "tag": "p",
+                              "props": {
+                                "data-node-id": "735:2563",
+                                "style": {
+                                  "position": "relative",
+                                  "flexShrink": "0",
+                                  "fontSize": "10px"
+                                }
+                              },
+                              "children": [
+                                "具身智能"
+                              ]
+                            },
+                            {
+                              "tag": "p",
+                              "props": {
+                                "data-node-id": "735:2564",
+                                "style": {
+                                  "position": "relative",
+                                  "flexShrink": "0",
+                                  "fontSize": "9px"
+                                }
+                              },
+                              "children": [
+                                "＋ 加入"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "a",
+          "props": {
+            "data-node-id": "728:2403",
+            "data-name": "AI辅助组合我的课程 / 按钮",
+            "href": "chat.html?mode=courses",
+            "style": {
+              "overflowWrap": "break-word",
+              "backgroundImage": "none",
+              "backgroundPositionX": "0%",
+              "backgroundPositionY": "0%",
+              "backgroundSize": "auto",
+              "backgroundRepeat": "repeat",
+              "backgroundAttachment": "scroll",
+              "backgroundOrigin": "padding-box",
+              "backgroundClip": "border-box",
+              "backgroundColor": "rgb(216, 248, 69)",
+              "alignContent": "stretch",
+              "display": "flex",
+              "fontWeight": "700",
+              "rowGap": "8px",
+              "columnGap": "8px",
+              "alignItems": "center",
+              "lineHeight": "21px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingInlineStart": "14px",
+              "paddingInlineEnd": "14px",
+              "paddingBlockStart": "11px",
+              "paddingBlockEnd": "11px",
+              "position": "relative",
+              "borderTopLeftRadius": "10px",
+              "borderTopRightRadius": "10px",
+              "borderBottomRightRadius": "10px",
+              "borderBottomLeftRadius": "10px",
+              "flexShrink": "0",
+              "color": "var(--text-primary,#171a2f)",
+              "whiteSpaceCollapse": "collapse",
+              "textWrapMode": "nowrap"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2405",
+                "style": {
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "fontSize": "13px"
+                }
+              },
+              "children": [
+                "AI辅助组合我的课程"
+              ]
+            },
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2406",
+                "style": {
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "fontSize": "14px"
+                }
+              },
+              "children": [
+                "↗"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "div",
+      "props": {
+        "data-node-id": "728:2407",
+        "data-name": "知识网络 / 37个对象 / 77条常显关系",
+        "className": "knowledge-graph",
+        "style": {
+          "backgroundImage": "none",
+          "backgroundPositionX": "0%",
+          "backgroundPositionY": "0%",
+          "backgroundSize": "auto",
+          "backgroundRepeat": "repeat",
+          "backgroundAttachment": "scroll",
+          "backgroundOrigin": "padding-box",
+          "backgroundClip": "border-box",
+          "backgroundColor": "rgb(244, 241, 255)",
+          "borderTopWidth": "1px",
+          "borderRightWidth": "1px",
+          "borderBottomWidth": "1px",
+          "borderLeftWidth": "1px",
+          "borderTopColor": "rgb(255, 255, 255)",
+          "borderRightColor": "rgb(255, 255, 255)",
+          "borderBottomColor": "rgb(255, 255, 255)",
+          "borderLeftColor": "rgb(255, 255, 255)",
+          "borderTopStyle": "solid",
+          "borderRightStyle": "solid",
+          "borderBottomStyle": "solid",
+          "borderLeftStyle": "solid",
+          "height": "500px",
+          "overflowX": "hidden",
+          "overflowY": "hidden",
+          "position": "relative",
+          "borderTopLeftRadius": "14px",
+          "borderTopRightRadius": "14px",
+          "borderBottomRightRadius": "14px",
+          "borderBottomLeftRadius": "14px",
+          "flexShrink": "0",
+          "width": "1204px"
+        }
+      },
+      "children": [
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2408",
+            "data-name": "共享关系 / 可编辑曲线",
+            "style": {
+              "position": "absolute",
+              "height": "498px",
+              "left": "0px",
+              "top": "0px",
+              "width": "1202px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-img2.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "a",
+          "props": {
+            "data-node-id": "728:2486",
+            "data-name": "数据分析与可视化表达",
+            "href": "infographic-design.html",
+            "title": "教师梳理的系列课程 · 进入信息图表设计",
+            "className": "series-course",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "initial",
+              "backgroundPositionX": "initial",
+              "backgroundPositionY": "initial",
+              "backgroundSize": "initial",
+              "backgroundRepeat": "initial",
+              "backgroundAttachment": "initial",
+              "backgroundOrigin": "initial",
+              "backgroundClip": "initial",
+              "backgroundColor": "rgb(23, 27, 50)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(48, 54, 79)",
+              "borderRightColor": "rgb(48, 54, 79)",
+              "borderBottomColor": "rgb(48, 54, 79)",
+              "borderLeftColor": "rgb(48, 54, 79)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "rowGap": "6px",
+              "columnGap": "6px",
+              "height": "64px",
+              "alignItems": "flex-start",
+              "left": "72px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingBottom": "7px",
+              "paddingTop": "9px",
+              "paddingInlineStart": "11px",
+              "paddingInlineEnd": "11px",
+              "borderTopLeftRadius": "12px",
+              "borderTopRightRadius": "12px",
+              "borderBottomRightRadius": "12px",
+              "borderBottomLeftRadius": "12px",
+              "top": "192px",
+              "width": "166px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2487",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "700",
+                  "lineHeight": "19.6px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "fontSize": "14px",
+                  "color": "var(--background-ice,white)",
+                  "width": "144px"
+                }
+              },
+              "children": [
+                "数据分析与可视化表达"
+              ]
+            },
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "728:2488",
+                "data-name": "贡献者",
+                "style": {
+                  "alignContent": "stretch",
+                  "display": "flex",
+                  "rowGap": "6px",
+                  "columnGap": "6px",
+                  "height": "20px",
+                  "alignItems": "center",
+                  "overflowX": "hidden",
+                  "overflowY": "hidden",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "width": "144px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "props": {
+                    "data-node-id": "728:2489",
+                    "data-name": "头像 / 吴琼",
+                    "style": {
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "width": "20px",
+                      "height": "20px"
+                    }
+                  },
+                  "children": [
+                    {
+                      "tag": "img",
+                      "props": {
+                        "alt": "",
+                        "height": "20",
+                        "src": "/morph-course-network/strict/network-img3.png",
+                        "width": "20",
+                        "style": {
+                          "position": "absolute",
+                          "display": "block",
+                          "top": "0px",
+                          "right": "0px",
+                          "bottom": "0px",
+                          "left": "0px",
+                          "maxWidth": "none",
+                          "width": "100%",
+                          "height": "100%"
+                        }
+                      },
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "tag": "p",
+                  "props": {
+                    "data-node-id": "728:2490",
+                    "style": {
+                      "overflowWrap": "break-word",
+                      "fontWeight": "400",
+                      "lineHeight": "15px",
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "fontSize": "10px",
+                      "color": "var(--text-inverse,#f8faff)",
+                      "whiteSpaceCollapse": "collapse",
+                      "textWrapMode": "nowrap"
+                    }
+                  },
+                  "children": [
+                    "吴琼"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "a",
+          "props": {
+            "data-node-id": "728:2491",
+            "data-name": "人工智能与艺术设计",
+            "href": "infographic-design.html",
+            "title": "教师梳理的系列课程 · 进入信息图表设计",
+            "className": "series-course",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "initial",
+              "backgroundPositionX": "initial",
+              "backgroundPositionY": "initial",
+              "backgroundSize": "initial",
+              "backgroundRepeat": "initial",
+              "backgroundAttachment": "initial",
+              "backgroundOrigin": "initial",
+              "backgroundClip": "initial",
+              "backgroundColor": "rgb(23, 27, 50)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(48, 54, 79)",
+              "borderRightColor": "rgb(48, 54, 79)",
+              "borderBottomColor": "rgb(48, 54, 79)",
+              "borderLeftColor": "rgb(48, 54, 79)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "rowGap": "6px",
+              "columnGap": "6px",
+              "height": "64px",
+              "alignItems": "flex-start",
+              "left": "556px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingBottom": "7px",
+              "paddingTop": "9px",
+              "paddingInlineStart": "11px",
+              "paddingInlineEnd": "11px",
+              "borderTopLeftRadius": "12px",
+              "borderTopRightRadius": "12px",
+              "borderBottomRightRadius": "12px",
+              "borderBottomLeftRadius": "12px",
+              "top": "36px",
+              "width": "166px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2492",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "700",
+                  "lineHeight": "19.6px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "fontSize": "14px",
+                  "color": "var(--background-ice,white)",
+                  "width": "144px"
+                }
+              },
+              "children": [
+                "人工智能与艺术设计"
+              ]
+            },
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "728:2493",
+                "data-name": "贡献者",
+                "style": {
+                  "alignContent": "stretch",
+                  "display": "flex",
+                  "rowGap": "6px",
+                  "columnGap": "6px",
+                  "height": "20px",
+                  "alignItems": "center",
+                  "overflowX": "hidden",
+                  "overflowY": "hidden",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "width": "144px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "props": {
+                    "data-node-id": "728:2494",
+                    "data-name": "头像 / 冯涛",
+                    "style": {
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "width": "20px",
+                      "height": "20px"
+                    }
+                  },
+                  "children": [
+                    {
+                      "tag": "img",
+                      "props": {
+                        "alt": "",
+                        "height": "20",
+                        "src": "/morph-course-network/strict/network-img4.png",
+                        "width": "20",
+                        "style": {
+                          "position": "absolute",
+                          "display": "block",
+                          "top": "0px",
+                          "right": "0px",
+                          "bottom": "0px",
+                          "left": "0px",
+                          "maxWidth": "none",
+                          "width": "100%",
+                          "height": "100%"
+                        }
+                      },
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "tag": "p",
+                  "props": {
+                    "data-node-id": "728:2495",
+                    "style": {
+                      "overflowWrap": "break-word",
+                      "fontWeight": "400",
+                      "lineHeight": "15px",
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "fontSize": "10px",
+                      "color": "var(--text-inverse,#f8faff)",
+                      "whiteSpaceCollapse": "collapse",
+                      "textWrapMode": "nowrap"
+                    }
+                  },
+                  "children": [
+                    "冯涛"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "a",
+          "props": {
+            "data-node-id": "728:2496",
+            "data-name": "交互艺术设计研究",
+            "href": "infographic-design.html",
+            "title": "教师梳理的系列课程 · 进入信息图表设计",
+            "className": "series-course",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "initial",
+              "backgroundPositionX": "initial",
+              "backgroundPositionY": "initial",
+              "backgroundSize": "initial",
+              "backgroundRepeat": "initial",
+              "backgroundAttachment": "initial",
+              "backgroundOrigin": "initial",
+              "backgroundClip": "initial",
+              "backgroundColor": "rgb(23, 27, 50)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(48, 54, 79)",
+              "borderRightColor": "rgb(48, 54, 79)",
+              "borderBottomColor": "rgb(48, 54, 79)",
+              "borderLeftColor": "rgb(48, 54, 79)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "rowGap": "6px",
+              "columnGap": "6px",
+              "height": "64px",
+              "alignItems": "flex-start",
+              "left": "952px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingBottom": "7px",
+              "paddingTop": "9px",
+              "paddingInlineStart": "11px",
+              "paddingInlineEnd": "11px",
+              "borderTopLeftRadius": "12px",
+              "borderTopRightRadius": "12px",
+              "borderBottomRightRadius": "12px",
+              "borderBottomLeftRadius": "12px",
+              "top": "288px",
+              "width": "166px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2497",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "700",
+                  "lineHeight": "19.6px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "fontSize": "14px",
+                  "color": "var(--background-ice,white)",
+                  "width": "144px"
+                }
+              },
+              "children": [
+                "交互艺术设计研究"
+              ]
+            },
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "728:2498",
+                "data-name": "贡献者",
+                "style": {
+                  "alignContent": "stretch",
+                  "display": "flex",
+                  "rowGap": "6px",
+                  "columnGap": "6px",
+                  "height": "20px",
+                  "alignItems": "center",
+                  "overflowX": "hidden",
+                  "overflowY": "hidden",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "width": "144px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "props": {
+                    "data-node-id": "728:2499",
+                    "data-name": "头像 / 师丹青",
+                    "style": {
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "width": "20px",
+                      "height": "20px"
+                    }
+                  },
+                  "children": [
+                    {
+                      "tag": "img",
+                      "props": {
+                        "alt": "",
+                        "height": "20",
+                        "src": "/morph-course-network/strict/network-img5.png",
+                        "width": "20",
+                        "style": {
+                          "position": "absolute",
+                          "display": "block",
+                          "top": "0px",
+                          "right": "0px",
+                          "bottom": "0px",
+                          "left": "0px",
+                          "maxWidth": "none",
+                          "width": "100%",
+                          "height": "100%"
+                        }
+                      },
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "tag": "p",
+                  "props": {
+                    "data-node-id": "728:2500",
+                    "style": {
+                      "overflowWrap": "break-word",
+                      "fontWeight": "400",
+                      "lineHeight": "15px",
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "fontSize": "10px",
+                      "color": "var(--text-inverse,#f8faff)",
+                      "whiteSpaceCollapse": "collapse",
+                      "textWrapMode": "nowrap"
+                    }
+                  },
+                  "children": [
+                    "师丹青"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "button",
+          "props": {
+            "data-node-id": "728:2501",
+            "data-name": "Vibe Coding",
+            "type": "button",
+            "data-network-topic": "Vibe Coding",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "initial",
+              "backgroundPositionX": "initial",
+              "backgroundPositionY": "initial",
+              "backgroundSize": "initial",
+              "backgroundRepeat": "initial",
+              "backgroundAttachment": "initial",
+              "backgroundOrigin": "initial",
+              "backgroundClip": "initial",
+              "backgroundColor": "rgb(254, 252, 255)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(168, 149, 228)",
+              "borderRightColor": "rgb(168, 149, 228)",
+              "borderBottomColor": "rgb(168, 149, 228)",
+              "borderLeftColor": "rgb(168, 149, 228)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "rowGap": "6px",
+              "columnGap": "6px",
+              "height": "64px",
+              "alignItems": "flex-start",
+              "left": "388px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingBottom": "7px",
+              "paddingTop": "9px",
+              "paddingInlineStart": "11px",
+              "paddingInlineEnd": "11px",
+              "borderTopLeftRadius": "10px",
+              "borderTopRightRadius": "10px",
+              "borderBottomRightRadius": "10px",
+              "borderBottomLeftRadius": "10px",
+              "top": "208px",
+              "width": "144px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2502",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "400",
+                  "lineHeight": "19.6px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(37, 36, 56)",
+                  "fontSize": "14px",
+                  "width": "122px"
+                }
+              },
+              "children": [
+                "Vibe Coding"
+              ]
+            },
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "728:2503",
+                "data-name": "贡献者",
+                "style": {
+                  "alignContent": "stretch",
+                  "display": "flex",
+                  "rowGap": "6px",
+                  "columnGap": "6px",
+                  "height": "20px",
+                  "alignItems": "center",
+                  "overflowX": "hidden",
+                  "overflowY": "hidden",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "width": "122px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "props": {
+                    "data-node-id": "728:2504",
+                    "data-name": "头像 / 肖岚茜",
+                    "style": {
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "width": "20px",
+                      "height": "20px"
+                    }
+                  },
+                  "children": [
+                    {
+                      "tag": "img",
+                      "props": {
+                        "alt": "",
+                        "height": "20",
+                        "src": "/morph-course-network/strict/network-img6.png",
+                        "width": "20",
+                        "style": {
+                          "position": "absolute",
+                          "display": "block",
+                          "top": "0px",
+                          "right": "0px",
+                          "bottom": "0px",
+                          "left": "0px",
+                          "maxWidth": "none",
+                          "width": "100%",
+                          "height": "100%"
+                        }
+                      },
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "tag": "p",
+                  "props": {
+                    "data-node-id": "728:2505",
+                    "style": {
+                      "overflowWrap": "break-word",
+                      "fontWeight": "400",
+                      "lineHeight": "15px",
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "color": "rgb(107, 112, 148)",
+                      "fontSize": "10px",
+                      "whiteSpaceCollapse": "collapse",
+                      "textWrapMode": "nowrap"
+                    }
+                  },
+                  "children": [
+                    "肖岚茜"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "button",
+          "props": {
+            "data-node-id": "728:2506",
+            "data-name": "图像与文本\n数据分析基础",
+            "type": "button",
+            "data-network-topic": "图像与文本\n数据分析基础",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "none",
+              "backgroundPositionX": "0%",
+              "backgroundPositionY": "0%",
+              "backgroundSize": "auto",
+              "backgroundRepeat": "repeat",
+              "backgroundAttachment": "scroll",
+              "backgroundOrigin": "padding-box",
+              "backgroundClip": "border-box",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(211, 201, 237)",
+              "borderRightColor": "rgb(211, 201, 237)",
+              "borderBottomColor": "rgb(211, 201, 237)",
+              "borderLeftColor": "rgb(211, 201, 237)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "rowGap": "4px",
+              "columnGap": "4px",
+              "height": "64px",
+              "alignItems": "flex-start",
+              "left": "264px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingInlineStart": "10px",
+              "paddingInlineEnd": "10px",
+              "paddingBlockStart": "5px",
+              "paddingBlockEnd": "5px",
+              "borderTopLeftRadius": "10px",
+              "borderTopRightRadius": "10px",
+              "borderBottomRightRadius": "10px",
+              "borderBottomLeftRadius": "10px",
+              "top": "116px",
+              "width": "144px"
+            }
+          },
+          "children": [
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "728:2507",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "400",
+                  "lineHeight": "0",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(37, 36, 56)",
+                  "fontSize": "11px",
+                  "width": "124px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "p",
+                  "props": {
+                    "style": {
+                      "lineHeight": "14.85px",
+                      "marginBottom": "0px"
+                    }
+                  },
+                  "children": [
+                    "图像与文本"
+                  ]
+                },
+                {
+                  "tag": "p",
+                  "props": {
+                    "style": {
+                      "lineHeight": "14.85px"
+                    }
+                  },
+                  "children": [
+                    "数据分析基础"
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "div",
+              "props": {
+                "data-node-id": "728:2508",
+                "data-name": "贡献者",
+                "style": {
+                  "alignContent": "stretch",
+                  "display": "flex",
+                  "rowGap": "6px",
+                  "columnGap": "6px",
+                  "height": "18px",
+                  "alignItems": "center",
+                  "overflowX": "hidden",
+                  "overflowY": "hidden",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "width": "124px"
+                }
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "props": {
+                    "data-node-id": "728:2509",
+                    "data-name": "头像 / 姚妍华",
+                    "style": {
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "width": "18px",
+                      "height": "18px"
+                    }
+                  },
+                  "children": [
+                    {
+                      "tag": "img",
+                      "props": {
+                        "alt": "",
+                        "height": "18",
+                        "src": "/morph-course-network/strict/network-img7.png",
+                        "width": "18",
+                        "style": {
+                          "position": "absolute",
+                          "display": "block",
+                          "top": "0px",
+                          "right": "0px",
+                          "bottom": "0px",
+                          "left": "0px",
+                          "maxWidth": "none",
+                          "width": "100%",
+                          "height": "100%"
+                        }
+                      },
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "tag": "p",
+                  "props": {
+                    "data-node-id": "728:2510",
+                    "style": {
+                      "overflowWrap": "break-word",
+                      "fontWeight": "400",
+                      "lineHeight": "15px",
+                      "position": "relative",
+                      "flexShrink": "0",
+                      "color": "rgb(107, 112, 148)",
+                      "fontSize": "10px",
+                      "whiteSpaceCollapse": "collapse",
+                      "textWrapMode": "nowrap"
+                    }
+                  },
+                  "children": [
+                    "姚妍华"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "button",
+          "props": {
+            "data-node-id": "728:2511",
+            "data-name": "AI 设计评议与验证",
+            "type": "button",
+            "data-network-topic": "AI 设计评议与验证",
+            "style": {
+              "overflowWrap": "break-word",
+              "position": "absolute",
+              "backgroundImage": "none",
+              "backgroundPositionX": "0%",
+              "backgroundPositionY": "0%",
+              "backgroundSize": "auto",
+              "backgroundRepeat": "repeat",
+              "backgroundAttachment": "scroll",
+              "backgroundOrigin": "padding-box",
+              "backgroundClip": "border-box",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(211, 201, 237)",
+              "borderRightColor": "rgb(211, 201, 237)",
+              "borderBottomColor": "rgb(211, 201, 237)",
+              "borderLeftColor": "rgb(211, 201, 237)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "fontWeight": "400",
+              "rowGap": "3px",
+              "columnGap": "3px",
+              "height": "48px",
+              "alignItems": "flex-start",
+              "left": "704px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingInlineStart": "10px",
+              "paddingInlineEnd": "10px",
+              "paddingBlockStart": "6px",
+              "paddingBlockEnd": "6px",
+              "borderTopLeftRadius": "9px",
+              "borderTopRightRadius": "9px",
+              "borderBottomRightRadius": "9px",
+              "borderBottomLeftRadius": "9px",
+              "top": "240px",
+              "width": "140px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2512",
+                "style": {
+                  "lineHeight": "18.2px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(37, 36, 56)",
+                  "fontSize": "13px",
+                  "width": "120px"
+                }
+              },
+              "children": [
+                "AI 设计评议与验证"
+              ]
+            },
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2513",
+                "style": {
+                  "lineHeight": "12px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(140, 129, 155)",
+                  "fontSize": "10px",
+                  "whiteSpaceCollapse": "collapse",
+                  "textWrapMode": "nowrap"
+                }
+              },
+              "children": [
+                "9 门课程共享"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "button",
+          "props": {
+            "data-node-id": "728:2514",
+            "data-name": "生成式 AI 基础",
+            "type": "button",
+            "data-network-topic": "生成式 AI 基础",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "none",
+              "backgroundPositionX": "0%",
+              "backgroundPositionY": "0%",
+              "backgroundSize": "auto",
+              "backgroundRepeat": "repeat",
+              "backgroundAttachment": "scroll",
+              "backgroundOrigin": "padding-box",
+              "backgroundClip": "border-box",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(211, 201, 237)",
+              "borderRightColor": "rgb(211, 201, 237)",
+              "borderBottomColor": "rgb(211, 201, 237)",
+              "borderLeftColor": "rgb(211, 201, 237)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "height": "26px",
+              "alignItems": "flex-start",
+              "justifyContent": "center",
+              "left": "436px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingInlineStart": "8px",
+              "paddingInlineEnd": "8px",
+              "borderTopLeftRadius": "6px",
+              "borderTopRightRadius": "6px",
+              "borderBottomRightRadius": "6px",
+              "borderBottomLeftRadius": "6px",
+              "top": "128px",
+              "width": "91px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2515",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "400",
+                  "lineHeight": "15.4px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(37, 36, 56)",
+                  "fontSize": "11px",
+                  "width": "75px"
+                }
+              },
+              "children": [
+                "生成式 AI 基础"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "button",
+          "props": {
+            "data-node-id": "728:2516",
+            "data-name": "提示与上下文设计",
+            "type": "button",
+            "data-network-topic": "提示与上下文设计",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "none",
+              "backgroundPositionX": "0%",
+              "backgroundPositionY": "0%",
+              "backgroundSize": "auto",
+              "backgroundRepeat": "repeat",
+              "backgroundAttachment": "scroll",
+              "backgroundOrigin": "padding-box",
+              "backgroundClip": "border-box",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(211, 201, 237)",
+              "borderRightColor": "rgb(211, 201, 237)",
+              "borderBottomColor": "rgb(211, 201, 237)",
+              "borderLeftColor": "rgb(211, 201, 237)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "height": "26px",
+              "alignItems": "flex-start",
+              "justifyContent": "center",
+              "left": "580px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingInlineStart": "8px",
+              "paddingInlineEnd": "8px",
+              "borderTopLeftRadius": "6px",
+              "borderTopRightRadius": "6px",
+              "borderBottomRightRadius": "6px",
+              "borderBottomLeftRadius": "6px",
+              "top": "160px",
+              "width": "106px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2517",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "400",
+                  "lineHeight": "15.4px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(37, 36, 56)",
+                  "fontSize": "11px",
+                  "width": "90px"
+                }
+              },
+              "children": [
+                "提示与上下文设计"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "button",
+          "props": {
+            "data-node-id": "728:2518",
+            "data-name": "AI 辅助实时视觉编程",
+            "type": "button",
+            "data-network-topic": "AI 辅助实时视觉编程",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "none",
+              "backgroundPositionX": "0%",
+              "backgroundPositionY": "0%",
+              "backgroundSize": "auto",
+              "backgroundRepeat": "repeat",
+              "backgroundAttachment": "scroll",
+              "backgroundOrigin": "padding-box",
+              "backgroundClip": "border-box",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(211, 201, 237)",
+              "borderRightColor": "rgb(211, 201, 237)",
+              "borderBottomColor": "rgb(211, 201, 237)",
+              "borderLeftColor": "rgb(211, 201, 237)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "height": "26px",
+              "alignItems": "flex-start",
+              "justifyContent": "center",
+              "left": "444px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingInlineStart": "8px",
+              "paddingInlineEnd": "8px",
+              "borderTopLeftRadius": "6px",
+              "borderTopRightRadius": "6px",
+              "borderBottomRightRadius": "6px",
+              "borderBottomLeftRadius": "6px",
+              "top": "300px",
+              "width": "121px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2519",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "400",
+                  "lineHeight": "15.4px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(37, 36, 56)",
+                  "fontSize": "11px",
+                  "width": "105px"
+                }
+              },
+              "children": [
+                "AI 辅助实时视觉编程"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2520",
+            "data-name": "provenance / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "844px",
+              "width": "12px",
+              "height": "12px",
+              "top": "176px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgProvenance.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "button",
+          "props": {
+            "data-node-id": "728:2521",
+            "data-name": "多模态 AI 交互",
+            "type": "button",
+            "data-network-topic": "多模态 AI 交互",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "none",
+              "backgroundPositionX": "0%",
+              "backgroundPositionY": "0%",
+              "backgroundSize": "auto",
+              "backgroundRepeat": "repeat",
+              "backgroundAttachment": "scroll",
+              "backgroundOrigin": "padding-box",
+              "backgroundClip": "border-box",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(211, 201, 237)",
+              "borderRightColor": "rgb(211, 201, 237)",
+              "borderBottomColor": "rgb(211, 201, 237)",
+              "borderLeftColor": "rgb(211, 201, 237)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "height": "26px",
+              "alignItems": "flex-start",
+              "justifyContent": "center",
+              "left": "808px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingInlineStart": "8px",
+              "paddingInlineEnd": "8px",
+              "borderTopLeftRadius": "6px",
+              "borderTopRightRadius": "6px",
+              "borderBottomRightRadius": "6px",
+              "borderBottomLeftRadius": "6px",
+              "top": "372px",
+              "width": "91px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2522",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "400",
+                  "lineHeight": "15.4px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(37, 36, 56)",
+                  "fontSize": "11px",
+                  "width": "75px"
+                }
+              },
+              "children": [
+                "多模态 AI 交互"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "button",
+          "props": {
+            "data-node-id": "728:2523",
+            "data-name": "AI 视觉参考与风格控制",
+            "type": "button",
+            "data-network-topic": "AI 视觉参考与风格控制",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "none",
+              "backgroundPositionX": "0%",
+              "backgroundPositionY": "0%",
+              "backgroundSize": "auto",
+              "backgroundRepeat": "repeat",
+              "backgroundAttachment": "scroll",
+              "backgroundOrigin": "padding-box",
+              "backgroundClip": "border-box",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(211, 201, 237)",
+              "borderRightColor": "rgb(211, 201, 237)",
+              "borderBottomColor": "rgb(211, 201, 237)",
+              "borderLeftColor": "rgb(211, 201, 237)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "height": "26px",
+              "alignItems": "flex-start",
+              "justifyContent": "center",
+              "left": "592px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingInlineStart": "8px",
+              "paddingInlineEnd": "8px",
+              "borderTopLeftRadius": "6px",
+              "borderTopRightRadius": "6px",
+              "borderBottomRightRadius": "6px",
+              "borderBottomLeftRadius": "6px",
+              "top": "328px",
+              "width": "132px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2524",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "400",
+                  "lineHeight": "15.4px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(37, 36, 56)",
+                  "fontSize": "11px",
+                  "width": "116px"
+                }
+              },
+              "children": [
+                "AI 视觉参考与风格控制"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2525",
+            "data-name": "agent / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "616px",
+              "width": "9px",
+              "height": "9px",
+              "top": "244px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgAgent.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2526",
+            "data-name": "robot-behavior / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "776px",
+              "width": "9px",
+              "height": "9px",
+              "top": "316px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgAgent.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2527",
+            "data-name": "ai-character / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "368px",
+              "width": "9px",
+              "height": "9px",
+              "top": "364px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgAgent.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2528",
+            "data-name": "ai-sound / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "488px",
+              "width": "7px",
+              "height": "7px",
+              "top": "360px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgAiSound.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "button",
+          "props": {
+            "data-node-id": "728:2529",
+            "data-name": "AI 辅助数据可视化",
+            "type": "button",
+            "data-network-topic": "AI 辅助数据可视化",
+            "style": {
+              "position": "absolute",
+              "backgroundImage": "none",
+              "backgroundPositionX": "0%",
+              "backgroundPositionY": "0%",
+              "backgroundSize": "auto",
+              "backgroundRepeat": "repeat",
+              "backgroundAttachment": "scroll",
+              "backgroundOrigin": "padding-box",
+              "backgroundClip": "border-box",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderTopWidth": "1px",
+              "borderRightWidth": "1px",
+              "borderBottomWidth": "1px",
+              "borderLeftWidth": "1px",
+              "borderTopColor": "rgb(211, 201, 237)",
+              "borderRightColor": "rgb(211, 201, 237)",
+              "borderBottomColor": "rgb(211, 201, 237)",
+              "borderLeftColor": "rgb(211, 201, 237)",
+              "borderTopStyle": "solid",
+              "borderRightStyle": "solid",
+              "borderBottomStyle": "solid",
+              "borderLeftStyle": "solid",
+              "alignContent": "stretch",
+              "display": "flex",
+              "flexDirection": "column",
+              "height": "26px",
+              "alignItems": "flex-start",
+              "justifyContent": "center",
+              "left": "268px",
+              "overflowX": "hidden",
+              "overflowY": "hidden",
+              "paddingInlineStart": "8px",
+              "paddingInlineEnd": "8px",
+              "borderTopLeftRadius": "6px",
+              "borderTopRightRadius": "6px",
+              "borderBottomRightRadius": "6px",
+              "borderBottomLeftRadius": "6px",
+              "top": "300px",
+              "width": "110px"
+            }
+          },
+          "children": [
+            {
+              "tag": "p",
+              "props": {
+                "data-node-id": "728:2530",
+                "style": {
+                  "overflowWrap": "break-word",
+                  "fontWeight": "400",
+                  "lineHeight": "15.4px",
+                  "position": "relative",
+                  "flexShrink": "0",
+                  "color": "rgb(37, 36, 56)",
+                  "fontSize": "11px",
+                  "width": "94px"
+                }
+              },
+              "children": [
+                "AI 辅助数据可视化"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2531",
+            "data-name": "ai-video / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "884px",
+              "width": "7px",
+              "height": "7px",
+              "top": "328px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgAiSound.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2532",
+            "data-name": "craft-ai / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "740px",
+              "width": "7px",
+              "height": "7px",
+              "top": "120px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgAiSound.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2533",
+            "data-name": "new-media / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "152px",
+              "width": "9px",
+              "height": "9px",
+              "top": "80px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgNewMedia.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2534",
+            "data-name": "creative / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "368px",
+              "width": "9px",
+              "height": "9px",
+              "top": "40px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgNewMedia.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2535",
+            "data-name": "ai-film / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "908px",
+              "width": "9px",
+              "height": "9px",
+              "top": "44px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgNewMedia.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2536",
+            "data-name": "craft / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "1076px",
+              "width": "9px",
+              "height": "9px",
+              "top": "136px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgNewMedia.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2537",
+            "data-name": "algorithm / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "404px",
+              "width": "9px",
+              "height": "9px",
+              "top": "440px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgNewMedia.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2538",
+            "data-name": "robotics / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "1052px",
+              "width": "9px",
+              "height": "9px",
+              "top": "428px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgNewMedia.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2539",
+            "data-name": "interaction-one / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "728px",
+              "width": "9px",
+              "height": "9px",
+              "top": "444px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgNewMedia.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2540",
+            "data-name": "digital-entertainment / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "140px",
+              "width": "9px",
+              "height": "9px",
+              "top": "408px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgNewMedia.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2541",
+            "data-name": "interaction-tech / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "44px",
+              "width": "6px",
+              "height": "6px",
+              "top": "244px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2542",
+            "data-name": "user-experience / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "1140px",
+              "width": "6px",
+              "height": "6px",
+              "top": "328px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2543",
+            "data-name": "interaction-two / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "1136px",
+              "width": "6px",
+              "height": "6px",
+              "top": "168px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2544",
+            "data-name": "interaction-intro / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "36px",
+              "width": "6px",
+              "height": "6px",
+              "top": "388px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2545",
+            "data-name": "creative-web / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "36px",
+              "width": "6px",
+              "height": "6px",
+              "top": "88px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2546",
+            "data-name": "information-interaction / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "60px",
+              "width": "6px",
+              "height": "6px",
+              "top": "316px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2547",
+            "data-name": "information-art-theory / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "56px",
+              "width": "6px",
+              "height": "6px",
+              "top": "160px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2548",
+            "data-name": "frontier-technology / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "1156px",
+              "width": "6px",
+              "height": "6px",
+              "top": "80px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2549",
+            "data-name": "cross-disciplinary / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "1160px",
+              "width": "6px",
+              "height": "6px",
+              "top": "396px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "div",
+          "props": {
+            "data-node-id": "728:2550",
+            "data-name": "vr-animation / 缩略节点",
+            "style": {
+              "position": "absolute",
+              "left": "1156px",
+              "width": "6px",
+              "height": "6px",
+              "top": "240px"
+            }
+          },
+          "children": [
+            {
+              "tag": "img",
+              "props": {
+                "alt": "",
+                "src": "/morph-course-network/strict/network-imgInteractionTech.svg",
+                "style": {
+                  "position": "absolute",
+                  "display": "block",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "maxWidth": "none",
+                  "width": "100%",
+                  "height": "100%"
+                }
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

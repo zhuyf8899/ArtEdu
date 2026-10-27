@@ -1,0 +1,100 @@
+{
+  "source": [
+    {
+      "selector": ".knowledge-network",
+      "x": 126.5,
+      "y": 280,
+      "width": 1012,
+      "height": 400
+    },
+    {
+      "selector": ".network-intro",
+      "x": 147.5,
+      "y": 301,
+      "width": 230,
+      "height": 500
+    },
+    {
+      "selector": ".knowledge-graph",
+      "x": 397.5,
+      "y": 401.484375,
+      "width": 720,
+      "height": 299.0032958984375
+    },
+    {
+      "selector": ".network-filterbar",
+      "x": 126.5,
+      "y": 708,
+      "width": 1012,
+      "height": 102
+    },
+    {
+      "selector": ".network-course-grid",
+      "x": 126.5,
+      "y": 834,
+      "width": 1012,
+      "height": 3360
+    },
+    {
+      "selector": ".network-course-card",
+      "x": 126.5,
+      "y": 834,
+      "width": 494,
+      "height": 352
+    }
+  ],
+  "implementation": [
+    {
+      "selector": ".knowledge-network",
+      "x": 126.5,
+      "y": 280,
+      "width": 1012,
+      "height": 400
+    },
+    {
+      "selector": ".network-intro",
+      "x": 147.5,
+      "y": 301,
+      "width": 230,
+      "height": 500
+    },
+    {
+      "selector": ".knowledge-graph",
+      "x": 397.5,
+      "y": 401.484375,
+      "width": 720,
+      "height": 299.0033264160156
+    },
+    {
+      "selector": ".particles-filterbar--strict",
+      "x": 126.5,
+      "y": 708,
+      "width": 1012,
+      "height": 102
+    },
+    {
+      "selector": ".particles-course-grid",
+      "x": 126.5,
+      "y": 834,
+      "width": 1012,
+      "height": 1856
+    },
+    {
+      "selector": ".particle-course-card",
+      "x": 126.5,
+      "y": 834,
+      "width": 494,
+      "height": 352
+    }
+  ],
+  "viewport": {
+    "source": {
+      "inner": 1280,
+      "client": 1280
+    },
+    "implementation": {
+      "inner": 1280,
+      "client": 1280
+    }
+  }
+}

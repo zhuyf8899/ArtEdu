@@ -6,6 +6,14 @@ import { atomPayload,coursePayload,atomicListSchema,parseAtomic,createAtomicSche
 const teacher={id:'teacher',roles:['teacher']} as any,student={id:'student',roles:['student']} as any;
 const valid={title:'色彩对比',summary:'理解色彩的不同对比关系',objective:'能够运用冷暖对比表达情绪',content:'观察两幅图像的色彩关系，解释它们的区别。',minutes:15,knowledge:['色彩对比'],completion:'read'};
 const auth={requireAnyRole:(a:any,roles:string[])=>{if(!a.roles.some((r:string)=>roles.includes(r)))throw new ForbiddenException();}} as any;
+
+test('原子列表分类和学习状态允许组合，拒绝未知字段和伪造状态',()=>{
+ const result=atomicListSchema.parse({view:'atoms',direction:'设计方法',stage:'in_progress',page:'2'});
+ assert.equal(result.direction,'设计方法');assert.equal(result.stage,'in_progress');assert.equal(result.page,2);
+ assert.equal(atomicListSchema.safeParse({direction:'SQL injection'}).success,false);
+ assert.equal(atomicListSchema.safeParse({stage:'published'}).success,false);
+ assert.equal(atomicListSchema.safeParse({userId:'someone-else'}).success,false);
+});
 test('非课程节点提交课程任务返回 400，且不读取课程版本或写入提交',async()=>{
  for(const kind of ['teaching','reflection']){
   const calls:string[]=[];
@@ -20,7 +28,7 @@ test('非课程节点提交课程任务返回 400，且不读取课程版本或�
  }
 });
 test('原子必须有独立目标、内容和明确练习，拒绝未知字段',()=>{
- assert.deepEqual(parseAtomic(atomicListSchema,{}),{view:'atoms',query:'',page:1});
+ assert.deepEqual(parseAtomic(atomicListSchema,{}),{view:'atoms',query:'',direction:'',stage:'',page:1});
  assert.deepEqual(parseAtomic(atomPayload,valid).assetIds,[]);
  assert.equal(atomPayload.safeParse({...valid,completion:'practice'}).success,false);
  assert.equal(atomPayload.safeParse({...valid,objective:'',isMastered:true}).success,false);
