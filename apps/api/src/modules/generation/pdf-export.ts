@@ -25,19 +25,39 @@ export function pdfBrowserPath() {
 
 let active = false;
 export class PdfExportError extends Error {}
+function isolatedPdfWorker() {
+  return process.platform === "linux" && process.getuid?.() !== 0 && process.env.ISOLATED_PAGE_CHECK_WORKER === "1";
+}
+
 export function assertPdfAvailable() {
+  if (process.env.PDF_RENDER_SERVICE_URL) return;
   const executablePath = pdfBrowserPath();
   if (!executablePath || !existsSync(executablePath)) throw new PdfExportError("PDF 渲染服务尚未配置，请联系管理员设置浏览器运行路径");
   if (active) throw new PdfExportError("PDF 渲染服务繁忙，请稍后重试");
 }
 export async function createPdf(doc: DocumentContent) {
   assertPdfAvailable();
+  if (process.env.PDF_RENDER_SERVICE_URL) {
+    try {
+      const response = await fetch(process.env.PDF_RENDER_SERVICE_URL, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(doc), signal: AbortSignal.timeout(45000), redirect: "error",
+      });
+      if (!response.ok || !response.headers.get("content-type")?.startsWith("application/pdf")) throw new Error("Invalid PDF response");
+      const bytes = Buffer.from(await response.arrayBuffer());
+      if (bytes.length > 20 * 1024 * 1024 || bytes.subarray(0, 5).toString() !== "%PDF-") throw new Error("Invalid PDF bytes");
+      return bytes;
+    } catch {
+      throw new PdfExportError("PDF 排版服务暂时不可用，请稍后重试");
+    }
+  }
   const executablePath = pdfBrowserPath()!;
   active = true;
   let browser;
   try {
-    // Dedicated ephemeral browser. Keep its sandbox enabled; never reuse a user profile.
-    browser = await puppeteer.launch({ executablePath, headless: true, timeout: 20000, args: ["--disable-background-networking", "--disable-extensions"] });
+    // Only the non-root renderer without credentials or egress uses container isolation.
+    // Other processes retain Chromium's sandbox. Never reuse a user profile.
+    browser = await puppeteer.launch({ executablePath, headless: true, timeout: 20000, args: ["--disable-background-networking", "--disable-extensions", "--disable-dev-shm-usage", ...(isolatedPdfWorker() ? ["--no-sandbox"] : [])] });
     const page = await browser.newPage();
     await page.setJavaScriptEnabled(false);
     await page.setRequestInterception(true);

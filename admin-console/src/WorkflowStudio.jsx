@@ -1,3 +1,4 @@
+import { PageLoading } from "./PageLoading.jsx";
 import { skipNode } from '../../shared/workflowGraph.mjs';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Code, ImageSquare, Lightbulb, LinkSimple, ListBullets, MagnifyingGlass, Palette, Path, PencilSimple, Plus, Robot, SquaresFour, Wrench } from "@phosphor-icons/react";
@@ -122,10 +123,10 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
 
   if (initialWorkflowId && !selected && !builderOpen) return <section className="portal-empty"><h2>{loading ? '正在打开工作流…' : '工作流暂时无法打开'}</h2>{openError && <p role="alert">{openError}</p>}<button onClick={backToCatalog}>返回技能工具</button></section>;
   if (selected?.definition?.engine === 'comfyui') return <ComfyCanvas readOnly editor={{name:selected.name,definition:selected.definition}} selected={selected} onNotice={onNotice} onBack={backToCatalog} />;
-  if (selected) return <Suspense fallback={<section className="portal-empty"><p>正在加载工作流画布…</p></section>}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onNotice={onNotice} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={backToCatalog} onStart={start} onExecute={executeNode} /></Suspense>;
+  if (selected) return <Suspense fallback={<PageLoading />}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onNotice={onNotice} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={backToCatalog} onStart={start} onExecute={executeNode} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
     <button className="learning-back" onClick={backToCatalog}><ArrowLeft size={16} weight="bold" /> 返回技能工具</button>
-    <Suspense fallback={<section className="portal-empty"><p>正在加载工作流创建器…</p></section>}>
+    <Suspense fallback={<PageLoading />}>
       <WorkflowAdmin showToast={onNotice} canPublish={canPublish} initialWorkflowId={initialEditId} onWorkflowNavigate={(id) => onNavigate(studioUrl({builder:true,edit:id}))} />
     </Suspense>
   </div>;

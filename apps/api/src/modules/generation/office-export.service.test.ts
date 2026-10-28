@@ -6,13 +6,39 @@ import test from "node:test";
 import { OfficeExportService } from "./office-export.service";
 import AdmZip from "adm-zip";
 import { documentContentSchema, parseDocumentContent } from "./document-content";
-import { documentHtml, pdfBrowserPath } from "./pdf-export";
+import { createPdf, documentHtml, pdfBrowserPath, PdfExportError } from "./pdf-export";
 import { runGenerationJobSchema } from "./generation.contracts";
 
 const fixture = { schemaVersion: 1 as const, title: "传统纹样课程", summary: "通过观察与创作理解纹样结构。", sections: [
   { heading: "课程目标", paragraphs: ["了解纹样的重复与对称。"], bullets: ["理解纹样结构", "完成一份草图"] },
   { heading: "课堂活动", paragraphs: ["分组讨论与创作。"], bullets: ["分享作品并讨论"] },
 ] };
+
+test("隔离 PDF 服务返回有效文件，拒绝错误状态和伪装的非 PDF 内容", async () => {
+  const previousUrl = process.env.PDF_RENDER_SERVICE_URL;
+  const previousFetch = globalThis.fetch;
+  process.env.PDF_RENDER_SERVICE_URL = "http://renderer.test/pdf";
+  try {
+    globalThis.fetch = async (_url, options) => {
+      assert.equal(options?.redirect, "error");
+      assert.deepEqual(JSON.parse(String(options?.body)), fixture);
+      return new Response("%PDF-1.7\n", { headers: { "content-type": "application/pdf" } });
+    };
+    assert.equal((await createPdf(fixture)).subarray(0, 5).toString(), "%PDF-");
+    for (const response of [
+      new Response("busy", { status: 503 }),
+      new Response("<html>error</html>", { headers: { "content-type": "application/pdf" } }),
+      new Response("%PDF-1.7", { headers: { "content-type": "text/plain" } }),
+    ]) {
+      globalThis.fetch = async () => response;
+      await assert.rejects(createPdf(fixture), PdfExportError);
+    }
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousUrl === undefined) delete process.env.PDF_RENDER_SERVICE_URL;
+    else process.env.PDF_RENDER_SERVICE_URL = previousUrl;
+  }
+});
 
 test("将模型结构化正文导出为 DOCX、PPTX 及已配置的 PDF", async () => {
   const uploadRoot = await mkdtemp(path.join(os.tmpdir(), "artedu-office-"));

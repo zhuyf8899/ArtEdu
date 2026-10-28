@@ -7,9 +7,18 @@
     <meta name="description" content="ArtEdu AI 艺术智慧学习与创作平台" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>ArtEdu · AI 艺术智慧平台</title>
+    <style id="local-loading-animation">
+      .page-loading{min-height:40vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#666;font:14px system-ui,sans-serif}
+      .page-loading__spinner{display:block;box-sizing:border-box;width:32px;height:32px;border:3px solid #e5e5e5;border-top-color:#7560c8;border-radius:50%;animation:page-loading-spin .8s linear infinite}
+      #boot-loading{min-height:100vh}
+      @keyframes page-loading-spin{to{transform:rotate(360deg)}}
+      @media(prefers-reduced-motion:reduce){.page-loading__spinner{animation:none}}
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div id="boot-loading" class="page-loading" role="status" aria-busy="true"><span class="page-loading__spinner" aria-hidden="true"></span><span>正在加载…</span></div></div>
+    <script src="/boot-loading.js" defer></script>
+    <noscript>请启用 JavaScript 后使用平台。</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

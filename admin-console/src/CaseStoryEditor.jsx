@@ -102,7 +102,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose: closeEdi
         <label>原作者／团队（多人用逗号分隔）<input maxLength={960} value={labelFields.creators} onChange={e => setLabelFields({...labelFields,creators:e.target.value})} placeholder="支持匿名作者；上传者不会替代原作者署名" /></label>
         {form.story.origin === "collected" && <section className="case-editor-step" aria-label="作品来源与展览信息">
           <h3>作品来源与展览信息</h3>
-          <small>在作品正文下方展示；来源链接不代表转载授权，仍需单独确认图片、视频的展示权限。</small>
+          <details><summary>来源与授权说明</summary><small>来源信息显示在作品正文下方。来源链接不代表转载授权，请确认图片、视频的展示权限。</small></details>
           <label>作品展示方式<select aria-label="作品展示方式" value={form.story.displayStyle} onChange={e => storyChange("displayStyle", e.target.value)}><option value="case-study">教学案例（成果与创作步骤）</option><option value="exhibition">艺术展览（封面、介绍与媒体）</option></select></label>
           <label>来源网站名称<input maxLength={160} value={form.story.sourceName} onChange={e => storyChange("sourceName", e.target.value)} placeholder="CVPR Art" /></label>
           <label>来源网站地址<input type="url" maxLength={2048} value={form.story.sourceUrl} onChange={e => storyChange("sourceUrl", e.target.value)} placeholder="https://thecvf-art.com/" /></label>

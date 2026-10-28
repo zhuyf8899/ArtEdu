@@ -1,3 +1,4 @@
+import { PageLoading } from "./PageLoading.jsx";
 /**
  * 【应用总入口】恢复用户会话，然后按登录状态、地址和角色选择界面。阅读顺序：App → AppContent 的状态与 useEffect → signIn/signOut → return 分支 → toPortalAccount。前端分流用于交互，业务权限还会由后端检查。
  */
@@ -78,12 +79,12 @@ function AppContent() {
 
   // 按顺序选择一个界面；return 后本轮不会继续判断后面的分支。
   // ! 表示“非”：未查完先等待，没有用户就显示登录页。
-  if (!ready) return <main className="portal-empty"><p>正在验证登录会话…</p></main>;
+  if (!ready) return <PageLoading />;
   if (!account) return <LocalLogin onLogin={signIn} message={sessionMessage} />;
-  if (pathname === "/canvas") return <Suspense fallback={<main className="portal-empty"><p>正在打开图片画布…</p></main>}><ImageCanvas onBack={() => navigate("/studio")} /></Suspense>;
+  if (pathname === "/canvas") return <Suspense fallback={<PageLoading />}><ImageCanvas onBack={() => navigate("/studio")} /></Suspense>;
   if (!sectionFromPath(pathname) && !adminSection) return <main className="portal-empty"><h1>页面不存在</h1><p>链接可能已失效，请返回首页选择入口。</p><button onClick={() => navigate('/')}>返回首页</button></main>;
   if (adminSection && (!canEnterAdmin(account) || !canViewAdminSection(account, adminSection))) return <main className="portal-empty"><h1>无权访问此管理页面</h1><p>当前账号没有访问权限，可返回学习空间或切换账号。</p><button onClick={() => navigate('/')}>返回学习空间</button><button onClick={signOut}>退出并切换账号</button></main>;
-  if (adminSection) return <Suspense fallback={<main className="portal-empty"><p>正在加载管理台…</p></main>}><AdminDashboard actor={account} initialSection={adminSection} onLearningNavigate={navigate} workflowEditId={new URLSearchParams(search).get('edit') ?? ''} onWorkflowNavigate={(id) => navigate('/admin/workflows' + (id ? '?edit=' + encodeURIComponent(id) : ''))} onNavigate={(section) => navigate(adminRoutes[section] ?? '/admin')} onBack={() => navigate('/')} /></Suspense>;
+  if (adminSection) return <Suspense fallback={<PageLoading />}><AdminDashboard actor={account} initialSection={adminSection} onLearningNavigate={navigate} workflowEditId={new URLSearchParams(search).get('edit') ?? ''} onWorkflowNavigate={(id) => navigate('/admin/workflows' + (id ? '?edit=' + encodeURIComponent(id) : ''))} onNavigate={(section) => navigate(adminRoutes[section] ?? '/admin')} onBack={() => navigate('/')} /></Suspense>;
   // 普通门户页面根据路径选择栏目；?course=... 等参数用于定位课程、课时或对话。
   // 传给组件的这些字段叫 props：由父组件向子组件提供数据和回调函数。
   const query = new URLSearchParams(search);

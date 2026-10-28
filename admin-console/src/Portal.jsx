@@ -1,3 +1,4 @@
+import { PageLoading } from "./PageLoading.jsx";
 /**
  * 【学生门户】提供 LocalLogin 登录界面和 UserPortal 门户布局，按 App 传入的 section 显示课程、创作、社区等页面。先找这两个导出函数，再按需追页面加载和事件处理，图标与样式细节可后读。
  */
@@ -74,12 +75,10 @@ export function LocalLogin({ onLogin, message = "" }) {
   return <div className="morph-v17 morph-login"><main className="test-login">
     <section className="test-login__intro">
       <div className="test-login__brand"><strong>MORPH LAB</strong><small>AI + Design 实验室 · ArtEdu</small></div>
-      <p className="eyebrow">// WELCOME</p>
       <h1>登录后进入<br />学习与创作空间。</h1>
-      <p>使用平台账号登录，课程进度、学习笔记与创作记录都会跟随账号保存。</p>
     </section>
     <section className="test-login__accounts">
-      <div className="account-panel__heading"><div><p>// SIGN IN</p><h2>账号登录</h2></div></div>
+      <div className="account-panel__heading"><h2>账号登录</h2></div>
       {isHostedPreview && <p className="login-error" role="status">预览页面暂不支持登录。</p>}
       {!isHostedPreview && serviceStatus === "offline" && <div className="login-service login-service--offline" role="status"><span>登录服务暂不可用</span><button type="button" onClick={checkService}>重试连接</button></div>}
       {message && <p role="status">{message}</p>}
@@ -236,7 +235,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       <nav className="portal-nav" aria-label="顶部主导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
       <GlobalSearchForm value={searchQuery} onSearch={navigateSearch} />
       {canEnterAdmin(account) && <button className="portal-console-shortcut" onClick={onEnterAdmin}>管理后台 <ArrowRight size={15} weight="bold" /></button>}
-      <div className="portal-account"><span className={`live-indicator ${isLive ? "is-live" : ""}`}>{isLive ? "API 已验证" : "API 未连接"}</span><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
+      <div className="portal-account"><div className="account-menu"><button className="account-switch" aria-label="打开账号菜单" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)}><span>{account.shortName.slice(0, 1)}</span><div><strong>{account.shortName}</strong><RolePill account={account} /></div></button>{accountMenuOpen && <div className="account-menu__panel"><strong>{account.name}</strong><span>{account.roleLabel}</span>{canEnterAdmin(account) && <button onClick={() => { setAccountMenuOpen(false); onEnterAdmin(); }}>进入管理后台</button>}<button className="account-menu__signout" onClick={onSwitchAccount}>退出登录</button></div>}</div></div>
     </header>}
 
     <main className={`portal-main ${section === "home" ? "portal-main--home" : ""}${standalone ? " portal-main--standalone" : ""}${workbench ? " portal-main--workbench" : ""}`}>
@@ -245,7 +244,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       {!morph && workbench && <header className="portal-workbench-bar">
         <button className="portal-workbench-bar__home" onClick={() => navigateSection("home")}><House size={17} weight="bold" /> 返回首页</button>
         <div className="portal-workbench-bar__title"><p>// STUDIO</p><strong>{pageTitle}</strong></div>
-        <span className="portal-workbench-bar__hint">课程负责学习，工作台负责动手。</span>
+
         {canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}
       </header>}
       {section !== "home" && section !== "courses" && section !== "studio" && section !== "curriculum" && section !== "community" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
@@ -263,7 +262,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(workflow.id)}`)}>打开此工作流 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入设计工具" onRetry={() => navigateSection("studio")} />}
       </>}
 
-      <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
+      <Suspense fallback={<PageLoading />}>
         {section === "courses" && <AtomicLearningHub account={account} library={learningLibrary || (learningCourseId ? 'legacy' : '')} nodeId={learningNodeId} revision={learningNodeRevision} onNavigate={onNavigate} legacy={<LearningLibrary variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onCourseChange={syncCourse} onNavigate={onNavigate} onNotice={showToast} />} />}
         {section === 'curriculum' && <CurriculumComposer courses={data.courses} topic={curriculumTopic} loading={portalLoading} error={portalError} onRetry={loadPortalData} onNavigate={onNavigate} onNotice={showToast}/>}
 
@@ -304,7 +303,7 @@ function TeachingCoach({ courses, workflows, onClose, onNavigate }) {
       setAnswer({ focus, course, workflow });
     }
   };
-  return <div className="coach-layer" role="presentation"><button className="coach-scrim" aria-label="关闭教学教练" onClick={onClose} /><section className="coach-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-title"><header><div><p>// LEARNING COACH · {answer ? "完成" : `问题 ${step + 1} / ${questions.length}`}</p><h2 id="coach-title">快速入门</h2></div><button onClick={onClose} aria-label="关闭教学教练"><X size={20} weight="bold" /></button></header><p className="coach-intro">回答三个小问题，获得适合你的课程、案例或工作流入口。推荐只基于平台已发布内容。</p>{!answer && <div className="coach-question"><strong>{current.title}</strong><div className="coach-options">{current.options.map(([value, label, hint]) => <button key={value} type="button" onClick={() => choose(value)}><b>{label}</b><span>{hint}</span><ArrowRight size={15} weight="bold" /></button>)}</div></div>}{answer && <section className="coach-answer"><span><Lightbulb size={18} weight="fill" /> 你的入门建议</span><p>{answer.focus}</p>{answer.course && <button onClick={() => onNavigate("/learning")}><small>推荐课程</small><strong>{answer.course.title}</strong><ArrowRight size={16} weight="bold" /></button>}{answer.workflow && <button onClick={() => onNavigate("/studio")}><small>推荐工作流</small><strong>{answer.workflow.name}</strong><ArrowRight size={16} weight="bold" /></button>}{!answer.course && !answer.workflow && <em>当前尚无可推荐内容；请先由教师发布课程或工作流。</em>}<button className="coach-restart" onClick={() => { setStep(0); setAnswers({ goal: "", level: "", output: "" }); setAnswer(null); }}>重新回答</button></section>}</section></div>;
+  return <div className="coach-layer" role="presentation"><button className="coach-scrim" aria-label="关闭教学教练" onClick={onClose} /><section className="coach-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-title"><header><div><p>// LEARNING COACH · {answer ? "完成" : `问题 ${step + 1} / ${questions.length}`}</p><h2 id="coach-title">快速入门</h2></div><button onClick={onClose} aria-label="关闭教学教练"><X size={20} weight="bold" /></button></header><p className="coach-intro">回答三个小问题，获得适合你的课程、案例或工作流入口。</p>{!answer && <div className="coach-question"><strong>{current.title}</strong><div className="coach-options">{current.options.map(([value, label, hint]) => <button key={value} type="button" onClick={() => choose(value)}><b>{label}</b><span>{hint}</span><ArrowRight size={15} weight="bold" /></button>)}</div></div>}{answer && <section className="coach-answer"><span><Lightbulb size={18} weight="fill" /> 你的入门建议</span><p>{answer.focus}</p>{answer.course && <button onClick={() => onNavigate("/learning")}><small>推荐课程</small><strong>{answer.course.title}</strong><ArrowRight size={16} weight="bold" /></button>}{answer.workflow && <button onClick={() => onNavigate("/studio")}><small>推荐工作流</small><strong>{answer.workflow.name}</strong><ArrowRight size={16} weight="bold" /></button>}{!answer.course && !answer.workflow && <em>当前尚无可推荐内容；请先由教师发布课程或工作流。</em>}<button className="coach-restart" onClick={() => { setStep(0); setAnswers({ goal: "", level: "", output: "" }); setAnswer(null); }}>重新回答</button></section>}</section></div>;
 }
 
 function HomeDataState({ loading = false, error = "", title, text, action, onRetry }) {

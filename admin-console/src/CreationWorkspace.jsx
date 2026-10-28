@@ -641,7 +641,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
 
 function responseText(result, methodDefinition) {
   if (!result) return "创作请求失败，输入已保留。请根据错误提示重试。";
-  if (result.local) return `${result.content}\n\n本次为本地演示结果，任务已写入数据库并完成审计；接入正式模型后可沿用同一创作入口。`;
+  if (result.local) return `${result.content}\n\n本次为本地演示结果。`;
   // 图片产物直接在气泡里渲染（附件按钮见下方 artifactImageOf），不再让用户点链接跳走；
   // 文档类产物仍然给下载入口，因为浏览器无法内联预览 Office 原件。
   if (result.content) {
