@@ -1,3 +1,5 @@
+import { TemporaryWorkflowService } from "./temporary-workflow.service";
+import { TemporaryWorkflowController } from "./temporary-workflow.controller";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DatabaseModule } from "../database/database.module";
@@ -12,8 +14,8 @@ import { ToolRecommendationsController,ToolRecommendationsService } from './tool
 
 @Module({
   imports: [AuthModule, DatabaseModule, GenerationModule, CreationStorageModule],
-  controllers: [StudioController, ComfyController, ToolRecommendationsController],
-  providers: [StudioService, ComfyService, ToolRecommendationsService],
-  exports: [StudioService, ComfyService],
+  controllers: [StudioController, ComfyController, ToolRecommendationsController, TemporaryWorkflowController],
+  providers: [StudioService, ComfyService, ToolRecommendationsService, TemporaryWorkflowService],
+  exports: [StudioService, ComfyService, TemporaryWorkflowService],
 })
 export class StudioModule {}

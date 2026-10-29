@@ -1,3 +1,5 @@
+import {temporaryWorkflowTools,tempCreateSchema,tempEditSchema,tempIdSchema} from "./temporary-workflow-tools";
+import {TemporaryWorkflowService} from "../studio/temporary-workflow.service";
 import { createHash } from 'node:crypto';
 import type { AgentToolContext } from "./agent-runtime";
 import type { ModelToolCall, ModelToolDefinition } from "../generation/model-adapter";
@@ -18,6 +20,7 @@ import {imageGenerationParametersSchema} from '../generation/generation.contract
 import {checkRenderedPage} from './agent-browser-check';
 
 export const platformToolDefinitions: readonly ModelToolDefinition[] = [
+  ...temporaryWorkflowTools,
   {type:'function',function:{name:'generate_image',description:'用户明确要求生图时调用，生成一张真实私有图片。只解释时不得调用。供应商可能添加AI标识；文件返回不等于视觉内容已核验。',parameters:{type:'object',properties:{prompt:{type:'string',minLength:1,maxLength:1500},workspacePath:{type:'string',description:'嵌入网页时将图片同步保存到工作区的相对路径，如assets/hero.png；后缀按实际图片格式自动调整。'},size:{type:'string',pattern:'^\\d{3,4}x\\d{3,4}$'},aspectRatio:{type:'string',enum:['1:1','4:3','3:4','16:9','9:16']}},required:['prompt']}}},
   { type: "function", function: { name: "search_platform", description: "搜索当前用户可见的课程、工作流和案例作品。", parameters: { type: "object", properties: { query: { type: "string", minLength: 1 }, type: { type: "string", enum: ["all", "course", "workflow", "work"] }, limit: { type: "integer", minimum: 1, maximum: 10 } }, required: ["query"] } } },
   { type: "function", function: { name: "list_published_content", description: "列出当前用户可见的已发布课程、工作流或案例；用户未提供 ID、要求随便打开一个内容时使用。返回站内相对路径，不会打开外部浏览器。", parameters: { type: "object", properties: { type: { type: "string", enum: ["all", "course", "workflow", "work"] }, limit: { type: "integer", minimum: 1, maximum: 10 } } } } },
@@ -79,6 +82,7 @@ export interface PlatformToolDependencies {
   workspace?: AgentWorkspaceService;
   generation?: GenerationService;
   rag?: RagService;
+  temporaryWorkflows?: TemporaryWorkflowService;
 }
 
 function parseArguments(call: ModelToolCall): unknown {
@@ -159,6 +163,28 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
       return listPublishedContent(listPublishedContentSchema.parse(raw), dependencies);
     case "list_courses":
       return listPublishedContent({ type: "course", limit: limitSchema.parse(raw).limit }, dependencies);
+    case "list_own_workflow_drafts": {
+      const r=await dependencies.database.query(`SELECT w.id,w.name,v.id AS "versionId",v.version_number AS revision FROM workflows w JOIN LATERAL(SELECT * FROM workflow_versions WHERE workflow_id=w.id ORDER BY version_number DESC LIMIT 1)v ON TRUE WHERE w.created_by=$1 AND w.status<>'archived' AND v.published_at IS NULL ORDER BY w.updated_at DESC LIMIT 20`,[dependencies.actor.id]);
+      return {status:'succeeded',items:r.rows};
+    }
+    case "create_temporary_workflow": {
+      if(!dependencies.temporaryWorkflows)throw Error('临时工作流服务未装配');
+      const w=dependencies.temporaryWorkflows.create(dependencies.actor,tempCreateSchema.parse(raw));
+      return {status:'succeeded',temporaryWorkflow:dependencies.temporaryWorkflows.summary(dependencies.actor,w.id)};
+    }
+    case "edit_temporary_workflow": {
+      if(!dependencies.temporaryWorkflows)throw Error('临时工作流服务未装配');const input=tempEditSchema.parse(raw);
+      const w=dependencies.temporaryWorkflows.edit(dependencies.actor,input.id,input);
+      return {status:'succeeded',temporaryWorkflow:dependencies.temporaryWorkflows.summary(dependencies.actor,w.id)};
+    }
+    case "read_temporary_workflow": {
+      if(!dependencies.temporaryWorkflows)throw Error('临时工作流服务未装配');return {status:'succeeded',workflow:dependencies.temporaryWorkflows.get(dependencies.actor,tempIdSchema.parse(raw).id)};
+    }
+    case "load_own_workflow_draft": {
+      if(!dependencies.temporaryWorkflows)throw Error('临时工作流服务未装配');const id=z.object({workflowId:z.string().min(1).max(160)}).parse(raw).workflowId;
+      const w=await dependencies.temporaryWorkflows.fromDraft(dependencies.actor,id);
+      return {status:'succeeded',workflow:w,temporaryWorkflow:dependencies.temporaryWorkflows.summary(dependencies.actor,w.id)};
+    }
     case "list_workflows":
       return listPublishedContent({ type: "workflow", limit: limitSchema.parse(raw).limit }, dependencies);
     case "search_cases": {

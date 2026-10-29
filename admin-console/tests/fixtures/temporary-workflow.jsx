@@ -1,0 +1,10 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {TemporaryWorkflowCard} from '../../src/TemporaryWorkflowCard.jsx';
+import * as store from '../../src/temporaryWorkflowStore.js';
+window.workflowStore=store;
+const id='temporary-workflow-00000000-0000-4000-8000-000000000001';
+const node=(id,type,value='')=>({id,type,position:{x:id==='out'?250:0,y:0},data:{label:id,value}});
+window.initialWorkflow={id,name:'本机临时图验收',revision:1,definition:{nodes:[node('text','text_constant','本机正文'),node('out','text_preview')],edges:[{id:'a',source:'text',target:'out'}]},changeSummary:'已生成文字预览图，尚未执行',execution:null};
+if(!await store.getLocalWorkflow('qa',id))await store.saveLocalWorkflow('qa','conversation',window.initialWorkflow);
+createRoot(document.getElementById('root')).render(<TemporaryWorkflowCard userId="qa" conversationId="conversation" id={id}/>);

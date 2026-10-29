@@ -1,3 +1,4 @@
+import {temporaryWorkflowToolNames,temporaryToolAudit} from "./temporary-workflow-tools";
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -64,6 +65,7 @@ export class AgentService {
   }
 
   async appendToolCall(runId: string, toolName: string, input: Record<string, unknown>, output: Record<string, unknown>) {
+    if(temporaryWorkflowToolNames.has(toolName)){input={action:toolName};output=temporaryToolAudit(toolName,output);}
     const run = await this.getOwnedRun(runId);
     const toolCallId = `agent-tool-${randomUUID()}`;
     await this.database.transaction(async (client) => {

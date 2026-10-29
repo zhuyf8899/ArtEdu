@@ -33,3 +33,8 @@ body.workflow-runner-open .workflow-graph-runner__summary .workflow-player__prog
 body.workflow-runner-open .workflow-graph-runner__summary .workflow-player__progress>i{background:#414750;border:0;border-radius:8px;overflow:hidden}
 body.workflow-runner-open .workflow-graph-runner__summary .workflow-player__progress>i>b{background:#d8f845;border:0}
 body.workflow-runner-open .workflow-graph-runner__summary .workflow-player__progress>span{color:#ececee;white-space:nowrap}
+
+.morph-quality-control { display:flex; gap:10px; align-items:center; padding:12px 0; font-size:13px; }
+.morph-quality-control select { min-width:0; max-width:190px; padding:6px; border:1px solid #7775; border-radius:6px; background:#202128; color:#fff; }
+[data-display-quality="light"] .floating-words { display:none; }
+[data-display-quality="light"] .mist, [data-display-quality="light"] .glow { animation:none !important; }

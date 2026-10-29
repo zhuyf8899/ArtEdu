@@ -8,6 +8,32 @@ import type { ModelRequest, ModelResult } from "./model-adapter";
 import { ImageTransportError } from "./image-transport";
 import { ImageConfigurationError } from "../../common/image-configuration";
 
+test('编辑原图和遮罩在创建付费任务前逐一授权，不能读取他人素材', async () => {
+  const checked: string[] = [];
+  const storage = { readImageForVision: async (a: Actor, id: string) => {
+    assert.equal(a.id, actor.id); checked.push(id);
+    if (id === 'other-mask') throw new Error('无权读取该临时文件');
+    return { fileName: 'image.png', dataUrl: 'data:image/png;base64,' };
+  }};
+  const service = new GenerationService({} as never, {} as never, {getForJob:()=>{throw Error('must not route');}} as never, undefined, storage as never);
+  service.createJob=async()=>{throw Error('must not create');};
+  await assert.rejects(service.runJob(actor,{jobType:'image',prompt:'编辑',parameters:{referenceFileId:'mine',maskFileId:'other-mask'}}),/无权/);
+  assert.deepEqual(checked,['mine','other-mask']);
+  await assert.rejects(service.runJob(actor,{jobType:'image',prompt:'编辑',parameters:{maskFileId:'orphan'}}),/遮罩需要原图/);
+});
+
+test('编辑任务将授权读取的图片传给编辑适配器，不以视觉聊天或文生图替代',async context=>{
+  context.mock.method(Logger.prototype,'error',()=>undefined);
+  const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6l8AAAAASUVORK5CYII=';
+  const image={fileName:'private.png',dataUrl:png};let called=false;
+  const registry={getForJob:(input:any)=>{assert.equal(input.imageEditing,true);return {id:'editor',execute:async(request:ModelRequest)=>{called=true;assert.deepEqual(request.imageEdit,{image,mask:image});throw new ImageTransportError('submit',1,'HTTP_400',400);}};}};
+  const repository={markRunning:async()=>true,failJob:async()=>{},recordUsage:async()=>{}};
+  const service=new GenerationService({} as never,repository as never,registry as never,undefined,{readImageForVision:async()=>image} as never);
+  service.createJob=async()=>({id:'edit-routing-test'} as GenerationJob);
+  await assert.rejects(service.runJob(actor,{jobType:'image',prompt:'编辑选区',parameters:{referenceFileId:'image',maskFileId:'mask'}}));
+  assert.equal(called,true);
+});
+
 test("生图缺通道或缺密钥时在创建任务和额度计数前停止，返回不可重试配置错误", async () => {
   for (const code of ['IMAGE_PROVIDER_NOT_CONFIGURED','IMAGE_PROVIDER_KEY_MISSING'] as const) {
     let created = false;
@@ -208,6 +234,16 @@ test("文档结构不合格时按校验原因自修复一次，修好才落盘",
   assert.ok(saved);
 });
 
+test('临时执行仅保存任务摘要和计费，不保存提示词、上下文或成果文件',async()=>{
+ let stored:any,request:any,captured=false;
+ const repository={markRunning:async()=>({id:'temp-job'}),completeJob:async()=>({id:'temp-job',status:'succeeded'}),recordUsage:async()=>{},createOutput:async()=>{throw Error('temporary output must not persist');}};
+ const models={getForJob:()=>({id:'mock-image',execute:async(input:any)=>{request=input;return {kind:'asset',content:'memory',mimeType:'image/png',metadata:{bytes:Buffer.from('png'),fileSize:3}};}})};
+ const service=new GenerationService({} as never,repository as never,models as never);
+ service.createJob=async(_actor,input)=>{stored=input;return {id:'temp-job'} as GenerationJob;};
+ const result=await service.runJob(actor,{jobType:'image',prompt:'PRIVATE PROMPT',context:[{role:'user',content:'PRIVATE CONTEXT'}] as any,parameters:{}},undefined,{capture:async()=>{captured=true;return {fileName:'result.png',mimeType:'image/png',fileSize:3,downloadUrl:'/api/temporary-workflows/id/assets/a'};}});
+ assert.equal(stored.prompt,'[temporary-workflow]');assert.deepEqual(stored.context,[]);assert.deepEqual(stored.parameters,{source:'temporary-workflow'});
+ assert.equal(request.transient,true);assert.match(JSON.stringify(request.messages),/PRIVATE PROMPT/);assert.equal(captured,true);assert.match(result.artifact!.downloadUrl,/temporary-workflows/);
+});
 test("同步创作完成后返回模型正文并记录 token 用量", async () => {
   const queuedJob: GenerationJob = {
     id: "job-deepseek-test",

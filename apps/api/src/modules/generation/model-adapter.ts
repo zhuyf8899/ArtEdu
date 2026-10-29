@@ -63,6 +63,9 @@ export interface ModelRequest {
   jobId?: string;
   /** 外部中断信号（用户暂停输出）。适配器会把它和自身超时合并。 */
   signal?: AbortSignal;
+  imageEdit?: import("./image-edit").ImageEditInput;
+  /** Internal: return image bytes in memory instead of writing a generated file. */
+  transient?: boolean;
 }
 
 export interface ModelResult {
@@ -96,7 +99,7 @@ export interface ModelStreamDelta {
  * 供应商协议。默认 openai-chat（chat/completions）；
  * 图像/视频等不兼容 OpenAI 文本协议的供应商使用各自的专用适配器。
  */
-export type ModelProtocol = "openai-chat" | "openai-image" | "modelscope-image" | "siliconflow-image";
+export type ModelProtocol = "openai-chat" | "openai-image" | "modelscope-image" | "siliconflow-image" | "wanx-image-edit";
 
 export interface ModelProviderConfig {
   id: string;
@@ -116,4 +119,6 @@ export interface ModelProviderConfig {
    * 不进入前台的模型选择列表。前台不感知它，也不需要选它。
    */
   internal?: boolean;
+  /** Explicit opt-in: provider supports image edits using its configured protocol. */
+  imageEditing?: boolean;
 }

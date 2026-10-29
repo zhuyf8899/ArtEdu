@@ -1,5 +1,7 @@
 import http from 'node:http';
 import { renderPage } from './agent-browser-check';
+import { createPdf } from '../generation/pdf-export';
+import { documentSchemaFor } from '../generation/document-content';
 
 // Isolated renderer: no DB, credentials, upload volumes, public port or egress.
 export function allowedCheckUrl(value: unknown) {
@@ -14,12 +16,17 @@ export function startBrowserCheckWorker() {
   let active = false;
   return http.createServer(async (request, response) => {
     if(request.url==='/health'&&request.method==='GET'){response.end('ok');return;}
-    if(request.method!=='POST'||request.url!=='/check'){response.writeHead(404).end();return;}
+    if(request.method!=='POST'||!['/check','/pdf'].includes(request.url??'')){response.writeHead(404).end();return;}
     if(active){response.writeHead(503).end('Renderer busy');return;}
     active=true;
     try {
       const chunks:Buffer[]=[]; let size=0;
-      for await(const chunk of request){size+=chunk.length;if(size>4096)throw Error('Request too large');chunks.push(chunk);}
+      for await(const chunk of request){size+=chunk.length;if(size>(request.url==='/pdf'?2*1024*1024:4096))throw Error('Request too large');chunks.push(chunk);}
+      if(request.url==='/pdf'){
+        const doc=documentSchemaFor('pdf').parse(JSON.parse(Buffer.concat(chunks).toString()));
+        const pdf=await createPdf(doc);
+        response.setHeader('Content-Type','application/pdf');response.end(pdf);return;
+      }
       const input=allowedCheckUrl(JSON.parse(Buffer.concat(chunks).toString()).url);
       const result=await renderPage(input.url,input.prefix);
       response.setHeader('Content-Type','application/json');response.end(JSON.stringify(result));

@@ -1,0 +1,489 @@
+{
+  "id": "01-text-to-image",
+  "title": "基础文生图",
+  "sourcePath": "archived/default.json",
+  "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/default.json",
+  "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/default.json",
+  "tutorialUrl": "https://docs.comfy.org/tutorials/basic/text-to-image",
+  "sourceSha256": "396fb34efa019c5f1cc242da22f89a7fcc43fce7240d014d75290278cb2f6dc0",
+  "nodes": [
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "position": [
+        10,
+        300
+      ],
+      "size": [
+        320,
+        154.65625
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 1,
+          "links": [
+            3,
+            5
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 2,
+          "links": [
+            8
+          ]
+        }
+      ],
+      "widgets": [
+        "v1-5-pruned-emaonly-fp16.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65",
+        "models": [
+          {
+            "name": "v1-5-pruned-emaonly-fp16.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors?download=true",
+            "directory": "checkpoints"
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "position": [
+        920,
+        170
+      ],
+      "size": [
+        320,
+        480
+      ],
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 4
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            7
+          ]
+        }
+      ],
+      "widgets": [
+        685468484323813,
+        "randomize",
+        20,
+        8,
+        "euler",
+        "normal",
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "KSampler",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65"
+      }
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "position": [
+        1000,
+        710
+      ],
+      "size": [
+        225,
+        96
+      ],
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            9
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEDecode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65"
+      }
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "position": [
+        1270,
+        170
+      ],
+      "size": [
+        470,
+        560
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "widgets": [
+        "SD1.5"
+      ],
+      "mode": 0,
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65"
+      }
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "position": [
+        430,
+        530
+      ],
+      "size": [
+        420,
+        170
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            6
+          ]
+        }
+      ],
+      "widgets": [
+        "text, watermark"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65"
+      }
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "position": [
+        490,
+        900
+      ],
+      "size": [
+        320,
+        168
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            2
+          ]
+        }
+      ],
+      "widgets": [
+        512,
+        512,
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65"
+      }
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "position": [
+        420,
+        220
+      ],
+      "size": [
+        430,
+        260
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            4
+          ]
+        }
+      ],
+      "widgets": [
+        "beautiful scenery nature glass bottle landscape, purple galaxy bottle,"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65"
+      }
+    },
+    {
+      "id": 15,
+      "type": "MarkdownNote",
+      "title": "Note: Prompt",
+      "position": [
+        400,
+        -320
+      ],
+      "size": [
+        470,
+        430
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "**Prompts usually have two types:**\n\n* **Positive Prompt:** Tells the model what you *want* to see.\n* **Negative Prompt:** Tells the model what you *don’t want* to see.\n\nThink of it as:<br/>\n👉 Positive = “Do this” <br/>\n👉 Negative = “Don’t do this”\n\n\nDifferent models may interpret prompts differently.<br/>\nSome prefer short, simple phrases; others respond well to detailed descriptions or styles.\nExperiment to see how each model reacts.\n\nAbout SD1.5:<br/>\nStable Diffusion 1.5 is one of the most popular base models.\nIt works best with short, clear prompts and simple concepts, and it has a natural, realistic visual style.\n"
+      ],
+      "mode": 0,
+      "properties": {}
+    },
+    {
+      "id": 14,
+      "type": "MarkdownNote",
+      "title": "Note: Output",
+      "position": [
+        1270,
+        780
+      ],
+      "size": [
+        470,
+        130
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "Image will auto-save to the `ComfyUI/output` folder. You can also right-click on the `Save Image` node and then use the menu to save the image locally."
+      ],
+      "mode": 0,
+      "properties": {}
+    },
+    {
+      "id": 13,
+      "type": "MarkdownNote",
+      "title": "Note: Image size",
+      "position": [
+        460,
+        1180
+      ],
+      "size": [
+        330,
+        163.953125
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "Different models are trained based on datasets of different image sizes. This workflow is using Stable Diffusion 1.5, which is trained based on 512x512 datasets. So, it doesn't perform well on large image sizes."
+      ],
+      "mode": 0,
+      "properties": {}
+    },
+    {
+      "id": 11,
+      "type": "MarkdownNote",
+      "title": "Note: Model link",
+      "position": [
+        -470,
+        160
+      ],
+      "size": [
+        400,
+        530.890625
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "[Tutorial](https://docs.comfy.org/tutorials/basic/text-to-image)\n\n\n## Model link\n\n**checkpoints**\n\n- [v1-5-pruned-emaonly-fp16.safetensors](https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors?download=true)\n\n\nModel Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   └── 📂 checkpoints/\n│          └── v1-5-pruned-emaonly-fp16.safetensors\n```\n\n\n## Report issue\nIf you have any problems running this workflow, please report template-related issues via this link: [report the template issue here](https://github.com/Comfy-Org/workflow_templates/issues)"
+      ],
+      "mode": 0,
+      "properties": {}
+    }
+  ],
+  "links": [
+    [
+      1,
+      4,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      5,
+      0,
+      3,
+      3,
+      "LATENT"
+    ],
+    [
+      3,
+      4,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      4,
+      6,
+      0,
+      3,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      5,
+      4,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      6,
+      7,
+      0,
+      3,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      3,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      8,
+      4,
+      2,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      9,
+      8,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": 3,
+  "nodeTypes": [
+    "CheckpointLoaderSimple",
+    "KSampler",
+    "VAEDecode",
+    "SaveImage",
+    "CLIPTextEncode",
+    "EmptyLatentImage",
+    "MarkdownNote"
+  ],
+  "review": "基础采样：检查点、正负条件、空潜空间、采样、VAE 解码和保存。",
+  "dependencies": [
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "mode": 0,
+      "widgets": [
+        "v1-5-pruned-emaonly-fp16.safetensors"
+      ],
+      "models": [
+        {
+          "name": "v1-5-pruned-emaonly-fp16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors?download=true",
+          "directory": "checkpoints"
+        }
+      ]
+    }
+  ],
+  "exactRoundTrip": true,
+  "difference": ""
+}

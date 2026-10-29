@@ -62,6 +62,11 @@ const workflowNodeSchema = z.object({
     find: z.string().max(1000).optional(),
     replacement: z.string().max(10000).optional(),
     selection: z.enum(['a', 'b']).optional(),
+    field: z.enum(['text','prompt','negativePrompt','error']).optional(),
+    operator: z.enum(['contains','equals','not_empty']).optional(),
+    iterations: z.number().int().min(1).max(20).optional(),
+    operation: z.enum(['text_template','text_replace','text_generate']).optional(),
+    until: z.string().max(1000).optional(),
   }).passthrough(),
 });
 
@@ -84,6 +89,7 @@ export const workflowDefinitionSchema = z.object({
   learning: workflowLearningSchema.optional(),
   schemaVersion: z.literal(2).default(2),
   engine: z.enum(['platform','comfyui']).optional(),
+  comfyExchange: z.object({format:z.enum(['ui','api']),collapsedReroutes:z.array(z.string().max(80)).max(80).optional(),source:z.record(z.string(),z.unknown()).optional(),edges:z.array(z.record(z.string(),z.unknown())).max(160).optional(),groups:z.array(z.record(z.string(),z.unknown())).max(20).optional()}).optional(),
   comfyPrompt: z.record(z.string(), z.object({class_type:z.string().min(1).max(160),inputs:z.record(z.string(),z.unknown()),_meta:z.object({title:z.string().max(160)}).optional()})).optional(),
   nodes: z.array(workflowNodeSchema).min(1).max(80),
   edges: z.array(workflowEdgeSchema).max(160).default([]),
@@ -113,12 +119,12 @@ export const workflowDefinitionSchema = z.object({
     if (target && (additionalPlatformNodeTypes as readonly string[]).includes(target.type)) {
       const ports = target.type === 'text_constant' ? [] : ['text_join', 'result_select'].includes(target.type) ? ['a', 'b'] : ['input'];
       const port = edge.targetHandle ?? 'input';
-      const key = JSON.stringify([edge.target, port]);
+      const key = JSON.stringify([edge.target, port, edge.sourceHandle === 'error' ? 'error' : 'normal']);
       if (!ports.includes(port) || newInputs.has(key)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: '节点输入端口不存在或重复连接' });
       newInputs.add(key);
     }
     const source = definition.nodes.find(node => node.id === edge.source);
-    if (source && (additionalPlatformNodeTypes as readonly string[]).includes(source.type) && edge.sourceHandle && edge.sourceHandle !== 'output') context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: '节点输出端口不存在' });
+    if (source && source.type !== 'comfy' && edge.sourceHandle && !(source.type === 'condition' ? ['true','false','error'] : ['output','error']).includes(edge.sourceHandle)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['edges'], message: '节点输出端口不存在' });
   }
   if (definition.engine === 'comfyui') {
     for (const node of definition.nodes) {
@@ -235,6 +241,7 @@ export const workflowRunExecuteSchema = z.object({
   negativePrompt: z.string().trim().max(1500).optional(),
   // 仅接收临时素材服务签发的 ID；实际文件归属、类型和过期时间由服务端再次校验。
   referenceFileId: z.string().trim().min(1).max(160).optional(),
+  maskFileId: z.string().trim().min(1).max(160).optional(),
 });
 
 export const reportInputSchema = z.object({

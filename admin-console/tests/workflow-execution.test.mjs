@@ -18,16 +18,16 @@ test('另一分支的提示词不能让当前创作输入自动跳过', () => {
   assert.equal(hasDownstreamPrompt(nodes, [edge('b', 'p')], 'b'), true);
 });
 
-test('新增九种节点带有明确用途、分组和输入端口，模板可以直接预检', () => {
-  assert.equal(Object.keys(additionalPlatformNodes).length, 9);
+test('文字与控制节点带有明确用途、分组和输入端口，模板可以直接预检', () => {
+  assert.equal(Object.keys(additionalPlatformNodes).length, 11);
   for (const meta of Object.values(additionalPlatformNodes)) {
     assert.ok(meta.hint.length > 10); assert.ok(meta.output); assert.ok(meta.group);
   }
   assert.deepEqual(platformInputPorts('text_constant'), []);
   assert.deepEqual(platformInputPorts('text_join').map(([id]) => id), ['a', 'b']);
-  assert.match(additionalPlatformNodes.result_select.hint, /两路上游都会执行/);
+  assert.match(additionalPlatformNodes.result_select.hint, /不执行/);
   let serial = 0;
-  for (const kind of ['prompt-tools', 'text-join']) {
+  for (const kind of ['prompt-tools', 'text-join', 'image-edit']) {
     const definition = createPlatformPreset(kind, prefix => `${prefix}-${++serial}`);
     assert.deepEqual(platformPublishIssues(definition), []);
     assert.equal(new Set(definition.nodes.map(node => node.id)).size, definition.nodes.length);

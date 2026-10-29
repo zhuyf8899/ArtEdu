@@ -1,0 +1,256 @@
+{
+  "localInventory": "D:\\ComfyUIV9.5\\ComfyUI-V9.5",
+  "mainPresent": false,
+  "models": [
+    {
+      "directory": "checkpoints",
+      "fileName": "v1-5-pruned-emaonly-fp16.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "01-text-to-image",
+          "nodeId": 4,
+          "mode": 0
+        },
+        {
+          "id": "02-image-to-image",
+          "nodeId": 14,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "checkpoints",
+      "fileName": "512-inpainting-ema.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "03-inpainting",
+          "nodeId": 29,
+          "mode": 0
+        },
+        {
+          "id": "04-outpainting",
+          "nodeId": 29,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "checkpoints",
+      "fileName": "dreamshaper_8.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "05-lora",
+          "nodeId": 4,
+          "mode": 0
+        },
+        {
+          "id": "06-multiple-loras",
+          "nodeId": 4,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "loras",
+      "fileName": "blindbox_v1_mix.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "05-lora",
+          "nodeId": 11,
+          "mode": 0
+        },
+        {
+          "id": "06-multiple-loras",
+          "nodeId": 11,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "loras",
+      "fileName": "MoXinV1.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "05-lora",
+          "nodeId": 13,
+          "mode": 4
+        },
+        {
+          "id": "06-multiple-loras",
+          "nodeId": 10,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "checkpoints",
+      "fileName": "DreamShaper_8_pruned.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "07-hires-latent",
+          "nodeId": 16,
+          "mode": 0
+        },
+        {
+          "id": "08-hires-esrgan",
+          "nodeId": 25,
+          "mode": 0
+        },
+        {
+          "id": "09-controlnet",
+          "nodeId": 14,
+          "mode": 0
+        },
+        {
+          "id": "11-esrgan",
+          "nodeId": 4,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "upscale_models",
+      "fileName": "RealESRGAN_x4plus.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "08-hires-esrgan",
+          "nodeId": 23,
+          "mode": 0
+        },
+        {
+          "id": "11-esrgan",
+          "nodeId": 13,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "vae",
+      "fileName": "vae-ft-mse-840000-ema-pruned.safetensors",
+      "localExactNamePresent": true,
+      "cases": [
+        {
+          "id": "09-controlnet",
+          "nodeId": 13,
+          "mode": 0
+        },
+        {
+          "id": "10-mixed-controlnets",
+          "nodeId": 15,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "controlnet",
+      "fileName": "control_v11p_sd15_scribble_fp16.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "09-controlnet",
+          "nodeId": 12,
+          "mode": 0
+        },
+        {
+          "id": "10-mixed-controlnets",
+          "nodeId": 26,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "controlnet",
+      "fileName": "control_v11p_sd15_openpose_fp16.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "10-mixed-controlnets",
+          "nodeId": 35,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "checkpoints",
+      "fileName": "awpainting_v14.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "10-mixed-controlnets",
+          "nodeId": 31,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "checkpoints",
+      "fileName": "sd_xl_refiner_1.0.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "12-sdxl-refiner",
+          "nodeId": 12,
+          "mode": 0
+        }
+      ]
+    },
+    {
+      "directory": "checkpoints",
+      "fileName": "sd_xl_base_1.0.safetensors",
+      "localExactNamePresent": false,
+      "cases": [
+        {
+          "id": "12-sdxl-refiner",
+          "nodeId": 4,
+          "mode": 0
+        }
+      ]
+    }
+  ],
+  "inputAssets": [
+    {
+      "name": "mixing_controlnets_pose_input.png",
+      "bytes": 4083,
+      "sha256": "6dff23659b50f36e63d242bdca840116590c829262bed1d5a819962790070912",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/mixing_controlnets_pose_input.png"
+    },
+    {
+      "name": "mixing_controlnets_scribble_input.png",
+      "bytes": 22835,
+      "sha256": "64da2164fc340aec1d54d479a3fb4c893986efcc77452bf4e083b6c451011e21",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/mixing_controlnets_scribble_input.png"
+    },
+    {
+      "name": "image2image_input_image.jpg",
+      "bytes": 166753,
+      "sha256": "f52b417feaf7e8b65b31875e9cebdbfabef824aecbbe0b3a980f8b551ba6d520",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/image2image_input_image.jpg"
+    },
+    {
+      "name": "inpaint_model_outpainting_input_image.png",
+      "bytes": 548774,
+      "sha256": "3b3d8b3b5f1b1afcbc3c819e8b13b5a385939170cc133dbfca4f2a2142e41037",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/inpaint_model_outpainting_input_image.png"
+    },
+    {
+      "name": "inpaint_example_input_image.png",
+      "bytes": 1296300,
+      "sha256": "ebbf24255b79907c90fe692696eea41fdbe9822d4bbc8ae0f660079f0a9b4559",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/inpaint_example_input_image.png"
+    },
+    {
+      "name": "controlnet_example_input_image.png",
+      "bytes": 1926742,
+      "sha256": "ab14f62bcb1dc1c41e43976aec4f45df3d9095da312e310d0114548866cdc0bf",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/controlnet_example_input_image.png"
+    }
+  ],
+  "gpuExecuted": false
+}

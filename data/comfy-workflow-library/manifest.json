@@ -1,0 +1,818 @@
+{
+  "inputAssets": [
+    {
+      "name": "mixing_controlnets_pose_input.png",
+      "bytes": 4083,
+      "sha256": "6dff23659b50f36e63d242bdca840116590c829262bed1d5a819962790070912",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/mixing_controlnets_pose_input.png"
+    },
+    {
+      "name": "mixing_controlnets_scribble_input.png",
+      "bytes": 22835,
+      "sha256": "64da2164fc340aec1d54d479a3fb4c893986efcc77452bf4e083b6c451011e21",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/mixing_controlnets_scribble_input.png"
+    },
+    {
+      "name": "image2image_input_image.jpg",
+      "bytes": 166753,
+      "sha256": "f52b417feaf7e8b65b31875e9cebdbfabef824aecbbe0b3a980f8b551ba6d520",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/image2image_input_image.jpg"
+    },
+    {
+      "name": "inpaint_model_outpainting_input_image.png",
+      "bytes": 548774,
+      "sha256": "3b3d8b3b5f1b1afcbc3c819e8b13b5a385939170cc133dbfca4f2a2142e41037",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/inpaint_model_outpainting_input_image.png"
+    },
+    {
+      "name": "inpaint_example_input_image.png",
+      "bytes": 1296300,
+      "sha256": "ebbf24255b79907c90fe692696eea41fdbe9822d4bbc8ae0f660079f0a9b4559",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/inpaint_example_input_image.png"
+    },
+    {
+      "name": "controlnet_example_input_image.png",
+      "bytes": 1926742,
+      "sha256": "ab14f62bcb1dc1c41e43976aec4f45df3d9095da312e310d0114548866cdc0bf",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/input/controlnet_example_input_image.png"
+    }
+  ],
+  "repository": "https://github.com/Comfy-Org/workflow_templates",
+  "commit": "67984637eefcd4825dcf5c134e39034785be1682",
+  "license": "MIT",
+  "createdAt": "2026-10-25T16:13:27.814Z",
+  "replication": "original node IDs, types, sockets, widgets, positions, dimensions, groups and opaque metadata",
+  "execution": "not executed; GPU bridge disabled",
+  "cases": [
+    {
+      "id": "01-text-to-image",
+      "title": "基础文生图",
+      "sourcePath": "archived/default.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/default.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/default.json",
+      "tutorialUrl": "https://docs.comfy.org/tutorials/basic/text-to-image",
+      "sourceSha256": "396fb34efa019c5f1cc242da22f89a7fcc43fce7240d014d75290278cb2f6dc0",
+      "nodes": 11,
+      "links": 9,
+      "groups": 3,
+      "nodeTypes": [
+        "CheckpointLoaderSimple",
+        "KSampler",
+        "VAEDecode",
+        "SaveImage",
+        "CLIPTextEncode",
+        "EmptyLatentImage",
+        "MarkdownNote"
+      ],
+      "review": "基础采样：检查点、正负条件、空潜空间、采样、VAE 解码和保存。",
+      "dependencies": [
+        {
+          "id": 4,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "v1-5-pruned-emaonly-fp16.safetensors"
+          ],
+          "models": [
+            {
+              "name": "v1-5-pruned-emaonly-fp16.safetensors",
+              "url": "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors?download=true",
+              "directory": "checkpoints"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "02-image-to-image",
+      "title": "图生图",
+      "sourcePath": "archived/image2image.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/image2image.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/image2image.json",
+      "tutorialUrl": "https://docs.comfy.org/tutorials/basic/image-to-image",
+      "sourceSha256": "c3076287df4ca0f6c2d65c6b964bac04be0641096f314d383dc6d21f4f102f07",
+      "nodes": 12,
+      "links": 12,
+      "groups": 3,
+      "nodeTypes": [
+        "CheckpointLoaderSimple",
+        "VAEDecode",
+        "SaveImage",
+        "LoadImage",
+        "CLIPTextEncode",
+        "ImageScaleToTotalPixels",
+        "VAEEncode",
+        "KSampler",
+        "MarkdownNote"
+      ],
+      "review": "载入原图经 VAE 编码后进入采样器，保留原始 denoise 与尺寸处理。",
+      "dependencies": [
+        {
+          "id": 14,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "v1-5-pruned-emaonly-fp16.safetensors"
+          ],
+          "models": [
+            {
+              "name": "v1-5-pruned-emaonly-fp16.safetensors",
+              "url": "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors?download=true",
+              "directory": "checkpoints"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "type": "LoadImage",
+          "mode": 0,
+          "widgets": [
+            "image2image_input_image.jpg",
+            "image"
+          ],
+          "models": []
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "03-inpainting",
+      "title": "局部重绘",
+      "sourcePath": "archived/inpaint_example.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/inpaint_example.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/inpaint_example.json",
+      "tutorialUrl": "https://docs.comfy.org/tutorials/basic/inpaint",
+      "sourceSha256": "b5cc720dcc1b41bb772fbadac2fbda1202c2bd955cd13bb61ce59b86006ba0b8",
+      "nodes": 12,
+      "links": 13,
+      "groups": 3,
+      "nodeTypes": [
+        "CLIPTextEncode",
+        "LoadImage",
+        "ImageScaleToTotalPixels",
+        "MarkdownNote",
+        "VAEEncodeForInpaint",
+        "VAEDecode",
+        "KSampler",
+        "SaveImage",
+        "CheckpointLoaderSimple"
+      ],
+      "review": "保留原图透明遮罩及重绘编码链，不改成普通文字生图。",
+      "dependencies": [
+        {
+          "id": 20,
+          "type": "LoadImage",
+          "mode": 0,
+          "widgets": [
+            "inpaint_example_input_image.png",
+            "image"
+          ],
+          "models": []
+        },
+        {
+          "id": 29,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "512-inpainting-ema.safetensors"
+          ],
+          "models": [
+            {
+              "name": "512-inpainting-ema.safetensors",
+              "url": "https://huggingface.co/Comfy-Org/stable_diffusion_2.1_repackaged/resolve/main/512-inpainting-ema.safetensors",
+              "directory": "checkpoints"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "04-outpainting",
+      "title": "向外扩图",
+      "sourcePath": "archived/inpaint_model_outpainting.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/inpaint_model_outpainting.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/inpaint_model_outpainting.json",
+      "tutorialUrl": "https://docs.comfy.org/tutorials/basic/inpaint",
+      "sourceSha256": "8fd7d90801177fdf2645cd027f45adcf72b44444f4326495014830009165bb9d",
+      "nodes": 13,
+      "links": 14,
+      "groups": 3,
+      "nodeTypes": [
+        "CheckpointLoaderSimple",
+        "CLIPTextEncode",
+        "LoadImage",
+        "ImageScaleToTotalPixels",
+        "KSampler",
+        "VAEDecode",
+        "SaveImage",
+        "ImagePadForOutpaint",
+        "MarkdownNote",
+        "VAEEncodeForInpaint"
+      ],
+      "review": "保留扩图 padding、遮罩与重绘模型链。",
+      "dependencies": [
+        {
+          "id": 29,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "512-inpainting-ema.safetensors"
+          ],
+          "models": [
+            {
+              "name": "512-inpainting-ema.safetensors",
+              "url": "https://huggingface.co/Comfy-Org/stable_diffusion_2.1_repackaged/resolve/main/512-inpainting-ema.safetensors",
+              "directory": "checkpoints"
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "type": "LoadImage",
+          "mode": 0,
+          "widgets": [
+            "inpaint_model_outpainting_input_image.png",
+            "image"
+          ],
+          "models": []
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "05-lora",
+      "title": "单 LoRA（保留旁路层）",
+      "sourcePath": "archived/lora.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/lora.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/lora.json",
+      "tutorialUrl": "https://docs.comfy.org/tutorials/basic/lora",
+      "sourceSha256": "a43e1ac3394a9d252ca3d078117041331094bac3a5a63fab311c2e1a3cec575a",
+      "nodes": 10,
+      "links": 13,
+      "groups": 0,
+      "nodeTypes": [
+        "KSampler",
+        "VAEDecode",
+        "SaveImage",
+        "EmptyLatentImage",
+        "CheckpointLoaderSimple",
+        "LoraLoader",
+        "CLIPTextEncode",
+        "MarkdownNote"
+      ],
+      "review": "启用 blindbox 权重 0.75 / 1，原图第二层 MoXin 权重 0.5 / 1 处于旁路模式 4；完整保留旁路状态。",
+      "dependencies": [
+        {
+          "id": 4,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "dreamshaper_8.safetensors"
+          ],
+          "models": [
+            {
+              "name": "dreamshaper_8.safetensors",
+              "url": "https://civitai.com/api/download/models/128713?type=Model&format=SafeTensor&size=pruned&fp=fp16",
+              "directory": "checkpoints"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "type": "LoraLoader",
+          "mode": 0,
+          "widgets": [
+            "blindbox_v1_mix.safetensors",
+            0.75,
+            1
+          ],
+          "models": [
+            {
+              "name": "blindbox_v1_mix.safetensors",
+              "url": "https://civitai.com/api/download/models/32988?type=Model&format=SafeTensor&size=full&fp=fp16",
+              "directory": "loras"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "type": "LoraLoader",
+          "mode": 4,
+          "widgets": [
+            "MoXinV1.safetensors",
+            0.5,
+            1
+          ],
+          "models": [
+            {
+              "name": "MoXinV1.safetensors",
+              "url": "https://civitai.com/api/download/models/14856?type=Model&format=SafeTensor&size=full&fp=fp16",
+              "directory": "loras"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "06-multiple-loras",
+      "title": "多 LoRA 串联",
+      "sourcePath": "archived/lora_multiple.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/lora_multiple.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/lora_multiple.json",
+      "tutorialUrl": "https://docs.comfy.org/tutorials/basic/lora",
+      "sourceSha256": "e57b0e2f201ec6c82938246a8a331fb8d419ae307ff03fcc3184968f0f29ba51",
+      "nodes": 10,
+      "links": 13,
+      "groups": 3,
+      "nodeTypes": [
+        "LoraLoader",
+        "CheckpointLoaderSimple",
+        "EmptyLatentImage",
+        "CLIPTextEncode",
+        "KSampler",
+        "VAEDecode",
+        "SaveImage",
+        "MarkdownNote"
+      ],
+      "review": "保留串联顺序和每层 MODEL、CLIP 权重，不合并为一个风格提示词。",
+      "dependencies": [
+        {
+          "id": 11,
+          "type": "LoraLoader",
+          "mode": 0,
+          "widgets": [
+            "blindbox_v1_mix.safetensors",
+            0.9,
+            1
+          ],
+          "models": [
+            {
+              "name": "blindbox_v1_mix.safetensors",
+              "url": "https://civitai.com/api/download/models/32988?type=Model&format=SafeTensor&size=full&fp=fp16",
+              "directory": "loras"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "dreamshaper_8.safetensors"
+          ],
+          "models": [
+            {
+              "name": "dreamshaper_8.safetensors",
+              "url": "https://civitai.com/api/download/models/128713?type=Model&format=SafeTensor&size=pruned&fp=fp16",
+              "directory": "checkpoints"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "type": "LoraLoader",
+          "mode": 0,
+          "widgets": [
+            "MoXinV1.safetensors",
+            0.9,
+            1
+          ],
+          "models": [
+            {
+              "name": "MoXinV1.safetensors",
+              "url": "https://civitai.com/api/download/models/14856?type=Model&format=SafeTensor&size=full&fp=fp16",
+              "directory": "loras"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "07-hires-latent",
+      "title": "潜空间二次采样放大",
+      "sourcePath": "archived/hiresfix_latent_workflow.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/hiresfix_latent_workflow.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/hiresfix_latent_workflow.json",
+      "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/2_pass_txt2img/",
+      "sourceSha256": "bca898d64d81e39fc9e969589aa073f0dcf49ac85994cc5719fe6efddfa702a6",
+      "nodes": 12,
+      "links": 17,
+      "groups": 7,
+      "nodeTypes": [
+        "EmptyLatentImage",
+        "LatentUpscale",
+        "KSampler",
+        "CLIPTextEncode",
+        "VAEDecode",
+        "PreviewImage",
+        "SaveImage",
+        "CheckpointLoaderSimple",
+        "MarkdownNote"
+      ],
+      "review": "低分辨率采样、潜空间放大、第二次采样，保留两阶段参数。",
+      "dependencies": [
+        {
+          "id": 16,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "DreamShaper_8_pruned.safetensors"
+          ],
+          "models": [
+            {
+              "name": "DreamShaper_8_pruned.safetensors",
+              "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+              "directory": "checkpoints"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "08-hires-esrgan",
+      "title": "ESRGAN 二次采样放大",
+      "sourcePath": "archived/hiresfix_esrgan_workflow.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/hiresfix_esrgan_workflow.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/hiresfix_esrgan_workflow.json",
+      "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/2_pass_txt2img/#non-latent-upscaling",
+      "sourceSha256": "349eb573fcebbeb5b32b72fbe3c6f6d3fb9530c3dc74d389d4609a121278c7cb",
+      "nodes": 16,
+      "links": 23,
+      "groups": 10,
+      "nodeTypes": [
+        "KSampler",
+        "VAEDecode",
+        "UpscaleModelLoader",
+        "EmptyLatentImage",
+        "ImageUpscaleWithModel",
+        "VAEEncode",
+        "CheckpointLoaderSimple",
+        "ImageScale",
+        "MarkdownNote",
+        "SaveImage",
+        "CLIPTextEncode"
+      ],
+      "review": "像素空间超分后重新编码到潜空间，再做二次采样。",
+      "dependencies": [
+        {
+          "id": 23,
+          "type": "UpscaleModelLoader",
+          "mode": 0,
+          "widgets": [
+            "RealESRGAN_x4plus.safetensors"
+          ],
+          "models": [
+            {
+              "name": "RealESRGAN_x4plus.safetensors",
+              "url": "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors",
+              "directory": "upscale_models"
+            }
+          ]
+        },
+        {
+          "id": 25,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "DreamShaper_8_pruned.safetensors"
+          ],
+          "models": [
+            {
+              "name": "DreamShaper_8_pruned.safetensors",
+              "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+              "directory": "checkpoints"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "09-controlnet",
+      "title": "ControlNet 控制",
+      "sourcePath": "archived/controlnet_example.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/controlnet_example.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/controlnet_example.json",
+      "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/controlnet/",
+      "sourceSha256": "1e7c9f5a088b25de4ad521765f8cc14c608f680eef6821080aaa381d03b06f01",
+      "nodes": 15,
+      "links": 15,
+      "groups": 4,
+      "nodeTypes": [
+        "CLIPTextEncode",
+        "CheckpointLoaderSimple",
+        "LoadImage",
+        "VAEDecode",
+        "KSampler",
+        "SaveImage",
+        "PreviewImage",
+        "VAELoader",
+        "ControlNetLoader",
+        "MarkdownNote",
+        "ControlNetApplyAdvanced",
+        "Canny",
+        "EmptyLatentImage"
+      ],
+      "review": "保留控制图、控制模型及条件强度，不虚构预处理器。",
+      "dependencies": [
+        {
+          "id": 14,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "DreamShaper_8_pruned.safetensors"
+          ],
+          "models": [
+            {
+              "name": "DreamShaper_8_pruned.safetensors",
+              "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+              "directory": "checkpoints"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "type": "LoadImage",
+          "mode": 0,
+          "widgets": [
+            "controlnet_example_input_image.png",
+            "image"
+          ],
+          "models": []
+        },
+        {
+          "id": 13,
+          "type": "VAELoader",
+          "mode": 0,
+          "widgets": [
+            "vae-ft-mse-840000-ema-pruned.safetensors"
+          ],
+          "models": [
+            {
+              "name": "vae-ft-mse-840000-ema-pruned.safetensors",
+              "url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors?download=true",
+              "directory": "vae"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "ControlNetLoader",
+          "mode": 0,
+          "widgets": [
+            "control_v11p_sd15_scribble_fp16.safetensors"
+          ],
+          "models": [
+            {
+              "name": "control_v11p_sd15_scribble_fp16.safetensors",
+              "url": "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_scribble_fp16.safetensors?download=true",
+              "directory": "controlnet"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "10-mixed-controlnets",
+      "title": "多 ControlNet 混合",
+      "sourcePath": "archived/mixing_controlnets.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/mixing_controlnets.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/mixing_controlnets.json",
+      "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/controlnet/#mixing-controlnets",
+      "sourceSha256": "a0addbddf84f3c0a0147d796915cfbb4f3d1c3c64e7f20b2e652e63d361aea49",
+      "nodes": 15,
+      "links": 17,
+      "groups": 5,
+      "nodeTypes": [
+        "VAELoader",
+        "LoadImage",
+        "ControlNetLoader",
+        "ControlNetApplyAdvanced",
+        "CLIPTextEncode",
+        "EmptyLatentImage",
+        "KSampler",
+        "VAEDecode",
+        "SaveImage",
+        "CheckpointLoaderSimple",
+        "MarkdownNote"
+      ],
+      "review": "保留多个控制图和顺序应用的条件链。",
+      "dependencies": [
+        {
+          "id": 15,
+          "type": "VAELoader",
+          "mode": 0,
+          "widgets": [
+            "vae-ft-mse-840000-ema-pruned.safetensors"
+          ],
+          "models": [
+            {
+              "name": "vae-ft-mse-840000-ema-pruned.safetensors",
+              "url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors?download=true",
+              "directory": "vae"
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "type": "LoadImage",
+          "mode": 0,
+          "widgets": [
+            "mixing_controlnets_scribble_input.png",
+            "image"
+          ],
+          "models": []
+        },
+        {
+          "id": 21,
+          "type": "LoadImage",
+          "mode": 0,
+          "widgets": [
+            "mixing_controlnets_pose_input.png",
+            "image"
+          ],
+          "models": []
+        },
+        {
+          "id": 26,
+          "type": "ControlNetLoader",
+          "mode": 0,
+          "widgets": [
+            "control_v11p_sd15_scribble_fp16.safetensors"
+          ],
+          "models": [
+            {
+              "name": "control_v11p_sd15_scribble_fp16.safetensors",
+              "url": "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_scribble_fp16.safetensors?download=true",
+              "directory": "controlnet"
+            }
+          ]
+        },
+        {
+          "id": 35,
+          "type": "ControlNetLoader",
+          "mode": 0,
+          "widgets": [
+            "control_v11p_sd15_openpose_fp16.safetensors"
+          ],
+          "models": [
+            {
+              "name": "control_v11p_sd15_openpose_fp16.safetensors",
+              "url": "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_openpose_fp16.safetensors",
+              "directory": "controlnet"
+            }
+          ]
+        },
+        {
+          "id": 31,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "awpainting_v14.safetensors"
+          ],
+          "models": [
+            {
+              "name": "awpainting_v14.safetensors",
+              "url": "https://civitai.com/api/download/models/624939?type=Model&format=SafeTensor&size=full&fp=fp16",
+              "directory": "checkpoints"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "11-esrgan",
+      "title": "模型超分",
+      "sourcePath": "archived/esrgan_example.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/esrgan_example.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/esrgan_example.json",
+      "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/upscale_models/",
+      "sourceSha256": "8d253128d05ddf8324c3e150db2452cd38f0f7c7174e473db125aaf0f7bbc361",
+      "nodes": 11,
+      "links": 12,
+      "groups": 5,
+      "nodeTypes": [
+        "ImageUpscaleWithModel",
+        "KSampler",
+        "CLIPTextEncode",
+        "VAEDecode",
+        "SaveImage",
+        "PreviewImage",
+        "EmptyLatentImage",
+        "UpscaleModelLoader",
+        "CheckpointLoaderSimple",
+        "MarkdownNote"
+      ],
+      "review": "保留 UpscaleModelLoader 和 ImageUpscaleWithModel 的真实模型引用。",
+      "dependencies": [
+        {
+          "id": 13,
+          "type": "UpscaleModelLoader",
+          "mode": 0,
+          "widgets": [
+            "RealESRGAN_x4plus.safetensors"
+          ],
+          "models": [
+            {
+              "name": "RealESRGAN_x4plus.safetensors",
+              "url": "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors",
+              "directory": "upscale_models"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "DreamShaper_8_pruned.safetensors"
+          ],
+          "models": [
+            {
+              "name": "DreamShaper_8_pruned.safetensors",
+              "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+              "directory": "checkpoints"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    },
+    {
+      "id": "12-sdxl-refiner",
+      "title": "SDXL Base 与 Refiner",
+      "sourcePath": "templates/sdxl_refiner_prompt_example.json",
+      "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/templates/sdxl_refiner_prompt_example.json",
+      "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/templates/sdxl_refiner_prompt_example.json",
+      "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/sdxl/",
+      "sourceSha256": "c376af45ad93aeb52326d51d73f2d218c85423e36eec05a498edda50b769e4fb",
+      "nodes": 20,
+      "links": 19,
+      "groups": 9,
+      "nodeTypes": [
+        "Note",
+        "CheckpointLoaderSimple",
+        "CLIPTextEncode",
+        "PrimitiveNode",
+        "EmptyLatentImage",
+        "KSamplerAdvanced",
+        "VAEDecode",
+        "SaveImage",
+        "MarkdownNote"
+      ],
+      "review": "保留 Base、Refiner 独立提示词与高级采样器阶段边界。",
+      "dependencies": [
+        {
+          "id": 12,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "sd_xl_refiner_1.0.safetensors"
+          ],
+          "models": [
+            {
+              "name": "sd_xl_refiner_1.0.safetensors",
+              "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0/resolve/main/sd_xl_refiner_1.0.safetensors?download=true",
+              "directory": "checkpoints"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "CheckpointLoaderSimple",
+          "mode": 0,
+          "widgets": [
+            "sd_xl_base_1.0.safetensors"
+          ],
+          "models": [
+            {
+              "name": "sd_xl_base_1.0.safetensors",
+              "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true",
+              "directory": "checkpoints"
+            }
+          ]
+        }
+      ],
+      "exactRoundTrip": true,
+      "difference": ""
+    }
+  ]
+}

@@ -1,0 +1,666 @@
+{
+  "id": "07-hires-latent",
+  "title": "潜空间二次采样放大",
+  "sourcePath": "archived/hiresfix_latent_workflow.json",
+  "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/hiresfix_latent_workflow.json",
+  "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/hiresfix_latent_workflow.json",
+  "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/2_pass_txt2img/",
+  "sourceSha256": "bca898d64d81e39fc9e969589aa073f0dcf49ac85994cc5719fe6efddfa702a6",
+  "nodes": [
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "position": [
+        -360,
+        300
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            2
+          ]
+        }
+      ],
+      "widgets": [
+        512,
+        512,
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 10,
+      "type": "LatentUpscale",
+      "position": [
+        -360,
+        670
+      ],
+      "size": [
+        315,
+        130
+      ],
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "widgets": [
+        "nearest-exact",
+        768,
+        768,
+        "disabled"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "LatentUpscale",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "position": [
+        510,
+        80
+      ],
+      "size": [
+        315,
+        474
+      ],
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 18
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 4
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            7,
+            10
+          ]
+        }
+      ],
+      "widgets": [
+        873141143997374,
+        "randomize",
+        12,
+        8,
+        "dpmpp_sde",
+        "normal",
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "KSampler",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 11,
+      "type": "KSampler",
+      "position": [
+        80,
+        680
+      ],
+      "size": [
+        315,
+        474
+      ],
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 23
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 12
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 13
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            15
+          ]
+        }
+      ],
+      "widgets": [
+        32484370206415,
+        "randomize",
+        14,
+        8,
+        "dpmpp_2m",
+        "simple",
+        0.5
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "KSampler",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "position": [
+        20,
+        330
+      ],
+      "size": [
+        420,
+        180
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 20
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            6,
+            13
+          ]
+        }
+      ],
+      "widgets": [
+        "bad hands, text, watermark,nsfw\n"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "position": [
+        870,
+        110
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 21
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            24
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEDecode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 18,
+      "type": "PreviewImage",
+      "position": [
+        870,
+        150
+      ],
+      "size": [
+        560,
+        400
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 24
+        }
+      ],
+      "outputs": [],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "PreviewImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 13,
+      "type": "VAEDecode",
+      "position": [
+        510,
+        680
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 15
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 22
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            17
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEDecode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 12,
+      "type": "SaveImage",
+      "position": [
+        520,
+        720
+      ],
+      "size": [
+        920,
+        560
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 17
+        }
+      ],
+      "outputs": [],
+      "widgets": [
+        "ComfyUI"
+      ],
+      "mode": 0,
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "position": [
+        20,
+        110
+      ],
+      "size": [
+        422.8500061035156,
+        164.30999755859375
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 19
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            4,
+            12
+          ]
+        }
+      ],
+      "widgets": [
+        "masterpiece HDR victorian portrait painting of woman, blonde hair, mountain nature, blue sky, (oil painting:1.1)"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44"
+      }
+    },
+    {
+      "id": 16,
+      "type": "CheckpointLoaderSimple",
+      "position": [
+        -360,
+        100
+      ],
+      "size": [
+        315,
+        98
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            18,
+            23
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 1,
+          "links": [
+            19,
+            20
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 2,
+          "links": [
+            21,
+            22
+          ]
+        }
+      ],
+      "widgets": [
+        "DreamShaper_8_pruned.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44",
+        "models": [
+          {
+            "name": "DreamShaper_8_pruned.safetensors",
+            "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+            "directory": "checkpoints"
+          }
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "type": "MarkdownNote",
+      "position": [
+        -810,
+        60
+      ],
+      "size": [
+        430,
+        360
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "### Learn more about this workflow\n\n> [Hires Fix - ComfyUI_examples](https://comfyanonymous.github.io/ComfyUI_examples/2_pass_txt2img/) — Overview\n> \n> [ComfyUI Image Upscale - docs.comfy.org](https://docs.comfy.org/tutorials/basic/upscale) — Upscaling step-by-step tutorial\n\n\n## Model links\n\n**checkpoints**\n\n- [DreamShaper_8_pruned.safetensors](https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors)\n\n\nModel Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   └── 📂 checkpoints/\n│          └── DreamShaper_8_pruned.safetensors\n```\n\n## Report issue\nIf you have any problems running this workflow, please report template-related issues via this link: [report the template issue here](https://github.com/Comfy-Org/workflow_templates/issues)"
+      ],
+      "mode": 0,
+      "properties": {}
+    }
+  ],
+  "links": [
+    [
+      2,
+      5,
+      0,
+      3,
+      3,
+      "LATENT"
+    ],
+    [
+      4,
+      6,
+      0,
+      3,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      7,
+      0,
+      3,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      3,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      10,
+      3,
+      0,
+      10,
+      0,
+      "LATENT"
+    ],
+    [
+      12,
+      6,
+      0,
+      11,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      13,
+      7,
+      0,
+      11,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      14,
+      10,
+      0,
+      11,
+      3,
+      "LATENT"
+    ],
+    [
+      15,
+      11,
+      0,
+      13,
+      0,
+      "LATENT"
+    ],
+    [
+      17,
+      13,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      18,
+      16,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      19,
+      16,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      20,
+      16,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      21,
+      16,
+      2,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      22,
+      16,
+      2,
+      13,
+      1,
+      "VAE"
+    ],
+    [
+      23,
+      16,
+      0,
+      11,
+      0,
+      "MODEL"
+    ],
+    [
+      24,
+      8,
+      0,
+      18,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": 7,
+  "nodeTypes": [
+    "EmptyLatentImage",
+    "LatentUpscale",
+    "KSampler",
+    "CLIPTextEncode",
+    "VAEDecode",
+    "PreviewImage",
+    "SaveImage",
+    "CheckpointLoaderSimple",
+    "MarkdownNote"
+  ],
+  "review": "低分辨率采样、潜空间放大、第二次采样，保留两阶段参数。",
+  "dependencies": [
+    {
+      "id": 16,
+      "type": "CheckpointLoaderSimple",
+      "mode": 0,
+      "widgets": [
+        "DreamShaper_8_pruned.safetensors"
+      ],
+      "models": [
+        {
+          "name": "DreamShaper_8_pruned.safetensors",
+          "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+          "directory": "checkpoints"
+        }
+      ]
+    }
+  ],
+  "exactRoundTrip": true,
+  "difference": ""
+}

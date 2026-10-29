@@ -51,6 +51,7 @@ services:
       ARTEDU_VERSION: ${ARTEDU_VERSION:-unversioned}
       PAGE_CHECK_SERVICE_URL: http://page-check:8080/check
       PAGE_CHECK_ASSET_HOST: api
+      PDF_RENDER_SERVICE_URL: http://page-check:8080/pdf
       CASE_VIDEO_MAX_MIB: ${CASE_VIDEO_MAX_MIB:-100}
       DATABASE_URL: postgresql://artedu:${ARTEDU_POSTGRES_PASSWORD}@postgres:5432/artedu
       HOST: 0.0.0.0
@@ -74,6 +75,7 @@ services:
       SILICONFLOW_API_KEY: ${SILICONFLOW_API_KEY:-}
       # OpenAI Images 兼容的校内/云端图片服务；名称固定，方便安全地注入容器。
       IMAGE_API_KEY: ${IMAGE_API_KEY:-}
+      BAILIAN_API_KEY: ${BAILIAN_API_KEY:-}
       # Internet search runs through DeepSeek's native web search (Anthropic-compatible
       # Messages endpoint): discovery and page extraction both happen provider-side, so this
       # deployment needs neither a local search service nor a Chromium crawler. The key is

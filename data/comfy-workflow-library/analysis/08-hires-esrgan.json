@@ -1,0 +1,897 @@
+{
+  "id": "08-hires-esrgan",
+  "title": "ESRGAN 二次采样放大",
+  "sourcePath": "archived/hiresfix_esrgan_workflow.json",
+  "sourceUrl": "https://github.com/Comfy-Org/workflow_templates/blob/67984637eefcd4825dcf5c134e39034785be1682/archived/hiresfix_esrgan_workflow.json",
+  "rawUrl": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/67984637eefcd4825dcf5c134e39034785be1682/archived/hiresfix_esrgan_workflow.json",
+  "tutorialUrl": "https://comfyanonymous.github.io/ComfyUI_examples/2_pass_txt2img/#non-latent-upscaling",
+  "sourceSha256": "349eb573fcebbeb5b32b72fbe3c6f6d3fb9530c3dc74d389d4609a121278c7cb",
+  "nodes": [
+    {
+      "id": 11,
+      "type": "KSampler",
+      "position": [
+        180,
+        750
+      ],
+      "size": [
+        315,
+        474
+      ],
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 35
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 12
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 13
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            15
+          ]
+        }
+      ],
+      "widgets": [
+        756770419990187,
+        "randomize",
+        14,
+        8,
+        "uni_pc_bh2",
+        "normal",
+        0.5
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "KSampler",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 21,
+      "type": "VAEDecode",
+      "position": [
+        -160,
+        740
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 20
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 32
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            23
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEDecode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 23,
+      "type": "UpscaleModelLoader",
+      "position": [
+        -190,
+        440
+      ],
+      "size": [
+        290,
+        60
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "UPSCALE_MODEL",
+          "type": "UPSCALE_MODEL",
+          "slot_index": 0,
+          "links": [
+            24
+          ]
+        }
+      ],
+      "widgets": [
+        "RealESRGAN_x4plus.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "UpscaleModelLoader",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43",
+        "models": [
+          {
+            "name": "RealESRGAN_x4plus.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors",
+            "directory": "upscale_models"
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "position": [
+        -190,
+        280
+      ],
+      "size": [
+        290,
+        106
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            2
+          ]
+        }
+      ],
+      "widgets": [
+        512,
+        512,
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 22,
+      "type": "ImageUpscaleWithModel",
+      "position": [
+        -160,
+        880
+      ],
+      "size": [
+        226.8000030517578,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "upscale_model",
+          "type": "UPSCALE_MODEL",
+          "link": 24
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 23
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            27
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ImageUpscaleWithModel",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 20,
+      "type": "VAEEncode",
+      "position": [
+        -150,
+        1250
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 26
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 31
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            18
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 13,
+      "type": "VAEDecode",
+      "position": [
+        360,
+        1280
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 15
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 33
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            17
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEDecode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 25,
+      "type": "CheckpointLoaderSimple",
+      "position": [
+        -190,
+        130
+      ],
+      "size": [
+        290,
+        98
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            34,
+            35
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 1,
+          "links": [
+            28,
+            29
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 2,
+          "links": [
+            30,
+            31,
+            32,
+            33
+          ]
+        }
+      ],
+      "widgets": [
+        "DreamShaper_8_pruned.safetensors"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43",
+        "models": [
+          {
+            "name": "DreamShaper_8_pruned.safetensors",
+            "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+            "directory": "checkpoints"
+          }
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "type": "ImageScale",
+      "position": [
+        -200,
+        1020
+      ],
+      "size": [
+        315,
+        130
+      ],
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 27
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            26
+          ]
+        }
+      ],
+      "widgets": [
+        "bilinear",
+        1024,
+        1024,
+        "disabled"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ImageScale",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 26,
+      "type": "MarkdownNote",
+      "position": [
+        -550,
+        90
+      ],
+      "size": [
+        320,
+        136
+      ],
+      "inputs": [],
+      "outputs": [],
+      "widgets": [
+        "### Learn more about this workflow\n\n> [Non-latent Upscaling - ComfyUI_examples](https://comfyanonymous.github.io/ComfyUI_examples/2_pass_txt2img/#non-latent-upscaling) — Overview\n> \n> [ComfyUI Image Upscale - docs.comfy.org](https://docs.comfy.org/tutorials/basic/upscale) — Upscaling step-by-step tutorial"
+      ],
+      "mode": 0,
+      "properties": {}
+    },
+    {
+      "id": 12,
+      "type": "SaveImage",
+      "position": [
+        590,
+        740
+      ],
+      "size": [
+        810,
+        540
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 17
+        }
+      ],
+      "outputs": [],
+      "widgets": [
+        "ComfyUI"
+      ],
+      "mode": 0,
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "position": [
+        170,
+        400
+      ],
+      "size": [
+        425.2799987792969,
+        180.61000061035156
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 29
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            6,
+            13
+          ]
+        }
+      ],
+      "widgets": [
+        "ugly, deformed, disfigured, mutated, glitch, abstract, blurry, lowres, low-details, bad quality, watermark, signature, text, censored, morbid, mutilated, poorly lit, bad shadow, out of focus, JPEG artifacts, duplicate, bad anatomy, bad hands, bad face, bad teeth, bad arms, bad legs, deformities, nsfw"
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "position": [
+        170,
+        190
+      ],
+      "size": [
+        422.8500061035156,
+        164.30999755859375
+      ],
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 28
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            4,
+            12
+          ]
+        }
+      ],
+      "widgets": [
+        "Elegant classical woman, wearing an exquisite lace (face-covering headdress:1.2), soft warm beige tone with film-like color grading, vintage court-style dress adorned with delicate pleats and pearl decorations. In a quiet space bathed in gentle, hazy light that mimics the softness of film photography. Showcasing delicate texture, mysterious atmosphere, and a touch of retro film grain, with natural color casts and subtle light leaks reminiscent of classic analog films."
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "position": [
+        620,
+        140
+      ],
+      "size": [
+        315,
+        474
+      ],
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 34
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 4
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            7,
+            20
+          ]
+        }
+      ],
+      "widgets": [
+        736955103296125,
+        "randomize",
+        12,
+        8,
+        "dpmpp_sde",
+        "normal",
+        1
+      ],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "KSampler",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "position": [
+        1000,
+        140
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 30
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            37
+          ]
+        }
+      ],
+      "widgets": [],
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEDecode",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    },
+    {
+      "id": 28,
+      "type": "SaveImage",
+      "position": [
+        1010,
+        230
+      ],
+      "size": [
+        380,
+        380
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 37
+        }
+      ],
+      "outputs": [],
+      "widgets": [
+        "ComfyUI"
+      ],
+      "mode": 0,
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43"
+      }
+    }
+  ],
+  "links": [
+    [
+      2,
+      5,
+      0,
+      3,
+      3,
+      "LATENT"
+    ],
+    [
+      4,
+      6,
+      0,
+      3,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      7,
+      0,
+      3,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      3,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      12,
+      6,
+      0,
+      11,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      13,
+      7,
+      0,
+      11,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      15,
+      11,
+      0,
+      13,
+      0,
+      "LATENT"
+    ],
+    [
+      17,
+      13,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      18,
+      20,
+      0,
+      11,
+      3,
+      "LATENT"
+    ],
+    [
+      20,
+      3,
+      0,
+      21,
+      0,
+      "LATENT"
+    ],
+    [
+      23,
+      21,
+      0,
+      22,
+      1,
+      "IMAGE"
+    ],
+    [
+      24,
+      23,
+      0,
+      22,
+      0,
+      "UPSCALE_MODEL"
+    ],
+    [
+      26,
+      24,
+      0,
+      20,
+      0,
+      "IMAGE"
+    ],
+    [
+      27,
+      22,
+      0,
+      24,
+      0,
+      "IMAGE"
+    ],
+    [
+      28,
+      25,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      29,
+      25,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      30,
+      25,
+      2,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      31,
+      25,
+      2,
+      20,
+      1,
+      "VAE"
+    ],
+    [
+      32,
+      25,
+      2,
+      21,
+      1,
+      "VAE"
+    ],
+    [
+      33,
+      25,
+      2,
+      13,
+      1,
+      "VAE"
+    ],
+    [
+      34,
+      25,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      35,
+      25,
+      0,
+      11,
+      0,
+      "MODEL"
+    ],
+    [
+      37,
+      8,
+      0,
+      28,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": 10,
+  "nodeTypes": [
+    "KSampler",
+    "VAEDecode",
+    "UpscaleModelLoader",
+    "EmptyLatentImage",
+    "ImageUpscaleWithModel",
+    "VAEEncode",
+    "CheckpointLoaderSimple",
+    "ImageScale",
+    "MarkdownNote",
+    "SaveImage",
+    "CLIPTextEncode"
+  ],
+  "review": "像素空间超分后重新编码到潜空间，再做二次采样。",
+  "dependencies": [
+    {
+      "id": 23,
+      "type": "UpscaleModelLoader",
+      "mode": 0,
+      "widgets": [
+        "RealESRGAN_x4plus.safetensors"
+      ],
+      "models": [
+        {
+          "name": "RealESRGAN_x4plus.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors",
+          "directory": "upscale_models"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "CheckpointLoaderSimple",
+      "mode": 0,
+      "widgets": [
+        "DreamShaper_8_pruned.safetensors"
+      ],
+      "models": [
+        {
+          "name": "DreamShaper_8_pruned.safetensors",
+          "url": "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+          "directory": "checkpoints"
+        }
+      ]
+    }
+  ],
+  "exactRoundTrip": true,
+  "difference": ""
+}

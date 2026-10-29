@@ -108,6 +108,11 @@ export class StudioController {
     return this.studio.executeRun(await this.auth.getActor(request), runId, parseInput(workflowRunExecuteSchema, body) as WorkflowRunExecuteInput);
   }
 
+  @Post("workflow-runs/:runId/nodes/:nodeId/rerun")
+  async rerunNode(@Req() request: FastifyRequest, @Param('runId') runId: string, @Param('nodeId') nodeId: string) {
+    return this.studio.rerunNode(await this.auth.getActor(request), runId, nodeId);
+  }
+
   @Get("works")
   async listWorks(@Req() request: FastifyRequest, @Query() query: unknown) {
     return this.studio.listWorks(await this.auth.getActor(request), parseInput(catalogQuerySchema, query) as CatalogQuery);

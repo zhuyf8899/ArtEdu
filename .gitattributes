@@ -1,2 +1,4 @@
 *.sh text eol=lf
 admin-console/public/morph-course-network/handoff/*.svg text eol=lf
+data/comfy-workflow-library/originals/*.json -text
+data/comfy-workflow-library/replicas/*.json -text

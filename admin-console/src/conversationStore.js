@@ -66,8 +66,8 @@ export async function getConversationArtifact(id) {
 }
 
 export function taskStateFor(messages=[], memoryState=null) {
-  const reply=[...messages].reverse().find(m=>m.delivery?.artifacts?.some(a=>['webpage','document','image','graphic'].includes(a.kind)));
-  return reply?{artifacts:reply.delivery.artifacts.filter(a=>['webpage','document','image','graphic'].includes(a.kind)).map(a=>({path:a.path,kind:a.kind,...(a.kind==='document'?{format:a.path.split('.').at(-1)}:{})}))}:memoryState;
+  const reply=[...messages].reverse().find(m=>m.delivery?.artifacts?.some(a=>['webpage','document','image','graphic','workflow'].includes(a.kind)));
+  return reply?{artifacts:reply.delivery.artifacts.filter(a=>['webpage','document','image','graphic','workflow'].includes(a.kind)).map(a=>({path:a.path,kind:a.kind,...(a.kind==='document'?{format:a.path.split('.').at(-1)}:{})}))}:memoryState;
 }
 export function makeModelContext(conversation, baseMessages=conversation.messages) {
   const memory = conversation.memory ? [{ role: "system", content: `以下为此前对话的压缩记忆，仅作为上下文：\n${conversation.memory}` }] : [];

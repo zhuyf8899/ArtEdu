@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {createPortal} from 'react-dom';
 import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, Flag, Heart, ImageSquare, MagnifyingGlass, PaperPlaneTilt, Plus, SpinnerGap, X } from "@phosphor-icons/react";
 import { addWorkComment, getMyWorks, getWork, getWorkflows, getWorks, reportComment, reportWork, submitWork, toggleWorkReaction, setWorkCollection } from "./services/adminApi.js";
+import { useFeedback } from "./FeedbackCenter.jsx";
 import { CaseStoryEditor } from "./CaseStoryEditor.jsx";
 import { CaseStoryView } from "./CaseStoryView.jsx";
 import { ImageLightbox } from "./ImageLightbox.jsx";
@@ -15,6 +16,7 @@ import { useScopedViewState } from './useScopedViewState.js';
 import { useDialogFocus } from './useDialogFocus.js';
 
 export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate, initialWorkId = '', variant = 'classic' }) {
+  const { confirmAction } = useFeedback();
   const [works, setWorks] = useState([]);
   const [myWorks, setMyWorks] = useState([]);
   const [workflows, setWorkflows] = useState([]);
@@ -98,6 +100,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     } catch (error) { onNotice(error.message); }
   };
   const submit = async () => {
+    if (!await confirmAction({ title: "提交案例审核？", message: "请确认原作者及展示授权。审核通过后公开发布。", confirmLabel: "确认提交" })) return;
     setLoading(true);
     try { setSelected(await submitWork(selected.id)); await refresh(); onNotice("已提交管理员审核，尚未公开发布"); }
     catch (error) { onNotice(error.message); }
@@ -139,7 +142,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
         {selected.status === "approved" && <div aria-busy={interactionBusy}><button aria-label="点赞案例" aria-pressed={selected.liked} disabled={interactionBusy} onClick={() => react("like")}><Heart weight={selected.liked ? "fill" : "bold"} /> {selected.likeCount}</button><button aria-label="收藏案例" aria-pressed={selected.favorited} disabled={interactionBusy} onClick={() => react("favorite")}><BookmarkSimple weight={selected.favorited ? "fill" : "bold"} /> {selected.favoriteCount}</button></div>}
       </header>
       {canCurate && selected.status === "approved" && <div className="case-collection-control"><label>案例所属模块<select aria-label="案例所属模块" disabled={collectionBusy} value={selected.collection ?? "community"} onChange={event => changeCollection(event.target.value)}>{Object.entries(CASE_COLLECTIONS).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>{collectionBusy && <span role="status">正在保存…</span>}</div>}
-      {editable && <div className="case-draft-actions"><button disabled={loading} onClick={() => setEditing(selected)}>编辑草稿／关联步骤图片</button><button disabled={loading} onClick={submit}>提交管理员审核</button><small>收集案例需先确认原作者和展示授权；保存不会自动发布。</small></div>}
+      {editable && <div className="case-draft-actions"><button disabled={loading} onClick={() => setEditing(selected)}>编辑草稿／关联步骤图片</button><button disabled={loading} onClick={submit}>提交管理员审核</button></div>}
       {selected.status === "rejected" && selected.latestRejection?.reason && <section className="case-review-feedback"><strong>审核意见 · {formatReviewDate(selected.latestRejection.createdAt)}</strong><p>{selected.latestRejection.reason}</p><small>修改并保存后，可再次提交审核；历史审核记录会保留。</small></section>}
       {selected.reviewHistory?.length > 0 && <details className="case-review-history"><summary>查看审核历史（{selected.reviewHistory.length}）</summary>{selected.reviewHistory.map((event, index) => <article key={`${event.action}-${event.createdAt}-${index}`}><strong>{reviewActionName(event.action)}</strong><time>{formatReviewDate(event.createdAt)}</time>{event.reason && <p>{event.reason}</p>}</article>)}</details>}
       <p className="community-summary">{selected.summary}</p>

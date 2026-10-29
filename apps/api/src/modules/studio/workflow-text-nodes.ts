@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 
-export const additionalPlatformNodeTypes = ['text_constant', 'text_join', 'text_replace', 'text_template', 'text_to_prompt', 'text_to_negative', 'text_preview', 'reroute', 'result_select'] as const;
+export const additionalPlatformNodeTypes = ['text_constant', 'text_join', 'text_replace', 'text_template', 'text_to_prompt', 'text_to_negative', 'text_preview', 'reroute', 'result_select', 'condition', 'loop'] as const;
 export const textProcessingTypes = ['text_replace', 'text_template', 'text_to_prompt', 'text_to_negative', 'text_preview'];
 
 export function assertTextNodeParameters(node: Record<string, any>) {
