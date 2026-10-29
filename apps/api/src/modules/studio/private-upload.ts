@@ -166,8 +166,11 @@ function detectTextMimeType(declaredMimeType: string, file: Buffer): PrivateUplo
   return declaredMimeType as PrivateUploadMimeType;
 }
 
-function safeFileName(value: string | undefined, mimeType: StoredUpload["mimeType"]) {
+export function safeFileName(value: string | undefined, mimeType: StoredUpload["mimeType"]) {
   const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "image/svg+xml": ".svg", "image/avif": ".avif", "image/bmp": ".bmp", "video/mp4": ".mp4", "video/webm": ".webm", "application/pdf": ".pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx", "text/plain": ".txt", "text/markdown": ".md", "text/csv": ".csv", "text/html": ".html", "text/css": ".css", "text/javascript": ".js" } as const)[mimeType];
-  const base = path.basename(value ?? "upload").replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 120) || "upload";
-  return base.toLowerCase().endsWith(extension) ? base : `${base}${extension}`;
+  const leaf = String(value ?? "").replace(/\\/g, "/").split("/").pop() ?? "";
+  const cleaned = leaf.replace(/[\u0000-\u001f\u007f]/g, "").replace(/[<>:"|?*]/g, "_").replace(/^\.+/, "").trim();
+  const withoutExtension = cleaned.replace(/\.[A-Za-z0-9]{1,5}$/u, "");
+  const base = Array.from(withoutExtension || cleaned).slice(0, 120).join("") || "upload";
+  return base + extension;
 }
