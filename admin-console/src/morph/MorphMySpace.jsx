@@ -12,7 +12,7 @@ const VIEWS=[['overview','空间总览',House],['portrait','我的专业画像',
 const statusName=value=>({draft:'草稿',pending:'审核中',approved:'已发布',rejected:'待修改',archived:'已归档'}[value]||'作品记录');
 const courseForCard=spaceCourseForCard;
 
-export function MorphMySpace({account,data,creation,view,onView,onNavigate,loading,error,onRetry,children}) {
+export function MorphMySpace({account,data,creation,view,onView,onNavigate,loading,error,onRetry,onTaskSaved,children}) {
   const evidence=spaceEvidence(data), full=view==='overview';
   const name=data.profile?.id===account.id?data.profile.displayName:account.name;
   return <section className={`morph-space container ${full?'morph-space--overview':'morph-space--compact'}`} aria-label="我的空间">
@@ -32,11 +32,11 @@ export function MorphMySpace({account,data,creation,view,onView,onNavigate,loadi
     <div id="morph-space-content" className="morph-space-content" role="region" aria-label="我的空间内容" aria-busy={loading}>
       {loading?<div className="morph-space-empty" role="status"><ArrowClockwise size={26}/><h2>正在同步我的空间</h2><p>课程、笔记与创作记录即将就绪。</p></div>:error?<div className="morph-space-empty" role="alert"><h2>个人记录暂时无法加载</h2><p>{error}</p><button onClick={onRetry}>重新加载</button></div>:<>
         {view==='overview'&&<>
-          <ProfessionalPortrait data={data} onNavigate={onNavigate} onView={onView} compact/>
+          <ProfessionalPortrait onTaskSaved={onTaskSaved} accountId={account.id} data={data} onNavigate={onNavigate} onView={onView} compact/>
           <section className="morph-space-section"><SpaceHeading eyebrow="CREATION DESK" title="最近创作与整理" action="全部记录" onAction={()=>onView('works')}/><WorkRecords items={(data.works||[]).slice(0,3)} error={data.workLoadError} onRetry={onRetry} onNavigate={onNavigate}/></section>
           <section className="morph-space-section"><SpaceHeading eyebrow="LEARNING PATH" title="我听的课" action="全部课程" onAction={()=>onView('courses')}/><CourseRecords courses={(data.courses||[]).slice(0,2)} onNavigate={onNavigate}/></section>
         </>}
-        {view==='portrait'&&<ProfessionalPortrait data={data} onNavigate={onNavigate} onView={onView}/>}
+        {view==='portrait'&&<ProfessionalPortrait onTaskSaved={onTaskSaved} accountId={account.id} data={data} onNavigate={onNavigate} onView={onView}/>}
         {view==='courses'&&<><section className="morph-space-section"><SpaceHeading eyebrow="ATOMIC LEARNING" title="我的原子学习" action="查看独立学习记录 ↗" onAction={()=>onNavigate('/learning?library=learning')}/><p>新原子的阅读、练习和已完成版本单独记录；下面保留原有课程进度。</p></section><SpaceCourses courses={data.courses||[]} onNavigate={onNavigate}/></>}
         {view==='works'&&<SpaceWorks data={data} onNavigate={onNavigate} onRetry={onRetry}/>}
         {view==='favorites'&&<><SpaceHeading eyebrow="COLLECTIONS" title="收藏案例"/><WorkRecords items={data.favorites||[]} favorite onNavigate={onNavigate}/></>}

@@ -1,0 +1,24 @@
+{
+  "paginatedCourses": 25,
+  "directionEvidence": true,
+  "timeFilter": true,
+  "practiceEvidence": true,
+  "planSavedAndParentUpdated": true,
+  "exactVersionAction": true,
+  "refresh": true,
+  "pinnedRouteVersions": true,
+  "legacy67": true,
+  "desktopWidths": [
+    1280,
+    1440,
+    1920
+  ],
+  "optionalEvidenceFailure": true,
+  "emptyHonest": true,
+  "planFailureRetry": true,
+  "accountIsolation": true,
+  "requiredFailureVisible": true,
+  "actualSpacePlanNavigation": true,
+  "compactOverview": true,
+  "consoleErrors": []
+}

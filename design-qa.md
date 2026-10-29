@@ -464,3 +464,63 @@ Browser verification passed: source-node public-resource dialog, management menu
 Accepted differences: local published-resource counts, titles, authors and personal progress differ from source examples. The shared site navigation retains the established brand icon, functional global search and real account label. No remaining P0/P1/P2 issue in the requested course-map composition. Mobile-specific design is not certified by this desktop pass.
 
 final result: passed
+
+## 2026-10-28 交接系列课程详情补全
+原稿课程页已按原始元素树与素材集成：10次课、19处课程节点、34处下级知识内容。组件浏览器核对1440x1000，搜索、展开、教学安排/团队、Esc关闭与学习跳转通过，页面异常0、横向溢出0。原稿样式与5件SVG素材本地保存，未执行源站脚本。云端前端构建与资源核验通过，API与数据库未改动。完整说明见 docs/handoff-series-ui-20261028.md。
+final result: passed
+## 2026-10-29 — unified learning entrance
+
+Visual target: the two user-provided 2026-10-29 screenshots, with the approved redesign brief: retain the second screen's MORPH assets/palette while consolidating the first screen's courses and navigation. This is an intentional layout redesign, not a claim of pixel-for-pixel identity with both conflicting source screens.
+
+- Typography: preserved the existing Chinese system/Noto stack; 32 px page title, 20 px card headings, 14 px descriptions, readable secondary labels.
+- Layout: one two-tab navigation; a collapsed network panel; common search/category/state rhythm and two-column resource cards. The first atom row is visible in the initial desktop viewport. Verified 1280, 1440 and 1920 widths.
+- Color: source lavender, white cards, dark primary actions, purple secondary actions and lime completion/network accents retained.
+- Artwork: all course SVGs, source node portraits, network lines and source illustration are reused; no replacement generated art or approximate drawings.
+- Content: clear labels for trial courses, outlines and planned courses. Resource identity and progress remain separate; source examples are not learner evidence.
+- Resolved P1: the legacy flex card's zero-width body conflicted with the unified grid, causing vertical text. Explicit body width, padding and grid rules fixed it; inspected the new screenshots and measured body widths.
+- Resolved P2: the source network's fixed height cropped its side action. Expanded height now includes the full introduction; the route action is visible and correctly named.
+- Resolved P2: atomic cards previously redirected 17 source atoms to the whole course. Cards now open their own versions; real course usage is available inside detail.
+
+Accepted browser evidence: `design-qa-assets/unified-learning-20261029/atoms-1440.png`, `courses-all-1440.png`, `courses-1280.png`, `courses-1440.png`, `courses-1920.png`, `network-expanded-1440.png`, `verification.json`. Screenshots were opened and inspected; source comparisons use the screenshots provided in the active request. The source captures have different widths and states, so no exact-coordinate fidelity claim is made.
+
+Primary component interactions: course/atom switch, category/open-state counts, query and progress filters, 67% legacy progress, course detail and related-atom search, direct atom detail and course relation, source network expand/collapse, contribution source/attachments, legacy-list alias. All passed, browser page errors 0. The separate ten-session course view also passed its existing browser checks.
+
+Production authentication, real submission/approval writes, paid model calls, mobile-specific design and a full accessibility certification were not exercised. Existing permissions and data services were not changed. No remaining P0/P1/P2 in the requested desktop catalog consolidation; broader content/teacher-assignment gaps remain in the separate version audit.
+
+final result: passed
+
+## 2026-10-29 — progress-based professional portrait
+
+Visual target: user-supplied F:/屏幕截图 2026-10-29 115608.png (2242×1135 source, 2048×1037 displayed), dark left radar and pale right panels on MORPH lavender. This is the approved data-driven adaptation, not a claim of pixel identity with sample scores. No new raster artwork is needed: the radar is a native canvas data visualization and icons use the existing Phosphor set.
+
+- Typography: existing Chinese font stack, 20–24px headings, 14px controls/body, 12–13px evidence metadata. Inspected full-view and readable card/summary regions.
+- Spacing/layout: dark radar and a 1.85:1 sidebar grid, 24px gaps, consistent 18–24px radii; evidence cards below. Checked 1280/1440/1920 desktop widths, no horizontal overflow and all radar labels within chart bounds. Screenshots use CSS pixels/deviceScaleFactor1; source and local viewport differ, so comparison is composition rather than coordinate matching.
+- Color: lavender canvas, dark #14172d radar, purple line, lime coverage indicator, pale cards and dark actions retained. Empty/null labels are distinct from a measured0%.
+- Image quality: chart renders at native device pixel ratio up to2, no raster chart enlargement; existing brand assets unchanged.
+- Copy/content: sample ability scores, interests, modality counts and badges replaced by real record counts, denominator explanations and actionable next learning. Existing course67% remains course progress; teacher practice verification is separate.
+
+Resolved P1: route coverage now uses pinned versions and suppresses ratios if a required version is unavailable. Time filtering cannot erase prerequisite evidence. Resolved P1: plan creation updates the parent personal-space task list immediately, verified by navigating from the real MyLearning component to PlanManager. Resolved P2: unknown directions, missing feedback/teacher evidence and optional service failures display explicit states instead of fabricated values. Account changes clear old learner data and stale requests.
+
+Accepted evidence: professional-portrait-20261029/portrait-1440.png, route-1440.png, legacy-1440.png, desktop-1280.png, desktop-1440.png, desktop-1920.png, empty-1440.png, integrated-plan.png and verification.json. Opened and inspected rendered captures against the supplied composition, including dense evidence cards and empty state. 12 model tests,157 platform tests,19 Sites compatibility tests passed. Browser interactions cover scope/time controls, direction evidence, practice toggle, exact version navigation,25-course pagination, plan success/failure retry, actual parent task navigation, refresh, optional/required errors and account switching; console errors0.
+
+Accepted differences: six existing professional direction labels plus actual legacy categories replace the reference's eight unsupported ability scores. Evidence details and transparent completion formulas are added. Production authenticated learning/teacher writes, paid model calls and mobile-specific design are not certified by this component pass. No remaining P0/P1/P2 in the requested desktop phase.
+
+final result: passed
+
+## 2026-10-29 — final desktop overlap and interaction audit
+
+Visual grounding: user's supplied F:/屏幕截图 2026-10-29 125302.png and fresh actual-component captures under design-qa-assets/platform-final-20261029/. Existing MORPH design is retained; this is a repair pass, not a new visual direction. IAB connection timed out; used the previously authorized Playwright fallback.
+
+24 page entrances and33 measured states captured. Accepted before/after evidence includes case-video-scroll, short-search, short-atom, document-preview and report-dialog. Captures were opened and inspected, including workflow/admin empty states, course cards, actual sample Word/PPT rendering, long feedback, student reflection form and media controls. Known fixture schema errors were corrected and rejected as product findings.
+
+Typography: old7–10px search and workflow/admin auxiliary text replaced by12–14px supporting text and readable actions. Layout rhythm: bounded search/feedback panels, static reading navigation, flexible document frame, consistent18px surfaces and40px actions. Colors: lavender, purple, white surfaces and dark primary actions preserved. Image quality: original platform assets and an authorized local video reused, no fabricated artwork. Copy: source filenames remain available for download only; progress and the distinction between rule suggestions and model generation are unchanged.
+
+Resolved: case navigation67px overlap ->0; search panel bottom853px ->704px in a720px window; feedback panel2387px ->680px with internal scrolling; document frame previously28px outside dialog ->within bounds; report background scroll301px ->0; download now triggers native download and preserves page; quota dialogs receive focus management/Escape and return focus. Localized overview review dates and additional legacy auxiliary typography cleaned up.
+
+Full numbered findings, recommendations, accepted screenshot flow and limits are in docs/platform-final-audit-20261029.md. Browser verification and production build must complete before deployment. Production authenticated business writes and paid model calls are not part of this pass; no claim of mobile or full accessibility certification.
+
+final result: passed
+
+Final modal-stack verification: all remaining manual body locks now share pageScrollLock. Nested review/image Escape and simultaneous route unmount passed, with body overflow restored. Final production build and160 platform/52 chat tests rerun after these changes;19 Sites tests passed earlier in this same audit.
+
+Deployment verified: final-ui-audit-20261029-r2, entry index-Bw3y5BS2.js matches local build, HTML no-store. API image unchanged;19 works/9 featured/43 media/30 atoms/13 legacy published courses retained.

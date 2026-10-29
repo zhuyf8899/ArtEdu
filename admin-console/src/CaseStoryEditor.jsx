@@ -1,3 +1,4 @@
+import {lockPageScroll} from './pageScrollLock.js';
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createWork, getWork, updateWork, uploadWorkAsset, getWorkUploadPolicy } from "./services/adminApi.js";
@@ -27,8 +28,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose: closeEdi
   closeState.current = { busy, onClose };
   useEffect(() => {
     const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockPage=lockPageScroll();
     const focusable = () => [...dialog.current.querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled)')].filter(element => !element.matches(':disabled'));
     focusable()[0]?.focus({ preventScroll: true });
     const handleKey = event => {
@@ -43,7 +43,7 @@ export function CaseStoryEditor({ initial, workflows, onSaved, onClose: closeEdi
     };
     document.addEventListener("keydown", handleKey);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlockPage();
       document.removeEventListener("keydown", handleKey);
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };

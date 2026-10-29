@@ -1,3 +1,4 @@
+import {lockPageScroll} from './pageScrollLock.js';
 /**
  * 【课程页面】从 API 加载目录与课程详情，处理选课、课时进度和资料展示。读代码时先找组件状态与 useEffect，再追一个按钮的处理函数；对应后端在 modules/courses。这里的界面限制不能代替后端权限校验。
  */
@@ -83,7 +84,7 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
   }, [selected?.id, initialCourseId, initialLessonId]);
 
   const showCourse = (courseId) => onNavigate ? onNavigate(withReturnTarget(`/learning?course=${encodeURIComponent(courseId)}`)) : openCourse(courseId);
-  const returnToCatalog = () => { courseRequest.current++; setSelected(null); if(onNavigate) onNavigate(context.to||"/learning?library=legacy"); };
+  const returnToCatalog = () => { courseRequest.current++; setSelected(null); if(onNavigate) onNavigate(context.to||"/learning?library=courses"); };
   const openCourse = async (courseId) => {
     // 请求编号防止快速切换课程时，较早请求的结果覆盖后来选中的课程。
     const requestId = ++courseRequest.current;
@@ -140,7 +141,7 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
   };
 
   if (selected) return <section className="learning-detail">
-    <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} weight="bold" /> {context.to?context.label:'返回课程库'}</button>
+    <div className="learning-detail-navigation"><button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} weight="bold" /> {context.to?context.label:'返回完整课程'}</button>{onNavigate&&<button className="atomic-button secondary" onClick={()=>onNavigate(withReturnTarget('/learning?library=atoms&query='+encodeURIComponent(selected.title)))}>查找相关原子 ↗</button>}</div>
     <div className="learning-detail__hero"><div><span>{selected.method} · {selected.category} · {variant === 'morph' ? morphCourseLevel(selected) : difficultyName(selected.difficulty)}</span><h2>{selected.title}</h2><p>{selected.summary}</p><div><Clock size={16} /> {selected.estimatedMinutes} 分钟{selected.availability==='coming_soon'?'（规划时长）':` · ${selected.lessonCount} 个课时`} · 作者 {selected.author}</div><div className="learning-detail__tools"><Wrench size={15} /> {selected.tools.join(" / ")}</div></div>
       <aside className={courseProgress(selected)>=100?'is-complete':''} aria-label="课程学习进度">
         <strong>{selected.availability==='coming_soon'?'筹备中':`${courseProgress(selected)}%`}</strong>
@@ -170,6 +171,7 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
     {selected.resources?.length > 0 && <CourseMaterials resources={selected.resources} />}
   </section>;
 
+  if (initialCourseId) return detailError ? <section className="resource-load-state resource-load-state--error" role="alert"><strong>课程暂时无法打开</strong><p>{detailError}</p><button onClick={()=>openCourse(initialCourseId)}>重新加载课程</button><button onClick={returnToCatalog}>{context.to?context.label:'返回完整课程'}</button></section> : <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin"/><strong>正在打开课程…</strong><p>正在同步课时与学习进度。</p></section>;
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载{variant==='morph'?'原子课程':' AI 讲堂'}</strong><p>正在同步课程、作者和工具标签。</p></section>;
   if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>{variant==='morph'?'原子课程':'AI 讲堂'}暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
 
@@ -253,11 +255,10 @@ function VideoMaterial({ resource, source, cover, meta }) {
     if (!enlarged) return undefined;
     const onKeyDown = (event) => { if (event.key === "Escape") setEnlarged(false); };
     window.addEventListener("keydown", onKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockPage=lockPageScroll();
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
+      unlockPage();
     };
   }, [enlarged]);
 

@@ -263,7 +263,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </>}
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
-        {section === "courses" && <AtomicLearningHub account={account} library={learningLibrary || (learningCourseId ? 'legacy' : '')} nodeId={learningNodeId} revision={learningNodeRevision} onNavigate={onNavigate} legacy={<LearningLibrary accountId={account.id} variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onCourseChange={syncCourse} onNavigate={onNavigate} onNotice={showToast} />} />}
+        {section === "courses" && <AtomicLearningHub account={account} library={learningLibrary || (learningCourseId ? 'legacy' : '')} nodeId={learningNodeId} revision={learningNodeRevision} legacyCourseId={learningCourseId} onNavigate={onNavigate} legacy={<LearningLibrary accountId={account.id} variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onCourseChange={syncCourse} onNavigate={onNavigate} onNotice={showToast} />} />}
         {section === 'curriculum' && <CurriculumComposer courses={data.courses} topic={curriculumTopic} loading={portalLoading} error={portalError} onRetry={loadPortalData} onNavigate={onNavigate} onNotice={showToast}/>}
 
         {section === "studio" && <WorkflowStudio accountId={account.id} variant={morph ? 'morph' : 'classic'} initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}

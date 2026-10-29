@@ -1,3 +1,4 @@
+import {lockPageScroll} from './pageScrollLock.js';
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowClockwise, CaretLeft, CaretRight, Check, X } from "@phosphor-icons/react";
@@ -27,9 +28,8 @@ function ReviewDetail({ review, onClose, onDecision, onPrevious, onNext, positio
   }, [review.id, attempt]);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow, previousFocus = document.activeElement;
-    document.body.style.overflow = "hidden"; closeRef.current?.focus();
-    return () => { document.body.style.overflow = previousOverflow; if (previousFocus?.isConnected) previousFocus.focus?.({ preventScroll: true }); };
+    const unlockPage=lockPageScroll(), previousFocus = document.activeElement; closeRef.current?.focus();
+    return () => { unlockPage(); if (previousFocus?.isConnected) previousFocus.focus?.({ preventScroll: true }); };
   }, []);
 
   useEffect(() => {

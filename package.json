@@ -20,7 +20,7 @@
     "db:prepare": "npm run db:up && npm run db:migrate && npm run db:seed && npm --prefix apps/api run showcase:install && npm run catalog:install",
     "check": "npm run check:api && npm run check:api:test && npm run check:atomic && npm run check:web && npm run check:morph && npm run test:case-import && node --test scripts/reliability.test.mjs scripts/start-case-local.test.mjs",
     "check:atomic": "npm --prefix apps/api run build && node --test apps/api/dist/modules/atomic/atomic.test.js admin-console/tests/atomic-learning.test.mjs admin-console/tests/atomic-attachments.test.mjs admin-console/tests/atomic-particles.test.mjs",
-    "test:case-import": "node --test scripts/import-community-cases.test.mjs apps/api/scripts/install-community-showcase.test.mjs apps/api/scripts/install-morph-catalog.test.mjs",
+    "test:case-import": "node --test scripts/import-community-cases.test.mjs apps/api/scripts/install-community-showcase.test.mjs apps/api/scripts/install-morph-catalog.test.mjs apps/api/scripts/install-atomic-handoff.test.mjs apps/api/scripts/install-cvpr-showcase.test.mjs",
     "check:runtime": "node scripts/check-runtime.mjs",
     "test:chat:live": "node scripts/verify-demo-chat.mjs",
     "test:documents:live": "node scripts/verify-document-generation.mjs",
@@ -28,6 +28,7 @@
     "check:api": "cd apps/api && npm run typecheck",
     "check:api:test": "npm --prefix apps/api run test:security",
     "check:web": "cd admin-console && npm run build && npm run test:sites && npm run test:chat && npm run test:platform",
-    "check:morph": "npm --prefix admin-console run test:morph && npm --prefix apps/api run test:morph"
+    "check:morph": "npm --prefix admin-console run test:morph && npm --prefix apps/api run test:morph",
+    "test:ui:final": "node scripts/verify-platform-final-ui.mjs"
   }
 }

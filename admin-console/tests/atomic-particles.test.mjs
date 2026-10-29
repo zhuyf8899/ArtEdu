@@ -2,6 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {atomicCardState,atomicNetworkGraph,atomicNetworkKey} from '../src/morph/atomicParticlesModel.js';
 import {readFile,access} from 'node:fs/promises';
+import {courseResources,filterCourseResources,atomicContentLabel} from '../src/morph/learningCatalogModel.js';
+
+test('统一课程目录保留同名资源的独立身份及真实进度，不按标题覆盖',()=>{
+ const resources=courseResources([{id:'legacy-color',title:'色彩',category:'设计基础',availability:'trial',progressPercent:67}],[{id:'atom-color',revision:2,kind:'course',status:'published',title:'色彩',required:3,completed:0,started:false}]);
+ assert.equal(resources.length,2);assert.equal(new Set(resources.map(r=>r.key)).size,2);assert.equal(resources.find(r=>r.type==='legacy').progress,67);assert.equal(resources.find(r=>r.type==='atomic').progress,0);
+});
+test('课程分类数量随开放状态与搜索变化，不再以全部目录计数冒充筛选数量',()=>{
+ const resources=courseResources([{id:'open',title:'配色',category:'设计基础',availability:'trial'},{id:'planned',title:'图表',category:'设计方法',availability:'coming_soon'}],[]);
+ assert.deepEqual(filterCourseResources(resources,{availability:'available'}).facets,{'设计基础':1});assert.deepEqual(filterCourseResources(resources,{availability:'planned'}).facets,{'设计方法':1});assert.equal(filterCourseResources(resources,{availability:'all',query:'配色'}).total,1);assert.equal(filterCourseResources(resources,{availability:'available',stage:'completed'}).total,0);
+ assert.equal(atomicContentLabel({id:'morph-handoff-atom-example',kind:'teaching'}),'知识大纲');
+});
+
+test('系列课程保留10次课、19处课程节点和全部34处下级知识内容',async()=>{
+ const template=JSON.parse(await readFile(new URL('../src/morph/handoffSeriesTemplate.json',import.meta.url),'utf8'));
+ const nodes=[];const visit=n=>{if(typeof n==='string')return;nodes.push(n);n.children.forEach(visit);};visit(template);
+ assert.equal(nodes.filter(n=>n.props.className==='lesson-session').length,10);
+ assert.equal(nodes.filter(n=>n.props.className==='lesson-topic').length,19);
+ assert.equal(nodes.filter(n=>n.props['data-point']==='true').length,34);
+ assert.ok(nodes.every(n=>!['script','iframe','object'].includes(n.tag)&&!Object.keys(n.props).some(k=>/^on/i.test(k))));
+ for(const n of nodes.filter(n=>n.tag==='img')){assert.ok(n.props.src.startsWith('/morph-course-network/series/'));await access(new URL('../public'+n.props.src,import.meta.url));}
+});
 
 test('交接课程网保留原始三处课程锚点、原图连线与13个交互入口',async()=>{
  const template=JSON.parse(await readFile(new URL('../src/morph/atomicReferenceNetwork.json',import.meta.url),'utf8'));

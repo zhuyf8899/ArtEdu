@@ -1,3 +1,4 @@
+import {lockPageScroll} from '../pageScrollLock.js';
 import { useEffect, useRef, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 import { emptyToolDraft, readToolDraft, toolDraftKey, validateToolDraft } from './toolRecommendation.js';
@@ -9,9 +10,9 @@ export function ToolRecommendationDialog({accountId,onClose,onNotice}) {
   const [items,setItems]=useState([]),[sending,setSending]=useState(false);
   useEffect(()=>{let active=true;getToolRecommendations().then(data=>{if(active)setItems(data.items||[]);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[]);
   useEffect(()=>{
-    const element=dialog.current,opener=document.activeElement,previous=document.body.style.overflow;
-    element.showModal();document.body.style.overflow='hidden';
-    return ()=>{element.close();document.body.style.overflow=previous;if(opener?.isConnected)opener.focus();};
+    const element=dialog.current,opener=document.activeElement,unlockPage=lockPageScroll();
+    element.showModal();
+    return ()=>{element.close();unlockPage();if(opener?.isConnected)opener.focus();};
   },[]);
   const submit=e=>{
     e.preventDefault();setError('');

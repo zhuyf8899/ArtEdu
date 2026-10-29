@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {createPortal} from 'react-dom';
 import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, Flag, Heart, ImageSquare, MagnifyingGlass, PaperPlaneTilt, Plus, SpinnerGap, X } from "@phosphor-icons/react";
 import { addWorkComment, getMyWorks, getWork, getWorkflows, getWorks, reportComment, reportWork, submitWork, toggleWorkReaction, setWorkCollection } from "./services/adminApi.js";
 import { CaseStoryEditor } from "./CaseStoryEditor.jsx";
@@ -229,8 +230,8 @@ function ReportDialog({ target, onClose, onSubmit }) {
   const [reason, setReason] = useState("other");
   const [description, setDescription] = useState("");
   const root=useRef(null),[sending,setSending]=useState(false);
-  const close=useRef(onClose);close.current=onClose;
-  const stableClose=useRef(()=>close.current());
+  const close=useRef({onClose,sending});close.current={onClose,sending};
+  const stableClose=useRef(()=>{if(!close.current.sending)close.current.onClose();});
   useDialogFocus(root,stableClose.current);
-  return <div ref={root} className="case-image-viewer" role="dialog" aria-modal="true" aria-labelledby="report-dialog-title"><button className="case-image-viewer__backdrop" onClick={onClose} aria-label="关闭举报" tabIndex={-1}/><form className="report-dialog" onSubmit={async event => { event.preventDefault(); if(sending)return;setSending(true);try{await onSubmit({ reason, description });}finally{setSending(false);} }}><h3 id="report-dialog-title">举报{target.label}</h3><label>举报类型<select value={reason} onChange={event => setReason(event.target.value)}><option value="violence">暴力内容</option><option value="pornography">色情内容</option><option value="harassment">辱骂或骚扰</option><option value="spam">广告或垃圾信息</option><option value="other">其他问题</option></select></label><label>说明<textarea required minLength={2} maxLength={1000} value={description} onChange={event => setDescription(event.target.value)} placeholder="请简要说明举报原因" /></label><div><button type="button" onClick={onClose}>取消</button><button type="submit" disabled={sending}>{sending?'正在提交…':'提交举报'}</button></div></form></div>;
+  return createPortal(<div ref={root} className="case-image-viewer" role="dialog" aria-modal="true" aria-labelledby="report-dialog-title"><button className="case-image-viewer__backdrop" disabled={sending} onClick={stableClose.current} aria-label="关闭举报" tabIndex={-1}/><form className="report-dialog" onSubmit={async event => { event.preventDefault(); if(sending)return;setSending(true);try{await onSubmit({ reason, description });}finally{setSending(false);} }}><h3 id="report-dialog-title">举报{target.label}</h3><label>举报类型<select value={reason} onChange={event => setReason(event.target.value)}><option value="violence">暴力内容</option><option value="pornography">色情内容</option><option value="harassment">辱骂或骚扰</option><option value="spam">广告或垃圾信息</option><option value="other">其他问题</option></select></label><label>说明<textarea required minLength={2} maxLength={1000} value={description} onChange={event => setDescription(event.target.value)} placeholder="请简要说明举报原因" /></label><div><button type="button" disabled={sending} onClick={stableClose.current}>取消</button><button type="submit" disabled={sending}>{sending?'正在提交…':'提交举报'}</button></div></form></div>,document.body);
 }

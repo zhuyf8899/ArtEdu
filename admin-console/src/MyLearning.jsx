@@ -153,7 +153,7 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
     const currentView = mySpaceView(learningView, learningAtlas);
     const onView = target => onNavigate('/my-learning' + (target === 'overview' ? '' : '?view=' + encodeURIComponent(target)));
     const safeData = data.profile?.id === account.id ? data : EMPTY_DATA;
-    return <MorphMySpace account={account} data={{...safeData,favorites:enrichFavoriteRecords(safeData.favorites,caseCatalog)}} creation={creation} view={currentView} onView={onView} onNavigate={onNavigate}
+    return <MorphMySpace onTaskSaved={task=>setData(current=>({...current,tasks:current.tasks.some(t=>t.id===task.id)?current.tasks:[task,...current.tasks]}))} account={account} data={{...safeData,favorites:enrichFavoriteRecords(safeData.favorites,caseCatalog)}} creation={creation} view={currentView} onView={onView} onNavigate={onNavigate}
       loading={loading} error={loadError} onRetry={load}>
       {currentView === 'plan' && <PlanManager data={safeData} onSaved={task=>setData(current=>({...current,tasks:current.tasks.some(t=>t.id===task.id)?current.tasks.map(t=>t.id===task.id?task:t):[task,...current.tasks]}))} onToggle={toggleTask} onDelete={removeTask} onNavigate={onNavigate} onNotice={onNotice}/>}
       {currentView === 'notes' && <NotesManager notes={safeData.notes} courses={safeData.courses} onSaved={note=>setData(current=>({...current,notes:current.notes.some(n=>n.id===note.id)?current.notes.map(n=>n.id===note.id?note:n):[note,...current.notes]}))} onDelete={removeNote} onNavigate={onNavigate} onNotice={onNotice}/>}

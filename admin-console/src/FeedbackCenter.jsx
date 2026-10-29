@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle, Info, WarningCircle, X } from "@phosphor-icons/react";
+import {lockPageScroll} from './pageScrollLock.js';
 
 const FeedbackContext = createContext(null);
 
@@ -10,6 +11,7 @@ export function FeedbackProvider({ children }) {
   const [dialog, setDialog] = useState(null);
   const timers = useRef(new Map());
   const dialogElement=useRef(null);
+  useEffect(()=>dialog?lockPageScroll():undefined,[Boolean(dialog)]);
 
   const dismiss = useCallback((id) => {
     setNotices((current) => current.filter((notice) => notice.id !== id));

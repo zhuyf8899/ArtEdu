@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import {lockPageScroll} from './pageScrollLock.js';
 import { ArrowClockwise, CaretLeft, CaretRight, DownloadSimple, X } from '@phosphor-icons/react';
 import { MAX_PREVIEW_BYTES, previewKind, readPreviewBlob, validateOfficeArchive } from './documentPreview.js';
 import './document-preview.css';
@@ -94,7 +95,7 @@ export function DocumentPreview({ blob, src, fileName = '', mimeType = '' }) {
 
 export function DocumentPreviewDialog({ fileName, src, blob, mimeType, downloadUrl, onClose }) {
   const dialog = useRef(null);
-  useEffect(() => { const previous = document.activeElement, element = dialog.current; element.showModal(); return () => { element.close(); requestAnimationFrame(() => { if (previous?.isConnected) previous.focus(); }); }; }, []);
+  useEffect(() => { const previous = document.activeElement, element = dialog.current; element.showModal();const unlock=lockPageScroll(); return () => { element.close();unlock(); requestAnimationFrame(() => { if (previous?.isConnected) previous.focus({preventScroll:true}); }); }; }, []);
   return createPortal(<dialog ref={dialog} className="document-preview-dialog" onCancel={onClose} aria-label={`${fileName}预览`}>
     <header><div><small>DOCUMENT VIEWER</small><strong>{fileName}</strong></div><div>{downloadUrl && <a href={downloadUrl} download={fileName.split('/').pop()}><DownloadSimple size={17} />下载原件</a>}<button type="button" onClick={onClose} aria-label="关闭文档预览"><X size={21} /></button></div></header>
     <DocumentPreview fileName={fileName} src={src} blob={blob} mimeType={mimeType} />

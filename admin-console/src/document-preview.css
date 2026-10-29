@@ -8,7 +8,11 @@
 .document-preview-dialog>header a{font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:#6554e8}
 .document-preview-dialog>header button{display:grid;place-items:center;min-width:36px;height:36px;background:#f3f0fc;border:1px solid #e2e0f6;border-radius:9px;color:#55506f;cursor:pointer}
 .document-preview{height:100%;min-height:0;display:flex;flex-direction:column;position:relative;background:#efedf6;font-size:14px;color:#111838}
-.document-preview-dialog>.document-preview{height:calc(100% - 70px)}
+.document-preview-dialog,.document-preview-dialog *{box-sizing:border-box}
+.document-preview-dialog[open]{display:flex;flex-direction:column}
+.document-preview-dialog>header{flex:none}
+.document-preview-dialog>header>div:last-child{flex-shrink:0}
+.document-preview-dialog>.document-preview{height:auto;flex:1;min-height:0}
 .document-preview__toolbar{min-height:48px;padding:8px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;border-bottom:1px solid #e2e0f6;background:#faf9fd;font-size:13px}
 .document-preview__toolbar small{font-size:11px;color:#7b7892}
 .document-preview__paging{display:flex;align-items:center;gap:6px}

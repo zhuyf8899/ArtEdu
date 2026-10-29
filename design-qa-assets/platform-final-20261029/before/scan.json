@@ -1,0 +1,429 @@
+{
+  "scans": [
+    {
+      "name": "01-home",
+      "route": "/",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 2745,
+      "title": "让创意生长于艺术与智能之间",
+      "alerts": [],
+      "sticky": [],
+      "outside": [
+        "title-button",
+        "button secondary",
+        "button"
+      ]
+    },
+    {
+      "name": "02-courses",
+      "route": "/learning?library=courses",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1559,
+      "title": "原子课程",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "03-atoms",
+      "route": "/learning?library=atoms",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1425,
+      "scrollHeight": 5266,
+      "title": "原子课程",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "04-atom-detail",
+      "route": "/learning?library=atoms&node=morph-handoff-atom-ac539963cda9ab9c&revision=1",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1580,
+      "title": "原子课程",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "atomic-learning-card",
+          "top": "90px",
+          "height": 456.75
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "05-course-detail",
+      "route": "/learning?course=morph-course-col-01",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 3465,
+      "title": "原子课程",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "lesson-outline",
+          "top": "64px",
+          "height": 137.5
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "06-series",
+      "route": "/learning?library=courses&node=morph-handoff-infographic-2026&revision=1",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 3777,
+      "alerts": [],
+      "sticky": [],
+      "outside": [
+        "09CNN必修 · 未开始",
+        "10Vibe Coding必修 · 未开始",
+        "11动捕实验室必修 · 未开始",
+        "12科学可视化必修 · 未开始",
+        "13小组讨论、初步方案设计与研讨必修 · 未开始",
+        "14小组初步方案陈述与优化设计必修 · 未开始",
+        "15小组方案制作与辅导必修 · 未开始",
+        "16参观展览必修 · 未开始"
+      ]
+    },
+    {
+      "name": "07-community",
+      "route": "/community",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 3088,
+      "title": "案例社区",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "08-case",
+      "route": "/community?work=qa-work-0",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 2739,
+      "title": "Fertile Matrices",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "case-reading-nav",
+          "top": "64px",
+          "height": 67.1875
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "caseVideoOverlap",
+      "overlap": 67.1875
+    },
+    {
+      "name": "09-tools",
+      "route": "/studio",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 4281,
+      "title": "专项技能工具",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "10-create",
+      "route": "/create",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000,
+      "title": "新的创作对话",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "11-space",
+      "route": "/my-learning",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 2931,
+      "title": "页面核对用户",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "12-portrait",
+      "route": "/my-learning?view=portrait",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1926,
+      "title": "页面核对用户",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "13-plan",
+      "route": "/my-learning?view=plan",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1042,
+      "title": "页面核对用户",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "14-notes",
+      "route": "/my-learning?view=notes",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1376,
+      "title": "页面核对用户",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "15-search",
+      "route": "/search?query=设计",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1611,
+      "title": "探索知识与创作",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "search-filters",
+          "top": "88px",
+          "height": 765
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "16-curriculum",
+      "route": "/curriculum",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000,
+      "title": "课程路径建议",
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "17-admin",
+      "route": "/admin",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000,
+      "title": "调用统计",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "sidebar ",
+          "top": "0px",
+          "height": 1000
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "18-admin-users",
+      "route": "/admin/users",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000,
+      "title": "用户与 API 额度",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "sidebar ",
+          "top": "0px",
+          "height": 1000
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "19-admin-courses",
+      "route": "/admin/courses",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 3911,
+      "title": "课程资源管理",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "sidebar ",
+          "top": "0px",
+          "height": 1000
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "20-admin-reviews",
+      "route": "/admin/reviews",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000,
+      "title": "内容审核",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "sidebar ",
+          "top": "0px",
+          "height": 1000
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "21-admin-reports",
+      "route": "/admin/reports",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000,
+      "title": "举报处理",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "sidebar ",
+          "top": "0px",
+          "height": 1000
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "22-admin-knowledge",
+      "route": "/admin/knowledge",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1092,
+      "title": "知识图谱管理",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "sidebar ",
+          "top": "0px",
+          "height": 1000
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "23-admin-workflows",
+      "route": "/admin/workflows",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000,
+      "title": "节点工作流",
+      "alerts": [],
+      "sticky": [
+        {
+          "class": "sidebar ",
+          "top": "0px",
+          "height": 1000
+        }
+      ],
+      "outside": []
+    },
+    {
+      "name": "24-canvas",
+      "route": "/canvas",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000,
+      "alerts": [],
+      "sticky": [],
+      "outside": []
+    },
+    {
+      "name": "25-short-search",
+      "height": 765,
+      "bottom": 853,
+      "clientHeight": 763,
+      "scrollHeight": 763,
+      "overflowY": "hidden"
+    },
+    {
+      "name": "26-short-admin",
+      "height": 720,
+      "bottom": 720,
+      "clientHeight": 720,
+      "scrollHeight": 784,
+      "overflowY": "auto"
+    },
+    {
+      "name": "27-short-atom",
+      "height": 2387.40625,
+      "bottom": 2996.15625,
+      "clientHeight": 2385,
+      "scrollHeight": 2385,
+      "overflowY": "visible"
+    },
+    {
+      "name": "28-short-create",
+      "height": 664,
+      "bottom": 720,
+      "clientHeight": 664,
+      "scrollHeight": 664,
+      "overflowY": "hidden"
+    },
+    {
+      "name": "29-report-dialog",
+      "top": 0,
+      "bottom": 720,
+      "bodyOverflow": ""
+    },
+    {
+      "name": "reportBackgroundScroll",
+      "delta": 301
+    },
+    {
+      "name": "30-document-preview",
+      "bottom": 692.1875,
+      "frameBottom": 720.1875,
+      "headerHeight": 99,
+      "bodyOverflow": ""
+    },
+    {
+      "name": "31-resource-download",
+      "downloaded": false,
+      "remainedOnPage": false
+    }
+  ],
+  "errors": [],
+  "unknown": []
+}
