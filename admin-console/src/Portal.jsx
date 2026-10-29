@@ -76,7 +76,7 @@ export function LocalLogin({ onLogin, message = "" }) {
     <section className="test-login__intro">
       <div className="test-login__brand"><strong>MORPH LAB</strong><small>AI + Design 实验室 · ArtEdu</small></div>
       <h1>登录后进入<br />学习与创作空间。</h1>
-      <p>课程进度、学习笔记和已保存作品跟随账号保存。创作对话仅保存在当前浏览器，请及时导出需要保留的记录。</p>
+      <details><summary>记录保存说明</summary><p>课程进度、学习笔记和已保存作品跟随账号保存。创作对话保存在当前浏览器，请导出需要保留的记录。</p></details>
     </section>
     <section className="test-login__accounts">
       <div className="account-panel__heading"><h2>账号登录</h2></div>

@@ -172,7 +172,7 @@ export function LearningLibrary({ onNotice, onNavigate, onCourseChange, initialC
   </section>;
 
   if (initialCourseId) return detailError ? <section className="resource-load-state resource-load-state--error" role="alert"><strong>课程暂时无法打开</strong><p>{detailError}</p><button onClick={()=>openCourse(initialCourseId)}>重新加载课程</button><button onClick={returnToCatalog}>{context.to?context.label:'返回完整课程'}</button></section> : <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin"/><strong>正在打开课程…</strong><p>正在同步课时与学习进度。</p></section>;
-  if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载{variant==='morph'?'原子课程':' AI 讲堂'}</strong><p>正在同步课程、作者和工具标签。</p></section>;
+  if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载{variant==='morph'?'原子课程':' AI 讲堂'}</strong></section>;
   if (catalogError) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} weight="bold" /><strong>{variant==='morph'?'原子课程':'AI 讲堂'}暂时无法加载</strong><p>{catalogError}</p><button onClick={loadCatalog}>重新加载</button></section>;
 
   if (variant === 'morph') return <>{detailError&&initialCourseId&&<div className="catalog-notice" role="alert">{detailError}<button onClick={returnToCatalog}>{context.to?context.label:'返回课程库'}</button></div>}<MorphCourseCatalog embedded accountId={accountId} courses={courses} onOpen={showCourse} onNavigate={onNavigate} /></>;
