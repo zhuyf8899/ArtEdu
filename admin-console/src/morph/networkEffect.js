@@ -1,11 +1,14 @@
+import { mountQuality, frameBudget } from './displayQuality.js';
 
-export function mountNetwork(root) {
+export function mountNetwork(root) { return mountQuality(root, mountEffect); }
+function mountEffect(root, quality) {
+const reportFrame = frameBudget(quality);
 const BG='#F2F1FA',P=[99,82,237],Y=[221,247,68],TAU=Math.PI*2;
 const SPEED=1.6,RANGE=160;
 const stage=root.querySelector('#effect-stage'),canvas=root.querySelector('#effect-canvas'),ctx=canvas.getContext('2d');
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 let W=0,H=0,dpr=1,time=0,mode=0;
-let paused=reduced.matches,last=0,raf=0,visible=true;
+let paused=reduced.matches||!quality.fps,last=0,raf=0,visible=true;
 const mouse={x:0,y:0,on:false};
 let seed=902;
 function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
@@ -14,7 +17,7 @@ const u=Math.max(0,Math.min(1,yellow));
 const c=P.map((v,i)=>Math.round(v+(Y[i]-v)*u));
 return `rgba(${c.join(',')},${Math.max(0,Math.min(1,a))})`;
 }
-const particles=Array.from({length:290},()=>({
+const particles=Array.from({length:Math.round(290*quality.scale)},()=>({
 x:(rnd()-.5)*1000,y:(rnd()-.5)*570,z:rnd()*640-120,
 vx:(rnd()-.5)*30,vy:(rnd()-.5)*25,vz:(rnd()-.5)*24,
 phase:rnd()*TAU,r:1+rnd()*1.2,accent:rnd()>.92,pull:0
@@ -153,13 +156,14 @@ mode?floating():network();
 
 }
 function resize(){
-const r=stage.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);
+const r=stage.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,quality.dpr);
 canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);draw();
 }
 function frame(now){
 raf=0;if(paused||!visible||document.hidden)return;
+if(last && now-last < 1000/quality.fps-1){raf=requestAnimationFrame(frame);return;}
 const dt=last?Math.min((now-last)/1000,.04):0;last=now;
-update(dt);draw();raf=requestAnimationFrame(frame);
+const started=performance.now();update(dt);draw();reportFrame(performance.now()-started);raf=requestAnimationFrame(frame);
 }
 function start(){last=0;if(!raf&&!paused&&!reduced.matches&&visible&&!document.hidden)raf=requestAnimationFrame(frame)}
 function stop(){cancelAnimationFrame(raf);raf=0;last=0}
@@ -170,7 +174,7 @@ const pointerLeave=()=>mouse.on=false;stage.addEventListener('pointerleave',poin
 const ro=new ResizeObserver(resize);ro.observe(stage);
 const io=new IntersectionObserver(e=>{visible=e[0].isIntersecting;visible?start():stop()});io.observe(stage);
 const visibility=()=>document.hidden?stop():start();document.addEventListener('visibilitychange',visibility);
-const motion=e=>{paused=e.matches;if(e.matches){mouse.on=false;stop();draw()}else start()};reduced.addEventListener('change',motion);
+const motion=e=>{paused=e.matches||!quality.fps;if(e.matches){mouse.on=false;stop();draw()}else start()};reduced.addEventListener('change',motion);
 const destroy=()=>{stop();ro.disconnect();io.disconnect();stage.removeEventListener('pointermove',pointerMove);stage.removeEventListener('pointerleave',pointerLeave);document.removeEventListener('visibilitychange',visibility);reduced.removeEventListener('change',motion);};resize();start();return destroy;
 
 }

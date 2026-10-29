@@ -1,3 +1,4 @@
+import { mountQuality, frameBudget } from './displayQuality.js';
 
 /* ============================================================
    原子课程背景：提取自用户提供的 codefield.js（无依赖 / 2D Canvas）
@@ -8,7 +9,9 @@
    - 增量重绘（每帧只刷新一段单元格），DPR 自适应，离开视口暂停
    - prefers-reduced-motion：渲染一帧静态图案
    ============================================================ */
-export function mountAtomic(root) {
+export function mountAtomic(root) { return mountQuality(root, mountEffect); }
+function mountEffect(root, quality) {
+const reportFrame = frameBudget(quality);
   'use strict';
 
   var canvas = root.querySelector('#effect-canvas');
@@ -17,7 +20,7 @@ export function mountAtomic(root) {
   if (!ctx) return;
 
   var reduceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var dpr = Math.min(window.devicePixelRatio || 1, quality.dpr);
 
   var CW = 11, CH = 15;          /* 单元格尺寸（CSS px，越小越密） */
   var PHRASES = ['ART&DESIGN', 'AI&DESIGN', 'FORM FOLLOWS FEELING', 'INPUT: CULTURE'];
@@ -201,11 +204,12 @@ export function mountAtomic(root) {
   function frame(now) {
     raf = null;
     if (!running) return;
+    if (lastTime !== null && now-lastTime < 1000/quality.fps-1) { raf = requestAnimationFrame(frame); return; }
     var dt = lastTime === null ? 0 : Math.min((now - lastTime) / 1000, 0.04);
     lastTime = now;
     // 保留原来的时间尺度：60fps 时约每帧 0.011。
     t += dt * 0.66;
-    sweep(perFrame);
+    const started = performance.now(); sweep(perFrame); reportFrame(performance.now()-started);
     raf = requestAnimationFrame(frame);
   }
 
@@ -227,13 +231,13 @@ export function mountAtomic(root) {
     cacheChar = new Array(total).fill('');
     cachePal = new Array(total).fill(-1);
     cursor = 0;
-    perFrame = Math.max(280, Math.min(620, Math.ceil(total / 14)));
+    perFrame = Math.round(Math.max(280, Math.min(620, Math.ceil(total / 14))) * quality.scale);
     ctx.clearRect(0, 0, W, H);
     planPhrases();
     sweep(total);
   }
 
-  var paused = false;
+  var paused = !quality.fps;
   function start() {
     if (running || paused || reduceQuery.matches || !visible || document.hidden) return;
     running = true; lastTime = null;
