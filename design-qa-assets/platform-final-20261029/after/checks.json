@@ -1,0 +1,25 @@
+{
+  "videoSeek": {
+    "duration": 9.966667,
+    "currentTime": 5.481666
+  },
+  "videoNoOverlay": true,
+  "imagePreview": true,
+  "quotaFocusEscape": true,
+  "bulkQuotaEscape": true,
+  "confirmationCancel": true,
+  "lessonNavigation": true,
+  "longFeedbackScroll": true,
+  "pptPaging": true,
+  "studentReflectionAttachment": true,
+  "studentAdminBlocked": true,
+  "toolsList": true,
+  "widths": [
+    1280,
+    1440,
+    1920
+  ],
+  "nestedReviewImageCleanup": true,
+  "liveLoginReachable": true,
+  "consoleErrors": []
+}

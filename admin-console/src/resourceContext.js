@@ -18,6 +18,8 @@ export function restoreResourceScroll(route){
 }
 export function returnContext(search = window.location.search) {
   const to = safeReturnTarget(new URLSearchParams(search).get('returnTo'));
-  const label = to.startsWith('/my-learning') ? (to.includes('favorites') ? '返回收藏案例' : to.includes('works') ? '返回我的作品' : '返回我的空间') : to.startsWith('/community') ? '返回案例社区' : to.startsWith('/search') ? '返回搜索结果' : to.startsWith('/learning')&&new URL(to,'http://local').searchParams.has('course') ? '返回本课程' : to.startsWith('/studio') ? '返回技能工具' : to.startsWith('/curriculum') ? '返回学习路径' : '返回课程库';
+  const learning=to.startsWith('/learning')?new URL(to,'http://local').searchParams:null;
+  const learningLabel=learning?.has('course')?'返回本课程':({atoms:'返回学习原子',courses:'返回完整课程',legacy:'返回完整课程',mine:'返回我的贡献',learning:'返回原子学习记录',review:'返回内容审核',grading:'返回练习评价'}[learning?.get('library')]||'返回学习原子');
+  const label = to.startsWith('/my-learning') ? (to.includes('favorites') ? '返回收藏案例' : to.includes('works') ? '返回我的作品' : '返回我的空间') : to.startsWith('/community') ? '返回案例社区' : to.startsWith('/search') ? '返回搜索结果' : learning ? learningLabel : to.startsWith('/studio') ? '返回技能工具' : to.startsWith('/curriculum') ? '返回学习路径' : '返回完整课程';
   return { to, label };
 }

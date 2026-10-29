@@ -1,0 +1,65 @@
+/* Desktop audit: keep reading controls in flow and make bounded side panels scroll. */
+body.morph-platform .case-reading-nav,body.morph-platform .lesson-outline{position:static;top:auto;z-index:auto;backdrop-filter:none;background:#f8f6ff}
+body.morph-platform :is(#case-gallery,#case-video,#case-process,#case-reflection,#case-discussion-heading,.lesson-card){scroll-margin-top:24px}
+body.morph-platform .case-reading-nav{align-items:center;gap:8px 14px}
+body.morph-platform .case-reading-nav a{display:inline-flex;align-items:center;min-height:40px;padding:8px 10px;border-radius:8px;font-size:14px;line-height:22px}
+body.morph-platform .case-reading-nav a:hover{background:#eee9fb}
+body.morph-platform .case-reading-nav a:focus-visible{outline:2px solid #7b66d4;outline-offset:2px}
+body.morph-platform .atomic-learning-card{top:20px;max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;overflow-wrap:anywhere}
+body.morph-platform .search-filters{top:16px;max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+/* A readable size for the old search summary, facets and empty/result states. */
+body.morph-platform .search-summary{border:1px solid #ded9ef;border-radius:18px;padding:18px 22px;gap:18px;flex-wrap:wrap}
+body.morph-platform .search-summary>div{padding:0 22px 0 0;margin:0;min-width:150px}
+body.morph-platform .search-summary span{font-size:13px;font-weight:400;line-height:22px;color:#6d6986}
+body.morph-platform .search-summary strong{font-size:22px;line-height:30px;color:#25233d;max-width:440px}
+body.morph-platform .search-summary strong small{font-size:13px;font-weight:400}
+body.morph-platform .search-filter-group{padding:18px}
+body.morph-platform .search-filter-group>span{font-size:12px;line-height:20px;color:#73688e}
+body.morph-platform .search-filter-group:not(.search-filter-group--tags)>button{min-height:42px;font-size:13px;line-height:22px;font-weight:500;gap:8px;border-radius:9px;color:#40394f}
+body.morph-platform .search-filter-group button b{font-size:12px;min-width:24px}
+body.morph-platform .search-filter-group:not(.search-filter-group--tags)>button.is-active{background:#eae5f9;color:#4d3d87;border-color:#7d66c6}
+body.morph-platform .search-filter-group:not(.search-filter-group--tags)>button.is-active i{background:#7d66c6}
+body.morph-platform .search-filter-group--tags button{font-size:12px;line-height:20px;padding:6px 9px;background:#f5f2fb;border-color:#e1d9ee;color:#695781;border-radius:7px}
+body.morph-platform .search-filter-group--tags button.is-active{background:#eae4fa;border-color:#9580d2;color:#554086}
+body.morph-platform .search-tag-more summary,body.morph-platform .search-clear{font-size:13px;line-height:22px}
+body.morph-platform .search-clear{min-height:40px;padding:7px 0;color:#765c9d}
+body.morph-platform .search-results>header{border-color:#ded9ef;gap:16px;flex-wrap:wrap}
+body.morph-platform .search-results>header span{font-size:12px;line-height:20px;color:#8270b5}
+body.morph-platform .search-results>header h2{font-size:24px;line-height:34px;letter-spacing:0}
+body.morph-platform .search-sort{font-size:13px;color:#726782}
+body.morph-platform .search-sort select{min-height:40px;font-size:13px;padding:8px 12px;border:1px solid #ded7ef;border-radius:9px;background:#fff;color:#3c344f}
+body.morph-platform .search-empty{border:1px solid #ded9ef;border-radius:18px;background:#ffffffc9;padding:48px 24px;color:#6d6683;box-shadow:none}
+body.morph-platform .search-empty :is(h3,strong){font-size:19px;line-height:29px;color:#353047}
+body.morph-platform .search-empty p{font-size:14px;line-height:25px;margin:12px 0 20px;color:#756a8b}
+body.morph-platform .search-empty button{min-height:42px;padding:10px 16px;background:#201d37;color:#fff;border:1px solid #201d37;border-radius:10px;font-size:14px}
+body.morph-platform .search-card__meta,body.morph-platform .search-card__type,body.morph-platform .search-card__tags span{font-size:12px;line-height:21px}
+body.morph-platform .search-card__body footer button{font-size:14px;line-height:22px;min-height:40px}
+/* Node workflows use the same MORPH rhythm as the tool directory above them. */
+body.morph-platform .workflow-catalog__toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px}
+body.morph-platform .workflow-catalog__toolbar h2{font-size:22px;line-height:32px;letter-spacing:0;margin:6px 0;color:#25223b}
+body.morph-platform .workflow-catalog__toolbar p{font-size:14px;line-height:24px;color:#766c89}
+body.morph-platform .workflow-catalog__actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+body.morph-platform .workflow-catalog__search{display:flex;align-items:center;gap:8px;min-width:0}
+body.morph-platform .workflow-catalog__search input{min-width:0;width:240px;max-width:100%;min-height:42px;padding:10px 12px;border:1px solid #ded8ed;border-radius:10px;background:#fff;color:#39314c;font:inherit;font-size:14px}
+body.morph-platform .workflow-catalog__actions button{min-height:42px;padding:10px 14px;font-size:14px;line-height:22px;border:1px solid #ded7ee;border-radius:10px;background:#fff;color:#65518e;box-shadow:none}
+body.morph-platform .workflow-catalog__actions .primary-button{background:#211e37;color:#fff;border-color:#211e37}
+body.morph-platform .empty-state>strong{font-size:17px;line-height:26px;color:#3c344e}
+body.morph-platform .empty-state>span{font-size:14px;line-height:25px;color:#797087}
+body.morph-platform .empty-state>button{font-size:14px;line-height:22px;min-height:40px}
+body.morph-platform .user-table :is(th,td){font-size:13px;line-height:22px}
+body.morph-platform .user-table :is(.sub-value,.table-meter span){font-size:12px;line-height:21px}
+body.morph-platform .user-table .row-actions button{font-size:13px;min-height:38px}
+body.morph-platform :is(.table-footer,.workflow-admin-pager){font-size:13px;line-height:22px;padding:14px 18px;min-height:56px}
+body.morph-platform :is(.table-footer,.workflow-admin-pager) button{font-size:13px;min-width:36px;min-height:36px;padding:6px 10px}
+body.morph-platform .review-list strong{font-size:14px;line-height:23px}
+body.morph-platform .review-list :is(span,em){font-size:12px;line-height:21px}
+body.morph-platform .tool-directory__manage{font-size:14px;min-height:42px;padding:9px 14px}
+body.morph-platform .bulk-quota-summary{margin:0;padding:16px 20px;font-size:14px;line-height:24px;background:#f1edfa;border:0;border-bottom:1px solid #e1d9ee;color:#66567f}
+body.morph-platform .bulk-quota-summary strong{font-size:16px;color:#4b397c}
+body.morph-platform .report-dialog{width:min(500px,calc(100vw - 40px));max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain;padding:28px;border:1px solid #e2dcef;border-radius:20px;background:#fbfaff;color:#28223c}
+body.morph-platform .report-dialog h3{font-size:21px;line-height:31px;overflow-wrap:anywhere}
+body.morph-platform .report-dialog label{font-size:14px;line-height:24px}
+body.morph-platform .report-dialog :is(select,textarea){font-size:14px;line-height:24px;border-color:#dfd6ed;border-radius:10px;color:#44354f}
+body.morph-platform .report-dialog button{min-height:42px;border-radius:10px;border:1px solid #dcd3eb;font-size:14px}
+body.morph-platform .report-dialog button[type=submit]{background:#231e39;color:#fff}
+@media(max-width:900px){body.morph-platform .search-filters,body.morph-platform .atomic-learning-card{position:static;max-height:none;overflow:visible;scrollbar-gutter:auto}}

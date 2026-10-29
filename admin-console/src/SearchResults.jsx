@@ -135,7 +135,7 @@ export function SearchResults({ accountId='anonymous', initialQuery, fallbackDat
     </div>
 
     <div className="search-layout">
-      <aside className="search-filters">
+      <aside className="search-filters" aria-label="搜索筛选">
         <header><Funnel size={18} weight="bold" /><div><strong>筛选结果</strong><span>按内容类型与标签</span></div></header>
         <div className="search-filter-group"><span>内容类型</span>{TYPE_FILTERS.map(([value, label]) => <button key={value} className={type === value ? "is-active" : ""} aria-pressed={type === value} onClick={() => setType(value)}><i />{morphModuleLabel(label,variant)}<b>{counts[value]}</b></button>)}</div>
         <div className="search-filter-group search-filter-group--tags"><span>相关标签</span><div>{primaryTags.map(tagButton)}</div>{extraTags.length > 0 && <details className="search-tag-more"><summary>更多标签（{extraTags.length}）</summary><div>{extraTags.map(tagButton)}</div></details>}</div>

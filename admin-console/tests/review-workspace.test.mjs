@@ -27,7 +27,8 @@ test('审核工作区使用独立适屏弹窗、固定操作区域和可重试�
   assert.match(source, /disabled={!ready \|\| busy}/);
   assert.match(source, /maxLength=\{1000\}/);
   assert.match(source, /notes\[review.id\]/);
-  assert.match(source, /document.body.style.overflow = previousOverflow/);
+  assert.match(source, /lockPageScroll/);
+  assert.match(source, /unlockPage()/);
   assert.match(source, /event.key === "Tab"/);
   assert.match(source, /\.image-lightbox/);
   assert.match(source, /\.feedback-dialog-layer/);

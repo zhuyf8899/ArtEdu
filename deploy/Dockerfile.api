@@ -17,6 +17,7 @@ COPY admin-console/package.json ./admin-console/package.json
 COPY admin-console/src/curriculumAtlas.js admin-console/src/courseKnowledge.js ./admin-console/src/
 # Content installer verifies the same public covers served by the web image.
 COPY admin-console/public/morph-v17 ./admin-console/public/morph-v17
+COPY admin-console/public/morph-course-network ./admin-console/public/morph-course-network
 
 WORKDIR /app/apps/api
 RUN npm run build

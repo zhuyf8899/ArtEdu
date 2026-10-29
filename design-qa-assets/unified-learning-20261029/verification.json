@@ -1,0 +1,12 @@
+{
+  "networkExpanded": true,
+  "availableCourses": 4,
+  "plannedCourses": 10,
+  "legacyDetail": true,
+  "contextualAtomSearch": true,
+  "directAtomDetail": true,
+  "atomCourseRelation": true,
+  "reflectionAttachment": true,
+  "legacyAliasUnified": true,
+  "errors": []
+}

@@ -1,7 +1,8 @@
 /**
  * 【管理后台】按当前栏目显示总览、用户、额度、审核及相关管理页面。先看导出的 AdminDashboard，再追某个栏目使用的 API；表格、抽屉和表单是界面组件，最终写入由后端验证。
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {useDialogFocus} from './useDialogFocus.js';
 import { ReviewDialog } from "./ReviewDialog.jsx";
 import { reviewDate, reviewStatusLabels } from "./reviewPresentation.js";
 import { RuntimeStatus } from "./RuntimeStatus.jsx";
@@ -132,7 +133,7 @@ function Overview({ users, reviews, dashboard, onNavigate, onEditQuota }) {
       <article className="panel model-panel"><div className="panel__heading"><div><p>// MODEL STATUS</p><h2>模型服务</h2></div><span className="live-chip"><i /> {dashboard ? `${dashboard.activeModels} 个配置已启用` : "读取中"}</span></div>{dashboard && dashboard.activeModels > 0
         ? <div className="empty-state"><Robot size={28} /><strong>模型服务已接入</strong><span>让问题成为想象的入口，让想象逐渐拥有形状。创作问答、图像与文档能力已汇集于此。</span></div>
         : <div className="empty-state"><Robot size={28} /><strong>模型服务未启用</strong><span>用户端仍可使用本地演示流程；接入密钥与执行器后再开放真实生成。</span></div>}</article>
-      <article className="panel review-panel"><div className="panel__heading"><div><p>// REVIEW QUEUE</p><h2>最新待审核</h2></div><button className="text-button" onClick={() => onNavigate("reviews")}>全部审核 <ArrowRight size={16} weight="bold" /></button></div><div className="review-list">{reviews.filter((item) => item.status === "pending").slice(0, 3).map((item, index) => <button key={item.id} onClick={() => onNavigate("reviews")}><span className="queue-index">0{index + 1}</span><div><strong>{item.title}</strong><span>{item.author} · {item.department}</span></div><em>{item.submittedAt}</em><ArrowRight size={17} weight="bold" /></button>)}{reviews.every((item) => item.status !== "pending") && <div className="empty-state empty-state--compact"><Check size={26} /><strong>审核队列已清空</strong><span>新的用户投稿会显示在这里。</span></div>}</div></article>
+      <article className="panel review-panel"><div className="panel__heading"><div><p>// REVIEW QUEUE</p><h2>最新待审核</h2></div><button className="text-button" onClick={() => onNavigate("reviews")}>全部审核 <ArrowRight size={16} weight="bold" /></button></div><div className="review-list">{reviews.filter((item) => item.status === "pending").slice(0, 3).map((item, index) => <button key={item.id} onClick={() => onNavigate("reviews")}><span className="queue-index">0{index + 1}</span><div><strong>{item.title}</strong><span>{item.author} · {item.department}</span></div><em title={item.submittedAt}>{reviewDate(item.submittedAt)}</em><ArrowRight size={17} weight="bold" /></button>)}{reviews.every((item) => item.status !== "pending") && <div className="empty-state empty-state--compact"><Check size={26} /><strong>审核队列已清空</strong><span>新的用户投稿会显示在这里。</span></div>}</div></article>
       <article className="panel quota-alerts"><div className="panel__heading"><div><p>// QUOTA ALERTS</p><h2>额度预警</h2></div><button className="text-button" onClick={() => onNavigate("users")}>管理用户 <ArrowRight size={16} weight="bold" /></button></div>{users.filter((user) => user.monthlyLimit > 0 && user.monthlyUsed / user.monthlyLimit >= 0.7).slice(0, 3).map((user) => { const ratio = Math.round((user.monthlyUsed / user.monthlyLimit) * 100); return <div className="quota-alert" key={user.id}><div className="avatar avatar--outline">{user.initials}</div><div className="quota-alert__info"><strong>{user.name}</strong><span>{user.monthlyUsed} / {user.monthlyLimit} 额度</span></div><div className="quota-alert__meter"><div><i style={{ width: `${ratio}%` }} /></div><span>{ratio}%</span></div><button className="small-button" onClick={() => onEditQuota(user)}>调整</button></div>; })}{!users.some(user=>user.monthlyLimit>0&&user.monthlyUsed/user.monthlyLimit>=0.7)&&<p className="audit-panel-empty">当前没有接近月额度上限的用户。</p>}</article>
     </section>
   </div>;
@@ -197,8 +198,10 @@ function UsersPage({ users, onEditQuota, onToggleStatus, selectedIds, onSelectio
 }
 
 function BulkQuotaDrawer({ count, onClose, onSave }) {
+  const root=useRef(null),close=useRef(onClose);close.current=onClose;const stableClose=useRef(()=>close.current());
+  useDialogFocus(root,stableClose.current);
   const [daily, setDaily] = useState(30); const [monthly, setMonthly] = useState(600); const [concurrent, setConcurrent] = useState(2);
-  return <div className="drawer-layer" role="presentation"><button className="drawer-scrim" onClick={onClose} aria-label="关闭批量额度设置" /><aside className="drawer" aria-label="批量 API 额度设置"><div className="drawer__header"><div><p>// BULK QUOTA POLICY</p><h2>批量设置额度</h2></div><button className="icon-button" onClick={onClose}><X size={21} weight="bold" /></button></div><p className="bulk-quota-summary">将为 <strong>{count}</strong> 个已选用户应用同一套额度策略。</p><form onSubmit={(event) => { event.preventDefault(); onSave({ dailyLimit: Number(daily), monthlyLimit: Number(monthly), concurrentLimit: Number(concurrent) }); }}><div className="field-group"><label htmlFor="bulk-daily">每日额度上限</label><div className="number-field"><input id="bulk-daily" type="number" min="0" value={daily} onChange={(event) => setDaily(event.target.value)} /><span>额度 / 日</span></div></div><div className="field-group"><label htmlFor="bulk-monthly">每月额度上限</label><div className="number-field"><input id="bulk-monthly" type="number" min="0" value={monthly} onChange={(event) => setMonthly(event.target.value)} /><span>额度 / 月</span></div></div><div className="field-group"><label htmlFor="bulk-concurrent">并发任务数</label><div className="number-field"><input id="bulk-concurrent" type="number" min="0" max="100" value={concurrent} onChange={(event) => setConcurrent(event.target.value)} /><span>个任务</span></div></div><div className="policy-note"><Warning size={20} weight="fill" /><p><strong>设置为 0 将立即停止新任务</strong><span>保存后会为每个账户写入独立审计记录。</span></p></div><div className="drawer__actions"><button type="button" className="outline-button" onClick={onClose}>取消</button><button type="submit" className="primary-button">应用到 {count} 个用户 <ArrowRight size={17} /></button></div></form></aside></div>;
+  return <div className="drawer-layer" role="presentation"><button className="drawer-scrim" onClick={onClose} aria-label="关闭批量额度设置" /><aside ref={root} className="drawer" role="dialog" aria-modal="true" aria-label="批量 API 额度设置"><div className="drawer__header"><div><p>// BULK QUOTA POLICY</p><h2>批量设置额度</h2></div><button className="icon-button" aria-label="关闭批量额度设置" onClick={onClose}><X size={21} weight="bold" /></button></div><p className="bulk-quota-summary">将为 <strong>{count}</strong> 个已选用户应用同一套额度策略。</p><form onSubmit={(event) => { event.preventDefault(); onSave({ dailyLimit: Number(daily), monthlyLimit: Number(monthly), concurrentLimit: Number(concurrent) }); }}><div className="field-group"><label htmlFor="bulk-daily">每日额度上限</label><div className="number-field"><input id="bulk-daily" type="number" min="0" value={daily} onChange={(event) => setDaily(event.target.value)} /><span>额度 / 日</span></div></div><div className="field-group"><label htmlFor="bulk-monthly">每月额度上限</label><div className="number-field"><input id="bulk-monthly" type="number" min="0" value={monthly} onChange={(event) => setMonthly(event.target.value)} /><span>额度 / 月</span></div></div><div className="field-group"><label htmlFor="bulk-concurrent">并发任务数</label><div className="number-field"><input id="bulk-concurrent" type="number" min="0" max="100" value={concurrent} onChange={(event) => setConcurrent(event.target.value)} /><span>个任务</span></div></div><div className="policy-note"><Warning size={20} weight="fill" /><p><strong>设置为 0 将立即停止新任务</strong><span>保存后会为每个账户写入独立审计记录。</span></p></div><div className="drawer__actions"><button type="button" className="outline-button" onClick={onClose}>取消</button><button type="submit" className="primary-button">应用到 {count} 个用户 <ArrowRight size={17} /></button></div></form></aside></div>;
 }
 
 function ReviewsPage({ reviews, selectedReview, onSelectReview, canManageContent, showToast, onChanged, actor, onLearningNavigate, atomicPending, onAtomicPending }) {
@@ -225,6 +228,8 @@ function ReportsPage({ reports, onDecision }) {
 }
 
 function QuotaDrawer({ user, onClose, onSave }) {
+  const root=useRef(null),close=useRef(onClose);close.current=onClose;const stableClose=useRef(()=>close.current());
+  useDialogFocus(root,stableClose.current,Boolean(user));
   const [draft,setDraft]=useState(()=>quotaDraft(user));
   useEffect(()=>setDraft(quotaDraft(user)),[user?.id,user?.dailyLimit,user?.monthlyLimit,user?.concurrentLimit]);
   if (!user) return null;
@@ -234,7 +239,7 @@ function QuotaDrawer({ user, onClose, onSave }) {
   const label=value=>value==null?'未设上限':value;
   return <div className="drawer-layer" role="presentation">
     <button className="drawer-scrim" onClick={onClose} aria-label="关闭额度设置"/>
-    <aside className="drawer" aria-label={`${user.name}的 API 额度设置`}>
+    <aside ref={root} className="drawer" role="dialog" aria-modal="true" aria-label={`${user.name}的 API 额度设置`}>
       <div className="drawer__header"><div><p>// QUOTA POLICY</p><h2>调整 API 额度</h2></div><button className="icon-button" aria-label="关闭额度设置窗口" onClick={onClose}><X size={21}/></button></div>
       <div className="drawer__user"><div className="avatar avatar--outline">{user.initials}</div><div><strong>{user.name}</strong><span>{user.id} · {user.department} · {user.identity}</span></div></div>
       <div className="current-usage"><div><span>本月当前使用</span><strong>{user.monthlyUsed}<small> / {label(monthly)}</small></strong></div><em>{monthly===null?'—':`${usedPercent}%`}</em><div className="wide-meter"><i style={{width:`${usedPercent}%`}}/></div></div>

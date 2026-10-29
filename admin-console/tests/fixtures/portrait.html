@@ -1,0 +1,12 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>专业画像组件核对（合成数据）</title><div id="root"></div><script type="module">
+import React,{useState}from'react';import{createRoot}from'react-dom/client';
+import'/src/styles.css';import'/src/morph/MorphChrome.jsx';import'/src/morph/platform-unified.css';import'/src/platform-audit-polish.css';import'/src/morph/my-space.css';
+import{MyLearning}from'/src/MyLearning.jsx';import{FeedbackProvider}from'/src/FeedbackCenter.jsx';
+import{AtomicPortrait}from'/src/morph/AtomicPortrait.jsx';
+document.body.className='morph-platform';
+const initial=new URLSearchParams(location.search),isEmpty=initial.has('empty');
+const oldCourse={id:'fixture-old',title:'色彩构成基础',category:'设计基础',lessonCount:3,completedLessons:2,progressPercent:67,lastStudiedAt:'2026-10-28T12:00:00Z'};
+function Preview(){const[owner,setOwner]=useState('fixture-owner'),[tasks,setTasks]=useState([]);const navigate=to=>{document.documentElement.dataset.navigation=to;};const data={profile:{id:owner},courses:isEmpty?[]:[oldCourse],summary:{completedLessons:isEmpty?0:2},tasks,learningLessons:[]};return React.createElement('main',{className:'morph-v17'},React.createElement('div',{className:'morph-space container',style:{paddingTop:24}},React.createElement('div',{style:{marginBottom:20}},React.createElement('button',{onClick:()=>{setOwner('fixture-other');setTasks([]);}},'切换测试身份'),React.createElement('output',{'aria-label':'已保存测试计划'},tasks.length)),React.createElement(AtomicPortrait,{accountId:owner,data,onNavigate:navigate,onTaskSaved:task=>setTasks(t=>[task,...t]),compact:initial.has('compact')})));}
+function Integrated(){const[view,setView]=useState('portrait');const navigate=to=>{document.documentElement.dataset.navigation=to;if(to.includes('/my-learning'))setView(new URL(to,location.origin).searchParams.get('view')||'overview');};return React.createElement('main',{className:'morph-v17'},React.createElement(MyLearning,{account:{id:'fixture-owner',name:'组件核对用户',shortName:'核',roles:['student'],roleLabel:'学生'},variant:'morph',learningView:view,creation:{},onNotice:()=>{},onNavigate:navigate}));}
+createRoot(document.getElementById('root')).render(initial.has('integrated')?React.createElement(FeedbackProvider,null,React.createElement(Integrated)):React.createElement(Preview));
+</script></html>

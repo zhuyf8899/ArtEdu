@@ -1,0 +1,879 @@
+{
+  "id": "cvpr-featured-recovery-20261029-v1",
+  "version": 1,
+  "cases": [
+    {
+      "id": "work-65ec6cbb-c891-43d3-a25e-3e3de376dea0",
+      "authorId": "user-operator-demo",
+      "title": "Reflections on Mechanical Creativity",
+      "summary": "《机械创造力的反思》由艺术家与技术创作者 Pindar Van Arman 创作，以绘画机器人的实践重新提出一个问题：当机器不只是复制作品，而开始参与生成，艺术家的角色与艺术独特性将如何变化？作品回应瓦尔特·本雅明关于机械复制与艺术“灵韵”的讨论，把关注点从复制技术转向机械创造力。\n\nVan Arman 具有传统绘画训练背景。他的机器人并非只执行预先写好的笔触，而是借助摄像头观察已经画出的结果，实时评估并调整下一步行动。自 2010 年起，他持续把视觉反馈引入系统，尝试重现人类创作中“看见—制作—再次看见”的递归过程，让机器面对真实颜料、画布肌理和不可完全预测的物理变化。\n\n这一方法受到马文·明斯基“心智社会”观点的启发：多个代理共同评估作品的结构、动态与美学特征。颜料滴落、堆积与混色不被简单视为误差，而会成为下一轮决策的输入。作品也与保罗·克利对创作反馈的理解、哈罗德·科恩对确定性计算艺术的反思形成对话，探索规则与偶然共同作用时产生的新形式。\n\nReflection 系列不仅呈现最终绘画，也向观众展开系统如何作出决定的过程。作品试图打开生成系统的“黑箱”，让观看者在创作发生的过程中思考：机器如何进行美学意义上的观看，人类又如何塑造这种正在形成的创造方式。",
+      "discipline": "AI 艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-10-12T02:52:22.061Z",
+      "createdAt": "2026-10-12T02:48:57.736Z",
+      "updatedAt": "2026-10-17T02:50:22.527Z",
+      "story": {
+        "steps": [],
+        "tools": [],
+        "origin": "collected",
+        "methods": [],
+        "version": 1,
+        "creators": [
+          "Pindar Van Arman"
+        ],
+        "sourceUrl": "https://thecvf-art.com/",
+        "collection": "art-selection",
+        "reflection": "",
+        "sourceName": "CVPR Art",
+        "originalUrl": "https://thecvf-art.com/project.php?year=2025&artist=reflections-on-mechanical-creativity&id=891",
+        "coverAssetId": "work-asset-42570fe5-f265-4c74-b6a0-cb22def3e960",
+        "displayStyle": "exhibition",
+        "authorization": "confirmed",
+        "exhibitionName": "CVPR Art Gallery",
+        "exhibitionYear": "2025",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        "机械创造力",
+        "作者身份",
+        "瓦尔特·本雅明",
+        "灵韵",
+        "艺术美学"
+      ],
+      "assets": [
+        {
+          "id": "work-asset-42570fe5-f265-4c74-b6a0-cb22def3e960",
+          "fileName": "mechanical-creativity-cover.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-65ec6cbb-c891-43d3-a25e-3e3de376dea0/998cb3cd-a803-4d38-a265-a496fa75f5e3-98e7cf74-06f1-4c36-9826-17254ceeff9a",
+          "fileSize": 305464,
+          "sha256": "e404393c3187bd9b53aff7453c74ad9c975fed55c09a94687230ba3231cbca83",
+          "sortOrder": 0,
+          "altText": "Reflections on Mechanical Creativity"
+        }
+      ]
+    },
+    {
+      "id": "work-7f9cdfee-cf5d-4b81-befd-3b4f04d3de3c",
+      "authorId": "user-operator-demo",
+      "title": "Atlas of Perception",
+      "summary": "Tom White 的《感知图谱》从一个设问出发：我们所看见的复杂世界，是否可能由数量有限的视觉要素组合而成？正如三原色能够构成丰富的色彩经验，神经网络对图像的理解，也可能依靠一组可以彼此组合的基本视觉概念。作品由此进入机器感知的内部，寻找外观背后的视觉语法。\n\n项目探索神经网络的潜在空间，结合艺术转译与机制可解释性方法，将网络内部隐藏的视觉特征转化为可观看的形态。这些特征并非对某件现实物体的直接描摹，而是机器识别复杂图像时使用的元素与模式。通过观察它们如何出现和组合，作品把通常不可见的感知结构带到观众面前。\n\n可视化以没有明确起点和终点的连续圆形画面呈现。径向展开的形式回应抽象特征空间难以被固定边界描述的性质，也让视觉概念之间的关系更像一组相互关联的星群，而不是从上至下排列的等级。\n\n作品中的多段动态影像呈现不同视觉概念的变化。观看重点不只在于辨认画面像什么，也在于比较形态、材质与节奏如何不断生成熟悉感，从而重新思考人类与机器组织视觉经验的方式。",
+      "discipline": "AI 艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-10-17T02:50:22.527Z",
+      "createdAt": "2026-10-17T02:50:22.527Z",
+      "updatedAt": "2026-10-17T02:50:22.527Z",
+      "story": {
+        "steps": [],
+        "tools": [],
+        "origin": "collected",
+        "methods": [
+          "生成艺术",
+          "可解释性"
+        ],
+        "version": 1,
+        "creators": [
+          "Tom White"
+        ],
+        "sourceUrl": "https://thecvf-art.com/",
+        "collection": "art-selection",
+        "reflection": "",
+        "sourceName": "CVPR Art",
+        "originalUrl": "https://thecvf-art.com/project.php?year=2025&artist=tom-white&id=880",
+        "coverAssetId": "work-asset-9a3daaed-e610-4a2d-b6ea-d3bd31c5cd42",
+        "displayStyle": "exhibition",
+        "authorization": "confirmed",
+        "exhibitionName": "CVPR Art Gallery",
+        "exhibitionYear": "2025",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        "艺术美学",
+        "视觉感知",
+        "神经网络"
+      ],
+      "assets": [
+        {
+          "id": "work-asset-9a3daaed-e610-4a2d-b6ea-d3bd31c5cd42",
+          "fileName": "tom-white-cover.png",
+          "mimeType": "image/png",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-7f9cdfee-cf5d-4b81-befd-3b4f04d3de3c/ee037a59-da9d-46f4-a925-23b3222511e0-9c5f2bbc-e4f2-4ede-912b-1d02bb1f8f77",
+          "fileSize": 304654,
+          "sha256": "2f1de429099a283730f00216d86717bb1411b17548f79eb7e4e9ba98558683b6",
+          "sortOrder": 0,
+          "altText": "Atlas of Perception"
+        },
+        {
+          "id": "work-asset-78bf4b60-a2bf-465a-82ed-51329e596c7f",
+          "fileName": "tom-white-balance.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-7f9cdfee-cf5d-4b81-befd-3b4f04d3de3c/c2b0e6ed-d9a0-4441-abf8-3794f22e4cd9-316f9000-dab0-4ede-9e38-624517a5dcd9",
+          "fileSize": 9989742,
+          "sha256": "0af68e40035fbac04cfa19abc3bf1fcf2077a8fdf513d992aeb23f1aebb0cdd8",
+          "sortOrder": 1,
+          "altText": "Atlas of Perception"
+        },
+        {
+          "id": "work-asset-defca115-1e92-46ea-a2a1-da3908cd9a4e",
+          "fileName": "tom-white-wirepeople.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-7f9cdfee-cf5d-4b81-befd-3b4f04d3de3c/c660e59f-779c-470e-a79e-9e7017b21487-2dd4665a-e216-4ad9-b9db-e173a6941cda",
+          "fileSize": 9818353,
+          "sha256": "86a47425d89e1e65ad82aa85c6894dc56012a9a5a8e11a7ef7fce9ca1e087243",
+          "sortOrder": 2,
+          "altText": "Atlas of Perception"
+        },
+        {
+          "id": "work-asset-cbe29466-4eff-4f1d-93ea-96579efca394",
+          "fileName": "tom-white-chrome.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-7f9cdfee-cf5d-4b81-befd-3b4f04d3de3c/30232822-7194-4a77-a779-2ab895ae7c54-e67c4223-d4f1-4874-90d3-e142fd2e14a2",
+          "fileSize": 9791024,
+          "sha256": "dc050c6dd39cfb4747b75e2a715332d80900beb1353c4dbde24e77547af4b84a",
+          "sortOrder": 3,
+          "altText": "Atlas of Perception"
+        },
+        {
+          "id": "work-asset-0c3f70d3-ca03-4eb6-a179-bd2cc965a8e0",
+          "fileName": "tom-white-whipped.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-7f9cdfee-cf5d-4b81-befd-3b4f04d3de3c/51328ffd-db15-4f43-bf2e-fc38cc8fed2b-2bb5f3fe-dcba-437e-b41a-e24838e1b855",
+          "fileSize": 8600600,
+          "sha256": "2d59f573b211c8426c0d490a71b42d73f7c7b8826d3ae20c6acd29ee70e91204",
+          "sortOrder": 4,
+          "altText": "Atlas of Perception"
+        },
+        {
+          "id": "work-asset-d6f04a8c-3205-4e18-a177-37ad6a699fe0",
+          "fileName": "tom-white-type.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-7f9cdfee-cf5d-4b81-befd-3b4f04d3de3c/4ec1be9e-5f22-4aa7-b184-c4fe784fbf12-77cb26c8-04be-42c8-97f7-1e04e50748a8",
+          "fileSize": 9182805,
+          "sha256": "ae3369ca1d6d7df1b0694a01a8dd64d1827543e56d8db8329c53083ff588dccd",
+          "sortOrder": 5,
+          "altText": "Atlas of Perception"
+        },
+        {
+          "id": "work-asset-05ca5f56-5dc7-4bb8-b234-1e36b88920a7",
+          "fileName": "tom-white-gelatin.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-7f9cdfee-cf5d-4b81-befd-3b4f04d3de3c/b14c1271-3d13-4e46-9256-391f3a4a4d83-887acee3-dd78-489d-881e-7976a1e7aeef",
+          "fileSize": 7473740,
+          "sha256": "260b2098a89a69b152dcbb73434616b41d191a8a41b36d8886177b5a1e0fa94d",
+          "sortOrder": 6,
+          "altText": "Atlas of Perception"
+        }
+      ]
+    },
+    {
+      "id": "work-4bd0b5ba-2a2a-40a7-a5a0-f5c0c63018d1",
+      "authorId": "user-operator-demo",
+      "title": "Diffusion TV",
+      "summary": "Sihwa Park 的《扩散电视》是一件实验性交互作品。它以带有怀旧意味的 CRT 电视为界面，让观众接触生成图像与声音背后的扩散模型，而不只是观看已经完成的生成结果。原本隐藏在计算过程中的去噪与转化，被带入可以操作、感受和理解的物理装置。\n\n作品受到白南准《Egg Grows》（1984—1989）的启发：后者借助尺寸逐渐增大的 CRT 电视制造蛋不断生长的视觉错觉。《扩散电视》同样利用旧电视的媒介特征，却把表现对象转向 AI 去噪的过程，让复杂模型从混乱数据形成可辨认图像与声音的变化成为交互体验。\n\n观众可以调节电视天线与旋钮，直接参与画面和声音的转变。熟悉的操作动作连接起人的身体经验与模型内部的生成过程，也使电视不再只是被动接收内容的屏幕，而成为人与技术相互作用的入口。\n\nCRT 电视曾是技术创新的象征，如今却常被视为过时设备。作品将这种处境与濒危物种的脆弱性联系起来，追问技术进步中哪些事物被保存、哪些又被遗失，并邀请观众思考人类、技术与自然之间相互依存的关系。该项目获得 Connected Minds Program 的部分资助。",
+      "discipline": "AI 艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-10-17T02:50:22.527Z",
+      "createdAt": "2026-10-17T02:50:22.527Z",
+      "updatedAt": "2026-10-17T02:50:22.527Z",
+      "story": {
+        "steps": [],
+        "tools": [],
+        "origin": "collected",
+        "methods": [
+          "交互艺术",
+          "生成艺术"
+        ],
+        "version": 1,
+        "creators": [
+          "Sihwa Park"
+        ],
+        "sourceUrl": "https://thecvf-art.com/",
+        "collection": "art-selection",
+        "reflection": "",
+        "sourceName": "CVPR Art",
+        "originalUrl": "https://thecvf-art.com/project.php?year=2025&artist=sihwa-park&id=887",
+        "coverAssetId": "work-asset-040e1ca3-1223-49db-9649-505951763e8e",
+        "displayStyle": "exhibition",
+        "authorization": "confirmed",
+        "exhibitionName": "CVPR Art Gallery",
+        "exhibitionYear": "2025",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        "艺术美学",
+        "交互装置",
+        "扩散模型"
+      ],
+      "assets": [
+        {
+          "id": "work-asset-040e1ca3-1223-49db-9649-505951763e8e",
+          "fileName": "sihwa-park-cover.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-4bd0b5ba-2a2a-40a7-a5a0-f5c0c63018d1/9ee2283e-e88e-4c1c-b17d-9fba247c9071-fcc4d103-b7ba-494a-ade4-5391f677cfe0",
+          "fileSize": 45537,
+          "sha256": "5d6ee5b374cb093cec41e87061f1b3fd5b748ec0bfebbaca1edce8f05d274c5b",
+          "sortOrder": 0,
+          "altText": "Diffusion TV"
+        }
+      ]
+    },
+    {
+      "id": "work-cb0ceae0-698d-4f11-bfad-b01f354c0359",
+      "authorId": "user-operator-demo",
+      "title": "Fertile Matrices",
+      "summary": "Robin Champenois 的《丰饶矩阵》从神经网络看似朴素的数学基础出发：层层矩阵运算与经训练调整的系数，如何涌现出近似生命、介于美丽与诡异之间的形态？作品把生成系统想象成一个充满流动、凝结与结晶的场域，让抽象计算转化为有机的视觉经验。\n\n项目使用从 DeepDream 衍生的定制 AI 算法，并将其应用于现代多模态网络。影像来自两种过程持续发生的合作与对抗：一方面，AI 试图让图像显现；另一方面，程序化算法不断扭曲这些图像，使形体无法稳定停留。生长与变形由此成为作品的持续状态，而不是通向某张最终图像的过渡。\n\n声音将带有陌生感的动物声与技术声并置，进一步模糊生物与机器、自然与人工之间的边界。作品借助这些混合形态，探讨创造、生成与集体无意识之间的关联，以及 AI 对人类记忆和想象材料的模仿如何重新进入我们的感知世界。\n\n《丰饶矩阵》既以系列影像存在，也可以装置形式展出：屏幕与线缆交织，周围布置仿佛正在蔓生的 3D 打印真菌珊瑚。数字画面与实体环境相互延伸，使观看者进入一个游移于梦境、噩梦与生命想象之间的混合生态。",
+      "discipline": "AI 艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-10-17T02:50:22.527Z",
+      "createdAt": "2026-10-17T02:50:22.527Z",
+      "updatedAt": "2026-10-17T02:50:22.527Z",
+      "story": {
+        "steps": [],
+        "tools": [],
+        "origin": "collected",
+        "methods": [
+          "生成艺术"
+        ],
+        "version": 1,
+        "creators": [
+          "Robin Champenois"
+        ],
+        "sourceUrl": "https://thecvf-art.com/",
+        "collection": "art-selection",
+        "reflection": "",
+        "sourceName": "CVPR Art",
+        "originalUrl": "https://thecvf-art.com/project.php?year=2025&artist=robin-champenois-clinamen&id=890",
+        "coverAssetId": "work-asset-8939787a-6c5c-4fbd-9b0f-d21df52b6cd9",
+        "displayStyle": "exhibition",
+        "authorization": "confirmed",
+        "exhibitionName": "CVPR Art Gallery",
+        "exhibitionYear": "2025",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        "艺术美学",
+        "生成艺术",
+        "有机形态"
+      ],
+      "assets": [
+        {
+          "id": "work-asset-8939787a-6c5c-4fbd-9b0f-d21df52b6cd9",
+          "fileName": "robin-champenois-cover.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-cb0ceae0-698d-4f11-bfad-b01f354c0359/8af31ba3-65ba-43fd-8433-87033b31ee3c-c5caaeeb-3c80-4f73-a520-3ef90e183e60",
+          "fileSize": 134629,
+          "sha256": "06a038a1de2ade23238df33b2d562d64f094c9de76e6ed8e1421a15d5dc08256",
+          "sortOrder": 0,
+          "altText": "Fertile Matrices"
+        },
+        {
+          "id": "work-asset-efd7734e-57bf-4e3f-834d-9bedb74d93cb",
+          "fileName": "robin-champenois-gallery-1.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-cb0ceae0-698d-4f11-bfad-b01f354c0359/c11aeffe-8e8b-44b6-a0fe-f0b987fd14ea-84b92f35-bcb4-411b-a9de-fd8a11b11b53",
+          "fileSize": 23993,
+          "sha256": "ef4d497e26002bda712c064eeeb292dc3670e018596efa497dd6d09b29eb6b2d",
+          "sortOrder": 1,
+          "altText": "Fertile Matrices"
+        },
+        {
+          "id": "work-asset-ea9781c6-7746-45ef-8bb6-1c774e9a5ec9",
+          "fileName": "robin-champenois-gallery-2.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-cb0ceae0-698d-4f11-bfad-b01f354c0359/8131e6a4-88f9-489b-94dd-850ac09d740d-e97a85f5-bc7e-4a8d-ba37-5fe8f43f8845",
+          "fileSize": 19087,
+          "sha256": "dd1490dbb9028ec40e97e264db395e4eb00eda52353e0d2a4cde257bbb5cd669",
+          "sortOrder": 2,
+          "altText": "Fertile Matrices"
+        },
+        {
+          "id": "work-asset-5de844e0-3719-4495-b179-880c58c10e71",
+          "fileName": "robin-champenois-gallery-3.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-cb0ceae0-698d-4f11-bfad-b01f354c0359/79998d6e-ae6a-48df-b006-44ac9934fb12-bb1649ee-b18e-4bf4-a0db-94e99ef81b01",
+          "fileSize": 21317,
+          "sha256": "10ae6ddd990ea7d45f8ee60935df3cf4190e468bd30808cda192c2657a6efc20",
+          "sortOrder": 3,
+          "altText": "Fertile Matrices"
+        },
+        {
+          "id": "work-asset-e5106d2b-4b18-42c2-a52d-7a21dfec9ef3",
+          "fileName": "robin-champenois-gallery-4.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-cb0ceae0-698d-4f11-bfad-b01f354c0359/8eabcc7e-7205-420e-b378-f05070e738ba-1f672eb5-670a-435b-aa07-f409345d78b5",
+          "fileSize": 20112,
+          "sha256": "08adcee93abeab03681473c6d26080c6a8ba904033d5bc4f956e443ff85e6342",
+          "sortOrder": 4,
+          "altText": "Fertile Matrices"
+        },
+        {
+          "id": "work-asset-e8bd4df7-ccce-4a8f-ad62-1958aa722fa5",
+          "fileName": "robin-champenois-gallery-5.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-cb0ceae0-698d-4f11-bfad-b01f354c0359/9886bad8-9275-4aa2-808d-b50ca22a1b39-64bd455b-21b4-4535-abdf-efafd6f2565e",
+          "fileSize": 172329,
+          "sha256": "a54c35bf106e455137646d865cc001b01b7632cd61f4cdba087bbb9df7fa9b1d",
+          "sortOrder": 5,
+          "altText": "Fertile Matrices"
+        },
+        {
+          "id": "work-asset-b38bf826-eb77-4beb-a87f-d694c24ab0d1",
+          "fileName": "robin-champenois-preview.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-cb0ceae0-698d-4f11-bfad-b01f354c0359/060da535-23dd-4431-a69a-f0f081bbc1b8-6e09992a-b662-47fa-aa19-3045529bb299",
+          "fileSize": 104000379,
+          "sha256": "bb303e6150339d7ea91d4ad8d2479487bcda738f8ada3153df1a64a253b3d078",
+          "sortOrder": 6,
+          "altText": "Fertile Matrices"
+        }
+      ]
+    },
+    {
+      "id": "work-471b1800-a74b-4658-925e-27338cca2d40",
+      "authorId": "user-operator-demo",
+      "title": "entropic.contagion",
+      "summary": "Feileacan Kirkbride McCormick 的《entropic.contagion》把网络模因置于持续变异的数字生态中，以传播、损耗与衰变探讨图像的生命。作品将图像理解为暂时形成结构的能量：它既不是生命体，也不是完全静止的物质，会在复制和重新置入语境的过程中改变，并影响它所处的系统。\n\n日常界面在这里被设想为一系列生态环境。熟悉的模因在艺术家的编排和外部影响下传播、互动、相互侵染，逐渐出现扭曲、异化与近似身体恐怖的形态。图像不再是稳定的信息载体，而成为一种持续繁殖、又不断失去原有结构的过程。\n\n作品结合细胞自动机与神经网络，使用神经细胞自动机（Neural Cellular Automata）使图像在变化的介质中演进。模因传播与神经网络的运算共同构成熵不断加速的条件，画面随时间变得更加破碎、失真和压缩，让数字文化中的复制与变异具有可见的质感。\n\n作品以这种不断腐化的视觉过程追问自动化与生成文化的未来：当越来越多内容以类似病毒的方式扩散，我们面对的将是怎样的信息环境？声音由 Robert M. Thomas 创作；图集包含作品在荷兰 NXT Museum 首次展出时的现场影像。",
+      "discipline": "AI 艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-10-19T03:24:41.033Z",
+      "createdAt": "2026-10-19T03:24:16.710Z",
+      "updatedAt": "2026-10-19T03:24:43.255Z",
+      "story": {
+        "steps": [],
+        "tools": [
+          "Neural Cellular Automata"
+        ],
+        "origin": "collected",
+        "methods": [
+          "生成艺术",
+          "神经细胞自动机"
+        ],
+        "version": 1,
+        "creators": [
+          "Feileacan Kirkbride McCormick"
+        ],
+        "sourceUrl": "https://thecvf-art.com/",
+        "collection": "art-selection",
+        "reflection": "",
+        "sourceName": "CVPR Art",
+        "originalUrl": "https://thecvf-art.com/project.php?year=2026&artist=feileacan-kirkbride-mccormick&id=952",
+        "coverAssetId": "work-asset-c2b8d566-e1aa-4d23-b457-7f0759409745",
+        "displayStyle": "exhibition",
+        "authorization": "confirmed",
+        "exhibitionName": "CVPR Art Gallery",
+        "exhibitionYear": "2026",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        "数字衰变",
+        "复杂系统",
+        "艺术美学"
+      ],
+      "assets": [
+        {
+          "id": "work-asset-c2b8d566-e1aa-4d23-b457-7f0759409745",
+          "fileName": "cvpr-entropic-contagion-cover.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-471b1800-a74b-4658-925e-27338cca2d40/ca153766-6ea4-4dc4-901b-63f5e292aab6-5e9f5e62-ff8d-4f65-acc1-fbdff4628c17",
+          "fileSize": 468074,
+          "sha256": "a192ecbec2915893f24318bdd87c9c9fa8d10fb1905b3d065e41ac22a002e06e",
+          "sortOrder": 0,
+          "altText": "entropic.contagion"
+        },
+        {
+          "id": "work-asset-40ef3a6b-338a-4519-9327-39497f9a12ef",
+          "fileName": "cvpr-entropic-contagion-1.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-471b1800-a74b-4658-925e-27338cca2d40/5fc3ccbe-1b0e-4570-a744-3afa4bca90dc-d9e9d802-cf5e-4214-9420-9dcecdde3e13",
+          "fileSize": 295193,
+          "sha256": "71424a62673bd223927796ac40db0c8f772a7c9ee267710096d61250eb83f947",
+          "sortOrder": 1,
+          "altText": "entropic.contagion"
+        },
+        {
+          "id": "work-asset-d13b9785-cfe6-491e-be5f-9ca0d9d0cf25",
+          "fileName": "cvpr-entropic-contagion-2.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-471b1800-a74b-4658-925e-27338cca2d40/b2d20dee-50d0-4f85-8e0f-e1cc193d4d15-3abfd935-1e36-4110-812a-1a4d59cb3c8a",
+          "fileSize": 286604,
+          "sha256": "71ce99bfd883d2d5c661488637b92a6b4eae19ba451b0a9e2b3518a67136000c",
+          "sortOrder": 2,
+          "altText": "entropic.contagion"
+        },
+        {
+          "id": "work-asset-ee31a385-44ca-4aff-a4c0-1937badf79d2",
+          "fileName": "cvpr-entropic-contagion-3.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-471b1800-a74b-4658-925e-27338cca2d40/ec6d932f-46d2-465c-8b64-06c0307ddd50-6bb0b138-f717-490f-a199-b2115036597e",
+          "fileSize": 326884,
+          "sha256": "968973b7a362df42ae41984aa5b58d6bf0758b412d4f1098de9c7c0aa74c0968",
+          "sortOrder": 3,
+          "altText": "entropic.contagion"
+        },
+        {
+          "id": "work-asset-f79ebab8-cc26-4e34-a86b-b3265ce4dd19",
+          "fileName": "cvpr-entropic-contagion-4.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-471b1800-a74b-4658-925e-27338cca2d40/3e4513fd-4247-4c11-b607-6eabae819c07-80fbe709-c0d5-49a6-b8aa-5d57b7a0ed63",
+          "fileSize": 309635,
+          "sha256": "c9953597f9ca58de06c9960c643c9966af4f13ed8d55a0395441d7d8dca89ab4",
+          "sortOrder": 4,
+          "altText": "entropic.contagion"
+        },
+        {
+          "id": "work-asset-d178b37e-e2db-4f87-8c08-81378cff0b20",
+          "fileName": "cvpr-entropic-contagion-5.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-471b1800-a74b-4658-925e-27338cca2d40/a0fe9168-157d-4fcc-b198-b4c0e8cb7781-a7b0ee3f-3f83-4b2f-a552-6f09b2c8e172",
+          "fileSize": 344552,
+          "sha256": "2a682b3b035a86cfa0b9d342b5d626dbd565bc204bca7df0d9300e7fc2789370",
+          "sortOrder": 5,
+          "altText": "entropic.contagion"
+        },
+        {
+          "id": "work-asset-5b387b0d-a364-493a-885e-84beafd0b677",
+          "fileName": "cvpr-entropic-contagion-6.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-471b1800-a74b-4658-925e-27338cca2d40/20d31c96-2f0d-4ae5-95e3-2a8714f8a2f8-9adc007a-e1d8-4471-a9f6-5e6cdb0a8199",
+          "fileSize": 305057,
+          "sha256": "5d4baf4884e2d67f8637794ed9885b66bebcb696ab94ce99b106fcec73e00e4c",
+          "sortOrder": 6,
+          "altText": "entropic.contagion"
+        },
+        {
+          "id": "work-asset-df4670c5-6cd5-4c4d-a65b-c3aed43fc9cc",
+          "fileName": "cvpr-entropic-contagion-7.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-471b1800-a74b-4658-925e-27338cca2d40/b07533d3-b3aa-4147-930a-f73c11073c16-b9e6e73c-ba83-470d-ad7a-03f0958074aa",
+          "fileSize": 69660095,
+          "sha256": "beb1bf49cc60d03122d07da8b348321dc2deb336c7b4bc575b479cfdb17be953",
+          "sortOrder": 7,
+          "altText": "entropic.contagion"
+        }
+      ]
+    },
+    {
+      "id": "work-efbb692b-b076-4e72-ba73-630bd61e900d",
+      "authorId": "user-operator-demo",
+      "title": "The Thousand Names of Macskusz",
+      "summary": "Veronika Szücs 与 Maximilian Noichl 共同创造的 Macskusz，是一只每天回应世界变化、重新生成自身形象的数字生物。它的不同面貌记录当日事件、情绪与生活纹理，既像艺术家的共同吉祥物，也逐渐成为两人关系的一份持续更新的肖像。\n\n项目最初来自剪纸实践：两位艺术家使用每天遇到的纸片与碎屑记录日常，形成彼此共享的视觉语言。随后，他们将这些剪纸扫描，并用于微调图像生成模型，使原本的手工形式能够在数字系统中延续，而不是被一种通用的生成风格替代。\n\n每天的工作流从代理读取两人晨间关注的主要新闻网站开始。大语言模型依据关于艺术家个性的内部概述，模拟他们可能围绕最感兴趣的新闻展开的讨论，再将当天的信息与这种想象中的反应凝练为一条图像提示，交给图像模型生成当天的化身。\n\n因此，Macskusz 可能是融入粉色泡沫浴的雌狮、带有忧郁气息的大理石纹猫，也可能是由考古地图构成的古老人物。多重信息被压缩为一个不断改名、不断变形的象征。作品把手工材料、亲密关系与自动化的信息处理连接起来，让每日生成不只是图像更新，也是艺术家观看世界方式的延展。",
+      "discipline": "AI 艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-10-19T03:25:11.958Z",
+      "createdAt": "2026-10-19T03:24:45.463Z",
+      "updatedAt": "2026-10-19T03:25:14.159Z",
+      "story": {
+        "steps": [],
+        "tools": [
+          "大型语言模型",
+          "微调图像生成模型"
+        ],
+        "origin": "collected",
+        "methods": [
+          "智能体共创",
+          "图像生成"
+        ],
+        "version": 1,
+        "creators": [
+          "Veronika Szücs",
+          "Maximilian Noichl"
+        ],
+        "sourceUrl": "https://thecvf-art.com/",
+        "collection": "art-selection",
+        "reflection": "",
+        "sourceName": "CVPR Art",
+        "originalUrl": "https://thecvf-art.com/project.php?year=2026&artist=veronika-szcs&id=1018",
+        "coverAssetId": "work-asset-e3647b59-ac44-4648-9240-236a5eb41880",
+        "displayStyle": "exhibition",
+        "authorization": "confirmed",
+        "exhibitionName": "CVPR Art Gallery",
+        "exhibitionYear": "2026",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        "数字生物",
+        "新闻叙事",
+        "剪纸"
+      ],
+      "assets": [
+        {
+          "id": "work-asset-e3647b59-ac44-4648-9240-236a5eb41880",
+          "fileName": "cvpr-macskusz-cover.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-efbb692b-b076-4e72-ba73-630bd61e900d/6a4a3fdb-5056-41ae-a6b8-b0472cb14d58-cbe9b37d-15fb-4976-8257-06ffec48548c",
+          "fileSize": 93082,
+          "sha256": "bf4b6f5f342c09c779b1ced1c4d8067195b461be5959e50d855ff469620c2fb2",
+          "sortOrder": 0,
+          "altText": "The Thousand Names of Macskusz"
+        },
+        {
+          "id": "work-asset-da3e5c8c-7bc3-4672-b8b4-73bbc147be43",
+          "fileName": "cvpr-macskusz-1.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-efbb692b-b076-4e72-ba73-630bd61e900d/0dbd8ae4-0138-4298-8fa3-d6c2a4d56d9e-5477bc0e-a59b-4d83-8a52-6a6a9f6b1b45",
+          "fileSize": 443761,
+          "sha256": "c067a4f8547bead26b12176f6d9182fffaad1847c178950577b1adc27b66905b",
+          "sortOrder": 1,
+          "altText": "The Thousand Names of Macskusz"
+        },
+        {
+          "id": "work-asset-844775b3-ceda-4ff4-8232-c461795c1140",
+          "fileName": "cvpr-macskusz-2.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-efbb692b-b076-4e72-ba73-630bd61e900d/9c39c8c2-755d-4378-8fac-2ef17fb722ff-bfae3055-6d73-4e67-a9d5-a2fda9695577",
+          "fileSize": 163651,
+          "sha256": "92bc50095c3c5bf7e28c614bf60d492cf929dae673fc1e6987033e4363e37336",
+          "sortOrder": 2,
+          "altText": "The Thousand Names of Macskusz"
+        },
+        {
+          "id": "work-asset-278517e2-010e-4c80-b321-e747d52e0313",
+          "fileName": "cvpr-macskusz-3.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-efbb692b-b076-4e72-ba73-630bd61e900d/baf20bb7-383d-4159-b942-d05cd21c7440-94a2d46a-9cf7-4eca-9d44-3a07488c2f2e",
+          "fileSize": 298581,
+          "sha256": "e33ce1842e0798ebd619353f23de2f590aa04b4f0cdd90513f9b9e90f786681f",
+          "sortOrder": 3,
+          "altText": "The Thousand Names of Macskusz"
+        },
+        {
+          "id": "work-asset-a3910917-4d59-4551-a74f-eab5d56e31f0",
+          "fileName": "cvpr-macskusz-4.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-efbb692b-b076-4e72-ba73-630bd61e900d/bd5114fc-def6-4882-a719-5f4e6efba6ed-c30e327f-826c-4bba-b96c-2a6f6d112fb6",
+          "fileSize": 169052,
+          "sha256": "14d09bfb6356213ed64ac3d7300aa716ef827ae72bc5c4921bee7f46b2793799",
+          "sortOrder": 4,
+          "altText": "The Thousand Names of Macskusz"
+        },
+        {
+          "id": "work-asset-e259b96a-9ac5-4ddf-ac17-ba155587aa31",
+          "fileName": "cvpr-macskusz-5.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-efbb692b-b076-4e72-ba73-630bd61e900d/5c9f34e0-050d-4ce9-bd69-3f5b9a8dadd8-9c5ab0de-58da-4540-b80b-1400d0bd7fee",
+          "fileSize": 149454,
+          "sha256": "39e19bb96e8a822ff0d7e26394a3b424115c7509ff4bd1364a8d9bea6100fbd3",
+          "sortOrder": 5,
+          "altText": "The Thousand Names of Macskusz"
+        },
+        {
+          "id": "work-asset-e531d8af-63ce-4534-bca9-38f4d8a91fbd",
+          "fileName": "cvpr-macskusz-6.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-efbb692b-b076-4e72-ba73-630bd61e900d/23cd4170-52b8-495b-93ec-fc021f73bc25-03269186-3dc9-426c-af00-edeca4e3727d",
+          "fileSize": 159181,
+          "sha256": "43a6f6f9502da9cdbfc59108f535b596ab9012602a003d4428efb377a04ffaa6",
+          "sortOrder": 6,
+          "altText": "The Thousand Names of Macskusz"
+        },
+        {
+          "id": "work-asset-1cb9b291-1642-4189-8c1b-d91c1e9d339c",
+          "fileName": "cvpr-macskusz-7.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-efbb692b-b076-4e72-ba73-630bd61e900d/4618d04d-7f4a-4bb7-ad57-864bb92e88e8-db9f8a29-da3f-4d8b-b01b-1369e6a308e3",
+          "fileSize": 403310,
+          "sha256": "e5bd7013e78c59487c2b932bf84b15a77449845002766ee1c34cde8a2fc6f2a2",
+          "sortOrder": 7,
+          "altText": "The Thousand Names of Macskusz"
+        },
+        {
+          "id": "work-asset-22eb5b31-bd36-4cfe-97d7-e4304c85b019",
+          "fileName": "cvpr-macskusz-8.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-efbb692b-b076-4e72-ba73-630bd61e900d/a0993a2e-7a42-4292-a391-e7fbd0e959b6-3dc91303-2b77-4042-a157-af34153efd0f",
+          "fileSize": 6994251,
+          "sha256": "ef76f20ea3f974d8a501f752be99beb2cd35ba97192dd1ed6d38c72dcc7eef2a",
+          "sortOrder": 8,
+          "altText": "The Thousand Names of Macskusz"
+        }
+      ]
+    },
+    {
+      "id": "work-ba1a7482-9025-484c-8c94-ae4231f81894",
+      "authorId": "user-operator-demo",
+      "title": "Glitchbox",
+      "summary": "Apolinario Passos 的《Glitchbox》是一套基于开源 AI 技术的实时视觉生成系统。它将人的动作、声音与音乐转化为持续变化的数字画面，把创作控制交到表演者与艺术家手中，让生成不再只发生在输入提示词之后，而能与正在进行的身体表达同步展开。\n\n系统通过动作追踪捕捉人的运动，同时把说话、歌唱、演奏等声音输入转译为动态视觉。舞蹈中的手势、声音的变化与音乐的节奏，可以成为画面脉动、流动和演变的触发条件。每次互动由现场表达推动，因此影像不是固定播放的背景，而是表演过程中的实时回应。\n\n开源是项目的重要立场。作品以可自由获得的工具为基础，强调创作者不必依赖昂贵的专有软件，并希望降低使用 AI 进行艺术创作的门槛。系统可以由社区修改、改进与分享，工具本身也因此成为共同创作的一部分。\n\n展示中的两段视频呈现这一实时转译方式。观看时可以关注动作与声音如何改变视觉的节奏，以及艺术家如何通过持续互动参与影像的生成，而不是只在开始时给出一次指令。",
+      "discipline": "AI 艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-10-19T03:25:29.615Z",
+      "createdAt": "2026-10-19T03:25:16.366Z",
+      "updatedAt": "2026-10-19T03:25:31.826Z",
+      "story": {
+        "steps": [],
+        "tools": [
+          "实时生成式 AI",
+          "动作追踪"
+        ],
+        "origin": "collected",
+        "methods": [
+          "实时生成",
+          "多模态交互"
+        ],
+        "version": 1,
+        "creators": [
+          "Apolinario Passos"
+        ],
+        "sourceUrl": "https://thecvf-art.com/",
+        "collection": "art-selection",
+        "reflection": "",
+        "sourceName": "CVPR Art",
+        "originalUrl": "https://thecvf-art.com/project.php?year=2026&artist=apolinario&id=930",
+        "coverAssetId": "work-asset-65eb01c3-d7d4-4499-86ae-7056f15ca1f8",
+        "displayStyle": "exhibition",
+        "authorization": "confirmed",
+        "exhibitionName": "CVPR Art Gallery",
+        "exhibitionYear": "2026",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        "交互艺术",
+        "声音可视化",
+        "开源创作"
+      ],
+      "assets": [
+        {
+          "id": "work-asset-65eb01c3-d7d4-4499-86ae-7056f15ca1f8",
+          "fileName": "cvpr-glitchbox-cover.webp",
+          "mimeType": "image/webp",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-ba1a7482-9025-484c-8c94-ae4231f81894/d479b544-047b-45b7-88a8-cfd319ff2201-1f49efa1-ad29-4d49-8e44-0a5bd5765b6c",
+          "fileSize": 59916,
+          "sha256": "d94a71a53362d0a574ac674f2a0478a7b2a9ce8a8bee574f230efdc49b7b240b",
+          "sortOrder": 0,
+          "altText": "Glitchbox"
+        },
+        {
+          "id": "work-asset-fa7bb6ae-fe73-4408-9bba-b5653459c8a3",
+          "fileName": "cvpr-glitchbox-1.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-ba1a7482-9025-484c-8c94-ae4231f81894/186296eb-63c4-4270-82f7-06dbb6416aa9-300e5cce-3fd5-4ddb-bfc4-a3006c4b76e0",
+          "fileSize": 2806367,
+          "sha256": "f174037e12d4d980a0b1c8697171aa2f24fef2cf3b9f1cebd0bcf9cca8a69735",
+          "sortOrder": 1,
+          "altText": "Glitchbox"
+        },
+        {
+          "id": "work-asset-7afa597a-fc15-4724-9188-9789cc418c86",
+          "fileName": "cvpr-glitchbox-2.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-ba1a7482-9025-484c-8c94-ae4231f81894/8af3f2f7-b6c7-4153-9378-8b42613febe5-d29aa969-8811-4284-971d-f4542ea16e4e",
+          "fileSize": 12942817,
+          "sha256": "a3b487b6c18f69a6a1470ca9de66c480042bc42394c1c6bdd80fac3f8f9f1fb8",
+          "sortOrder": 2,
+          "altText": "Glitchbox"
+        }
+      ]
+    },
+    {
+      "id": "work-f40a1c3d-a523-4402-9d16-8a0a89178166",
+      "authorId": "user-operator-demo",
+      "title": "The Future of the Past",
+      "summary": "Irina Raicu 的《过去的未来》以艺术与时尚为共同语言，把过去、现在与未来连接起来。影像从人类历史中的表达方式出发，思考祖先如何呈现自己，以及今天的创作者如何继续这条不断变化的文化脉络。艺术和服饰在其中既是形式，也映照着不同时代的期待、恐惧与梦想。\n\n项目与名为 Artist Agent 的多模态 AI 创作助手协作。该助手基于 Microsoft AutoGen 框架开发，可以生成和处理图像、视频、声音与音乐，并由与艺术家直接互动的核心 AI 组织这些过程。艺术家提供的数据、个人偏好和创作反馈，会进入协作过程，影响最终的艺术输出。\n\n作品由此把 AI 代理作为创作伙伴来探索，而不是把艺术家的判断排除在外。多种媒介的组织与反复反馈共同构成工作方式，也呈现了个性化生成如何依赖创作者持续参与，而非仅靠一次性的自动生成。\n\n在观念上，影像吸收古老故事、书籍与关于人类存在的哲学追问，将文明的变化与持续寻找意义、连接的愿望并置。作品邀请观看者暂时停下，在艺术与时尚跨越时间的流动中，重新看见人类共同经历的美与延续。",
+      "discipline": "AI 艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-10-19T03:25:49.487Z",
+      "createdAt": "2026-10-19T03:25:34.039Z",
+      "updatedAt": "2026-10-19T03:25:51.694Z",
+      "story": {
+        "steps": [],
+        "tools": [
+          "Microsoft AutoGen",
+          "Artist Agent"
+        ],
+        "origin": "collected",
+        "methods": [
+          "多模态共创",
+          "影像叙事"
+        ],
+        "version": 1,
+        "creators": [
+          "Irina RAICU"
+        ],
+        "sourceUrl": "https://thecvf-art.com/",
+        "collection": "art-selection",
+        "reflection": "",
+        "sourceName": "CVPR Art",
+        "originalUrl": "https://thecvf-art.com/project.php?year=2024&artist=irina-raicu-the-future-of-the-past&id=785",
+        "coverAssetId": "work-asset-6d5d6f1f-5e6a-4e02-becf-0de877b34e83",
+        "displayStyle": "exhibition",
+        "authorization": "confirmed",
+        "exhibitionName": "CVPR Art Gallery",
+        "exhibitionYear": "2024",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        "艺术与时尚",
+        "文化记忆",
+        "AI 智能体"
+      ],
+      "assets": [
+        {
+          "id": "work-asset-6d5d6f1f-5e6a-4e02-becf-0de877b34e83",
+          "fileName": "cvpr-future-of-the-past-cover.png",
+          "mimeType": "image/png",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-f40a1c3d-a523-4402-9d16-8a0a89178166/ec0d185a-3272-4068-afeb-69f53d2a5a6a-f4a8e8b4-5144-44f0-a196-916511e6d094",
+          "fileSize": 108802,
+          "sha256": "7b19d143f363f36a64299f2a101ee3312d6664d8f5a0c65af3eba4209c9447e8",
+          "sortOrder": 0,
+          "altText": "The Future of the Past"
+        },
+        {
+          "id": "work-asset-0dabe8f2-ce57-4c90-bfbc-98ed0a7dea04",
+          "fileName": "cvpr-future-of-the-past-1.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-f40a1c3d-a523-4402-9d16-8a0a89178166/10a56fd1-3ff8-4af6-9325-2dc708907c25-6d48c4cf-b9d1-43ed-9673-90db9694a25e",
+          "fileSize": 303168,
+          "sha256": "ef61392fe60f42200ca24687da7de6b2c609c5a71b8b3773daeeab6ea6c02d11",
+          "sortOrder": 1,
+          "altText": "The Future of the Past"
+        },
+        {
+          "id": "work-asset-464b104c-6e22-42b2-8e40-1bbe05128a53",
+          "fileName": "cvpr-future-of-the-past-2.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-f40a1c3d-a523-4402-9d16-8a0a89178166/c4ae077b-9645-4fd5-9c84-80274988c176-cc769202-5e12-4654-9e9a-cfb1ea531fcb",
+          "fileSize": 134924,
+          "sha256": "33928330e746a2be33553d1b38eb2efcbe61c638c2b18d871ae395b7d31b7d1e",
+          "sortOrder": 2,
+          "altText": "The Future of the Past"
+        },
+        {
+          "id": "work-asset-3028af28-6842-4375-9d5a-3b30b0a8edc7",
+          "fileName": "cvpr-future-of-the-past-3.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-f40a1c3d-a523-4402-9d16-8a0a89178166/a2230133-b3ac-4f71-badf-19233c8ccd50-26336130-1c25-4f97-b46d-437654a43ee1",
+          "fileSize": 4129317,
+          "sha256": "13091aef8e9d0cd02167bef4a2501884c27ce63d6e0bae2125071c9404d1239e",
+          "sortOrder": 3,
+          "altText": "The Future of the Past"
+        }
+      ]
+    },
+    {
+      "id": "work-4809b19e-f22f-4c86-b574-a972c003b948",
+      "authorId": "user-operator-demo",
+      "title": "Clinamen — Visiones Imbris",
+      "summary": "Robin Champenois 的 Clinamen 是一项持续进行的影像艺术计划，借由流动的像素进入“人工无意识”与集体记忆的空间。项目名称来自卢克莱修关于原子不可预测偏转的概念：影像中的形体不断诞生、交融又消散，如同记忆与感知始终处在变化之中。\n\n画面由两种算法的持续对抗构成。生成式 AI 试图从接收到的像素流中唤起可辨认的图像，而像素化的物理模拟不断让画面滴落、流散，并不为刚刚形成的物体停留。秩序与消散在同一时间发生，项目由此将熵与负熵的关系转化为可观看的动态绘画。\n\n《Visiones Imbris》为沉浸式投影构想：像素如雨般倾泻，物体与面孔从中显现，仿佛以集体过去的碎片织成一幅开放的壁画。缓慢的节奏、舒缓的音乐与来自久远时间的拉丁语吟诵，与数字生活的快速流动形成对照，邀请观看者进入安静、内省的观看状态。\n\n原作《Visiones Imbris》为 2023 年创作的约 45 分钟循环影像。本页视频为原作网站提供的约 3 分 26 秒预览片，并非完整循环版本。它保留了画面生成与消散的过程，便于观察作品如何在熟悉的形象与不可稳定辨认的流动之间往返。",
+      "discipline": "AI 艺术",
+      "isFeatured": false,
+      "featuredRank": null,
+      "publishedAt": "2026-10-19T03:26:07.155Z",
+      "createdAt": "2026-10-19T03:25:53.906Z",
+      "updatedAt": "2026-10-19T03:26:09.365Z",
+      "story": {
+        "steps": [],
+        "tools": [
+          "生成式 AI",
+          "像素物理模拟"
+        ],
+        "origin": "collected",
+        "methods": [
+          "生成艺术",
+          "物理模拟"
+        ],
+        "version": 1,
+        "creators": [
+          "Robin Champenois"
+        ],
+        "sourceUrl": "https://thecvf-art.com/",
+        "collection": "art-selection",
+        "reflection": "",
+        "sourceName": "CVPR Art",
+        "originalUrl": "https://thecvf-art.com/project.php?year=2024&artist=robin-champenois-clinamen&id=780",
+        "coverAssetId": "work-asset-12ae96ea-a76f-42da-b3d4-50bc8343e013",
+        "displayStyle": "exhibition",
+        "authorization": "confirmed",
+        "exhibitionName": "CVPR Art Gallery",
+        "exhibitionYear": "2024",
+        "allowDocumentDownload": false
+      },
+      "tags": [
+        "沉浸式影像",
+        "集体记忆",
+        "熵与秩序"
+      ],
+      "assets": [
+        {
+          "id": "work-asset-12ae96ea-a76f-42da-b3d4-50bc8343e013",
+          "fileName": "cvpr-clinamen-cover.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-4809b19e-f22f-4c86-b574-a972c003b948/2b2ab54d-5e89-4e6d-bab6-6b2aaa50bd4c-6495f433-7819-4b78-9622-ed171a8e605d",
+          "fileSize": 189202,
+          "sha256": "ff41bf3acdbc29061c3f01c241067224cda294a8a6cd97a00a11315dc1150d8b",
+          "sortOrder": 0,
+          "altText": "Clinamen — Visiones Imbris"
+        },
+        {
+          "id": "work-asset-9671c010-022f-474b-b779-adb21918fb78",
+          "fileName": "cvpr-clinamen-1.jpg",
+          "mimeType": "image/jpeg",
+          "assetType": "image",
+          "storageKey": "users/user-operator-demo/works/work-4809b19e-f22f-4c86-b574-a972c003b948/90a79d0e-0c2e-4120-934d-771d31e9a700-1581be38-e39a-448e-9e2e-e490622e4cbb",
+          "fileSize": 191323,
+          "sha256": "78817dae57cc7c4817801fd22dcd89d5a8b97b256b5bb218503600f990ac9827",
+          "sortOrder": 1,
+          "altText": "Clinamen — Visiones Imbris"
+        },
+        {
+          "id": "work-asset-dede8cc7-545f-4bbf-af51-be3fe9416f2d",
+          "fileName": "cvpr-clinamen-2.mp4",
+          "mimeType": "video/mp4",
+          "assetType": "video",
+          "storageKey": "users/user-operator-demo/works/work-4809b19e-f22f-4c86-b574-a972c003b948/5bb09ff4-1556-45a3-9ce5-54a93fa1bde1-5c81faa7-2650-4e54-8688-9967b371c8cf",
+          "fileSize": 81967582,
+          "sha256": "40f3a6d873027769000b2bd49464cdd16b3f15b63ac171a27d3571635e736e56",
+          "sortOrder": 2,
+          "altText": "Clinamen — Visiones Imbris"
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import {atomicStatus,learningStage} from '../atomicModel.js';
+import handoffCovers from './handoffAtomicCovers.json' with {type:'json'};
 
 export const atomicDirections=['设计基础','设计方法','美术史','设计史','软件实操','人工智能基础'];
 export const atomicNetworkKey=item=>`${item.id}@${item.revision}`;
@@ -9,6 +10,7 @@ export function atomicCardState(item){
  return {percent,label:item.status!=='published'?atomicStatus[item.status]||'草稿':done?'已完成':item.stage?learningStage[item.stage]:started?'学习中':'未开始',action:item.status!=='published'?'查看投稿':done?'回顾课程':started?'继续学习':course?'开始课程':'开始学习',tone:done?'complete':started?'learning':'new'};
 }
 export function atomicCover(item){
+ if(handoffCovers[item.id])return handoffCovers[item.id];
  const assets='/morph-course-network/';
  return assets+({color:'cards-img6.svg',type:'cards-img8.svg',grid:'cards-img9.svg'}[item.visual]|| (item.kind==='course'?'cards-imgTokens.svg':item.kind==='reflection'?'cards-img4.svg':'cards-img.svg'));
 }

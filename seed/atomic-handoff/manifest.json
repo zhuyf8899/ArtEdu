@@ -1,0 +1,1052 @@
+{
+  "id": "morph-atomic-handoff-20261028-v1",
+  "version": 1,
+  "source": {
+    "catalog": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+    "series": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+    "capturedAt": "2026-10-28",
+    "catalogEntries": 17,
+    "sessions": 10,
+    "seriesHours": 32,
+    "notice": "原稿目录及大纲，不含完整讲义/视频、示例教师账号或示例学习记录。"
+  },
+  "publisher": {
+    "id": "morph-handoff-library",
+    "username": "morph-handoff-library",
+    "displayName": "MORPH LAB 课程资料库",
+    "status": "disabled"
+  },
+  "nodes": [
+    {
+      "id": "morph-handoff-atom-ac539963cda9ab9c",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "抽象与隐喻",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "抽象与隐喻",
+        "summary": "从观察与抽象出发，寻找数据和图形之间的视觉隐喻，通过转译、草图与比较，探索信息的视觉表达。",
+        "direction": "设计方法",
+        "objective": "了解“抽象与隐喻”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n从观察与抽象出发，寻找数据和图形之间的视觉隐喻，通过转译、草图与比较，探索信息的视觉表达。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 1 次课 · 09.28 周一\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "抽象与隐喻"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-cafa511fc73dd4b9",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "Vibe Coding",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "肖岚茜 · 清华大学美术学院博士",
+      "readiness": "outline",
+      "payload": {
+        "title": "Vibe Coding",
+        "summary": "通过自然语言和 AI 构建交互艺术原型，探索网页艺术与实体交互装置的创作方法，将创意逐步转化为可运行、可体验的作品。",
+        "direction": "软件实操",
+        "objective": "了解“Vibe Coding”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n通过自然语言和 AI 构建交互艺术原型，探索网页艺术与实体交互装置的创作方法，将创意逐步转化为可运行、可体验的作品。\n\n### 来源与教学安排\n原稿讲授者：肖岚茜 · 清华大学美术学院博士\n所属课程：信息图表设计。第 4 次课 · 10.15 周四\n\n### 原稿知识大纲\n- 案例导入\n- 工具上手\n- 参考效果复现\n- 改造与混搭\n- 从数据开始设计\n  - 理解数据\n  - 建立视觉隐喻\n  - 图形与视觉映射\n  - 交互创意\n  - 交互叙事\n  - 设计卡练习\n- 数据网站创作\n- 展示与提交\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "Vibe Coding",
+          "案例导入",
+          "工具上手",
+          "参考效果复现",
+          "改造与混搭",
+          "从数据开始设计",
+          "理解数据",
+          "建立视觉隐喻",
+          "图形与视觉映射",
+          "交互创意",
+          "交互叙事",
+          "设计卡练习",
+          "数据网站创作",
+          "展示与提交"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：肖岚茜 · 清华大学美术学院博士；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-e32c3f4f61334cda",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "科学可视化设计与问答",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "Fabio Duarte · MIT · Principal Research Scientist",
+      "readiness": "outline",
+      "payload": {
+        "title": "科学可视化",
+        "summary": "围绕科学问题、数据与视觉表达，通过案例阅读和设计分析，理解可视化如何支持观察、解释与交流。",
+        "direction": "软件实操",
+        "objective": "了解“科学可视化”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n围绕科学问题、数据与视觉表达，通过案例阅读和设计分析，理解可视化如何支持观察、解释与交流。\n\n### 来源与教学安排\n原稿讲授者：Fabio Duarte · MIT · Principal Research Scientist\n所属课程：信息图表设计。第 5 次课 · 10.19 周一\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "科学可视化",
+          "科学可视化设计与问答"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：Fabio Duarte · MIT · Principal Research Scientist；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-012f928ff5b2cfd5",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "Data Diary",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "姚妍华 · 清华大学美术学院博士后",
+      "readiness": "outline",
+      "payload": {
+        "title": "数据日志",
+        "summary": "日常观察的结构化再现：把生活中的观察转化为数据记录，建立记录规则、视觉编码和自己的表达方式。",
+        "direction": "软件实操",
+        "objective": "了解“数据日志”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n日常观察的结构化再现：把生活中的观察转化为数据记录，建立记录规则、视觉编码和自己的表达方式。\n\n### 来源与教学安排\n原稿讲授者：姚妍华 · 清华大学美术学院博士后\n所属课程：信息图表设计。第 1 次课 · 09.28 周一\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "数据日志",
+          "Data Diary"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：姚妍华 · 清华大学美术学院博士后；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-3e295035f3831651",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "色彩构成基础",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "色彩构成基础",
+        "summary": "从色彩原理到实际应用，建立系统的色彩认知与搭配能力，掌握设计中的色彩表达方法。",
+        "direction": "设计基础",
+        "objective": "了解“色彩构成基础”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n从色彩原理到实际应用，建立系统的色彩认知与搭配能力，掌握设计中的色彩表达方法。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 45,
+        "knowledge": [
+          "色彩构成基础"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": [],
+        "visual": "color"
+      }
+    },
+    {
+      "id": "morph-handoff-atom-d8f3b6538dcc0481",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "字体认知",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "字体认知",
+        "summary": "理解衬线、无衬线与字重层级，掌握中文与西文混排的基本判断与选用方法。",
+        "direction": "设计基础",
+        "objective": "了解“字体认知”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n理解衬线、无衬线与字重层级，掌握中文与西文混排的基本判断与选用方法。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 30,
+        "knowledge": [
+          "字体认知"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": [],
+        "visual": "type"
+      }
+    },
+    {
+      "id": "morph-handoff-atom-fd12a05003888a4a",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "版式网格入门",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "版式网格入门",
+        "summary": "学习 12 栏响应式网格的搭建方法，完成海报与界面的版面规范与秩序训练。",
+        "direction": "设计基础",
+        "objective": "了解“版式网格入门”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n学习 12 栏响应式网格的搭建方法，完成海报与界面的版面规范与秩序训练。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 60,
+        "knowledge": [
+          "版式网格入门"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": [],
+        "visual": "grid"
+      }
+    },
+    {
+      "id": "morph-handoff-atom-d41647bc7722f84d",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "品牌标志推导",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "品牌标志推导",
+        "summary": "从关键词与结构出发推导几何标志，建立一套可复用的品牌视觉生成方法。",
+        "direction": "设计方法",
+        "objective": "了解“品牌标志推导”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n从关键词与结构出发推导几何标志，建立一套可复用的品牌视觉生成方法。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 90,
+        "knowledge": [
+          "品牌标志推导"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-8c4ea71522b97cd6",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "材质与表面基础",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "材质与表面基础",
+        "summary": "认识 CMF 与表面处理工艺，理解材质质感在真实产品中的表达逻辑与取舍。",
+        "direction": "设计基础",
+        "objective": "了解“材质与表面基础”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n认识 CMF 与表面处理工艺，理解材质质感在真实产品中的表达逻辑与取舍。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 75,
+        "knowledge": [
+          "材质与表面基础"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-ab0814d102f7f4f3",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "动态字体入门",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "动态字体入门",
+        "summary": "掌握可变字体与动态排版基础，让文字在时间与节奏维度中完成叙事表达。",
+        "direction": "设计基础",
+        "objective": "了解“动态字体入门”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n掌握可变字体与动态排版基础，让文字在时间与节奏维度中完成叙事表达。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 85,
+        "knowledge": [
+          "动态字体入门"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-4caf95be8c93abb7",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "HUD 信息层级",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "HUD 信息层级",
+        "summary": "面向透明显示屏的视觉版式与信息层级规范，完成一套可读性优先的 HUD 界面练习。",
+        "direction": "设计基础",
+        "objective": "了解“HUD 信息层级”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n面向透明显示屏的视觉版式与信息层级规范，完成一套可读性优先的 HUD 界面练习。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 110,
+        "knowledge": [
+          "HUD 信息层级"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-77bf08cbe27d775c",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "设计系统 Tokens 基础",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "设计系统 Tokens 基础",
+        "summary": "用 Design Tokens 统一颜色、间距与字阶，搭建设计系统可扩展的规范底座。",
+        "direction": "设计基础",
+        "objective": "了解“设计系统 Tokens 基础”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n用 Design Tokens 统一颜色、间距与字阶，搭建设计系统可扩展的规范底座。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 60,
+        "knowledge": [
+          "设计系统 Tokens 基础"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-d235d15e6e90f357",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "参数化图形入门",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "参数化图形入门",
+        "summary": "由标量场公式驱动的连续图形，掌握参数化视觉的生成逻辑与可控变量。",
+        "direction": "设计基础",
+        "objective": "了解“参数化图形入门”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n由标量场公式驱动的连续图形，掌握参数化视觉的生成逻辑与可控变量。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 120,
+        "knowledge": [
+          "参数化图形入门"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-7d563505c14b7988",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "设计思维方法",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "设计思维方法",
+        "summary": "从用户观察到问题定义，建立跨专业的设计思考与方案验证方法。",
+        "direction": "设计方法",
+        "objective": "了解“设计思维方法”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n从用户观察到问题定义，建立跨专业的设计思考与方案验证方法。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 60,
+        "knowledge": [
+          "设计思维方法"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-25178bd047d55df3",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "海报设计",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "海报设计",
+        "summary": "结合色彩、字体与版式网格，将设计概念转化为清晰的视觉传达。",
+        "direction": "设计方法",
+        "objective": "了解“海报设计”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n结合色彩、字体与版式网格，将设计概念转化为清晰的视觉传达。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 90,
+        "knowledge": [
+          "海报设计"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-16ec441bc706922d",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "产品设计",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "产品设计",
+        "summary": "从使用情境与需求出发，探索产品形态、材质与原型验证。",
+        "direction": "设计方法",
+        "objective": "了解“产品设计”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n从使用情境与需求出发，探索产品形态、材质与原型验证。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 120,
+        "knowledge": [
+          "产品设计"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-6ea63e956cc5882d",
+      "kind": "teaching",
+      "catalogEntry": true,
+      "sourceTitle": "信息图表设计",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles",
+      "lecturer": "",
+      "readiness": "outline",
+      "payload": {
+        "title": "信息图表设计",
+        "summary": "组织数据与叙事，选择合适的图表，用视觉层级表达复杂信息。",
+        "direction": "设计方法",
+        "objective": "了解“信息图表设计”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接目录示例：当前提供简介，尚未提供完整讲义、课件或视频。示例教师姓名和学习百分比不作为真实记录导入。\n\n组织数据与叙事，选择合适的图表，用视觉层级表达复杂信息。\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles)",
+        "minutes": 90,
+        "knowledge": [
+          "信息图表设计"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；https://morph-lab-design-platform.wj27398.chatgpt.site/atomic-courses-particles；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-bdec2ad3e5651b5c",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "信息图形与可视化",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "信息图形与可视化",
+        "summary": "《信息图表设计》课程节点：信息图形与可视化。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“信息图形与可视化”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：信息图形与可视化。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 1 次课 · 09.28 周一\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "信息图形与可视化"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-29db7b302b75eb85",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "可视化与叙事",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "可视化与叙事",
+        "summary": "《信息图表设计》课程节点：可视化与叙事。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“可视化与叙事”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：可视化与叙事。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 2 次课 · 10.08 周四\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "可视化与叙事"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-be513614fd09ff56",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "数据可视化技术基础",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "数据可视化技术基础",
+        "summary": "《信息图表设计》课程节点：数据可视化技术基础。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“数据可视化技术基础”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：数据可视化技术基础。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 2 次课 · 10.08 周四\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "数据可视化技术基础"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-56845d94f6d4fd34",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "Data Diary 分享与点评",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "Fabio Duarte · MIT · Principal Research Scientist\n\n吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "Data Diary 分享与点评",
+        "summary": "《信息图表设计》课程节点：Data Diary 分享与点评。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“Data Diary 分享与点评”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：Data Diary 分享与点评。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：Fabio Duarte · MIT · Principal Research Scientist；；吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 3 次课 · 10.12 周一\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "Data Diary 分享与点评"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：Fabio Duarte · MIT · Principal Research Scientist\n\n吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-f97d1773d26b8bf2",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "最终作业布置与案例分析",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "最终作业布置与案例分析",
+        "summary": "《信息图表设计》课程节点：最终作业布置与案例分析。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“最终作业布置与案例分析”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：最终作业布置与案例分析。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 3 次课 · 10.12 周一\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "最终作业布置与案例分析"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-435c8d244c4fcbe6",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "AI 辅助设计",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "AI 辅助设计",
+        "summary": "《信息图表设计》课程节点：AI 辅助设计。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "人工智能基础",
+        "objective": "了解“AI 辅助设计”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：AI 辅助设计。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 4 次课 · 10.15 周四\n\n### 原稿知识大纲\n- 小组确定方向\n  - 收束研究问题\n  - 盘点数据与素材\n  - 选择方法与媒介\n  - 形成验证草案\n\n### 关联学习原子\n- [CNN](/learning?library=atoms&node=morph-handoff-atom-1f3d47dacc1a19a5&revision=1)\n- [Vibe Coding](/learning?library=atoms&node=morph-handoff-atom-cafa511fc73dd4b9&revision=1)\n- [动捕实验室](/learning?library=atoms&node=morph-handoff-atom-d86c93229f314418&revision=1)\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "AI 辅助设计",
+          "小组确定方向",
+          "收束研究问题",
+          "盘点数据与素材",
+          "选择方法与媒介",
+          "形成验证草案"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-1f3d47dacc1a19a5",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "CNN",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "姚妍华 · 清华大学美术学院博士后",
+      "readiness": "outline",
+      "payload": {
+        "title": "CNN",
+        "summary": "《信息图表设计》课程节点：CNN。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "人工智能基础",
+        "objective": "了解“CNN”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：CNN。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：姚妍华 · 清华大学美术学院博士后\n所属课程：信息图表设计。第 4 次课 · 10.15 周四\n\n### 原稿知识大纲\n- 图像与像素\n- 卷积与特征\n  - 局部窗口与卷积核\n  - 特征图与层级\n- 分类与识别\n- 训练样本与模型学习\n- 识别实验与误差观察\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "CNN",
+          "图像与像素",
+          "卷积与特征",
+          "局部窗口与卷积核",
+          "特征图与层级",
+          "分类与识别",
+          "训练样本与模型学习",
+          "识别实验与误差观察"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：姚妍华 · 清华大学美术学院博士后；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-d86c93229f314418",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "动捕实验室",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "冼枫 · 清华大学艺术与设计实验教学中心高级工程师",
+      "readiness": "outline",
+      "payload": {
+        "title": "动捕实验室",
+        "summary": "《信息图表设计》课程节点：动捕实验室。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“动捕实验室”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：动捕实验室。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：冼枫 · 清华大学艺术与设计实验教学中心高级工程师\n所属课程：信息图表设计。第 4 次课 · 10.15 周四\n\n### 原稿知识大纲\n- 动作捕捉\n  - 采集流程与空间标定\n  - 关节轨迹与时间变化\n- 3D 扫描\n  - 扫描覆盖与视角\n  - 点云、网格与纹理\n- 采集结果与数据整理\n- 从采集到设计表达\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "动捕实验室",
+          "动作捕捉",
+          "采集流程与空间标定",
+          "关节轨迹与时间变化",
+          "3D 扫描",
+          "扫描覆盖与视角",
+          "点云、网格与纹理",
+          "采集结果与数据整理",
+          "从采集到设计表达"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：冼枫 · 清华大学艺术与设计实验教学中心高级工程师；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-80c1fdd89f1eee18",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "小组讨论、初步方案设计与研讨",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授\n\nFabio Duarte · MIT · Principal Research Scientist",
+      "readiness": "outline",
+      "payload": {
+        "title": "小组讨论、初步方案设计与研讨",
+        "summary": "《信息图表设计》课程节点：小组讨论、初步方案设计与研讨。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“小组讨论、初步方案设计与研讨”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：小组讨论、初步方案设计与研讨。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授；；Fabio Duarte · MIT · Principal Research Scientist\n所属课程：信息图表设计。第 5 次课 · 10.19 周一\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "小组讨论、初步方案设计与研讨"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授\n\nFabio Duarte · MIT · Principal Research Scientist；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-e08e1443bf371722",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "小组初步方案陈述与优化设计",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授\n\nFabio Duarte · MIT · Principal Research Scientist",
+      "readiness": "outline",
+      "payload": {
+        "title": "小组初步方案陈述与优化设计",
+        "summary": "《信息图表设计》课程节点：小组初步方案陈述与优化设计。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“小组初步方案陈述与优化设计”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：小组初步方案陈述与优化设计。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授；；Fabio Duarte · MIT · Principal Research Scientist\n所属课程：信息图表设计。第 6 次课 · 10.22 周四\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "小组初步方案陈述与优化设计"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授\n\nFabio Duarte · MIT · Principal Research Scientist；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-c14b4d16e0fed1e7",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "小组方案制作与辅导",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "小组方案制作与辅导",
+        "summary": "《信息图表设计》课程节点：小组方案制作与辅导。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“小组方案制作与辅导”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：小组方案制作与辅导。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 7 次课 · 10.26 周一；第 8 次课 · 10.29 周四；第 9 次课 · 11.02 周一\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "小组方案制作与辅导"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-87f583c050920379",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "参观展览",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "参观展览",
+        "summary": "《信息图表设计》课程节点：参观展览。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“参观展览”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：参观展览。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 7 次课 · 10.26 周一\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "参观展览"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-atom-98586a4d35c818ce",
+      "kind": "teaching",
+      "catalogEntry": false,
+      "sourceTitle": "最终作业陈述",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "lecturer": "吴琼 · 清华大学美术学院教授",
+      "readiness": "outline",
+      "payload": {
+        "title": "最终作业陈述",
+        "summary": "《信息图表设计》课程节点：最终作业陈述。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。",
+        "direction": "设计方法",
+        "objective": "了解“最终作业陈述”的课程范围与现有知识大纲，明确后续需要学习的内容。",
+        "content": "> 交接课程大纲：同步原稿已提供的介绍与知识节点。详细讲义、课件与视频尚未随交接网页提供。\n\n《信息图表设计》课程节点：最终作业陈述。按交接稿提供教学安排与现有知识大纲，完整课程资料待接入。\n\n### 来源与教学安排\n原稿讲授者：吴琼 · 清华大学美术学院教授\n所属课程：信息图表设计。第 10 次课 · 11.05 周四\n\n### 课程总结\n原稿列出“课程总结”，其下级详细内容待补充。\n\n[查看《信息图表设计》完整课程路线](/learning?library=atoms&node=morph-handoff-infographic-2026&revision=1)\n\n### 资料状态\n当前为大纲阅读与自我确认，不代表完成课堂学时或获得能力认证。后续教师可补充正式教学资源。\n[查看交接原稿](https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design)\n\n大纲建议阅读时间：15 分钟（平台阅读建议，不替代原稿课程学时）。",
+        "minutes": 15,
+        "knowledge": [
+          "最终作业陈述"
+        ],
+        "tools": [],
+        "completion": "read",
+        "exercise": "",
+        "source": "MORPH LAB 交接课程；原稿讲授者：吴琼 · 清华大学美术学院教授；https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design；仅同步现有大纲与图示，不含示例学习进度。",
+        "assetIds": []
+      }
+    },
+    {
+      "id": "morph-handoff-infographic-2026",
+      "kind": "course",
+      "sourceUrl": "https://morph-lab-design-platform.wj27398.chatgpt.site/infographic-design",
+      "readiness": "outline",
+      "payload": {
+        "title": "信息图表设计（数据分析与可视化表达）",
+        "summary": "清华大学美术学院专业基础课，原稿主讲吴琼；2026 秋季，10 次课、32 学时。以可视化思维观察和理解世界，探索数据、信息与人的关系。本次同步17个可复用节点与已有大纲，课堂讲义和视频待补充；完成记录仅表示大纲阅读。",
+        "steps": [
+          {
+            "atomId": "morph-handoff-atom-bdec2ad3e5651b5c",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 1 次课 · 09.28 周一。原稿节点：信息图形与可视化。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-ac539963cda9ab9c",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 1 次课 · 09.28 周一。原稿节点：抽象与隐喻。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-012f928ff5b2cfd5",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 1 次课 · 09.28 周一。原稿节点：Data Diary。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-29db7b302b75eb85",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 2 次课 · 10.08 周四。原稿节点：可视化与叙事。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-be513614fd09ff56",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 2 次课 · 10.08 周四。原稿节点：数据可视化技术基础。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-56845d94f6d4fd34",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 3 次课 · 10.12 周一。原稿节点：Data Diary 分享与点评。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-f97d1773d26b8bf2",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 3 次课 · 10.12 周一。原稿节点：最终作业布置与案例分析。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-435c8d244c4fcbe6",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 4 次课 · 10.15 周四。原稿节点：AI 辅助设计。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-1f3d47dacc1a19a5",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 4 次课 · 10.15 周四。原稿节点：CNN。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-cafa511fc73dd4b9",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 4 次课 · 10.15 周四。原稿节点：Vibe Coding。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-d86c93229f314418",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 4 次课 · 10.15 周四。原稿节点：动捕实验室。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-e32c3f4f61334cda",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 5 次课 · 10.19 周一。原稿节点：科学可视化设计与问答。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-80c1fdd89f1eee18",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 5 次课 · 10.19 周一。原稿节点：小组讨论、初步方案设计与研讨。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-e08e1443bf371722",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 6 次课 · 10.22 周四。原稿节点：小组初步方案陈述与优化设计。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-c14b4d16e0fed1e7",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 7 次课 · 10.26 周一；第 8 次课 · 10.29 周四；第 9 次课 · 11.02 周一。原稿节点：小组方案制作与辅导。多次课堂复用同一原子与学习记录。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-87f583c050920379",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 7 次课 · 10.26 周一。原稿节点：参观展览。当前同步课程大纲，完整讲义待接入。"
+          },
+          {
+            "atomId": "morph-handoff-atom-98586a4d35c818ce",
+            "revision": 1,
+            "required": true,
+            "prerequisites": [],
+            "task": "",
+            "context": "第 10 次课 · 11.05 周四。原稿节点：最终作业陈述。当前同步课程大纲，完整讲义待接入。"
+          }
+        ]
+      }
+    }
+  ],
+  "media": [],
+  "omittedMedia": [
+    {
+      "filename": "detail-imgMetaphor.png",
+      "reason": "source-placeholder-32x32",
+      "sha256": "338a795f06e30f0216c162fb0e188db9595cb2cbc90557524e4dc28c670b6531"
+    },
+    {
+      "filename": "detail-imgVibeV2.png",
+      "reason": "source-placeholder-32x32",
+      "sha256": "338a795f06e30f0216c162fb0e188db9595cb2cbc90557524e4dc28c670b6531"
+    },
+    {
+      "filename": "detail-imgDiary.png",
+      "reason": "source-placeholder-32x32",
+      "sha256": "338a795f06e30f0216c162fb0e188db9595cb2cbc90557524e4dc28c670b6531"
+    },
+    {
+      "filename": "detail-imgProjectReview.png",
+      "reason": "source-placeholder-32x32",
+      "sha256": "338a795f06e30f0216c162fb0e188db9595cb2cbc90557524e4dc28c670b6531"
+    },
+    {
+      "filename": "detail-imgProjectFinal.png",
+      "reason": "source-placeholder-32x32",
+      "sha256": "338a795f06e30f0216c162fb0e188db9595cb2cbc90557524e4dc28c670b6531"
+    }
+  ],
+  "coverAssets": [
+    {
+      "filename": "cards-img.svg",
+      "sha256": "c24e126f9cae037d222bd54b977b1c8af10d259451977a644232849c6b58fd08",
+      "size": 969
+    },
+    {
+      "filename": "cards-imgVibeCoding.svg",
+      "sha256": "0e2b7b3ff046e08244df7654c4d5f9c62d89de797502ff05aee96def574e23a2",
+      "size": 830
+    },
+    {
+      "filename": "cards-img3.svg",
+      "sha256": "db34a2074d1eb7801b802d13e2abe2b53b83b55c4d153ef0de6890f654b52db9",
+      "size": 2309
+    },
+    {
+      "filename": "cards-img4.svg",
+      "sha256": "02eaa67fdc8564a680fb7cce61252cc6c7168653d76696885f64e8869ef3580e",
+      "size": 4228
+    },
+    {
+      "filename": "cards-img6.svg",
+      "sha256": "69e41f62f2702fce59154c6e0d717d716cb2c9bf82f188b8f60550ceac539ed9",
+      "size": 1218
+    },
+    {
+      "filename": "cards-img8.svg",
+      "sha256": "99b0830e3ca298ee03e7b8aeb48b3d948479c1f6a715cffa1090ba0bf66034d7",
+      "size": 618
+    },
+    {
+      "filename": "cards-img9.svg",
+      "sha256": "9dbbcf45ddb08828d70d0c6ad2356a99e54f5c540f44857a053595ee539c6c17",
+      "size": 794
+    },
+    {
+      "filename": "cards-img10.svg",
+      "sha256": "8b878b4b0d6292509f391580931974ccc6a6f15be40d56ab17a93acf6dec9b78",
+      "size": 1084
+    },
+    {
+      "filename": "cards-img11.svg",
+      "sha256": "aebeb599b999dffddf3808b5be49525fa9bd590dacb22632dc522e850318ddd4",
+      "size": 1811
+    },
+    {
+      "filename": "cards-imgGroup.svg",
+      "sha256": "3bdd61161cccc18dfafd66b8ca33a5e49352f8a926eaa55bbea55fec1c7d9371",
+      "size": 1225
+    },
+    {
+      "filename": "cards-imgHud.svg",
+      "sha256": "3eecc33983569dee08d215f019117fdb8c0c3dec7eec7186b64bd8cf01372c5d",
+      "size": 1304
+    },
+    {
+      "filename": "cards-imgTokens.svg",
+      "sha256": "fb3f2810dad3cf017757c133305c8e4ae222932fc6510aca03cc73c00e3e5d5b",
+      "size": 1331
+    },
+    {
+      "filename": "cards-img12.svg",
+      "sha256": "c1aaf0338df937baa7f2fd0e02ed69e6ae0d60d1bbfcb6977c1685f346719412",
+      "size": 4741
+    }
+  ]
+}

@@ -8,8 +8,9 @@ import './atomic-reference-source.css';
 // This is the supplied curriculum design, not a generated arrangement of today's
 // records. Its original coordinates, artwork, curves and contributor captions are
 // kept together. Published learning content is resolved separately on interaction.
+const referenceText=value=>value.replace('AI辅助组合我的课程','组合学习路线').replace('教师、AI 与我，一起共创培养方案','连接知识原子，规划自己的学习路径');
 function ReferenceElement({node,onSelect,onNavigate,root=false}){
- if(typeof node==='string')return node;
+ if(typeof node==='string')return referenceText(node);
  const props={...node.props};
  if(root){props.role='region';props['aria-label']='学院课程知识网络';}
  if(node.tag==='button'||node.tag==='a'){
@@ -18,7 +19,7 @@ function ReferenceElement({node,onSelect,onNavigate,root=false}){
   props.href=node.tag==='a'?(composer?'/curriculum':'/learning?library=atoms'):undefined;
   props.onClick=event=>{event.preventDefault();composer?onNavigate('/curriculum'):onSelect(topic);};
  }
- return createElement(node.tag,props,...node.children.map((child,index)=>typeof child==='string'?child:<ReferenceElement node={child} key={index} onSelect={onSelect} onNavigate={onNavigate}/>));
+ return createElement(node.tag,props,...node.children.map((child,index)=>typeof child==='string'?referenceText(child):<ReferenceElement node={child} key={index} onSelect={onSelect} onNavigate={onNavigate}/>));
 }
 export function AtomicReferenceNetwork({accountId,serial,onNavigate}){
  const root=useRef(null),[topic,setTopic]=useState(''),[data,setData]=useState({items:[]}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
@@ -26,7 +27,7 @@ export function AtomicReferenceNetwork({accountId,serial,onNavigate}){
   const wrapper=root.current,network=wrapper.querySelector('.knowledge-network'),graph=wrapper.querySelector('.knowledge-graph');
   // Original source's sizeGraph algorithm. Scaling the whole coordinate system
   // preserves its handoff composition instead of changing the node topology.
-  const resize=()=>{const style=getComputedStyle(network),stacked=innerWidth<=1000,available=network.clientWidth-parseFloat(style.paddingLeft)*2-(stacked?0:parseFloat(style.gridTemplateColumns.split(' ')[0])+parseFloat(style.columnGap)),scale=Math.min(1,available/1204);graph.style.transform=`scale(${scale})`;graph.style.marginBottom=`${-500*(1-scale)}px`;if(!stacked)network.style.setProperty('height',Math.max(400,500*scale+50)+'px','important');else network.style.removeProperty('height');};
+  const resize=()=>{const style=getComputedStyle(network),stacked=innerWidth<=1000,available=network.clientWidth-parseFloat(style.paddingLeft)*2-(stacked?0:parseFloat(style.gridTemplateColumns.split(' ')[0])+parseFloat(style.columnGap)),scale=Math.min(1,available/1204);graph.style.transform=`scale(${scale})`;graph.style.marginBottom=`${-500*(1-scale)}px`;if(!stacked)network.style.setProperty('height',Math.max(wrapper.closest('.learning-network-panel')?(network.querySelector('.network-intro')?.scrollHeight||500)+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom):400,500*scale+50)+'px','important');else network.style.removeProperty('height');};
   const observer=new ResizeObserver(resize);observer.observe(network);resize();return()=>observer.disconnect();
  },[]);
  useEffect(()=>{let active=true;setLoading(true);setError('');atomicRequest('/network').then(result=>{if(active)setData(result);}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[accountId,serial,attempt]);

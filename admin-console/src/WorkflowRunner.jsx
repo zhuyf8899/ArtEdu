@@ -1,3 +1,4 @@
+import {lockPageScroll} from './pageScrollLock.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from "@xyflow/react";
@@ -49,12 +50,11 @@ export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onB
     return () => { cancelAnimationFrame(frame); observer.disconnect(); };
   }, [activeId, selected.id, focusNode]);
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockPage=lockPageScroll();
     // 运行工作流时整页都属于画布：给 body 打标记，隐藏站点导航与两侧装饰。
     document.body.classList.add("workflow-runner-open");
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlockPage();
       document.body.classList.remove("workflow-runner-open");
     };
   }, []);

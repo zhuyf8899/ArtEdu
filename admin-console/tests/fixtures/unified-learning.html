@@ -1,0 +1,8 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>学习入口组件核对</title><div id="root"></div><script type="module">
+import React,{useState}from'react';import{createRoot}from'react-dom/client';
+import'/src/styles.css';import'/src/morph/MorphChrome.jsx';import'/src/morph/platform-unified.css';import'/src/platform-audit-polish.css';
+import{AtomicLearningHub}from'/src/AtomicLearningHub.jsx';import{LearningLibrary}from'/src/LearningLibrary.jsx';import{FeedbackProvider}from'/src/FeedbackCenter.jsx';
+document.body.className='morph-platform';
+function Preview(){const[location,setLocation]=useState(window.location.search);const p=new URLSearchParams(location),courseId=p.get('course')||'',account={id:'component-preview',roles:[p.get('role')||'teacher']};const navigate=to=>{document.documentElement.dataset.navigation=to;history.pushState({},'',to);setLocation(window.location.search);};return React.createElement('main',{className:'morph-v17 morph-platform'},React.createElement(AtomicLearningHub,{account,library:p.get('library')||(courseId?'legacy':'atoms'),legacyCourseId:courseId,nodeId:p.get('node')||'',revision:p.get('revision')||'',onNavigate:navigate,legacy:React.createElement(LearningLibrary,{accountId:account.id,variant:'morph',initialCourseId:courseId,onNavigate:navigate,onNotice:()=>{}})}));}
+createRoot(document.getElementById('root')).render(React.createElement(FeedbackProvider,null,React.createElement(Preview)));
+</script></html>

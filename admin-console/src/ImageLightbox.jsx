@@ -1,3 +1,4 @@
+import {lockPageScroll} from './pageScrollLock.js';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CaretLeft, CaretRight, ArrowSquareOut, ArrowsCounterClockwise, ArrowsOutSimple, DownloadSimple, MagnifyingGlassMinus, MagnifyingGlassPlus, X } from "@phosphor-icons/react";
@@ -32,11 +33,10 @@ export function ImageLightbox({ src, alt = "", fileName = "", onClose, variant =
   const reset = useCallback(() => setView({ scale: 1, x: 0, y: 0 }), []);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
+    const unlockPage=lockPageScroll();
     const previousFocus = document.activeElement;
-    document.body.style.overflow = "hidden";
     closeRef.current?.focus?.();
-    return () => { document.body.style.overflow = previousOverflow; if (previousFocus?.isConnected) previousFocus.focus?.({ preventScroll: true }); };
+    return () => { unlockPage(); if (previousFocus?.isConnected) previousFocus.focus?.({ preventScroll: true }); };
   }, []);
 
   // 切换图片从完整适屏状态开始，不沿用上一张的缩放或拖动位置。
