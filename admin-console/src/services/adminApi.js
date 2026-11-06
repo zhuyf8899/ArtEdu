@@ -334,3 +334,8 @@ export const bindTemporaryWorkflowImage = (id,node,input) => request(`/temporary
 export const uploadTemporaryWorkflowImage = (id,file) => {const form=new FormData();form.append('file',file);return request(`/temporary-workflows/${encodeURIComponent(id)}/assets`,{method:'POST',body:form});};
 
 export const rerunWorkflowNode = (runId, nodeId) => request(`/workflow-runs/${encodeURIComponent(runId)}/nodes/${encodeURIComponent(nodeId)}/rerun`, {method:'POST'});
+
+export const getComfyFeature=()=>request("/platform/comfyui-feature");
+export const setComfyFeature=enabled=>request("/admin/comfyui-feature",{method:"PUT",body:JSON.stringify({enabled})});
+
+export const getKnowledgeNetwork=()=>request("/me/knowledge-network");

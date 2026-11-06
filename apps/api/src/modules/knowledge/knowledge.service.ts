@@ -6,7 +6,7 @@ import { AuthService, type Actor } from "../auth/auth.service";
 import { DatabaseService } from "../database/database.service";
 import type { LearningPathInput, ActivityInput, GoalInput, GoalUpdate, NodeInput, NodeLinks, NodeUpdate } from "./knowledge.contracts";
 
-interface NodeRow extends QueryResultRow { id: string; title: string; description: string; domain: string; sort_order: number; status: string; }
+interface NodeRow extends QueryResultRow { tags: string[]; show_in_network: boolean; id: string; title: string; description: string; domain: string; sort_order: number; status: string; }
 interface EdgeRow extends QueryResultRow { from_node_id: string; to_node_id: string; relation: "prerequisite" | "related"; }
 interface BindingRow extends QueryResultRow { node_id: string; target_type: string; target_id: string; }
 interface GoalRow extends QueryResultRow { id: string; title: string; description: string; sort_order: number; status: string; }
@@ -99,6 +99,14 @@ export class KnowledgeService {
     return { nodes, edges: graph.edges.map(this.mapEdge), bindings: graph.bindings.map(row=>({...this.mapBinding(row),...graph.available.get(row.target_type+':'+row.target_id)})), recommendations,
       path: path.rows[0] ?? {title:"我的学习路径",nodeIds:[]},
       summary: { total: nodes.length, completed: completed.size, inProgress: nodes.filter((node) => node.state === "in_progress").length } };
+  }
+
+  async getNetwork(actor: Actor) {
+    const map=await this.getMap(actor);
+    const nodes=map.nodes.filter(node=>node.showInNetwork),ids=new Set(nodes.map(node=>node.id));
+    const edges=[...new Map(map.edges.filter(edge=>ids.has(edge.fromNodeId)&&ids.has(edge.toNodeId)).map(edge=>[
+      edge.relation==='related'?[edge.fromNodeId,edge.toNodeId].sort().join(':')+':related':edge.fromNodeId+':'+edge.toNodeId+':'+edge.relation,edge])).values()];
+    return {nodes,edges,bindings:map.bindings.filter(binding=>ids.has(binding.nodeId)),curation:'manual',summary:{nodes:nodes.length,edges:edges.length,tagged:nodes.filter(node=>node.tags.length>0).length}};
   }
 
   async syncLabels(actor: Actor) {
@@ -208,8 +216,8 @@ export class KnowledgeService {
   async createNode(actor: Actor, input: NodeInput) {
     this.auth.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
     const result = await this.database.query<NodeRow>(`
-      INSERT INTO knowledge_nodes(id,title,description,domain,sort_order,status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *
-    `, [`knowledge-node-${randomUUID()}`, input.title, input.description, input.domain, input.sortOrder, input.status, actor.id]);
+      INSERT INTO knowledge_nodes(id,title,description,domain,sort_order,status,created_by,tags,show_in_network) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9) RETURNING *
+    `, [`knowledge-node-${randomUUID()}`, input.title, input.description, input.domain, input.sortOrder, input.status, actor.id, JSON.stringify(input.tags??[]), input.showInNetwork??false]);
     return this.mapNode(result.rows[0]);
   }
 
@@ -217,8 +225,8 @@ export class KnowledgeService {
     this.auth.requireAnyRole(actor, ADMIN_MANAGEMENT_ROLES);
     const result = await this.database.query<NodeRow>(`
       UPDATE knowledge_nodes SET source='manual',title=COALESCE($2,title),description=COALESCE($3,description),domain=COALESCE($4,domain),
-        sort_order=COALESCE($5,sort_order),status=COALESCE($6,status),updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING *
-    `, [nodeId, input.title ?? null, input.description ?? null, input.domain ?? null, input.sortOrder ?? null, input.status ?? null]);
+        sort_order=COALESCE($5,sort_order),status=COALESCE($6,status),tags=COALESCE($7::jsonb,tags),show_in_network=COALESCE($8,show_in_network),updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING *
+    `, [nodeId, input.title ?? null, input.description ?? null, input.domain ?? null, input.sortOrder ?? null, input.status ?? null, input.tags===undefined?null:JSON.stringify(input.tags), input.showInNetwork??null]);
     if (!result.rows[0]) throw new NotFoundException("知识点不存在");
     return this.mapNode(result.rows[0]);
   }
@@ -286,7 +294,7 @@ export class KnowledgeService {
     if (result.rows.length !== unique.length) throw new BadRequestException(`关联的 ${table} 记录不存在`);
   }
 
-  private mapNode(row: NodeRow) { return { id: row.id, title: row.title, description: row.description, domain: row.domain, sortOrder: row.sort_order, status: row.status }; }
+  private mapNode(row: NodeRow) { return { id: row.id, tags:row.tags??[], showInNetwork:row.show_in_network??false, title: row.title, description: row.description, domain: row.domain, sortOrder: row.sort_order, status: row.status }; }
   private mapEdge(row: EdgeRow) { return { fromNodeId: row.from_node_id, toNodeId: row.to_node_id, relation: row.relation }; }
   private mapBinding(row: BindingRow) { return { nodeId: row.node_id, targetType: row.target_type, targetId: row.target_id }; }
   private mapGoal(row: GoalRow) { return { id: row.id, title: row.title, description: row.description, sortOrder: row.sort_order, status: row.status }; }

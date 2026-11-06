@@ -1,3 +1,4 @@
+import {workflowFeatureEnabled,requireWorkflowFeature,workflowToolNames} from "../studio/workflow-feature";
 import {temporaryWorkflowTools,tempCreateSchema,tempEditSchema,tempIdSchema} from "./temporary-workflow-tools";
 import {TemporaryWorkflowService} from "../studio/temporary-workflow.service";
 import { createHash } from 'node:crypto';
@@ -140,7 +141,7 @@ async function listPublishedContent(args: z.infer<typeof listPublishedContentSch
   }
   if (args.type === "all" || args.type === "workflow") {
     const workflows = await dependencies.database.query<{ id: string; name: string; description: string | null; category: string | null }>(
-      "SELECT id,name,description,category FROM workflows WHERE status='published' ORDER BY updated_at DESC LIMIT $1", [limit],
+      "SELECT id,name,description,category FROM workflows WHERE status='published' AND (SELECT enabled FROM comfy_feature_settings WHERE id=true) ORDER BY updated_at DESC LIMIT $1", [limit],
     );
     items.push(...workflows.rows.map((item) => ({ type: "workflow", id: item.id, title: item.name, summary: item.description ?? "", category: item.category ?? "", platformRoute: `/studio?workflow=${encodeURIComponent(item.id)}` })));
   }
@@ -154,6 +155,7 @@ async function listPublishedContent(args: z.infer<typeof listPublishedContentSch
 }
 
 export async function executePlatformTool(call: ModelToolCall, context: AgentToolContext, dependencies: PlatformToolDependencies) {
+  if(workflowToolNames.has(call.function.name))await requireWorkflowFeature(dependencies.database);
   const raw = parseArguments(call);
   switch (call.function.name) {
     case "list_uploaded_files":
@@ -339,4 +341,8 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
     default:
       throw new Error(`未注册的平台工具: ${call.function.name}`);
   }
+}
+
+export async function availablePlatformToolDefinitions(db:DatabaseService){
+ return await workflowFeatureEnabled(db)?platformToolDefinitions:platformToolDefinitions.filter(tool=>!workflowToolNames.has(tool.function.name));
 }

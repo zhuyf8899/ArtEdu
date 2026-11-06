@@ -1,3 +1,4 @@
+import {withComfyFeature} from "./ComfyFeature.jsx";
 import { WorkflowImageInput } from "./WorkflowImageInput.jsx";
 import { createPortal } from "react-dom";
 import "./workflow-editor.css";
@@ -186,7 +187,7 @@ function FlowNode({ data, selected }) {
 
 const nodeTypes = { ...Object.fromEntries(Object.keys(palette).map((type) => [type, FlowNode])), comfy: ComfyNode };
 
-export function WorkflowAdmin({ showToast, canPublish = true, initialWorkflowId = "", onWorkflowNavigate }) {
+function WorkflowAdminContent({ showToast, canPublish = true, initialWorkflowId = "", onWorkflowNavigate }) {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -347,7 +348,7 @@ export function WorkflowAdmin({ showToast, canPublish = true, initialWorkflowId 
   </div>;
 }
 
-export function WorkflowCanvas({ editor, selected, loading = false, dirty = false, canPublish = false, onNotice = () => {}, onBack, onChange = () => {}, onDefinition = () => {}, onSave, onExport, onImport, readOnly = false }) {
+function WorkflowCanvasContent({ editor, selected, loading = false, dirty = false, canPublish = false, onNotice = () => {}, onBack, onChange = () => {}, onDefinition = () => {}, onSave, onExport, onImport, readOnly = false }) {
   const native = editor.definition.engine === 'comfyui';
   const [catalog, setCatalog] = useState({});
   const [workerOnline, setWorkerOnline] = useState(false);
@@ -756,3 +757,7 @@ export function WorkflowCanvas({ editor, selected, loading = false, dirty = fals
 
   </div>, document.body);
 }
+
+export const WorkflowAdmin=withComfyFeature(WorkflowAdminContent);
+
+export const WorkflowCanvas=withComfyFeature(WorkflowCanvasContent);

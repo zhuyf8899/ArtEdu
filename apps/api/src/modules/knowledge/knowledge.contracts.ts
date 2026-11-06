@@ -7,6 +7,8 @@ const edge = z.object({ toNodeId: id, relation: z.enum(["prerequisite", "related
 
 export const nodeInputSchema = z.object({
   title: z.string().trim().min(1).max(120),
+  tags: z.array(z.string().trim().min(1).max(40)).max(12).refine(tags=>new Set(tags).size===tags.length,"标签不能重复").optional(),
+  showInNetwork: z.boolean().optional(),
   description: z.string().trim().max(2000).default(""),
   domain: z.string().trim().min(1).max(80).default("general"),
   sortOrder: z.number().int().min(0).max(100000).default(0),

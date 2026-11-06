@@ -21,7 +21,7 @@ test('工具审计只留计数和 ID，不保存定义、参数或二进制',()=
 test('真实 Harness 调用临时图工具并直接交给客户端，不自动执行或保存正式版本',async()=>{
  const actor={id:'owner',roles:['student']} as any;let generated=0;
  const generation={runJob:async()=>{generated++;throw Error('must not call image API');}};
- const db={query:async()=>{throw Error('must not write workflow graph to SQL');}};
+ const db={query:async(sql:string)=>{if(sql==='SELECT enabled FROM comfy_feature_settings WHERE id=true')return {rows:[{enabled:true}]};throw Error('must not write workflow graph to SQL');}};
  const temporary=new TemporaryWorkflowService(db as any,new StudioService(db as any,{} as any,generation as any),generation as any);
  const agents={claimForExecution:async()=>({createdAt:new Date().toISOString(),scenario:'chat',input:{prompt:'生成一个文字工作流',parameters:{}}}),appendAgentMessage:async()=>{},appendToolCall:async()=>{},appendArtifact:async()=>{throw Error('workflow must not create cloud file');},finishRun:async(_id:any,delivery:any)=>({status:delivery.status,delivery})};
  const adapter={id:'scripted',capabilities:['chat'],execute:async()=>({kind:'text',content:'',toolCalls:[{id:'create',type:'function',function:{name:'create_temporary_workflow',arguments:JSON.stringify({name:'测试临时图',definition,changeSummary:'创建文字预览链'})}}]})};

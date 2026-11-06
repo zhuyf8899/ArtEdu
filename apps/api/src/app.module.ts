@@ -1,3 +1,4 @@
+import {WorkflowFeatureGuard} from "./modules/studio/workflow-feature";
 import { ObjectStorageModule } from './modules/object-storage/object-storage.module';
 /**
  * 【后端模块总目录】imports 把各领域模块装进应用；controllers 注册本模块的接口；providers 注册可注入的服务。APP_GUARD 将认证守卫设为全局入口检查，具体业务权限仍由业务层验证。
@@ -26,7 +27,7 @@ import { AtomicModule } from "./modules/atomic/atomic.module";
 @Module({
   imports: [ObjectStorageModule, DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, CreationStorageModule, GenerationModule, LearningModule, KnowledgeModule, PortalModule, RagModule, StudioModule, MorphModule, AtomicModule],
   controllers: [HealthController],
-  providers: [CloudCacheService, { provide: APP_GUARD, useClass: AuthenticationGuard }],
+  providers: [CloudCacheService, { provide: APP_GUARD, useClass: AuthenticationGuard }, {provide:APP_GUARD,useClass:WorkflowFeatureGuard}],
 })
 export class AppModule {}
 

@@ -6,7 +6,7 @@ import {StudioService} from './studio.service';
 const actor={id:'owner',roles:['student']} as any,other={id:'other',roles:['admin']} as any;
 const node=(id:string,type:string,value='')=>({id,type,position:{x:0,y:0},data:{label:id,value}});
 const definition={nodes:[node('text','text_constant','PRIVATE_NODE_TEXT'),node('out','text_preview')],edges:[{id:'edge',source:'text',target:'out'}]};
-function fixture(db:any={query:async()=>{throw Error('unexpected SQL');}},generation:any={runJob:async()=>{throw Error('unexpected API call');}}){const studio=new StudioService(db,{} as any,generation);return {studio,service:new TemporaryWorkflowService(db,studio,generation)};}
+function fixture(db:any={query:async()=>{throw Error('unexpected SQL');}},generation:any={runJob:async()=>{throw Error('unexpected API call');}}){const source=db;db={...source,query:async(sql:string,...args:any[])=>sql==='SELECT enabled FROM comfy_feature_settings WHERE id=true'?{rows:[{enabled:true}]}:source.query(sql,...args)};const studio=new StudioService(db,{} as any,generation);return {studio,service:new TemporaryWorkflowService(db,studio,generation)};}
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 test('内存预算同时限制账号与服务；超限不淘汰旧图且不调用模型',async()=>{
  const {service}=fixture();const w=service.create(actor,{name:'保留已有图',definition});

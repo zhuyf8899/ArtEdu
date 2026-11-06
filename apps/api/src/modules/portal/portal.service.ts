@@ -95,7 +95,7 @@ export class PortalService {
       this.database.query<WorkflowRow>(`
         SELECT id, name, description, category, entry_type
         FROM workflows
-        WHERE status = 'published'
+        WHERE status = 'published' AND (SELECT enabled FROM comfy_feature_settings WHERE id=true)
         ORDER BY is_featured DESC, featured_rank NULLS LAST, created_at DESC
         LIMIT 6
       `),
@@ -245,7 +245,7 @@ export class PortalService {
         LEFT JOIN users creator ON creator.id = workflow.created_by
         LEFT JOIN workflow_tags relation ON relation.workflow_id = workflow.id
         LEFT JOIN tags tag ON tag.id = relation.tag_id
-        WHERE workflow.status = 'published'
+        WHERE workflow.status = 'published' AND (SELECT enabled FROM comfy_feature_settings WHERE id=true)
           AND (
             workflow.name ILIKE ANY($1::text[]) OR COALESCE(workflow.description, '') ILIKE ANY($1::text[]) OR
             COALESCE(workflow.category, '') ILIKE ANY($1::text[]) OR COALESCE(creator.display_name, '') ILIKE ANY($1::text[]) OR
@@ -314,7 +314,7 @@ export class PortalService {
           ARRAY(SELECT jsonb_array_elements_text(COALESCE(catalog_json->'tags','[]'::jsonb))) AS tags,
           COUNT(*) OVER()::int AS match_count
         FROM tool_directory_links
-        WHERE status='active'
+        WHERE status='active' AND (id <> 'tool-directory-workflow' OR (SELECT enabled FROM comfy_feature_settings WHERE id=true))
           AND (name ILIKE ANY($1::text[]) OR detail ILIKE ANY($1::text[]) OR category ILIKE ANY($1::text[]) OR COALESCE(catalog_json->'tags','[]'::jsonb)::text ILIKE ANY($1::text[]))
           AND ($2::text IS NULL OR category=$2 OR COALESCE(catalog_json->'tags','[]'::jsonb) ? $2)
         ORDER BY sort_order LIMIT $3

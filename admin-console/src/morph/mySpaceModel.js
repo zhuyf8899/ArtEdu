@@ -1,6 +1,6 @@
 import { courseProgress } from '../courseProgress.js';
 import { decorateCourse } from '../coursePresentation.js';
-export const SPACE_VIEWS = ['overview','portrait','courses','plan','notes','works','favorites'];
+export const SPACE_VIEWS = ['overview','portrait','knowledge','courses','plan','notes','works','favorites'];
 export const spaceCourseForCard = course => decorateCourse(course);
 export function spaceCourseStatus(course) {
   if(course.archived || course.status === 'archived') return 'archived';

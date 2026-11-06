@@ -1,3 +1,4 @@
+import {useComfyFeature,ComfyDisabled} from "./ComfyFeature.jsx";
 import { PageLoading } from "./PageLoading.jsx";
 import { skipNode } from '../../shared/workflowGraph.mjs';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -26,7 +27,7 @@ const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https:
  */
 const nodesCarryPrompt = (nodes, edges, id) => hasDownstreamPrompt(nodes, edges, id);
 
-export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", onNavigate, onNotice, canPublish = false, canManageToolDirectory = false, variant = 'classic' }) {
+function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", onNavigate, onNotice, canPublish = false, canManageToolDirectory = false, variant = 'classic' }) {
   const [recommendOpen,setRecommendOpen]=useState(false);
   const [workflows, setWorkflows] = useState([]);
   const [catalogState,setCatalogState]=useState('loading'),[catalogError,setCatalogError]=useState('');
@@ -172,6 +173,7 @@ export function WorkflowStudio({ accountId, initialWorkflowId, initialRunId = ""
   </section>;
 }
 function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder, variant, onNavigate }) {
+ const {enabled:comfyEnabled}=useComfyFeature();
   const [links, setLinks] = useState([]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -193,7 +195,7 @@ function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder, variant, on
   const categories = useMemo(() => ["全部", ...new Set(links.filter((item) => item.status === "active").map((item) => item.category).filter(Boolean))], [links]);
   // 皮影与其它工具同属一份清单：早前它单独占一张大卡，其余工具在下面另起一段；
   // 现在全部按同一行式呈现，管理员也能像别的工具一样编辑它。
-  const visibleLinks = useMemo(() => links.filter((item) => item.status === "active" && (category === "全部" || item.category === category) && morphQueryMatches([item.name,item.detail,item.category,...(item.catalog?.tags||[])],toolQuery)), [category, links, toolQuery]);
+  const visibleLinks = useMemo(() => links.filter((item) => item.status === "active" && (category === "全部" || item.category === category) && morphQueryMatches([item.name,item.detail,item.category,...(item.catalog?.tags||[])],toolQuery)).filter(tool=>comfyEnabled===true||!(tool.id==='tool-directory-workflow'||/^\/(?:admin\/workflows|studio\?(?:.*&)?(?:builder|workflow|edit|run)=)/.test(tool.href))), [category, links, toolQuery, comfyEnabled]);
   const openNew = () => { setEditingId(null); setForm(emptyToolForm()); setEditorOpen(true); };
   const edit = (item) => { setEditingId(item.id); setForm({ category: item.category, name: item.name, detail: item.detail, href: item.href, coverImageUrl: item.coverImageUrl || "", iconKey: item.iconKey, launchMode: item.launchMode, featured: item.featured, status: item.status }); setEditorOpen(true); };
   const submit = async (event) => {
@@ -238,3 +240,9 @@ function ToolDirectoryCard({ tool, canManage, onEdit, onOpenWorkflowBuilder, onN
   return <article className="tool-directory__card">{isWorkflowBuilder ? <button type="button" className="tool-directory__launch" onClick={onOpenWorkflowBuilder} aria-label="打开工作流管理与创建页面">{content}</button> : <a href={tool.href} onClick={event=>{if(tool.href.startsWith('/') && !external && onNavigate && !event.button && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey){event.preventDefault();onNavigate(tool.href);}}} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined} referrerPolicy={external ? "no-referrer" : undefined}>{content}</a>}{canManage && <button className="tool-directory__edit" onClick={() => onEdit(tool)} aria-label={`编辑 ${tool.name}`}><PencilSimple size={14} weight="bold" /><span>编辑</span></button>}</article>;
 }
 
+
+export function WorkflowStudio(props){
+ const {enabled}=useComfyFeature();
+ if(enabled===true)return <WorkflowStudioContent {...props}/>;
+ return <section className="workflow-catalog">{(props.initialWorkflowId||props.builderOpen)&&<ComfyDisabled/>}<ToolDirectory variant={props.variant} canManage={props.canManageToolDirectory} onNotice={props.onNotice} onNavigate={props.onNavigate}/></section>;
+}

@@ -1,3 +1,4 @@
+import {ComfyFeatureProvider} from "./ComfyFeature.jsx";
 import { PageLoading } from "./PageLoading.jsx";
 /**
  * 【应用总入口】恢复用户会话，然后按登录状态、地址和角色选择界面。阅读顺序：App → AppContent 的状态与 useEffect → signIn/signOut → return 分支 → toPortalAccount。前端分流用于交互，业务权限还会由后端检查。
@@ -34,7 +35,7 @@ export function App() {
     return () => document.body.classList.remove('morph-platform');
   }, []);
   // Provider 为内部页面提供统一的操作提示、确认等反馈能力。
-  return <FeedbackProvider><AppContent /></FeedbackProvider>;
+  return <FeedbackProvider><ComfyFeatureProvider><AppContent /></ComfyFeatureProvider></FeedbackProvider>;
 }
 
 function AppContent() {
@@ -50,7 +51,7 @@ function AppContent() {
   // 挂载后询问后端当前身份。then 处理成功，catch 处理失败，finally 总会执行。
   // 末尾 [] 表示此 Effect 不随状态变化重跑；开发 StrictMode 可额外检查它。
   useEffect(() => {
-    getCurrentUser().then((actor) => setAccount(toPortalAccount(actor))).catch(() => setAccount(null)).finally(() => setReady(true));
+    getCurrentUser().then((actor) => {setAccount(toPortalAccount(actor));window.dispatchEvent(new Event('comfy-feature-refresh'));}).catch(() => setAccount(null)).finally(() => setReady(true));
   }, []);
 
   useEffect(() => {
@@ -69,6 +70,7 @@ function AppContent() {
   const signIn = async (username, password) => {
     const actor = await loginLocal(username.trim(), password);
     setAccount(toPortalAccount(actor));
+    window.dispatchEvent(new Event('comfy-feature-refresh'));
     setSessionMessage("");
   };
 

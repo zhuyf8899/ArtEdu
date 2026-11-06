@@ -1,3 +1,4 @@
+import {requireWorkflowFeature} from "./workflow-feature";
 import {BadRequestException,ConflictException,ForbiddenException,Injectable,NotFoundException,OnModuleDestroy,OnModuleInit} from '@nestjs/common';
 import {createHash,randomUUID} from 'node:crypto';
 import type {Actor} from '../auth/auth.service';
@@ -44,6 +45,7 @@ export class TemporaryWorkflowService implements OnModuleInit,OnModuleDestroy {
  start(actor:Actor,id:string,input:{revision:number;requestId:string}){const e=this.owned(actor,id);this.studio.validateTemporaryDefinition(e.definition);if(e.revision!==input.revision)throw new ConflictException('请先查看最新图，再确认执行');if(e.execution?.requestId===input.requestId)return this.snapshot(e);if(e.abort||e.saving)throw new ConflictException('当前工作流正在执行');for(const node of e.definition.nodes)if(node.type==='load_image'){if(!e.bindings[node.id])throw new BadRequestException('请先为图片输入节点选择本机图片');this.imageEdit(e,e.bindings[node.id]);}e.lastActivity=Date.now();e.abort=new AbortController();e.execution={id:randomUUID(),requestId:input.requestId,revision:e.revision,status:'running',completedNodes:[],artifacts:[]};void this.run(actor,e);return this.snapshot(e);}
  private async run(actor:Actor,e:Entry){const execution=e.execution!;const signal=e.abort!.signal;try{
    const state=await this.studio.executeTemporaryGraph(actor,e.definition,e.bindings,async(input:any,context:any)=>{
+     await requireWorkflowFeature(this.db);
      this.owned(actor,e.id,true);
      const edit=context.referenceFileId?this.imageEdit(e,context):undefined;
      const reservation=randomUUID(),reservedBytes=input.jobType==='chat'?64000:8*1024*1024;this.quota(actor,reservedBytes);this.reservations.set(reservation,{ownerId:actor.id,bytes:reservedBytes});

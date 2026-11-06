@@ -1,3 +1,4 @@
+import {ComfyFeatureControl} from "./ComfyFeature.jsx";
 /**
  * 【管理后台】按当前栏目显示总览、用户、额度、审核及相关管理页面。先看导出的 AdminDashboard，再追某个栏目使用的 API；表格、抽屉和表单是界面组件，最终写入由后端验证。
  */
@@ -304,9 +305,9 @@ export function AdminDashboard({ actor, onBack, onNavigate = () => {}, onLearnin
       {(adminLoading || adminLoadError) && <div className={`admin-load-state ${adminLoadError ? "is-error" : ""}`} aria-busy={adminLoading}><span>{adminLoading ? "正在同步管理数据…" : adminLoadError}</span>{!adminLoading && <button onClick={loadAdminData}>重新加载</button>}</div>}
       {section === "overview" && <Overview users={users} reviews={reviews} dashboard={dashboard} onNavigate={changeSection} onEditQuota={setQuotaUser} />}
       {section === "users" && <UsersPage users={users} onEditQuota={setQuotaUser} onToggleStatus={toggleUserStatus} selectedIds={selectedUserIds} onSelectionChange={setSelectedUserIds} onOpenBulkQuota={() => setBulkQuotaOpen(true)} canManageQuota={canManageQuota} />}
-      {section === "knowledge" && <KnowledgeAdmin showToast={showToast} />}
+      {section === "knowledge" && <KnowledgeAdmin showToast={showToast} onNavigate={onLearningNavigate} />}
       {section === "courses" && <AdminCourses showToast={showToast} canManageContent={canManageQuota} canReviewCourses={canManageQuota} onNavigate={onLearningNavigate} />}
-      {section === "workflows" && <WorkflowAdmin showToast={showToast} initialWorkflowId={workflowEditId} onWorkflowNavigate={onWorkflowNavigate} />}
+      {section === "workflows" && <><ComfyFeatureControl actor={actor} showToast={showToast}/><WorkflowAdmin showToast={showToast} initialWorkflowId={workflowEditId} onWorkflowNavigate={onWorkflowNavigate} /></>}
       {section === "reviews" && <ReviewsPage actor={actor} onLearningNavigate={onLearningNavigate} atomicPending={atomicPending} onAtomicPending={setAtomicPending} reviews={reviews} selectedReview={selectedReview} canManageContent={canManageQuota || operatorOnly} showToast={showToast} onChanged={loadAdminData} onSelectReview={(item, queue) => { setSelectedReview(item); setReviewQueue(queue); }} />}
       {section === "reports" && <ReportsPage reports={reports} onDecision={resolveReport} />}
     </div></main></div>

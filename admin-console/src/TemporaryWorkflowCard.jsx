@@ -1,3 +1,4 @@
+import {withComfyFeature} from "./ComfyFeature.jsx";
 import {useEffect,useRef,useState} from 'react';
 import {ReactFlow,Background,Controls} from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -16,7 +17,7 @@ function LocalInput({userId,id,node,onState}){
 }
 
 /** Mounting, opening and viewing results never restore or renew any cloud cache. */
-export function TemporaryWorkflowCard({userId,conversationId,id,onSelect}){
+function TemporaryWorkflowCardContent({userId,conversationId,id,onSelect}){
  const [record,setRecord]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[inputs,setInputs]=useState({}),[expanded,setExpanded]=useState(false);
  const active=useRef(true),timer=useRef(null),action=useRef(false),polling=useRef(false);
  useEffect(()=>{active.current=true;const load=()=>void getLocalWorkflow(userId,id).then(r=>{if(active.current)setRecord(r);}).catch(e=>{if(active.current)setError(e.message);});load();const update=e=>{if(e.detail.user===userId&&e.detail.id===id)load();};window.addEventListener('artedu:temporary-workflow-updated',update);return()=>{active.current=false;clearTimeout(timer.current);window.removeEventListener('artedu:temporary-workflow-updated',update);};},[userId,id]);
@@ -42,3 +43,5 @@ export function TemporaryWorkflowCard({userId,conversationId,id,onSelect}){
   {execution&&<section><strong>v{execution.revision} · {({running:'正在执行',completed:'执行完成',failed:'执行失败'})[execution.status]}</strong><p>{execution.completedNodes.length} / {snapshot.definition.nodes.length} 个节点</p>{execution.error&&<p role="alert">{execution.error}</p>}{execution.text&&<pre>{execution.text}</pre>}{execution.artifacts.map(a=><LocalResult key={a.id} userId={userId} id={id} artifact={a} updatedAt={record.updatedAt}/>)}{execution.artifacts.length>0&&<button type="button" onClick={()=>{setBusy(true);void poll();}}>重试同步成果</button>}</section>}
  </section>;
 }
+
+export const TemporaryWorkflowCard=withComfyFeature(TemporaryWorkflowCardContent);

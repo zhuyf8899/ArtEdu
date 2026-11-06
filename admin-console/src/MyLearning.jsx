@@ -1,3 +1,4 @@
+import {KnowledgeNetwork} from "./KnowledgeNetwork.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowClockwise, ArrowRight, BookOpenText, BookmarkSimple, CalendarCheck, Check,
@@ -155,6 +156,7 @@ export function MyLearning({ account, onNavigate, onNotice, learningAtlas = "", 
     const safeData = data.profile?.id === account.id ? data : EMPTY_DATA;
     return <MorphMySpace onTaskSaved={task=>setData(current=>({...current,tasks:current.tasks.some(t=>t.id===task.id)?current.tasks:[task,...current.tasks]}))} account={account} data={{...safeData,favorites:enrichFavoriteRecords(safeData.favorites,caseCatalog)}} creation={creation} view={currentView} onView={onView} onNavigate={onNavigate}
       loading={loading} error={loadError} onRetry={load}>
+      {currentView === 'knowledge' && <KnowledgeNetwork accountId={account.id} onNavigate={onNavigate}/>}
       {currentView === 'plan' && <PlanManager data={safeData} onSaved={task=>setData(current=>({...current,tasks:current.tasks.some(t=>t.id===task.id)?current.tasks.map(t=>t.id===task.id?task:t):[task,...current.tasks]}))} onToggle={toggleTask} onDelete={removeTask} onNavigate={onNavigate} onNotice={onNotice}/>}
       {currentView === 'notes' && <NotesManager notes={safeData.notes} courses={safeData.courses} onSaved={note=>setData(current=>({...current,notes:current.notes.some(n=>n.id===note.id)?current.notes.map(n=>n.id===note.id?note:n):[note,...current.notes]}))} onDelete={removeNote} onNavigate={onNavigate} onNotice={onNotice}/>}
     </MorphMySpace>;

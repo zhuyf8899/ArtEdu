@@ -1,0 +1,28 @@
+import 'reflect-metadata';
+import assert from 'node:assert/strict';
+import {withDatabase} from './run-sql-file';
+import {WorkflowFeatureController} from '../modules/studio/workflow-feature.controller';
+import {WorkflowFeatureGuard} from '../modules/studio/workflow-feature';
+import {availablePlatformToolDefinitions} from '../modules/agent/agent-tools';
+import {ComfyService} from '../modules/studio/comfy.service';
+void withDatabase(async pool=>{const client=await pool.connect();try{
+ await client.query('BEGIN');
+ const actor=(await client.query('SELECT id FROM users LIMIT 1')).rows[0];if(!actor)throw Error('No existing local user available');
+ const db={query:(sql:string,args?:any[])=>client.query(sql,args),transaction:async(work:any)=>work(client)} as any;
+ const controller=new WorkflowFeatureController(db,{getActor:async()=>actor,requireAnyRole:()=>{}} as any);
+ const guard=new WorkflowFeatureGuard(db);
+ const context=(url:string)=>({switchToHttp:()=>({getRequest:()=>({url})})}) as any;
+ const count=(await client.query('SELECT count(*) FROM knowledge_nodes')).rows[0].count;
+ await controller.set({} as any,{enabled:false});
+ assert.equal((await controller.get({} as any)).enabled,false);
+ await assert.rejects(()=>guard.canActivate(context('/api/admin/workflows')),/节点生图/);
+ assert.equal(await guard.canActivate(context('/api/me/knowledge-map')),true);
+ assert.equal(await new ComfyService(db).claim({id:'test-device',user_id:actor.id}),null);
+ assert.ok(!(await availablePlatformToolDefinitions(db)).some(t=>t.function.name==='create_temporary_workflow'));
+ await controller.set({} as any,{enabled:true});
+ assert.equal(await guard.canActivate(context('/api/comfy/catalog')),true);
+ assert.ok((await availablePlatformToolDefinitions(db)).some(t=>t.function.name==='create_temporary_workflow'));
+ assert.equal((await client.query('SELECT count(*) FROM knowledge_nodes')).rows[0].count,count);
+ assert.equal((await client.query("SELECT to_regclass('public.platform_feature_settings') AS name")).rows[0].name,null);
+ console.log('PASS: ComfyUI off/on, direct access blocking, Agent tools filtering, Worker claim blocked, knowledge graph unchanged; all writes rolled back.');
+ }finally{await client.query('ROLLBACK');client.release();}});

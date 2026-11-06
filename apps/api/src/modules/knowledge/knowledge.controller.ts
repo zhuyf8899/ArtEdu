@@ -10,6 +10,9 @@ import { KnowledgeService } from "./knowledge.service";
 export class KnowledgeController {
   constructor(private readonly auth: AuthService, private readonly knowledge: KnowledgeService) {}
 
+  @Get("me/knowledge-network")
+  async network(@Req() request: FastifyRequest) { return this.knowledge.getNetwork(await this.auth.getActor(request)); }
+
   @Get("me/knowledge-map")
   async map(@Req() request: FastifyRequest) { return this.knowledge.getMap(await this.auth.getActor(request)); }
 

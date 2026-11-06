@@ -1,3 +1,4 @@
+import {workflowFeatureEnabled} from "./workflow-feature";
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
@@ -98,6 +99,7 @@ export class ComfyService {
         id: string;
         user_id: string;
     }) {
+        if(!await workflowFeatureEnabled(this.db))return null;
         await this.expire();
         return this.db.transaction(async (c) => {
             await c.query('SELECT id FROM local_bridge_devices WHERE id=$1 FOR UPDATE', [device.id]);
@@ -131,7 +133,7 @@ export class ComfyService {
         const r = await this.db.query(`UPDATE comfy_jobs SET lease_until=CURRENT_TIMESTAMP+INTERVAL '45 seconds',progress_json=progress_json||COALESCE($4::jsonb,'{}'::jsonb),updated_at=CURRENT_TIMESTAMP WHERE run_id=$1 AND device_id=$2 AND user_id=$3 AND status IN ('running','cancelling') RETURNING status`, [runId, device.id, device.user_id, progress ? JSON.stringify(progress) : null]);
         if (!r.rows[0])
             throw new ConflictException('任务租约已结束或不属于该设备');
-        return { cancel: r.rows[0].status === 'cancelling' };
+        return { cancel: r.rows[0].status === 'cancelling' || !await workflowFeatureEnabled(this.db) };
     }
     async finish(device: {
         id: string;

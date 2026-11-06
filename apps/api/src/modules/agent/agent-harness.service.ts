@@ -1,3 +1,4 @@
+import {requireWorkflowFeature} from "../studio/workflow-feature";
 import {Optional} from "@nestjs/common";
 import {TemporaryWorkflowService} from "../studio/temporary-workflow.service";
 import {temporaryWorkflowToolNames} from "./temporary-workflow-tools";
@@ -15,7 +16,7 @@ import { AgentService } from "./agent.service";
 import { runModelLoop, type AgentProgressEvent } from "./agent-runtime";
 import type { ModelAdapter, ModelRequest, ModelStreamDelta, ModelToolDefinition } from "../generation/model-adapter";
 import { ModelRegistry } from "../generation/model-registry";
-import { executePlatformTool, platformToolDefinitions } from "./agent-tools";
+import { executePlatformTool, availablePlatformToolDefinitions } from "./agent-tools";
 import { portalSearchQuerySchema } from "../portal/portal.contracts";
 import { PortalService } from "../portal/portal.service";
 import { WebSearchService } from "./web-search.service";
@@ -180,7 +181,7 @@ export class AgentHarnessService {
     const scenario = run.scenario as keyof typeof scenarioInstruction;
     const previousTask = z.object({artifacts:z.array(z.object({kind:z.string().max(40),path:z.string().max(500),format:z.string().max(10).optional()})).max(30)}).safeParse(runParameters?.previousTask);
     let contract = followups ? {action:"answer" as const,deliverables:[]} : planTask({prompt,previousTask:previousTask.success?previousTask.data:null});
-    if(input.temporaryWorkflowId && this.temporaryWorkflows){this.temporaryWorkflows.get(actor,input.temporaryWorkflowId);touchedWorkflows.add(input.temporaryWorkflowId);if(contract.action==='execute')contract={action:'answer',deliverables:[]};}
+    if(input.temporaryWorkflowId && this.temporaryWorkflows){await requireWorkflowFeature(this.database);this.temporaryWorkflows.get(actor,input.temporaryWorkflowId);touchedWorkflows.add(input.temporaryWorkflowId);if(contract.action==='execute')contract={action:'answer',deliverables:[]};}
     const systemPrompt = followups ? FOLLOWUP_PROMPT : composeAgentPrompt({basePolicy:toolUsePolicy,contract,searchEnabled:input.searchEnabled,attachmentMissing:!!referenceId&&!uploadedFile}) + "\n当用户要求生成或编辑工作流时，必须使用临时工作流工具交付真实节点图，不得以写 JSON 文件冒充。只能编辑本人未发布草稿；修改后由用户点击运行和正式保存，禁止启动临时图或自动永久保存。图片输入节点留给用户在卡片中选图。不要在回答中复述完整节点 JSON，只给变更摘要。";
     await this.agents.appendAgentMessage(runId, "正在整理创作需求并准备调用模型。");
 
@@ -231,11 +232,11 @@ export class AgentHarnessService {
               parameters: {
                 ...input.model,
                 toolChoice: input.model.toolChoice ?? "auto",
-                tools: runParameters?.source==='followup-suggestions'?[]:platformToolDefinitions.filter(tool=>(input.searchEnabled||tool.function.name!=='search_web')&&!(input.temporaryWorkflowId&&tool.function.name==='start_workflow_run')),
+                tools: runParameters?.source==='followup-suggestions'?[]:(await availablePlatformToolDefinitions(this.database)).filter(tool=>(input.searchEnabled||tool.function.name!=='search_web')&&!(input.temporaryWorkflowId&&tool.function.name==='start_workflow_run')),
                 ...(/deepseek/i.test(serverAdapter!.id)?{providerOptions:{...input.model.providerOptions,thinking:{type:'disabled'}}}:{}),
               },
             },
-            tools: runParameters?.source==='followup-suggestions'?[]:platformToolDefinitions.filter(tool=>(input.searchEnabled||tool.function.name!=='search_web')&&!(input.temporaryWorkflowId&&tool.function.name==='start_workflow_run')),
+            tools: runParameters?.source==='followup-suggestions'?[]:(await availablePlatformToolDefinitions(this.database)).filter(tool=>(input.searchEnabled||tool.function.name!=='search_web')&&!(input.temporaryWorkflowId&&tool.function.name==='start_workflow_run')),
             contract,
             executeTool: {
               execute: async (call, context) => {

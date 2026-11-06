@@ -8,14 +8,14 @@ import { isCollectedWork, spaceEvidence, spaceCourseForCard, spaceCourseStatus }
 import './my-space.css';
 import { withReturnTarget } from '../resourceContext.js';
 
-const VIEWS=[['overview','空间总览',House],['portrait','我的专业画像',ChartPolar],['courses','我的课程',BookOpenText],['plan','学习计划',CalendarCheck],['notes','学习笔记',NotePencil],['works','我的作品',ImageSquare],['favorites','收藏案例',BookmarkSimple]];
+const VIEWS=[['overview','空间总览',House],['portrait','我的专业画像',ChartPolar],['knowledge','知识网络',BookOpenText],['courses','我的课程',BookOpenText],['plan','学习计划',CalendarCheck],['notes','学习笔记',NotePencil],['works','我的作品',ImageSquare],['favorites','收藏案例',BookmarkSimple]];
 const statusName=value=>({draft:'草稿',pending:'审核中',approved:'已发布',rejected:'待修改',archived:'已归档'}[value]||'作品记录');
 const courseForCard=spaceCourseForCard;
 
 export function MorphMySpace({account,data,creation,view,onView,onNavigate,loading,error,onRetry,onTaskSaved,children}) {
   const evidence=spaceEvidence(data), full=view==='overview';
   const name=data.profile?.id===account.id?data.profile.displayName:account.name;
-  return <section className={`morph-space container ${full?'morph-space--overview':'morph-space--compact'}`} aria-label="我的空间">
+  return <section className={`morph-space container ${full?'morph-space--overview':'morph-space--compact'} ${view==='knowledge'?'morph-space--knowledge':''}`} aria-label="我的空间">
     <header className="morph-space-profile">
       {full&&<div className="morph-space-cover"><img src="/morph-v17/assets/digital-organism-cover-v1.png" alt="艺术与智能主题的个人空间默认封面"/></div>}
       <div className="morph-space-identity"><div className="morph-space-avatar" aria-hidden="true">{name.slice(0,1)}</div>
@@ -40,7 +40,7 @@ export function MorphMySpace({account,data,creation,view,onView,onNavigate,loadi
         {view==='courses'&&<><section className="morph-space-section"><SpaceHeading eyebrow="ATOMIC LEARNING" title="我的原子学习" action="查看独立学习记录 ↗" onAction={()=>onNavigate('/learning?library=learning')}/><p>新原子的阅读、练习和已完成版本单独记录；下面保留原有课程进度。</p></section><SpaceCourses courses={data.courses||[]} onNavigate={onNavigate}/></>}
         {view==='works'&&<SpaceWorks data={data} onNavigate={onNavigate} onRetry={onRetry}/>}
         {view==='favorites'&&<><SpaceHeading eyebrow="COLLECTIONS" title="收藏案例"/><WorkRecords items={data.favorites||[]} favorite onNavigate={onNavigate}/></>}
-        {['plan','notes'].includes(view)&&<div className="morph-space-manager">{children}</div>}
+        {['knowledge','plan','notes'].includes(view)&&<div className="morph-space-manager">{children}</div>}
       </>}
     </div>
   </section>;

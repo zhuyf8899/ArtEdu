@@ -1,3 +1,4 @@
+import {withComfyFeature} from "./ComfyFeature.jsx";
 import {lockPageScroll} from './pageScrollLock.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkflowImageInput } from "./WorkflowImageInput.jsx";
@@ -19,7 +20,7 @@ function GraphNode({ data }) {
 }
 const nodeTypes = Object.fromEntries(Object.keys(nodeStyle).map((type) => [type, GraphNode]));
 
-export function WorkflowRunner({ selected, run, loading, autoError, onRetry, onBack, onStart, onExecute, onNotice }) {
+function WorkflowRunnerContent({ selected, run, loading, autoError, onRetry, onBack, onStart, onExecute, onNotice }) {
   const steps = run?.steps ?? selected.steps ?? [];
   const activeStep = run?.status === "in_progress" ? steps[run.currentStep] : null;
   const activeId = activeStep?.id;
@@ -115,3 +116,5 @@ function NodeExecutionPanel({ step, node, output, loading, onExecute }) {
   };
   return <article className="workflow-step workflow-step--node"><span>当前节点 · {node?.type || "note"}</span><h3>{step.title}</h3>{needsPrompt && <label className="workflow-run-prompt">创作需求<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="输入本次要生成的内容" /></label>}{needsNegativePrompt && <label className="workflow-run-prompt">负向提示词<textarea value={negativePrompt} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="例如：文字、水印、模糊" maxLength={1500} /></label>}{needsReference && <WorkflowImageInput value={referenceFile} onChange={setReferenceFile} disabled={loading || uploading} />}{uploadError && <p role="alert">{uploadError}</p>}<footer>{needsPrompt || needsReference ? <button disabled={loading || uploading || (needsPrompt && !prompt.trim() && !String(node?.data?.value ?? "").trim()) || (needsReference && (!referenceFile?.imageFile || referenceFile.maskPending))} onClick={execute}>{loading || uploading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} {uploading ? "上传参考图片…" : needsPrompt ? "开始生成" : "提交并继续"}</button> : needsNegativePrompt ? <button disabled={loading} onClick={execute}>{loading ? <SpinnerGap className="spin" /> : <Play size={18} weight="fill" />} 用这组负向词继续</button> : <span className="workflow-step__auto">{loading ? "正在执行…" : "自动执行"}</span>}</footer></article>;
 }
+
+export const WorkflowRunner=withComfyFeature(WorkflowRunnerContent);

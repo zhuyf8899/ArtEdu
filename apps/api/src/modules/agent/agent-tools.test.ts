@@ -28,14 +28,14 @@ function call(name: string, args: Record<string, unknown>): ModelToolCall {
 test("复现截图报错：生成服务返回文字而非图片产物", async () => {
   const generation = { runJob: async () => ({ job: { id: "text-only", status: "succeeded" }, output: { kind: "text", content: "构图方案" } }) };
   await assert.rejects(executePlatformTool(call("generate_image", { prompt: "海浪" }), baseContext, {
-    actor, runId: "run-1", database: {} as DatabaseService, agents: {} as AgentService, studio: {} as StudioService, generation: generation as never,
+    actor, runId: "run-1", database: {query:async()=>({rows:[{enabled:true}]})} as unknown as DatabaseService, agents: {} as AgentService, studio: {} as StudioService, generation: generation as never,
   }), /^Error: 图片服务没有返回实际私有图片$/);
 });
 
 test("上游服务异常直接传递，不会变成截图中的产物校验报错", async () => {
   const generation = { runJob: async () => { throw new Error("模型服务认证失败"); } };
   await assert.rejects(executePlatformTool(call("generate_image", { prompt: "海浪" }), baseContext, {
-    actor, runId: "run-1", database: {} as DatabaseService, agents: {} as AgentService, studio: {} as StudioService, generation: generation as never,
+    actor, runId: "run-1", database: {query:async()=>({rows:[{enabled:true}]})} as unknown as DatabaseService, agents: {} as AgentService, studio: {} as StudioService, generation: generation as never,
   }), /^Error: 模型服务认证失败$/);
 });
 
@@ -60,7 +60,7 @@ test("平台 Agent 工具返回已发布课程和课时事实，而不是占位�
 
 test("成果草稿直接保存，启动工作流仍必须等待用户明确确认", async () => {
   const agents = { async appendArtifact() { return "artifact-1"; } } as unknown as AgentService;
-  const dependencies = { actor, runId: "run-1", database: {} as DatabaseService, agents, studio: {} as StudioService };
+  const dependencies = { actor, runId: "run-1", database: {query:async()=>({rows:[{enabled:true}]})} as unknown as DatabaseService, agents, studio: {} as StudioService };
   const artifact = await executePlatformTool(call("create_agent_artifact", { artifactType: "brief", content: "设计说明" }), baseContext, dependencies);
   const workflow = await executePlatformTool(call("start_workflow_run", { workflowId: "workflow-1" }), baseContext, dependencies);
 
@@ -74,7 +74,7 @@ test("用户明确确认后才启动已发布工作流", async () => {
   } } as unknown as StudioService;
   const confirmed: AgentToolContext = { ...baseContext, messages: [{ role: "user", content: "我确认，启动工作流 workflow-1。" }] };
   const result = await executePlatformTool(call("start_workflow_run", { workflowId: "workflow-1", context: { theme: "宋锦" } }), confirmed, {
-    actor, runId: "run-1", database: {} as DatabaseService, agents: {} as AgentService, studio,
+    actor, runId: "run-1", database: {query:async()=>({rows:[{enabled:true}]})} as unknown as DatabaseService, agents: {} as AgentService, studio,
   });
 
   assert.deepEqual(result, { status: "succeeded", workflowRun: { receivedActor: "student-1", workflowId: "workflow-1", context: { theme: "宋锦" } }, message: "工作流已启动。" });
@@ -90,7 +90,7 @@ test("多文件工作区工具一次创建网页所需文件，并限制在当�
     },
   } as unknown as AgentWorkspaceService;
   const result = await executePlatformTool(call("write_workspace_files", { files: [{ path: "site/index.html", content: "<link rel=\"stylesheet\" href=\"style.css\">" }, { path: "site/style.css", content: "body { color: #111; }" }] }), baseContext, {
-    actor, runId: "run-1", database: {} as DatabaseService, agents: {} as AgentService, studio: {} as StudioService, workspace,
+    actor, runId: "run-1", database: {query:async()=>({rows:[{enabled:true}]})} as unknown as DatabaseService, agents: {} as AgentService, studio: {} as StudioService, workspace,
   });
   assert.equal(result.status, "succeeded");
   assert.deepEqual(received.map((file) => file.path), ["site/index.html", "site/style.css"]);
