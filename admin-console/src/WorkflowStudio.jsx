@@ -1,3 +1,4 @@
+import {loadWorkflowSelection} from "./workflowResume.js";
 import {useComfyFeature,ComfyDisabled} from "./ComfyFeature.jsx";
 import { PageLoading } from "./PageLoading.jsx";
 import { skipNode } from '../../shared/workflowGraph.mjs';
@@ -76,9 +77,9 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
   useEffect(() => {
     const requestId = ++opening.current;
     setSelected(null); setRun(null); setAutoError(''); setOpenError(''); advancing.current = '';
-    if (!initialWorkflowId || builderOpen) { setLoading(false); return; }
+    if ((!initialWorkflowId && !initialRunId) || builderOpen) { setLoading(false); return; }
     setLoading(true);
-    Promise.all([getWorkflow(initialWorkflowId), initialRunId ? getWorkflowRun(initialRunId) : Promise.resolve(null)]).then(([detail, previous]) => {
+    loadWorkflowSelection(initialWorkflowId, initialRunId, {getWorkflow,getWorkflowRun}).then(({detail, previous}) => {
       if(requestId !== opening.current) return;
       if(previous && previous.workflowId !== detail.id) throw new Error('执行记录不属于这个工作流，请返回目录重新打开');
       setSelected(detail); setRun(previous);
@@ -123,7 +124,7 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
     }).finally(() => { if(alive.current && requestId === opening.current) setLoading(false); });
   }, [run, selected, loading, autoError, onNotice]);
 
-  if (initialWorkflowId && !selected && !builderOpen) return <section className="portal-empty"><h2>{loading ? '正在打开工作流…' : '工作流暂时无法打开'}</h2>{openError && <p role="alert">{openError}</p>}<button onClick={backToCatalog}>返回技能工具</button></section>;
+  if ((initialWorkflowId || initialRunId) && !selected && !builderOpen) return <section className="portal-empty"><h2>{loading ? '正在打开工作流…' : '工作流暂时无法打开'}</h2>{openError && <p role="alert">{openError}</p>}<button onClick={backToCatalog}>返回技能工具</button></section>;
   if (selected?.definition?.engine === 'comfyui') return <ComfyCanvas readOnly editor={{name:selected.name,definition:selected.definition}} selected={selected} onNotice={onNotice} onBack={backToCatalog} />;
   if (selected) return <Suspense fallback={<PageLoading />}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onNotice={onNotice} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={backToCatalog} onStart={start} onExecute={executeNode} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
@@ -244,5 +245,5 @@ function ToolDirectoryCard({ tool, canManage, onEdit, onOpenWorkflowBuilder, onN
 export function WorkflowStudio(props){
  const {enabled}=useComfyFeature();
  if(enabled===true)return <WorkflowStudioContent {...props}/>;
- return <section className="workflow-catalog">{(props.initialWorkflowId||props.builderOpen)&&<ComfyDisabled/>}<ToolDirectory variant={props.variant} canManage={props.canManageToolDirectory} onNotice={props.onNotice} onNavigate={props.onNavigate}/></section>;
+ return <section className="workflow-catalog">{(props.initialWorkflowId||props.initialRunId||props.builderOpen)&&<ComfyDisabled/>}<ToolDirectory variant={props.variant} canManage={props.canManageToolDirectory} onNotice={props.onNotice} onNavigate={props.onNavigate}/></section>;
 }
