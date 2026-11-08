@@ -1,3 +1,4 @@
+import {KnowledgeModule} from "../knowledge/knowledge.module";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DatabaseModule } from "../database/database.module";
@@ -14,7 +15,7 @@ import { WebSearchService } from "./web-search.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
 
 @Module({
-  imports: [AuthModule, DatabaseModule, GenerationModule, PortalModule, StudioModule, CreationStorageModule, RagModule],
+  imports: [KnowledgeModule, AuthModule, DatabaseModule, GenerationModule, PortalModule, StudioModule, CreationStorageModule, RagModule],
   controllers: [AgentController, AgentAdminController],
   providers: [AgentService, AgentHarnessService, WebSearchService, AgentWorkspaceService],
   exports: [AgentService, WebSearchService],

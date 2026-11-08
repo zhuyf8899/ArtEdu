@@ -164,11 +164,15 @@ export function assessDelivery({ contract, ledger = [], content = '', finishReas
         if(index<0)return true;unmatched.splice(index,1);return false;
     });
     const unverified = items.filter(a => (a.kind === 'webpage' || a.kind === 'image') && a.validation !== 'pass');
+    const routePlan=[...ledger].reverse().find(entry=>entry.name==='plan_learning_route');
+    const routeReview=routePlan&&[...ledger].reverse().find(entry=>entry.name==='review_learning_route'&&entry.output?.planId===routePlan.output?.planId);
+    const routePending=routePlan&&(routePlan.output?.status==='needs_review'?routeReview?.output?.status!=='reviewed_candidate':routePlan.output?.status!=='screened_candidate');
     let status: AgentDelivery['status'] = 'succeeded', reason = '任务已完成';
     if (needsConfirmation) {
         status = 'needs_confirmation';
         reason = '等待对应动作的用户确认';
     }
+    else if (routePending) { status='partial'; reason='学习路线尚有未复核连接、关联问题或先修冲突'; }
     else if (contract.action === 'execute' && !ledger.some(e => e.name === 'start_workflow_run' && classifyToolOutcome(e.output) === 'succeeded')) {
         status = 'failed';
         reason = '没有实际执行请求的动作';

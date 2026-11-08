@@ -1,3 +1,6 @@
+import {learningRouteTools,executeLearningRouteTool} from "./learning-route-tools";
+import {knowledgeGraphTool,readKnowledgeGraph} from "./knowledge-graph-tool";
+import type {KnowledgeService} from "../knowledge/knowledge.service";
 import {workflowFeatureEnabled,requireWorkflowFeature,workflowToolNames} from "../studio/workflow-feature";
 import {temporaryWorkflowTools,tempCreateSchema,tempEditSchema,tempIdSchema} from "./temporary-workflow-tools";
 import {TemporaryWorkflowService} from "../studio/temporary-workflow.service";
@@ -22,6 +25,8 @@ import {checkRenderedPage} from './agent-browser-check';
 
 export const platformToolDefinitions: readonly ModelToolDefinition[] = [
   ...temporaryWorkflowTools,
+  knowledgeGraphTool,
+  ...learningRouteTools,
   {type:'function',function:{name:'generate_image',description:'用户明确要求生图时调用，生成一张真实私有图片。只解释时不得调用。供应商可能添加AI标识；文件返回不等于视觉内容已核验。',parameters:{type:'object',properties:{prompt:{type:'string',minLength:1,maxLength:1500},workspacePath:{type:'string',description:'嵌入网页时将图片同步保存到工作区的相对路径，如assets/hero.png；后缀按实际图片格式自动调整。'},size:{type:'string',pattern:'^\\d{3,4}x\\d{3,4}$'},aspectRatio:{type:'string',enum:['1:1','4:3','3:4','16:9','9:16']}},required:['prompt']}}},
   { type: "function", function: { name: "search_platform", description: "搜索当前用户可见的课程、工作流和案例作品。", parameters: { type: "object", properties: { query: { type: "string", minLength: 1 }, type: { type: "string", enum: ["all", "course", "workflow", "work"] }, limit: { type: "integer", minimum: 1, maximum: 10 } }, required: ["query"] } } },
   { type: "function", function: { name: "list_published_content", description: "列出当前用户可见的已发布课程、工作流或案例；用户未提供 ID、要求随便打开一个内容时使用。返回站内相对路径，不会打开外部浏览器。", parameters: { type: "object", properties: { type: { type: "string", enum: ["all", "course", "workflow", "work"] }, limit: { type: "integer", minimum: 1, maximum: 10 } } } } },
@@ -83,6 +88,7 @@ export interface PlatformToolDependencies {
   workspace?: AgentWorkspaceService;
   generation?: GenerationService;
   rag?: RagService;
+  knowledge?: KnowledgeService;
   temporaryWorkflows?: TemporaryWorkflowService;
 }
 
@@ -158,6 +164,13 @@ export async function executePlatformTool(call: ModelToolCall, context: AgentToo
   if(workflowToolNames.has(call.function.name))await requireWorkflowFeature(dependencies.database);
   const raw = parseArguments(call);
   switch (call.function.name) {
+    case "plan_learning_route":
+    case "review_learning_route":
+      if(!dependencies.knowledge)throw new Error("知识图谱服务不可用");
+      return executeLearningRouteTool(call.function.name,raw,dependencies.knowledge,dependencies.actor,dependencies.runId,await workflowFeatureEnabled(dependencies.database));
+    case "get_knowledge_graph":
+      if(!dependencies.knowledge)throw new Error("知识图谱服务不可用");
+      return readKnowledgeGraph(dependencies.knowledge,dependencies.actor,raw,await workflowFeatureEnabled(dependencies.database));
     case "list_uploaded_files":
       if (!dependencies.creationStorage) throw new Error("文件读取服务不可用");
       return { status: "succeeded", ...(await dependencies.creationStorage.list(dependencies.actor)) };

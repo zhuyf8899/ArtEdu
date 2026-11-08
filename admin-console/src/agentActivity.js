@@ -4,7 +4,7 @@ const toolLabels = {
   'model.invoke': '调用模型', 'agent.execute': '执行任务', 'request.prepare': '准备任务',
   'artifact.generate': '生成产物',
   'generation.image': '生成图片', 'generation.pattern': '生成图案', 'generation.document': '生成文档',
-  get_course_lesson:'读取课程与课时', search_course_knowledge:'检索课程知识',
+  plan_learning_route:'生成基础学习路线', review_learning_route:'复核局部知识关联', get_knowledge_graph:'查看知识图谱', get_course_lesson:'读取课程与课时', search_course_knowledge:'检索课程知识',
   get_workflow_detail:'读取工作流', get_case_detail:'读取案例', search_cases:'搜索案例',
   list_courses:'列出课程', list_workflows:'列出工作流', get_workflow_run_result:'读取运行结果',
   list_saved_artifacts:'读取成果草稿', generate_document:'生成文档', list_uploaded_files:'列出参考文件',
