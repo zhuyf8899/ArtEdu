@@ -7,6 +7,20 @@ const teacher={id:'teacher',roles:['teacher']} as any,student={id:'student',role
 const valid={title:'色彩对比',summary:'理解色彩的不同对比关系',objective:'能够运用冷暖对比表达情绪',content:'观察两幅图像的色彩关系，解释它们的区别。',minutes:15,knowledge:['色彩对比'],completion:'read'};
 const auth={requireAnyRole:(a:any,roles:string[])=>{if(!a.roles.some((r:string)=>roles.includes(r)))throw new ForbiddenException();}} as any;
 
+test('教学原子与课程独立保存教师署名，兼容旧版本并校验长度',()=>{
+ const course={title:'设计课程',summary:'从理解走向完整实践',steps:[{atomId:'a',revision:1}]};
+ for(const [schema,payload] of [[atomPayload,valid],[coursePayload,course]] as const){
+  const parsed=schema.parse({...payload,teacherName:'  张老师、李老师  ',teacherBio:'  设计学院\n视觉传达方向  '});
+  assert.equal(parsed.teacherName,'张老师、李老师');
+  assert.equal(parsed.teacherBio,'设计学院\n视觉传达方向');
+  assert.equal(schema.safeParse(payload).success,true);
+  assert.equal(schema.safeParse({...payload,teacherName:'师'.repeat(201)}).success,false);
+  assert.equal(schema.safeParse({...payload,teacherBio:'师'.repeat(2001)}).success,false);
+  assert.equal(schema.safeParse({...payload,ownerId:'another-teacher'}).success,false);
+  assert.equal(schema.parse({...payload,teacherName:'',teacherBio:''}).teacherName,'');
+ }
+});
+
 test('原子列表分类和学习状态允许组合，拒绝未知字段和伪造状态',()=>{
  const result=atomicListSchema.parse({view:'atoms',direction:'设计方法',stage:'in_progress',page:'2'});
  assert.equal(result.direction,'设计方法');assert.equal(result.stage,'in_progress');assert.equal(result.page,2);

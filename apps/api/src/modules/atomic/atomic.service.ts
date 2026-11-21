@@ -143,7 +143,7 @@ export class AtomicService {
    SELECT * FROM decorated WHERE ($6='' OR direction=$6) AND ($7='' OR CASE WHEN required>0 AND completed=required THEN 'completed' WHEN started THEN 'in_progress' ELSE 'not_started' END=$7)
   ), page_rows AS (
    SELECT id,kind,"ownerId","parentId","parentTitle","publishedRevision",author,revision,status,stage,direction,
-    payload->>'title' AS title,payload->>'summary' AS summary,payload->'knowledge' AS knowledge,payload->'tools' AS tools,payload->'minutes' AS minutes,payload->>'visual' AS visual,payload->>'completion' AS completion,
+    payload->>'title' AS title,payload->>'summary' AS summary,payload->>'teacherName' AS "teacherName",payload->>'teacherBio' AS "teacherBio",payload->'knowledge' AS knowledge,payload->'tools' AS tools,payload->'minutes' AS minutes,payload->>'visual' AS visual,payload->>'completion' AS completion,
     jsonb_array_length(COALESCE(payload->'assetIds','[]')) AS "assetCount",completed,required,started
    FROM filtered ORDER BY CASE WHEN $1='learning' THEN learned_at END DESC,created_at DESC,id,revision DESC LIMIT 24 OFFSET $4
   ) SELECT COALESCE((SELECT jsonb_agg(row_to_json(page_rows)) FROM page_rows),'[]') AS items,
