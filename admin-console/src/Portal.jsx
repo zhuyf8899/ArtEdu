@@ -224,12 +224,12 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const morphNav = <MorphNav account={account} section={section==='curriculum'?'courses':section} creation={data.creation} onNavigate={onNavigate} onSwitchAccount={onSwitchAccount} onEnterAdmin={onEnterAdmin} />;
   useEffect(() => {
     const previous = document.title;
-    if (morph) document.title = `MORPH LAB · ${{home:'艺术与智能之间',courses:'原子课程',curriculum:'AI 编排课程体系',studio:'专项技能工具',community:'案例社区',myLearning:'我的空间',creation:'创作空间',search:'搜索'}[section] ?? 'ArtEdu'}`;
+    if (morph) document.title = `MORPH LAB · ${{home:'艺术与智能之间',courses:'原子课程',curriculum:'组合我的课程',studio:'专项技能工具',community:'案例社区',myLearning:'我的空间',creation:'创作空间',search:'搜索'}[section] ?? 'ArtEdu'}`;
     return () => { document.title = previous; };
   }, [morph, section]);
 
   return <div className={`portal-shell${morph ? ' morph-v17' : ''}${standalone ? " portal-shell--standalone" : ""}${workbench ? " portal-shell--workbench" : ""}`} data-page={section === 'home' ? 'home' : section === 'courses' ? 'courses' : section === 'community' ? 'cases' : section === 'studio' ? 'tools' : section} data-section={section} data-standalone={standalone ? "true" : undefined} data-chrome={chromeFree ? "none" : undefined}>
-    {morph && section === 'home' && <MorphHero nav={morphNav}><AiCreationLauncher variant="morph" account={account} creation={data.creation} onNotice={showToast} onNavigate={onNavigate} onLaunch={id=>onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : '/create')} /></MorphHero>}
+    {morph && section === 'home' && <MorphHero nav={morphNav}>{(homeMethod, onHomeMethodChange) => <AiCreationLauncher variant="morph" homeMethod={homeMethod} onHomeMethodChange={onHomeMethodChange} account={account} creation={data.creation} onNotice={showToast} onNavigate={onNavigate} onLaunch={id=>onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : '/create')} />}</MorphHero>}
     {morph && section !== 'home' && morphNav}
     {!morph && !chromeFree && <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
@@ -265,7 +265,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
       <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
         {section === "courses" && <AtomicLearningHub account={account} library={learningLibrary || (learningCourseId ? 'legacy' : '')} nodeId={learningNodeId} revision={learningNodeRevision} legacyCourseId={learningCourseId} onNavigate={onNavigate} legacy={<LearningLibrary accountId={account.id} variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onCourseChange={syncCourse} onNavigate={onNavigate} onNotice={showToast} />} />}
-        {section === 'curriculum' && <CurriculumComposer courses={data.courses} topic={curriculumTopic} loading={portalLoading} error={portalError} onRetry={loadPortalData} onNavigate={onNavigate} onNotice={showToast}/>}
+        {section === 'curriculum' && <CurriculumComposer courses={data.courses} topic={curriculumTopic} courseId={learningCourseId} nodeId={learningNodeId} revision={learningNodeRevision} loading={portalLoading} error={portalError} onRetry={loadPortalData} onNavigate={onNavigate} onNotice={showToast}/>}
 
         {section === "studio" && <WorkflowStudio accountId={account.id} variant={morph ? 'morph' : 'classic'} initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 

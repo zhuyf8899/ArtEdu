@@ -1,0 +1,130 @@
+/* Shared surfaces and layout from the November MORPH handoff. */
+.portal-shell.morph-v17 {
+  --ink: #171a2f;
+  --muted: #6b7094;
+  --border: #e2def0;
+  --surface: #faf9ff;
+  --catalog-gap: 16px;
+  --catalog-columns: 4;
+  --learning-columns: 2;
+  --morph-page-title: 28px;
+  --morph-card-title: 17px;
+  --morph-frost: blur(8px) saturate(115%);
+  --morph-glass-fill: linear-gradient(135deg, #ffffff1f, #ffffff09 55%, #ffffff11);
+  --morph-glass-light: inset 1px 1px 1px #ffffff61, inset -1px -1px 1px #ffffff1a, 0 8px 28px #11183813;
+  background: linear-gradient(135deg, #eeedf6, #f5f5f5) fixed;
+  color: var(--ink);
+  font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+}
+
+html:has(.portal-shell.morph-v17) { scrollbar-color: #a094ed transparent; }
+.morph-v17 .site-nav.morph-nav { backdrop-filter: var(--morph-frost); }
+.morph-v17 .morph-nav .brand.morph-wordmark { padding: 0; background: transparent; border: 0; }
+.morph-v17 .morph-nav .morph-wordmark img {
+  display: block;
+  width: clamp(130px, 14vw, 190px);
+  height: auto;
+  object-fit: contain;
+}
+.morph-v17 .footer.unified-footer { background: transparent; }
+.morph-v17 .footer .morph-wordmark img { display: block; width: 170px; height: auto; }
+
+.morph-v17 :is(.morph-catalog-search, .learning-search, .particles-reference-search, .morph-account .account-dialog) {
+  background: rgb(255 255 255 / 50%);
+  backdrop-filter: var(--morph-frost);
+  box-shadow: var(--morph-glass-light);
+  border: 0;
+  border-radius: 10px;
+}
+.morph-v17 .particles-reference-search > input { background: transparent; border: 0; width: 100%; }
+.morph-v17 .morph-account .account-dialog { border-radius: 20px; }
+.morph-v17 .morph-account .account-dialog > * { color: var(--ink); }
+.morph-v17 .composer #prompt-form {
+  background: var(--morph-glass-fill);
+  backdrop-filter: var(--morph-frost);
+  box-shadow: var(--morph-glass-light);
+  border: 0;
+}
+
+.morph-v17 :is(.morph-page-banner, .atomic-hub--particles .particles-banner) {
+  isolation: auto;
+  overflow: visible;
+  background: transparent;
+}
+.morph-v17 :is(.morph-page-banner, .atomic-hub--particles .particles-banner)::after { display: none; }
+.morph-v17 :is(.morph-page-banner, .atomic-hub--particles .particles-banner) .banner-art {
+  position: fixed;
+  inset: 56px 0 auto 12%;
+  height: 380px;
+  pointer-events: none;
+  mask-image: linear-gradient(90deg, transparent 20%, #000 65%), linear-gradient(#000 70%, transparent);
+  mask-composite: intersect;
+}
+.morph-v17 :is(.morph-page-banner, .atomic-hub--particles .particles-banner) .banner-copy h1,
+.morph-v17 :is(.morph-curriculum, .morph-space-profile) h1 {
+  font-size: var(--morph-page-title);
+  line-height: 1.4;
+}
+.morph-v17 .atomic-hub--particles .atomic-workspace { position: relative; z-index: 2; }
+
+.morph-v17 :is(.morph-case-grid, .morph-tool-catalog .tool-directory__list--grid) {
+  grid-template-columns: repeat(var(--catalog-columns), minmax(0, 1fr)) !important;
+  gap: var(--catalog-gap) !important;
+}
+.morph-v17 :is(.morph-community-catalog, .morph-tool-catalog) .morph-discovery__main {
+  grid-template-columns: repeat(var(--catalog-columns), minmax(0, 1fr));
+  gap: 12px var(--catalog-gap);
+  align-items: stretch;
+}
+.morph-v17 :is(.morph-community-catalog, .morph-tool-catalog) .morph-category-list {
+  grid-column: 1 / -2;
+  align-content: center;
+  align-items: center;
+  min-height: 44px;
+}
+.morph-v17 :is(.learning-discovery, .atomic-hub--strict .particles-filterbar--strict) {
+  grid-template-columns: repeat(var(--learning-columns), minmax(0, 1fr));
+  gap: var(--catalog-gap);
+}
+.morph-v17 :is(.unified-learning-grid, .particles-course-grid, .morph-catalog .course-grid) {
+  grid-template-columns: repeat(var(--learning-columns), minmax(0, 1fr));
+  gap: var(--catalog-gap);
+}
+.morph-v17 :is(.morph-case-card, .morph-tool-card, .morph-course-card, .particle-course-card) {
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+}
+.morph-v17 :is(.morph-case-card .case-body, .morph-tool-card, .morph-course-card .course-body) { padding: 20px; }
+.morph-v17 .morph-case-card h2 { font-size: var(--morph-card-title) !important; }
+.morph-v17 :is(.morph-tool-card h2, .morph-course-card h2, .atomic-hub--particles .particle-course-info h3) {
+  font-size: var(--morph-card-title);
+}
+.morph-v17 :is(.morph-category, .morph-category-more, .button, .morph-tool-card .morph-tool-card__launch) { border-radius: 10px; }
+.morph-v17 .morph-category:not([aria-pressed="true"]) { border-color: transparent; }
+.morph-v17 .learning-network-panel {
+  background: rgb(255 255 255 / 50%);
+  border: 0;
+  border-radius: 20px;
+  backdrop-filter: var(--morph-frost);
+  box-shadow: var(--morph-glass-light);
+}
+.morph-v17 #learning-network-content { background: #eceaf7; }
+.morph-v17 :is(.particle-course-cover, .unified-learning-grid .morph-course-card .course-cover) { background: #e5e1f2; }
+.morph-v17 .community-detail .same-workflow { border-top: 1px solid var(--border); }
+
+@media (max-width: 1200px) {
+  .portal-shell.morph-v17 { --catalog-columns: 2; }
+}
+@media (max-width: 1000px) {
+  .portal-shell.morph-v17 { --learning-columns: 1; }
+}
+@media (max-width: 768px) {
+  .portal-shell.morph-v17 { --catalog-columns: 1; --morph-page-title: 24px; --morph-card-title: 16px; }
+  .morph-v17 :is(.morph-community-catalog, .morph-tool-catalog) .morph-category-list { grid-column: 1; }
+  .morph-v17 .morph-nav .morph-wordmark img { width: min(170px, 45vw); }
+  .morph-v17 :is(.morph-page-banner, .atomic-hub--particles .particles-banner) .banner-art {
+    inset: 130px 0 auto;
+    mask-image: linear-gradient(90deg, transparent 35%, #000 80%), linear-gradient(transparent, #000 14% 72%, transparent);
+  }
+}

@@ -14,9 +14,11 @@ import { MorphComposer } from './morph/MorphComposer.jsx';
 
 // 起始页只负责“说清需求 + 选定能力”，不再在这里渲染模型长回复：
 // 提交后立刻跳到 /create 专用阅读页，长文本与历次对话都在那里。
-export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () => {}, variant = 'classic', onNavigate }) {
+export function AiCreationLauncher({ account, creation, onNotice, onLaunch = () => {}, variant = 'classic', onNavigate, homeMethod, onHomeMethodChange }) {
   const storedDraft = useMemo(() => readDraft(account.id), [account.id]);
-  const [methodId, setMethodId] = useState(() => storedDraft?.methodId ?? CREATION_METHODS[0].id);
+  const [draftMethodId, setDraftMethodId] = useState(() => storedDraft?.methodId ?? CREATION_METHODS[0].id);
+  const methodId = homeMethod ?? draftMethodId;
+  const setMethodId = onHomeMethodChange ?? setDraftMethodId;
   const [modelId, setModelId] = useState(() => storedDraft?.modelId ?? FALLBACK_MODELS[0].id);
   const [prompt, setPrompt] = useState(() => storedDraft?.prompt ?? "");
   const [searchEnabled, setSearchEnabled] = useState(() => storedDraft?.searchEnabled ?? false);

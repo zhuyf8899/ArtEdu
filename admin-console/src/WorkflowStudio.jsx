@@ -29,7 +29,6 @@ const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https:
 const nodesCarryPrompt = (nodes, edges, id) => hasDownstreamPrompt(nodes, edges, id);
 
 function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", onNavigate, onNotice, canPublish = false, canManageToolDirectory = false, variant = 'classic' }) {
-  const [recommendOpen,setRecommendOpen]=useState(false);
   const [workflows, setWorkflows] = useState([]);
   const [catalogState,setCatalogState]=useState('loading'),[catalogError,setCatalogError]=useState('');
   const [catalogQuery,setCatalogQuery]=useState('');
@@ -134,9 +133,8 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
     </Suspense>
   </div>;
   return <section className="workflow-catalog" id="workflow-catalog">
-    {variant === 'morph' && <MorphPageBanner title="专项技能工具" eyebrow="SKILL TOOLS"><button className="button morph-recommend-trigger" onClick={()=>setRecommendOpen(true)}>推荐一个工具<ArrowUpRight size={16}/></button></MorphPageBanner>}
+    {variant === 'morph' && <SkillToolsBanner accountId={accountId} onNotice={onNotice}/>}
     {returnContext().to&&<button className="learning-back audit-resource-return" onClick={()=>onNavigate(returnContext().to)}><ArrowLeft size={16}/>{returnContext().label}</button>}
-    {variant === 'morph' && recommendOpen && <ToolRecommendationDialog accountId={accountId} onClose={()=>setRecommendOpen(false)} onNotice={onNotice}/>}
     <div className={variant === 'morph' ? 'container morph-tool-catalog' : undefined}>
     <ToolDirectory variant={variant} canManage={canManageToolDirectory} onNotice={onNotice} onNavigate={onNavigate} onOpenWorkflowBuilder={openBuilder} />
     {/* 工具入口之后必须有节点工作流列表：之前这一块被工具目录挤掉了，学生根本点不进工作流。 */}
@@ -172,6 +170,16 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
     </div>
     </div>
   </section>;
+}
+
+function SkillToolsBanner({ accountId, onNotice }) {
+  const [recommendOpen, setRecommendOpen] = useState(false);
+  return <>
+    <MorphPageBanner title="专项技能工具" eyebrow="SKILL TOOLS">
+      <button className="button morph-recommend-trigger" onClick={() => setRecommendOpen(true)}>推荐一个工具<ArrowUpRight size={16}/></button>
+    </MorphPageBanner>
+    {recommendOpen && <ToolRecommendationDialog accountId={accountId} onClose={() => setRecommendOpen(false)} onNotice={onNotice}/>}
+  </>;
 }
 function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder, variant, onNavigate }) {
  const {enabled:comfyEnabled}=useComfyFeature();
@@ -245,5 +253,10 @@ function ToolDirectoryCard({ tool, canManage, onEdit, onOpenWorkflowBuilder, onN
 export function WorkflowStudio(props){
  const {enabled}=useComfyFeature();
  if(enabled===true)return <WorkflowStudioContent {...props}/>;
- return <section className="workflow-catalog">{(props.initialWorkflowId||props.initialRunId||props.builderOpen)&&<ComfyDisabled/>}<ToolDirectory variant={props.variant} canManage={props.canManageToolDirectory} onNotice={props.onNotice} onNavigate={props.onNavigate}/></section>;
+ const tools = <ToolDirectory variant={props.variant} canManage={props.canManageToolDirectory} onNotice={props.onNotice} onNavigate={props.onNavigate}/>;
+ return <section className="workflow-catalog" id="workflow-catalog">
+   {props.variant === 'morph' && <SkillToolsBanner accountId={props.accountId} onNotice={props.onNotice}/>}
+   {(props.initialWorkflowId||props.initialRunId||props.builderOpen)&&<ComfyDisabled/>}
+   {props.variant === 'morph' ? <div className="container morph-tool-catalog">{tools}</div> : tools}
+ </section>;
 }
