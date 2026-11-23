@@ -14,6 +14,7 @@ import { AppModule } from "./app.module";
 import { getEnvironment } from "./common/environment";
 import { ApiExceptionFilter } from "./common/api-exception.filter";
 import { apiRateLimitHook } from "./common/rate-limit";
+import { workspaceGrantPath } from "./modules/agent/workspace-preview-grants";
 
 async function bootstrap() {
   // 先验证配置，再创建服务器；配置不完整时尽早失败，避免带着错误参数运行。
@@ -24,7 +25,18 @@ async function bootstrap() {
   const maxUploadBytes = Math.max(caseUploadPolicy().videoBytes, courseUploadPolicy().videoBytes);
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: environment.nodeEnv !== "test", bodyLimit: 1_048_576, genReqId: () => randomUUID() }),
+    new FastifyAdapter({
+      logger: environment.nodeEnv === "test" ? false : {
+        serializers: {
+          req(request: {url?: string; method?: string; hostname?: string; ip?: string}) {
+            const url = request.url?.startsWith(workspaceGrantPath) ? workspaceGrantPath + "[redacted]" : request.url;
+            return { method: request.method, url, host: request.hostname, remoteAddress: request.ip };
+          },
+        },
+      },
+      bodyLimit: 1_048_576,
+      genReqId: () => randomUUID(),
+    }),
   );
 
   // Controller 中写 courses，实际访问路径就是 /api/courses。
@@ -67,7 +79,7 @@ async function bootstrap() {
       reply.header("Content-Security-Policy", "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
     }
     reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-    reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
+    if (!reply.getHeader("Referrer-Policy")) reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("X-Frame-Options", "DENY");
     if (environment.nodeEnv === "production") {

@@ -24,7 +24,7 @@ export class LocalBridgeService {
   async claim(authorization?: string) {
     const device = await this.authenticate(authorization);
     await this.touch(device.id);
-    return this.agents.claimNextForLocalBridge(device.user_id);
+    return this.agents.claimNextForLocalBridge(device.user_id, device.id);
   }
   async heartbeat(authorization?: string) { const device = await this.authenticate(authorization); await this.touch(device.id); return { ok: true, deviceId: device.id }; }
   async status(actor: Actor) {
@@ -37,13 +37,13 @@ export class LocalBridgeService {
     if (!result.rows[0]) throw new NotFoundException("本地 Bridge 不存在或已撤销");
     return { ok: true, deviceId };
   }
-  async complete(authorization: string | undefined, runId: string, input: { providerId: string; model: string; content: string }) {
+  async complete(authorization: string | undefined, runId: string, input: { leaseId: string; providerId: string; model: string; content: string }) {
     const device = await this.authenticate(authorization);
-    return this.agents.completeFromLocalBridge(device.user_id, runId, input.content, input.providerId, input.model);
+    return this.agents.completeFromLocalBridge(device.user_id, device.id, runId, input.leaseId, input.content, input.providerId, input.model);
   }
-  async fail(authorization: string | undefined, runId: string, reason: string) {
+  async fail(authorization: string | undefined, runId: string, input: { leaseId: string; reason: string }) {
     const device = await this.authenticate(authorization);
-    return this.agents.failFromLocalBridge(device.user_id, runId, reason);
+    return this.agents.failFromLocalBridge(device.user_id, device.id, runId, input.leaseId, input.reason);
   }
   async comfyRegister(authorization:string|undefined,nodes:Record<string,any>){const d=await this.authenticate(authorization);await this.touch(d.id);return this.comfy.register(d,nodes);}
   async comfyClaim(authorization:string|undefined){const d=await this.authenticate(authorization);await this.touch(d.id);return this.comfy.claim(d);}

@@ -12,12 +12,13 @@ import { AgentController } from "./agent.controller";
 import { AgentService } from "./agent.service";
 import { AgentHarnessService } from "./agent-harness.service";
 import { WebSearchService } from "./web-search.service";
+import { WorkspacePreviewGrants } from "./workspace-preview-grants";
 import { AgentWorkspaceService } from "./agent-workspace.service";
 
 @Module({
   imports: [KnowledgeModule, AuthModule, DatabaseModule, GenerationModule, PortalModule, StudioModule, CreationStorageModule, RagModule],
   controllers: [AgentController, AgentAdminController],
-  providers: [AgentService, AgentHarnessService, WebSearchService, AgentWorkspaceService],
+  providers: [AgentService, AgentHarnessService, WebSearchService, AgentWorkspaceService, WorkspacePreviewGrants],
   exports: [AgentService, WebSearchService],
 })
 export class AgentModule {}

@@ -6,7 +6,7 @@ import { createReadStream } from "node:fs";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseInput } from "../../common/validation";
 import { AuthService } from "../auth/auth.service";
-import { workspacePreviewCsp } from "../agent/workspace-preview-csp";
+import { previewCspFor } from "../agent/workspace-preview-csp";
 import {
   courseReviewDecisionSchema,
   courseKnowledgeBindingsSchema,
@@ -141,7 +141,7 @@ export class CoursesController {
     // 网页与 SVG 课件是不可信内容，改用与 Agent 预览相同的沙箱策略：
     // 拿不到本站登录态，也不能联网、提交表单或跳转顶层窗口。
     reply.header("Content-Security-Policy", ["text/html", "image/svg+xml"].includes(mimeType)
-      ? workspacePreviewCsp(request.headers["x-forwarded-host"] ?? request.headers.host)
+      ? previewCspFor(mimeType, request.headers["x-forwarded-host"] ?? request.headers.host)
       : "frame-ancestors 'self'");
     if (resource.resourceType !== "video") {
       reply.header("Content-Length", String(resource.sizeBytes));

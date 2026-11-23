@@ -1,7 +1,7 @@
 import {cacheExpired} from '../cloud-cache/cache-policy';
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { createReadStream } from "node:fs";
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getEnvironment } from "../../common/environment";
 import type { Actor } from "../auth/auth.service";
@@ -24,7 +24,7 @@ export class AgentWorkspaceService {
     scoped.conversationScope = id;
     return scoped;
   }
-  private root(actor: Actor) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id, ...(this.conversationScope ? ["__conversations", this.conversationScope] : [])); }
+  private root(actor: Pick<Actor, "id">) { return path.resolve(getEnvironment().uploadRoot, "agent-workspaces", actor.id, ...(this.conversationScope ? ["__conversations", this.conversationScope] : [])); }
 
   /**
    * 自检工具需要知道页面引用的文件是否存在、多大——只做 stat，不读内容，
@@ -116,9 +116,20 @@ export class AgentWorkspaceService {
     return { items: written, message: `已创建 ${written.length} 个工作区文件。` };
   }
 
-  async open(actor: Actor, filePath: string) {
+  async open(actor: Pick<Actor, "id">, filePath: string, previewDirectory?: string) {
     const relative = this.relative(filePath);
-    const target = this.resolve(actor, relative);
+    const target = await realpath(this.resolve(actor, relative)).catch(() => null);
+    if (!target) throw new NotFoundException("工作区文件不存在");
+    const root = await realpath(this.root(actor));
+    if (!target.startsWith(root + path.sep)) throw new ForbiddenException("工作区路径越界");
+    if (previewDirectory !== undefined) {
+      const scope = await realpath(this.resolve(actor, previewDirectory));
+      const topDirectory = path.relative(root, target).split(path.sep)[0].toLowerCase();
+      if (!(scope === root || scope.startsWith(root + path.sep)) || !target.startsWith(scope + path.sep)
+        || (!previewDirectory && topDirectory === "__conversations")) {
+        throw new ForbiddenException("文件不属于此次预览");
+      }
+    }
     const info = await stat(target).catch(() => null);
     if (!info?.isFile() || cacheExpired(info.mtimeMs)) throw new NotFoundException("工作区文件不存在");
     return { path: relative, stream: createReadStream(target), contentType: contentType(relative), fileName: path.basename(relative) };
@@ -141,7 +152,7 @@ export class AgentWorkspaceService {
     return normalized;
   }
 
-  private resolve(actor: Actor, relative: string) {
+  private resolve(actor: Pick<Actor, "id">, relative: string) {
     const root = this.root(actor);
     const candidate = path.resolve(root, ...relative.split("/"));
     if (candidate !== root && !candidate.startsWith(`${root}${path.sep}`)) throw new ForbiddenException("工作区路径越界");

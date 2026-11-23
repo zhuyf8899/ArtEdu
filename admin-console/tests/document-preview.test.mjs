@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import JSZip from 'jszip';
-import { previewKind, validateOfficeArchive, readPreviewBlob, MAX_PREVIEW_BYTES } from '../src/documentPreview.js';
+import { previewKind, validateOfficeArchive, verifyOfficeArchive, readPreviewBlob, MAX_PREVIEW_BYTES } from '../src/documentPreview.js';
 
 test('预览识别 DOCX/PPTX/PDF/媒体/文本，旧版格式给出明确边界', () => {
   for (const ext of ['docx','pptx','pdf']) assert.equal(previewKind(`assets/中文.${ext}`),ext);
@@ -18,6 +18,15 @@ test('Office 解压前检查目录、加密、单文件大小与总大小',async
   let central = 0; while(data.getUint32(central,true)!==0x02014b50)central++;
   data.setUint32(central+24,MAX_PREVIEW_BYTES+1,true); assert.throws(()=>validateOfficeArchive(bomb),/过大/);
   data.setUint32(central+24,10,true);data.setUint16(central+8,1,true);assert.throws(()=>validateOfficeArchive(bomb),/加密/);
+});
+test('Office 在渲染前验证实际的解压字节，也能取消校验', async () => {
+  const zip = new JSZip();
+  zip.file('word/document.xml', '<document>文档正文</document>');
+  const buffer = await zip.generateAsync({type:'arraybuffer',compression:'DEFLATE',streamFiles:true});
+  await verifyOfficeArchive(buffer);
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(verifyOfficeArchive(buffer, controller.signal), {name:'AbortError'});
 });
 test('私有文件只走站内原鉴权接口，拒绝外链和重定向，不把文件交给第三方',async () => {
   const previousLocation=globalThis.location, previousFetch=globalThis.fetch;

@@ -24,5 +24,5 @@ export class LocalBridgeController {
   @Public() @Post("heartbeat") async heartbeat(@Req() request: FastifyRequest) { return this.service.heartbeat(request.headers.authorization); }
   @Public() @Post("tasks/claim") async claim(@Req() request: FastifyRequest) { return this.service.claim(request.headers.authorization); }
   @Public() @Post("tasks/:runId/complete") async complete(@Req() request: FastifyRequest, @Param("runId") runId: string, @Body() body: unknown) { return this.service.complete(request.headers.authorization, runId, parseInput(bridgeResultSchema, body)); }
-  @Public() @Post("tasks/:runId/fail") async fail(@Req() request: FastifyRequest, @Param("runId") runId: string, @Body() body: unknown) { return this.service.fail(request.headers.authorization, runId, parseInput(bridgeFailureSchema, body).reason); }
+  @Public() @Post("tasks/:runId/fail") async fail(@Req() request: FastifyRequest, @Param("runId") runId: string, @Body() body: unknown) { return this.service.fail(request.headers.authorization, runId, parseInput(bridgeFailureSchema, body)); }
 }

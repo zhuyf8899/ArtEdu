@@ -73,12 +73,15 @@ export class AgentService {
   async appendToolCall(runId: string, toolName: string, input: Record<string, unknown>, output: Record<string, unknown>) {
     if(temporaryWorkflowToolNames.has(toolName)){input={action:toolName};output=temporaryToolAudit(toolName,output);}
     const run = await this.getOwnedRun(runId);
+    return this.database.transaction((client) => this.recordToolCall(client, run, toolName, input, output));
+  }
+
+  private async recordToolCall(client: PoolClient, run: RunRow, toolName: string, input: Record<string, unknown>, output: Record<string, unknown>) {
     const toolCallId = `agent-tool-${randomUUID()}`;
-    await this.database.transaction(async (client) => {
-      const scanStatus = await this.scanTarget(client, runId, run.user_id, "tool_call", toolCallId, JSON.stringify({ input, output }));
-      const failed=!!output.error||output.status==='failed'||output.status==='confirmation_required'||output.verdict==='fail';
-      await client.query(`INSERT INTO agent_tool_calls (id,run_id,tool_name,status,input_json,output_json,started_at,completed_at) VALUES ($1,$2,$3,$6,$4::jsonb,$5::jsonb,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [toolCallId, runId, toolName, JSON.stringify(input), JSON.stringify({ ...output, scanStatus }),failed?'failed':'succeeded']);
-    });
+    const scanStatus = await this.scanTarget(client, run.id, run.user_id, "tool_call", toolCallId, JSON.stringify({ input, output }));
+    const failed = !!output.error || output.failed === true || ['failed', 'confirmation_required'].includes(String(output.status)) || output.verdict === 'fail';
+    await client.query(`INSERT INTO agent_tool_calls (id,run_id,tool_name,status,input_json,output_json,started_at,completed_at) VALUES ($1,$2,$3,$6,$4::jsonb,$5::jsonb,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
+      [toolCallId, run.id, toolName, JSON.stringify(input), JSON.stringify({ ...output, scanStatus }), failed ? 'failed' : 'succeeded']);
     return toolCallId;
   }
 
@@ -144,34 +147,78 @@ export class AgentService {
     );
   }
 
-  async claimNextForLocalBridge(userId: string) {
+  async claimNextForLocalBridge(userId: string, deviceId: string) {
+    const leaseId = randomUUID();
     const result = await this.database.query<RunRow>(`
       WITH next_run AS (
-        SELECT id FROM agent_runs WHERE user_id=$1 AND status='waiting_user'
+        SELECT id FROM agent_runs WHERE user_id=$1
+          AND created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes'
+          AND (status='waiting_user' OR (status='running' AND bridge_lease_expires_at<=CURRENT_TIMESTAMP))
         ORDER BY updated_at ASC FOR UPDATE SKIP LOCKED LIMIT 1
       )
-      UPDATE agent_runs run SET status='running',updated_at=CURRENT_TIMESTAMP
+      UPDATE agent_runs run SET status='running',bridge_device_id=$2,bridge_lease_id=$3,
+        bridge_lease_expires_at=CURRENT_TIMESTAMP+INTERVAL '5 minutes',updated_at=CURRENT_TIMESTAMP
       FROM next_run WHERE run.id=next_run.id RETURNING run.*
-    `, [userId]);
-    return result.rows[0] ? this.mapRun(result.rows[0]) : null;
+    `, [userId, deviceId, leaseId]);
+    return result.rows[0] ? { ...this.mapRun(result.rows[0]), leaseId } : null;
   }
 
-  async completeFromLocalBridge(userId: string, runId: string, content: string, providerId: string, model: string) {
-    const run = await this.getOwnedRun(runId);
-    if (run.user_id !== userId || run.status !== "running") throw new ForbiddenException("本地 Bridge 无权回传该任务");
-    await this.appendToolCall(runId, "local_bridge.model_result", { providerId, model, secretTransferred: false }, { content, providerId, model });
-    const type = run.scenario === "webpage_generation" ? "webpage" : run.scenario === "pattern_generation" ? "pattern" : "brief";
-    await this.appendArtifact(runId, type, { content, providerId, model, generatedBy: "local-bridge" });
-    await this.appendAgentMessage(runId, content);
-    return this.completeRun(runId);
+  async completeFromLocalBridge(userId: string, deviceId: string, runId: string, leaseId: string, content: string, providerId: string, model: string) {
+    let storageKey: string | undefined;
+    try {
+      await this.database.transaction(async client => {
+        const run = await this.lockBridgeRun(client, userId, deviceId, runId, leaseId);
+        const metadata = { content, providerId, model, generatedBy: "local-bridge" };
+        const type = run.scenario === "webpage_generation" ? "webpage" : run.scenario === "pattern_generation" ? "pattern" : "brief";
+        const artifactId = `agent-artifact-${randomUUID()}`;
+        storageKey = `agent-runs/${runId}/${artifactId}.json`;
+        await this.writeLocalArtifact(storageKey, { id: artifactId, runId, type, metadata, createdAt: new Date().toISOString() });
+        await this.recordToolCall(client, run, "local_bridge.model_result", { providerId, model, secretTransferred: false }, { content, providerId, model });
+        const scanStatus = await this.scanTarget(client, runId, userId, "artifact", artifactId, JSON.stringify(metadata));
+        await client.query(`INSERT INTO agent_artifacts (id,run_id,artifact_type,storage_key,metadata_json,scan_status) VALUES ($1,$2,$3,$4,$5::jsonb,$6)`,
+          [artifactId, runId, type, storageKey, JSON.stringify(metadata), scanStatus]);
+        await this.recordMessage(client, runId, userId, "agent", content, "message", `agent-message-${randomUUID()}`);
+        await this.settleBridgeRun(client, runId, 'succeeded', null);
+      });
+    } catch (error) {
+      if (storageKey) await rm(this.artifactPath(storageKey), { force: true }).catch(() => undefined);
+      throw error;
+    }
+    return this.getRunInternal(runId);
   }
 
-  async failFromLocalBridge(userId: string, runId: string, reason: string) {
-    const run = await this.getOwnedRun(runId);
-    if (run.user_id !== userId || run.status !== "running") throw new ForbiddenException("本地 Bridge 无权回传该任务");
-    await this.appendToolCall(runId, "local_bridge.model_result", {}, { failed: true, reason });
-    await this.appendAgentMessage(runId, `本地模型调用未完成：${reason}`);
-    return this.failRun(runId, reason);
+  async failFromLocalBridge(userId: string, deviceId: string, runId: string, leaseId: string, reason: string) {
+    await this.database.transaction(async client => {
+      const run = await this.lockBridgeRun(client, userId, deviceId, runId, leaseId);
+      await this.recordToolCall(client, run, "local_bridge.model_result", {}, { failed: true, reason });
+      await this.recordMessage(client, runId, userId, "agent", `本地模型调用未完成：${reason}`, "message", `agent-message-${randomUUID()}`);
+      await this.settleBridgeRun(client, runId, 'failed', reason.slice(0, 1000));
+    });
+    return this.getRunInternal(runId);
+  }
+
+  private async lockBridgeRun(client: PoolClient, userId: string, deviceId: string, runId: string, leaseId: string) {
+    const { rows: [run] } = await client.query<RunRow>(`
+      SELECT run.* FROM agent_runs run
+      JOIN local_bridge_devices device ON device.id=run.bridge_device_id AND device.user_id=run.user_id
+      JOIN users owner ON owner.id=run.user_id
+      WHERE run.id=$1 AND run.user_id=$2 AND run.bridge_device_id=$3 AND run.bridge_lease_id=$4
+        AND run.status='running' AND run.bridge_lease_expires_at>CURRENT_TIMESTAMP
+        AND run.created_at>CURRENT_TIMESTAMP-INTERVAL '20 minutes'
+        AND device.status='active' AND device.expires_at>CURRENT_TIMESTAMP AND owner.status='active'
+      FOR UPDATE OF run, device, owner
+    `, [runId, userId, deviceId, leaseId]);
+    if (!run) throw new ForbiddenException("本地 Bridge 无权回传该任务，或任务租约已失效");
+    return run;
+  }
+
+  private async settleBridgeRun(client: PoolClient, runId: string, status: 'succeeded' | 'failed', reason: string | null) {
+    // A content scan may already have blocked the run. Preserve that decision.
+    await client.query(`UPDATE agent_runs SET
+      status=CASE WHEN status='running' THEN $2 ELSE status END,
+      failure_reason=CASE WHEN status='running' THEN $3 ELSE failure_reason END,
+      bridge_device_id=NULL,bridge_lease_id=NULL,bridge_lease_expires_at=NULL,
+      updated_at=CURRENT_TIMESTAMP,completed_at=CURRENT_TIMESTAMP WHERE id=$1`, [runId, status, reason]);
   }
 
   async failRun(runId: string, reason: string) {

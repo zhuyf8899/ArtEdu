@@ -269,12 +269,22 @@ export class AtomicService {
   if(!getEnvironment().fileUploadsEnabled)throw new ForbiddenException('上传未启用');
   const part=await request.file({limits:{fileSize:courseUploadPolicy().videoBytes}});if(!part)throw new BadRequestException('请选择文件');
   const upload=await storePrivateUpload(part,getEnvironment().uploadRoot,workAssetMimeTypes,`atomic/${id}`,courseUploadPolicy().videoBytes);
-  try{return await this.db.transaction(async c=>{
+  try{const result=await this.db.transaction(async c=>{
    await this.node(c,id,true);const current=await this.latest(c,id);if(current.revision!==revision||current.status!=='draft')throw new ConflictException('草稿已变化，请刷新');
-   const p=current.payload as AtomPayload;if(p.assetIds.length>=12)throw new BadRequestException('每个原子最多十二个附件');
-   const assetId=randomUUID();await c.query('INSERT INTO atomic_assets(id,node_id,storage_key,file_name,mime_type,size_bytes) VALUES($1,$2,$3,$4,$5,$6)',[assetId,id,upload.storageKey,upload.fileName,upload.mimeType,upload.sizeBytes]);
+   const p=current.payload as AtomPayload;
+   const existing=await c.query<{id:string;storage_key:string}>(
+    'SELECT id,storage_key FROM atomic_assets WHERE node_id=$1 AND id=ANY($2::text[]) AND size_bytes=$3 AND sha256=$4',
+    [id,p.assetIds,upload.sizeBytes,upload.sha256],
+   );
+   for(const asset of existing.rows){
+    const info=await stat(path.join(getEnvironment().uploadRoot,asset.storage_key)).catch(()=>null);
+    if(info?.isFile() && info.size===upload.sizeBytes)return {id:asset.id,reused:true};
+   }
+   if(p.assetIds.length>=12)throw new BadRequestException('每个原子最多十二个附件');
+   const assetId=randomUUID();
+   await c.query('INSERT INTO atomic_assets(id,node_id,storage_key,file_name,mime_type,size_bytes,sha256) VALUES($1,$2,$3,$4,$5,$6,$7)',[assetId,id,upload.storageKey,upload.fileName,upload.mimeType,upload.sizeBytes,upload.sha256]);
    await c.query("UPDATE atomic_versions SET payload=jsonb_set(payload,'{assetIds}',$3::jsonb) WHERE node_id=$1 AND revision=$2",[id,revision,JSON.stringify([...p.assetIds,assetId])]);await this.audit(c,actor,n,revision,'upload',upload.fileName);return {id:assetId};
-  });}catch(e){await rm(path.join(getEnvironment().uploadRoot,upload.storageKey),{force:true});throw e;}
+  });if('reused' in result)await rm(path.join(getEnvironment().uploadRoot,upload.storageKey),{force:true});return result;}catch(e){await rm(path.join(getEnvironment().uploadRoot,upload.storageKey),{force:true});throw e;}
  }
  async asset(actor:Actor,id:string,assetId:string,revision?:number){
   const {v}=await this.visible(actor,id,revision);if(!(v.payload.assetIds??[]).includes(assetId))throw new NotFoundException('此版本无该附件');

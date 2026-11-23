@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {lockPageScroll} from './pageScrollLock.js';
 import { ArrowClockwise, CaretLeft, CaretRight, DownloadSimple, X } from '@phosphor-icons/react';
-import { MAX_PREVIEW_BYTES, previewKind, readPreviewBlob, validateOfficeArchive } from './documentPreview.js';
+import { MAX_PREVIEW_BYTES, previewKind, readPreviewBlob, verifyOfficeArchive } from './documentPreview.js';
 import './document-preview.css';
 
 const officeShell = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob: data:; font-src blob: data:; connect-src 'none'; script-src 'none'; base-uri 'none'; form-action 'none'"><style>html,body{margin:0;min-height:100%;background:#efedf6;color:#17192f;font-family:Arial,'Microsoft YaHei',sans-serif}#pages{padding:20px;box-sizing:border-box;min-height:100vh}.docx-wrapper{background:transparent!important;padding:0!important}.docx-wrapper>section.docx{max-width:100%;box-sizing:border-box;margin:0 auto 20px!important;box-shadow:0 2px 16px #17192f12!important}img,svg{max-width:100%}a{pointer-events:none}*{box-sizing:border-box}</style></head><body><main id="pages"></main></body></html>`;
@@ -27,11 +27,13 @@ export function DocumentPreview({ blob, src, fileName = '', mimeType = '' }) {
   useEffect(() => {
     if (!source) return;
     if (['docx','pptx'].includes(kind) && !ready) return;
+    const verification = new AbortController();
     let cancelled = false, objectUrl = '', instance, resize;
     const render = async () => {
       if (kind === 'unsupported') throw Error('此格式暂不支持在线预览。旧版 .doc / .ppt 请另存为 .docx / .pptx 后上传。');
       if (['docx','pptx'].includes(kind)) {
-        const buffer = await source.arrayBuffer(); validateOfficeArchive(buffer);
+        const buffer = await source.arrayBuffer();
+        await verifyOfficeArchive(buffer, verification.signal);
         const doc = frame.current?.contentDocument, container = doc?.getElementById('pages');
         if (!container || cancelled) return;
         container.replaceChildren();
@@ -73,7 +75,7 @@ export function DocumentPreview({ blob, src, fileName = '', mimeType = '' }) {
       }
     };
     render().catch(error => { if (!cancelled) setState(current => ({ ...current, loading: false, error: error.message || '文档解析失败，请下载原件查看。' })); });
-    return () => { cancelled = true; resize?.disconnect(); instance?.destroy(); if (viewer.current === instance) viewer.current = null; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+    return () => { cancelled = true; verification.abort(); resize?.disconnect(); instance?.destroy(); if (viewer.current === instance) viewer.current = null; if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [source, kind, ready]);
   const turn = async page => {
     if (!viewer.current || page < 0 || page >= state.pages) return;

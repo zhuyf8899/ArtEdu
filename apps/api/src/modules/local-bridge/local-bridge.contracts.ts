@@ -6,7 +6,8 @@ export const pairBridgeSchema = z.object({
   tokenDays: z.number().int().min(1).max(90).default(30),
 });
 export const bridgeResultSchema = z.object({
+  leaseId: z.uuid(),
   providerId: z.string().trim().min(1).max(80), model: z.string().trim().min(1).max(160),
   content: z.string().trim().min(1).max(100000),
 });
-export const bridgeFailureSchema = z.object({ reason: z.string().trim().min(1).max(1000) });
+export const bridgeFailureSchema = z.object({ leaseId: z.uuid(), reason: z.string().trim().min(1).max(1000) });

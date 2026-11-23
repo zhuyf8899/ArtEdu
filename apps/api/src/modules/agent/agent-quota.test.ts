@@ -13,3 +13,16 @@ test('claim preserves cache expiry while enforcing quota in the same transaction
  (service as any).getOwnedRun=async()=>({user_id:'u'});(service as any).mapRun=()=>({});
  await service.claimForExecution({id:'u',roles:[]} as any,'r');assert.equal(calls[1],'quota');assert.match(calls[2],/20 minutes/);
 });
+test('Bridge 回传在事务中校验设备、当前租约和有效期，失败时不记录产物',async()=>{
+ const queries:{sql:string;values?:unknown[]}[]=[];
+ const service=new AgentService({transaction:async(fn:any)=>fn({query:async(sql:string,values:unknown[])=>{
+  queries.push({sql,values});return {rows:[]};
+ }})} as any,{} as any);
+ const lease='baf72dae-b8d1-4bef-8e39-d70f35d871e4';
+ await assert.rejects(service.completeFromLocalBridge('owner','other-device','run',lease,'结果','provider','model'),/租约/);
+ assert.equal(queries.length,1);
+ assert.deepEqual(queries[0].values,['run','owner','other-device',lease]);
+ assert.match(queries[0].sql,/bridge_device_id=\$3 AND run.bridge_lease_id=\$4/);
+ assert.match(queries[0].sql,/bridge_lease_expires_at>CURRENT_TIMESTAMP/);
+ assert.match(queries[0].sql,/FOR UPDATE OF run/);
+});

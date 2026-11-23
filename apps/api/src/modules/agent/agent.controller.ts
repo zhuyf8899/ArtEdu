@@ -7,33 +7,52 @@ import { AgentHarnessService } from "./agent-harness.service";
 import { AgentService } from "./agent.service";
 import { AgentWorkspaceService } from "./agent-workspace.service";
 import { previewCspFor } from "./workspace-preview-csp";
+import { WorkspacePreviewGrants, workspaceGrantPath } from "./workspace-preview-grants";
+import { Public } from "../auth/public.decorator";
+import { getEnvironment } from "../../common/environment";
 
 @Controller("agent-runs")
 export class AgentController {
-  constructor(private readonly agents: AgentService, private readonly harness: AgentHarnessService, private readonly auth: AuthService, private readonly workspace: AgentWorkspaceService) {}
+  constructor(private readonly agents: AgentService, private readonly harness: AgentHarnessService, private readonly auth: AuthService, private readonly workspace: AgentWorkspaceService, private readonly previewGrants: WorkspacePreviewGrants) {}
 
   @Get("workspace-file")
   async openWorkspaceFile(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Query("path") filePath: string) {
-    const asset = await this.workspace.open(await this.auth.getActor(request), filePath);
-    reply.header("Cache-Control", "private, no-store").header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff");
-    return asset.stream;
+    return this.openPrivatePreview(request, reply, filePath);
   }
 
-  /**
-   * 工作区预览使用包含文件路径的 URL，令 HTML 内的相对 CSS/JS/图片路径按项目目录
-   * 解析。保留 workspace-file 查询接口，避免已落库的旧链接失效。
-   */
   @Get("workspace-preview/*")
   async previewWorkspaceFile(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    return this.openPrivatePreview(request, reply, String((request.params as Record<string, string>)["*"] ?? ""));
+  }
+
+  @Public()
+  @Get("workspace-preview-grant/:token/*")
+  async openGrantedPreview(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("token") token: string) {
     const filePath = String((request.params as Record<string, string>)["*"] ?? "");
-    const asset = await this.workspace.open(await this.auth.getActor(request), filePath);
-    reply.header("Cache-Control", "private, no-store").header("Content-Type", asset.contentType).header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`).header("X-Content-Type-Options", "nosniff").header("Cache-Control", "private, no-store");
-    // HTML 使用 allow-scripts + allow-same-origin 以加载受认证资源，同源存储并未隔离。
-    // connect-src 阻止 fetch/WebSocket，form-action 阻止表单；获准的资源请求仍可携带会话。
-    // 显式主机来源允许同主机任意端口资源；完整策略与限制见 workspace-preview-csp。
-    // SVG 也走同一条思路：它同样可以内嵌脚本，不能因为"只是图片"就跳过限制，
-    // 只是策略更紧（script-src 'none'，见 workspace-preview-csp）。
-    const csp = previewCspFor(asset.contentType, request.headers["x-forwarded-host"] ?? request.headers.host);
+    const owner = await this.previewGrants.authorize(token, filePath);
+    const asset = await this.workspace.open(owner, filePath, owner.directory);
+    if (request.headers.origin === "null") reply.header("Access-Control-Allow-Origin", "null");
+    return this.sendPreviewAsset(request, reply, asset, workspaceGrantPath + token + "/");
+  }
+
+  private async openPrivatePreview(request: FastifyRequest, reply: FastifyReply, filePath: string) {
+    const actor = await this.auth.getActor(request);
+    const asset = await this.workspace.open(actor, filePath);
+    if (asset.contentType.split(";")[0] === "text/html") {
+      asset.stream.destroy();
+      const location = await this.previewGrants.issue(actor.id, asset.path);
+      reply.header("Cache-Control", "private, no-store").header("Referrer-Policy", "no-referrer").header("Location", location).code(302);
+      return;
+    }
+    return this.sendPreviewAsset(request, reply, asset);
+  }
+
+  private sendPreviewAsset(request: FastifyRequest, reply: FastifyReply, asset: Awaited<ReturnType<AgentWorkspaceService["open"]>>, grantPrefix = "") {
+    reply.header("Cache-Control", "private, no-store").header("Referrer-Policy", "no-referrer")
+      .header("Content-Type", asset.contentType)
+      .header("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(asset.fileName)}`)
+      .header("X-Content-Type-Options", "nosniff");
+    const csp = previewCspFor(asset.contentType, request.headers["x-forwarded-host"] ?? request.headers.host, grantPrefix, getEnvironment().corsOrigins);
     if (csp) reply.header("Content-Security-Policy", csp);
     return asset.stream;
   }

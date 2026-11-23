@@ -3,48 +3,53 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { workspacePreviewCsp } from "./workspace-preview-csp";
+import { WorkspacePreviewGrants } from "./workspace-preview-grants";
+import type { DatabaseService } from "../database/database.service";
 
-test("预览页保留沙箱与断网限制", () => {
+const prefix = "/api/agent-runs/workspace-preview-grant/" + "a".repeat(43) + "/";
+
+test("HTML 预览使用隔离来源，单文件课件仅允许内联资源", () => {
   const csp = workspacePreviewCsp("artedu.example.edu");
-  // allow-same-origin 是必需的：没有它，文档是不透明来源，同目录 CSS/JS 会被
-  // 当成跨站请求（cookie 不发送 → 401 JSON → ORB 拦截），页面永远是裸 HTML。
-  assert.ok(csp.startsWith("sandbox allow-scripts allow-same-origin; default-src 'none'"));
-  // 即使同源，这几条硬限制也必须保留。
-  assert.ok(csp.includes("connect-src 'none'"), "生成页不得发起 fetch/XHR/WebSocket");
-  assert.ok(csp.includes("form-action 'none'"));
-  assert.ok(csp.includes("base-uri 'none'"));
-  assert.ok(csp.includes("object-src 'none'"));
-  assert.ok(csp.includes("frame-src 'none'"));
-});
-
-test("同目录资源靠显式主机名放行，而不是匹配不到任何东西的 'self'", () => {
-  const csp = workspacePreviewCsp("8.212.153.167");
-  // 沙箱文档是不透明来源，CSP 里的 'self' 会匹配不到任何 URL，
-  // 于是 HTML 引用的同目录 CSS/JS 全被拦掉，页面只剩默认样式。
-  assert.ok(!csp.includes("'self'"), "预览页的资源来源不能依赖 'self'");
-  assert.ok(csp.includes("style-src http://8.212.153.167:* https://8.212.153.167:* 'unsafe-inline'"));
-  assert.ok(csp.includes("script-src http://8.212.153.167:* https://8.212.153.167:* 'unsafe-inline'"));
-  assert.ok(csp.includes("img-src http://8.212.153.167:* https://8.212.153.167:* data: blob:"));
-});
-
-test("反代只透传主机名时也要允许任意端口", () => {
-  // nginx 用 $host 转发（不带端口），而 staging 实际访问是 :8080，所以端口必须通配。
-  const csp = workspacePreviewCsp("8.212.153.167:8080");
-  assert.ok(csp.includes("http://8.212.153.167:*"));
-  assert.ok(csp.includes("https://8.212.153.167:*"));
-});
-
-test("Host 头不可信时退回只允许内联资源，不把原样字符串拼进响应头", () => {
-  for (const hostile of ['evil.com"; connect-src *; x="', "a b", "例子.中国", "[::1]:4000", "evil.com/"]) {
-    const csp = workspacePreviewCsp(hostile);
-    assert.ok(!csp.includes(hostile), `不能原样回填 ${hostile}`);
-    assert.ok(csp.includes("style-src 'unsafe-inline'"));
-    assert.ok(csp.includes("script-src 'unsafe-inline'"));
+  assert.ok(csp.startsWith("sandbox allow-scripts; default-src 'none'"));
+  assert.ok(!csp.includes("allow-same-origin"));
+  assert.ok(!csp.includes("artedu.example.edu"));
+  for (const directive of ["connect-src", "form-action", "base-uri", "object-src", "frame-src"]) {
+    assert.ok(csp.includes(directive + " 'none'"));
   }
-  assert.ok(workspacePreviewCsp(undefined).includes("connect-src 'none'"));
-  assert.ok(workspacePreviewCsp("").includes("style-src 'unsafe-inline'"));
-  // 逗号分隔的转发链只取最靠近浏览器的那一跳。
-  assert.ok(workspacePreviewCsp("artedu.example.edu, inner.local").includes("http://artedu.example.edu:*"));
+});
+
+test("多文件预览只允许本次授权路径内的资源", () => {
+  const csp = workspacePreviewCsp("artedu.example.edu:8080", prefix, ["http://localhost:4173"]);
+  for (const origin of ["https://artedu.example.edu:*", "http://localhost:4173"]) {
+    assert.ok(csp.includes(origin + prefix));
+  }
+  assert.ok(!csp.includes("https://artedu.example.edu:* "));
+  assert.ok(csp.split("; ").filter(directive => !directive.startsWith("frame-ancestors")).every(directive => !directive.includes("'self'")));
+});
+
+test("无效主机与非授权前缀不能进入预览策略", () => {
+  for (const hostile of ['evil.com"; connect-src *; x="', "a b", "例子.中国", "evil.com/"]) {
+    const csp = workspacePreviewCsp(hostile, prefix);
+    assert.ok(!csp.includes(hostile));
+    assert.ok(csp.includes("style-src 'unsafe-inline'"));
+  }
+  assert.ok(!workspacePreviewCsp("artedu.example.edu", "/api/").includes("artedu.example.edu"));
+});
+
+test("预览授权使用摘要查找，资源受签发目录和过期条件约束", async () => {
+  let hash = "";
+  const grants = new WorkspacePreviewGrants({ query: async (sql: string, values: string[]) => {
+    if (sql.startsWith("INSERT")) hash = values[0];
+    return {rows: sql.includes("SELECT") && values[0] === hash
+      ? [{user_id:"owner",directory:"project"}] : []};
+  } } as unknown as DatabaseService);
+  const url = await grants.issue("owner", "project/index.html");
+  const token = url.split("/")[4];
+  assert.match(hash, /^[0-9a-f]{64}$/);
+  assert.notEqual(token, hash);
+  assert.deepEqual(await grants.authorize(token, "project/assets/site.css"), {id:"owner",directory:"project"});
+  await assert.rejects(grants.authorize(token, "other/report.txt"), /不属于/);
+  await assert.rejects(grants.authorize("b".repeat(43), "project/index.html"), /无效或过期/);
 });
 
 test("全局 onSend 不得覆盖路由自己声明的 CSP", async () => {

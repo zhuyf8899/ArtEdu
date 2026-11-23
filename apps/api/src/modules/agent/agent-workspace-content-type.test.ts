@@ -43,7 +43,7 @@ test("SVG 预览禁止脚本与联网，同时放行同目录资源", () => {
 
 test("预览策略按 Content-Type 选择，HTML 走沙箱、图片不额外加策略", () => {
   const host = "8.212.153.167";
-  assert.ok(previewCspFor("text/html; charset=utf-8", host).startsWith("sandbox allow-scripts allow-same-origin; default-src 'none'"));
+  assert.ok(previewCspFor("text/html; charset=utf-8", host).startsWith("sandbox allow-scripts; default-src 'none'"));
   assert.ok(previewCspFor("image/svg+xml", host).includes("script-src 'none'"));
   assert.equal(previewCspFor("image/png", host), "");
   assert.equal(previewCspFor("font/woff2", host), "");
