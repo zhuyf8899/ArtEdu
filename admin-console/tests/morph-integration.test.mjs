@@ -35,7 +35,7 @@ test('tool actions remain separate from course disclosures and preserve safe lau
   assert.match(card,/aria-labelledby=\{titleId\}/);
   assert.match(card,/href=\{tool.href\}/);assert.match(card,/target=\{info.newTab/);
   assert.match(card,/noopener noreferrer/);assert.match(card,/referrerPolicy="no-referrer"/);
-  assert.match(card,/onNavigate\(`\/learning\?course=\$\{encodeURIComponent\(id\)\}`\)/);
+  assert.match(card,/onNavigate\(withReturnTarget\(`\/learning\?course=\$\{encodeURIComponent\(id\)\}`\)\)/);
   assert.match(card,/info.workflow \? <button[^>]*onClick=\{onOpenWorkflowBuilder\}/);
   assert.match(card,/canManage && <button/);
   assert.doesNotMatch(card,/localStorage|MORPH_DATA|免费增值|LAB PICK/);

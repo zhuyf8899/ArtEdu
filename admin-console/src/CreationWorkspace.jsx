@@ -28,7 +28,7 @@ import { useUnsavedChanges } from './useUnsavedChanges.js';
 
 // 专用创作对话页：左侧历次对话，右侧长文本阅读区与续写输入。
 // 起始页提交的需求以 pending 形式落进本地对话，由本页接管真实的模型/演示调用。
-export function AiCreationWorkspace({ account, creation, ready = true, onCreate, onSuggest, onNotice, showHistory = false, startNew = false, conversationId = "", onBack = () => {} }) {
+export function AiCreationWorkspace({ account, creation, ready = true, onCreate, onSuggest, onNotice, showHistory = false, startNew = false, conversationId = "", backLabel = "返回首页", onBack = () => {} }) {
   const [conversations, setConversations] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -543,7 +543,7 @@ export function AiCreationWorkspace({ account, creation, ready = true, onCreate,
   return <section className="creation-canvas" aria-label="创作对话">
     <header className="creation-canvas__header">
       <div className="creation-canvas__header-left">
-        <button type="button" className="creation-canvas__back" onClick={onBack}><ArrowLeft size={17} weight="bold" />返回</button>
+        <button type="button" className="creation-canvas__back" onClick={onBack}><ArrowLeft size={17} weight="bold" />{backLabel}</button>
         {/* 收起后保留固定入口，不改变当前对话、草稿或后台任务。 */}
         <button ref={historyToggle} type="button" className={`creation-canvas__history-toggle${historyOpen ? " is-open" : ""}`} aria-expanded={historyOpen} aria-controls="artedu-creation-history" aria-label={historyOpen ? "收起创作记录" : "展开创作记录"} onClick={() => setHistoryOpen((open) => !open)} title={historyOpen ? "收起创作记录，扩大对话区" : "展开创作记录"}>
           <SidebarSimple size={16} weight="bold" /><span>创作记录</span><b>{conversations.length}</b>

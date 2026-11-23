@@ -14,7 +14,8 @@ import { morphQueryMatches, toolCategoryName } from './morph/morphPresentation.j
 import { CatalogControls } from './morph/CatalogControls.jsx';
 import { MorphToolCard } from './morph/MorphToolCard.jsx';
 import { ToolRecommendationDialog } from './morph/ToolRecommendationDialog.jsx';
-import { returnContext } from './resourceContext.js';
+import { returnContext, withReturnTarget } from './resourceContext.js';
+import { useScopedViewState } from './useScopedViewState.js';
 
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
 const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ WorkflowRunner: component }) => ({ default: component })));
@@ -28,7 +29,7 @@ const emptyToolForm = () => ({ category: "", name: "", detail: "", href: "https:
  */
 const nodesCarryPrompt = (nodes, edges, id) => hasDownstreamPrompt(nodes, edges, id);
 
-function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", onNavigate, onNotice, canPublish = false, canManageToolDirectory = false, variant = 'classic' }) {
+function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = "", builderOpen = false, initialEditId = "", workflowCatalogRequested = false, onNavigate, onNotice, canPublish = false, canManageToolDirectory = false, variant = 'classic' }) {
   const [workflows, setWorkflows] = useState([]);
   const [catalogState,setCatalogState]=useState('loading'),[catalogError,setCatalogError]=useState('');
   const [catalogQuery,setCatalogQuery]=useState('');
@@ -63,8 +64,26 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
   const opening = useRef(0);
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
-  const backToCatalog = () => onNavigate(studioUrl());
-  const openBuilder = () => onNavigate(studioUrl({builder:true}));
+  const context = returnContext();
+  const backToCatalog = () => onNavigate(context.to || studioUrl());
+  const backLabel = context.to ? context.label : '返回技能工具';
+  const openBuilder = () => onNavigate(withReturnTarget(studioUrl({builder:true})));
+  const workflowCatalog = useRef(null);
+  const workflowJumped = useRef(false);
+  const [toolsReady, setToolsReady] = useState(false);
+  useEffect(() => {
+    if (!workflowCatalogRequested || initialWorkflowId || initialRunId || builderOpen) {
+      workflowJumped.current = false;
+      return;
+    }
+    if (!toolsReady || catalogState === 'loading' || workflowJumped.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (!workflowCatalog.current) return;
+      workflowCatalog.current.scrollIntoView({block:'start'});
+      workflowJumped.current = true;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [workflowCatalogRequested, initialWorkflowId, initialRunId, builderOpen, toolsReady, catalogState]);
   const [autoError, setAutoError] = useState("");
   const advancing = useRef("");
 
@@ -86,11 +105,11 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
       .finally(() => { if(requestId === opening.current) setLoading(false); });
     return () => { opening.current++; };
   }, [initialWorkflowId, initialRunId, builderOpen, onNotice]);
-  const open = (workflow) => onNavigate(studioUrl({workflow:workflow.id}));
+  const open = (workflow) => onNavigate(withReturnTarget(studioUrl({workflow:workflow.id})));
   const start = async () => {
     const requestId = opening.current;
     setLoading(true);
-    try { const next = await startWorkflowRun(selected.id, {}, selected.versionId); setAutoError(""); if (!alive.current || requestId !== opening.current) return; onNavigate(studioUrl({workflow:selected.id,run:next.id}), {replace:true}); onNotice("工作流已开始，节点进度会自动保存"); }
+    try { const next = await startWorkflowRun(selected.id, {}, selected.versionId); setAutoError(""); if (!alive.current || requestId !== opening.current) return; onNavigate(withReturnTarget(studioUrl({workflow:selected.id,run:next.id}), context.to), {replace:true}); onNotice("工作流已开始，节点进度会自动保存"); }
     catch (error) { if(requestId === opening.current) onNotice(error.message); }
     finally { if(requestId === opening.current) setLoading(false); }
   };
@@ -123,22 +142,22 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
     }).finally(() => { if(alive.current && requestId === opening.current) setLoading(false); });
   }, [run, selected, loading, autoError, onNotice]);
 
-  if ((initialWorkflowId || initialRunId) && !selected && !builderOpen) return <section className="portal-empty"><h2>{loading ? '正在打开工作流…' : '工作流暂时无法打开'}</h2>{openError && <p role="alert">{openError}</p>}<button onClick={backToCatalog}>返回技能工具</button></section>;
+  if ((initialWorkflowId || initialRunId) && !selected && !builderOpen) return <section className="portal-empty"><h2>{loading ? '正在打开工作流…' : '工作流暂时无法打开'}</h2>{openError && <p role="alert">{openError}</p>}<button onClick={backToCatalog}>{backLabel}</button></section>;
   if (selected?.definition?.engine === 'comfyui') return <ComfyCanvas readOnly editor={{name:selected.name,definition:selected.definition}} selected={selected} onNotice={onNotice} onBack={backToCatalog} />;
   if (selected) return <Suspense fallback={<PageLoading />}><WorkflowRunner selected={selected} run={run} loading={loading} autoError={autoError} onNotice={onNotice} onRetry={() => { advancing.current = ""; setAutoError(""); }} onBack={backToCatalog} onStart={start} onExecute={executeNode} /></Suspense>;
   if (builderOpen) return <div className="workflow-builder-entry">
-    <button className="learning-back" onClick={backToCatalog}><ArrowLeft size={16} weight="bold" /> 返回技能工具</button>
+    <button className="learning-back" onClick={backToCatalog}><ArrowLeft size={16} weight="bold" /> {backLabel}</button>
     <Suspense fallback={<PageLoading />}>
-      <WorkflowAdmin showToast={onNotice} canPublish={canPublish} initialWorkflowId={initialEditId} onWorkflowNavigate={(id) => onNavigate(studioUrl({builder:true,edit:id}))} />
+      <WorkflowAdmin showToast={onNotice} canPublish={canPublish} initialWorkflowId={initialEditId} onWorkflowNavigate={(id) => onNavigate(withReturnTarget(studioUrl({builder:true,edit:id}), context.to))} />
     </Suspense>
   </div>;
-  return <section className="workflow-catalog" id="workflow-catalog">
+  return <section className="workflow-catalog">
     {variant === 'morph' && <SkillToolsBanner accountId={accountId} onNotice={onNotice}/>}
-    {returnContext().to&&<button className="learning-back audit-resource-return" onClick={()=>onNavigate(returnContext().to)}><ArrowLeft size={16}/>{returnContext().label}</button>}
+    <StudioReturnButton context={context} onNavigate={onNavigate}/>
     <div className={variant === 'morph' ? 'container morph-tool-catalog' : undefined}>
-    <ToolDirectory variant={variant} canManage={canManageToolDirectory} onNotice={onNotice} onNavigate={onNavigate} onOpenWorkflowBuilder={openBuilder} />
+    <ToolDirectory accountId={accountId} variant={variant} canManage={canManageToolDirectory} onNotice={onNotice} onNavigate={onNavigate} onOpenWorkflowBuilder={openBuilder} onReadyChange={setToolsReady} />
     {/* 工具入口之后必须有节点工作流列表：之前这一块被工具目录挤掉了，学生根本点不进工作流。 */}
-    <div className="workflow-catalog__list">
+    <div className="workflow-catalog__list" id="workflow-catalog" ref={workflowCatalog}>
       <header className="workflow-catalog__toolbar">
         <div><p>// NODE WORKFLOWS</p><h2>节点工作流</h2><span>先打开画布查看节点，再点击开始运行；编辑与新建请进入工作流管理。</span></div>
         <div className="workflow-catalog__actions">
@@ -181,19 +200,24 @@ function SkillToolsBanner({ accountId, onNotice }) {
     {recommendOpen && <ToolRecommendationDialog accountId={accountId} onClose={() => setRecommendOpen(false)} onNotice={onNotice}/>}
   </>;
 }
-function ToolDirectory({ canManage, onNotice, onOpenWorkflowBuilder, variant, onNavigate }) {
+function ToolDirectory({ accountId, canManage, onNotice, onOpenWorkflowBuilder, variant, onNavigate, onReadyChange }) {
  const {enabled:comfyEnabled}=useComfyFeature();
   const [links, setLinks] = useState([]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyToolForm);
   const [editingId, setEditingId] = useState(null);
-  const [category, setCategory] = useState("全部");
-  const [viewMode, setViewMode] = useState("grid");
-  const [toolQuery,setToolQuery] = useState(()=>new URLSearchParams(window.location.search).get('toolQuery')||'');
-  useEffect(()=>{setToolQuery(new URLSearchParams(window.location.search).get('toolQuery')||'');setCategory('全部');},[window.location.search]);
+  const initialQuery = new URLSearchParams(window.location.search).get('toolQuery') || '';
+  const filterScope = accountId + ':tools:' + initialQuery;
+  const [category, setCategory] = useScopedViewState(filterScope + ':category', '全部');
+  const [viewMode, setViewMode] = useScopedViewState(accountId + ':tools:view', 'grid');
+  const [toolQuery, setToolQuery] = useScopedViewState(filterScope + ':query', initialQuery);
   const [toolState,setToolState] = useState('loading');
   const [toolError,setToolError] = useState('');
+  useEffect(() => {
+    onReadyChange?.(toolState !== 'loading');
+    return () => onReadyChange?.(false);
+  }, [onReadyChange, toolState]);
 
   const load = useCallback(() => {
     setToolState('loading');setToolError('');
@@ -250,13 +274,19 @@ function ToolDirectoryCard({ tool, canManage, onEdit, onOpenWorkflowBuilder, onN
 }
 
 
+function StudioReturnButton({context,onNavigate}) {
+ return context.to && <button type="button" className="learning-back audit-resource-return" onClick={()=>onNavigate(context.to)}><ArrowLeft size={16}/>{context.label}</button>;
+}
+
 export function WorkflowStudio(props){
  const {enabled}=useComfyFeature();
- if(enabled===true)return <WorkflowStudioContent {...props}/>;
- const tools = <ToolDirectory variant={props.variant} canManage={props.canManageToolDirectory} onNotice={props.onNotice} onNavigate={props.onNavigate}/>;
- return <section className="workflow-catalog" id="workflow-catalog">
+ const workflowCatalogRequested = new URLSearchParams(window.location.search).get('view') === 'workflows' || window.location.hash === '#workflow-catalog';
+ if(enabled===true)return <WorkflowStudioContent {...props} workflowCatalogRequested={workflowCatalogRequested}/>;
+ const tools = <ToolDirectory accountId={props.accountId} variant={props.variant} canManage={props.canManageToolDirectory} onNotice={props.onNotice} onNavigate={props.onNavigate}/>;
+ return <section className="workflow-catalog">
    {props.variant === 'morph' && <SkillToolsBanner accountId={props.accountId} onNotice={props.onNotice}/>}
-   {(props.initialWorkflowId||props.initialRunId||props.builderOpen)&&<ComfyDisabled/>}
+   <StudioReturnButton context={returnContext()} onNavigate={props.onNavigate}/>
+   {(workflowCatalogRequested||props.initialWorkflowId||props.initialRunId||props.builderOpen)&&<ComfyDisabled/>}
    {props.variant === 'morph' ? <div className="container morph-tool-catalog">{tools}</div> : tools}
  </section>;
 }

@@ -1,4 +1,4 @@
-import {returnContext} from '../resourceContext.js';
+import {returnContext,withReturnTarget} from '../resourceContext.js';
 import {createElement,useEffect,useRef,useState} from 'react';
 import template from './handoffSeriesTemplate.json';
 import bundle from './handoffSeriesData.json';
@@ -36,7 +36,7 @@ export function HandoffSeriesView({onNavigate,children}){
   if(action==='expand-all'){const next=!expanded;root.current.querySelectorAll('.lesson-topic,.lesson-point').forEach(d=>d.open=next);setExpanded(next);const b=root.current.querySelector('[data-action="expand-all"]');if(b)b.textContent=next?'收起全部':'展开全部';return;}
   setPanel(action==='schedule'?'教学安排':'教学团队');
  };
- const study=id=>onNavigate(atomicUrl(id,1)+'&fromCourse='+handoffSeriesId+'&fromRevision=1');
+ const study=id=>onNavigate(withReturnTarget(atomicUrl(id,1)+'&fromCourse='+handoffSeriesId+'&fromRevision=1'));
  const names=[...new Set(bundle.nodes.filter(n=>n.lecturer).flatMap(n=>n.lecturer.split('\n')).filter(Boolean))];
  const schedule=[...new Set(course.payload.steps.flatMap(s=>s.context.split('。')[0].split('；')))];
  return <section className="handoff-series" ref={root}><div className="figma-course-detail"><div className="series-return"><button onClick={()=>onNavigate(returnContext().to||'/learning?library=courses')}>← {returnContext().to?returnContext().label:'返回完整课程'}</button><a href="#series-learning-tools">我的学习路线 ↓</a></div><SourceNode node={template} onAction={act} onStudy={study}/><details id="series-learning-tools" className="series-learning-tools"><summary>我的学习路线与课程任务</summary>{children}</details></div>{panel&&<dialog ref={dialog} className="series-dialog" onCancel={()=>setPanel('')} aria-label={panel}><header><h2>{panel}</h2><button onClick={()=>setPanel('')} aria-label="关闭">×</button></header>{(panel==='教学安排'?schedule:names).map(x=><p key={x}>{x}</p>)}</dialog>}</section>;

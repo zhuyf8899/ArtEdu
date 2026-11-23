@@ -16,6 +16,7 @@ import { canEnterAdmin } from "./testAccounts.js";
 import { MorphNav, MorphHero, MorphFooter } from './morph/MorphChrome.jsx';
 import { MorphHomeRecommendations } from './morph/MorphCatalog.jsx';
 import { mergeCourseRecord } from './courseProgress.js';
+import { returnContext, withReturnTarget } from './resourceContext.js';
 
 const LearningLibrary = lazy(() => import("./LearningLibrary.jsx").then(({ LearningLibrary: component }) => ({ default: component })));
 const WorkflowStudio = lazy(() => import("./WorkflowStudio.jsx").then(({ WorkflowStudio: component }) => ({ default: component })));
@@ -221,6 +222,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const chromeFree = standalone || workbench;
   // Deployment can fall back without data migration. ?ui=classic affects this view only.
   const morph = import.meta.env.VITE_PORTAL_UI !== 'classic' && new URLSearchParams(window.location.search).get('ui') !== 'classic';
+  const creationReturn = section === 'creation' ? returnContext() : null;
   const morphNav = <MorphNav account={account} section={section==='curriculum'?'courses':section} creation={data.creation} onNavigate={onNavigate} onSwitchAccount={onSwitchAccount} onEnterAdmin={onEnterAdmin} />;
   useEffect(() => {
     const previous = document.title;
@@ -269,13 +271,13 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
         {section === "studio" && <WorkflowStudio accountId={account.id} variant={morph ? 'morph' : 'classic'} initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
-        {section === "community" && <CommunityLibrary variant={morph ? 'morph' : 'classic'} initialWorkId={communityWorkId} onNavigate={onNavigate} account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(`/studio?workflow=${encodeURIComponent(workflowId)}`)} />}
+        {section === "community" && <CommunityLibrary variant={morph ? 'morph' : 'classic'} initialWorkId={communityWorkId} onNavigate={onNavigate} account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(withReturnTarget(`/studio?workflow=${encodeURIComponent(workflowId)}`))} />}
 
         {section === "myLearning" && <MyLearning variant={morph ? 'morph' : 'classic'} learningView={learningView} creation={data.creation} caseCatalog={data.works} account={account} learningAtlas={learningAtlas} learningAtlasCourse={learningAtlasCourse} onNavigate={onNavigate} onNotice={showToast} />}
 
         {section === "search" && <SearchResults accountId={account.id} variant={morph ? 'morph' : 'classic'} initialQuery={searchQuery} fallbackData={data} onSearch={navigateSearch} onNavigate={onNavigate} />}
 
-        {section === "creation" && <AiCreationWorkspace account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} onSuggest={suggestFollowups} creation={data.creation} onNotice={showToast} showHistory={creationHistoryOpen} startNew={creationStartNew} conversationId={creationId} onBack={() => onNavigate("/")} />}
+        {section === "creation" && <AiCreationWorkspace account={account} ready={!portalLoading && isLive} onCreate={createFromConversation} onSuggest={suggestFollowups} creation={data.creation} onNotice={showToast} showHistory={creationHistoryOpen} startNew={creationStartNew} conversationId={creationId} backLabel={creationReturn?.to ? creationReturn.label : "返回首页"} onBack={() => onNavigate(creationReturn?.to || "/")} />}
       </Suspense>
       </div>
     </main>

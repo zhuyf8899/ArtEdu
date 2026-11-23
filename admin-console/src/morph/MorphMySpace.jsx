@@ -47,7 +47,7 @@ export function MorphMySpace({account,data,creation,view,onView,onNavigate,loadi
 }
 
 function SpaceHeading({eyebrow,title,action,onAction}) {return <header className="morph-space-heading"><div><span>{eyebrow}</span><h2>{title}</h2></div>{action&&<button type="button" onClick={onAction}>{action}<ArrowRight size={16}/></button>}</header>;}
-function CourseRecords({courses,onNavigate}) {return courses.length?<div className="morph-space-course-grid">{courses.map(course=><MorphCourseCard key={course.id} course={courseForCard(course)} onOpen={id=>onNavigate(`/learning?course=${encodeURIComponent(id)}`)}/>)}</div>:<div className="morph-space-empty"><BookOpenText size={30}/><h3>还没有加入课程</h3><button onClick={()=>onNavigate('/learning')}>发现原子课程<ArrowRight size={16}/></button></div>;}
+function CourseRecords({courses,onNavigate}) {return courses.length?<div className="morph-space-course-grid">{courses.map(course=><MorphCourseCard key={course.id} course={courseForCard(course)} onOpen={id=>onNavigate(withReturnTarget(`/learning?course=${encodeURIComponent(id)}`))}/>)}</div>:<div className="morph-space-empty"><BookOpenText size={30}/><h3>还没有加入课程</h3><button onClick={()=>onNavigate('/learning')}>发现原子课程<ArrowRight size={16}/></button></div>;}
 function SpaceCourses({courses,onNavigate}) {
   const [status,setStatus]=useState('all'),[query,setQuery]=useState('');
   const state=spaceCourseStatus;

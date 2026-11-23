@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowUpRight, Spinner } from '@phosphor-icons/react';
 import { atomicRequest, createLearningNote } from '../services/adminApi.js';
 import { atomicUrl } from '../atomicModel.js';
+import { returnContext, withReturnTarget } from '../resourceContext.js';
 import { courseReadiness } from '../coursePresentation.js';
 import { composeCurriculum, curriculumTopics, curriculumAvailability } from './curriculumModel.js';
 import './handoff-details.css';
@@ -38,14 +39,16 @@ export function CurriculumComposer({courses=[],topic='',courseId='',nodeId='',re
       duration: steps.reduce((total, {course}) => total + Math.max(0, Number(course.estimatedMinutes) || 0), 0)};
   }, [topic, courses, seedCourse]);
   const availability=curriculumAvailability(result);
+  const context = returnContext();
   const courseLink = course => course.href ?? '/learning?course=' + encodeURIComponent(course.id);
   const selection = useMemo(() => {
     const params = new URLSearchParams();
     if (courseId) params.set('course', courseId);
     if (nodeId) params.set('node', nodeId);
     if (nodeId && revision) params.set('revision', revision);
+    if (context.to) params.set('returnTo', context.to);
     return params.toString();
-  }, [courseId, nodeId, revision]);
+  }, [courseId, nodeId, revision, context.to]);
   const heading=useRef(null),busy=useRef(false),currentTopic=useRef(topic);
   const pathKey = JSON.stringify([topic, selection]);
   useEffect(()=>{currentTopic.current=pathKey;setSaved(false);if(topic)heading.current?.focus({preventScroll:true});},[topic,pathKey]);
@@ -67,7 +70,7 @@ export function CurriculumComposer({courses=[],topic='',courseId='',nodeId='',re
     finally {busy.current=false;setSaving(false);}
   };
   return <section className="container curriculum-page morph-curriculum" aria-label="组合我的课程">
-    <button type="button" className="curriculum-back" onClick={()=>onNavigate('/learning')}><ArrowLeft size={16}/>原子课程</button>
+    <button type="button" className="curriculum-back" onClick={()=>onNavigate(context.to || '/learning?library=courses')}><ArrowLeft size={16}/>{context.to ? context.label : '返回完整课程'}</button>
     <header><span className="eyebrow">CURRICULUM COMPOSER</span><h1>组合我的课程</h1><p>从你选的课程或原子出发，按学习目标查找目录中的配套课程。</p><button className="button secondary" onClick={()=>onNavigate('/learning?library=courses')}>查看教师编排的完整课程 ↗</button></header>
     <section className="curriculum-conversation" aria-label="课程编排对话" aria-busy={loading || nodePending}>
       <div id="curriculum-messages" aria-live="polite">
@@ -77,8 +80,8 @@ export function CurriculumComposer({courses=[],topic='',courseId='',nodeId='',re
           {!result?<div className="path-result"><h2 ref={heading} tabIndex={-1}>选择一个相关方向</h2><p>当前目录支持信息图表、海报与产品设计路径。选择与你的目标最接近的方向。</p><TopicSuggestions onChoose={recommend}/></div>:<section className="path-result">
             <span className="eyebrow">YOUR LEARNING PATH</span><h2 ref={heading} tabIndex={-1}>{result.title} · 从方法到实践</h2><p>可直接打开学习内容，也可将这条路径保存到学习笔记。</p>{seedCourse && <TopicSuggestions onChoose={recommend}/>}
             {result.missing.length>0&&<p className="curriculum-availability" role="status">部分课程尚未发布，仅展示当前目录中的 {result.steps.length} 门课程。</p>}
-            <ol className="path-list">{result.steps.map(({course,reason},index)=><li key={course.id}><span className="path-number">{index+1}</span><div><h3><button type="button" className="title-button" onClick={()=>onNavigate(courseLink(course))}>{course.title}<ArrowUpRight size={17}/></button></h3><p>{reason}</p><small>{course.estimatedMinutes||0} 分钟 · {courseReadiness(course)||'已开放'}{index?' · 承接 '+result.steps[index-1].course.title:' · 共同基础'}</small></div></li>)}</ol>
-            <footer><span>{result.steps.length} 门目录课程 · 规划约 {result.duration} 分钟<br/>{availability.availableCount} 门现在可学 · {availability.plannedCount} 门筹备中</span><div>{availability.nextCourse&&<button className="button" onClick={()=>onNavigate(courseLink(availability.nextCourse))}>{availability.review?'回顾可学课程':'从可学课程开始'}<ArrowUpRight size={16}/></button>}<button className="button secondary" disabled={!result.steps.length||saving||saved} onClick={save}>{saving?'正在保存…':saved?'已保存到学习笔记':'保存学习路径'}</button><button className="button secondary" onClick={()=>onNavigate('/my-learning?view=notes')}>我的空间<ArrowUpRight size={16}/></button></div></footer>
+            <ol className="path-list">{result.steps.map(({course,reason},index)=><li key={course.id}><span className="path-number">{index+1}</span><div><h3><button type="button" className="title-button" onClick={()=>onNavigate(withReturnTarget(courseLink(course)))}>{course.title}<ArrowUpRight size={17}/></button></h3><p>{reason}</p><small>{course.estimatedMinutes||0} 分钟 · {courseReadiness(course)||'已开放'}{index?' · 承接 '+result.steps[index-1].course.title:' · 共同基础'}</small></div></li>)}</ol>
+            <footer><span>{result.steps.length} 门目录课程 · 规划约 {result.duration} 分钟<br/>{availability.availableCount} 门现在可学 · {availability.plannedCount} 门筹备中</span><div>{availability.nextCourse&&<button className="button" onClick={()=>onNavigate(withReturnTarget(courseLink(availability.nextCourse)))}>{availability.review?'回顾可学课程':'从可学课程开始'}<ArrowUpRight size={16}/></button>}<button className="button secondary" disabled={!result.steps.length||saving||saved} onClick={save}>{saving?'正在保存…':saved?'已保存到学习笔记':'保存学习路径'}</button><button className="button secondary" onClick={()=>onNavigate('/my-learning?view=notes')}>我的空间<ArrowUpRight size={16}/></button></div></footer>
           </section>}
         </>}
       </div>
