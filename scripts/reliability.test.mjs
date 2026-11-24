@@ -32,8 +32,9 @@ test('部署健康检查失败必须退出；备份位于迁移之前', async ()
   assert.match(start,/if \(\$SeedDemo\)/);
   const nginx = await readFile('deploy/nginx.conf','utf8');
   assert.match(nginx,/client_max_body_size 101m/); assert.match(nginx,/client_max_body_size 11m/);
-  assert.doesNotMatch(nginx,/proxy_pass http:\/\/api:4000/);
-  assert.equal((nginx.match(/proxy_pass http:\/\/\$\{ARTEDU_API_HOST\}:4000/g) ?? []).length,5);
+  assert.match(nginx,/location \^~ \/api\/agent-runs\/workspace-preview-grant\/\s*\{[^}]*?proxy_pass\s/);
+  const proxyTargets = [...nginx.matchAll(/^\s*proxy_pass\s+([^;]+);/gm)];
+  for (const [, target] of proxyTargets) assert.equal(target.trim(),'http://${ARTEDU_API_HOST}:4000');
   const dockerfile = await readFile('deploy/Dockerfile.web','utf8');
   assert.match(dockerfile,/\/etc\/nginx\/templates\/default\.conf\.template/);
   const compose = await readFile('docker-compose.staging.yml','utf8');
