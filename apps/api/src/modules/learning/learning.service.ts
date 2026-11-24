@@ -227,6 +227,7 @@ export class LearningService {
       catalog: row.catalog_json ?? null,
       availability: row.catalog_json?.availability ?? 'available',
       author: row.catalog_json?.authorLabel || row.creator_name || '作者待确认',
+      teacherName: typeof row.catalog_json?.teacherName === 'string' ? row.catalog_json.teacherName : "",
       method: row.catalog_json?.method,
       tools: row.catalog_json?.tools,
       id: row.id,

@@ -51,7 +51,7 @@ function CourseRecords({courses,onNavigate}) {return courses.length?<div classNa
 function SpaceCourses({courses,onNavigate}) {
   const [status,setStatus]=useState('all'),[query,setQuery]=useState('');
   const state=spaceCourseStatus;
-  const visible=courses.filter(course=>(status==='all'||state(course)===status)&&[course.title,course.author,course.catalog?.authorLabel,course.creatorName].filter(Boolean).join(' ').toLowerCase().includes(query.trim().toLowerCase()));
+  const visible=courses.filter(course=>(status==='all'||state(course)===status)&&[course.title,course.teacherName,course.author,course.catalog?.authorLabel,course.creatorName].filter(Boolean).join(' ').toLowerCase().includes(query.trim().toLowerCase()));
   const filters=[['all','全部'],['new','未开始'],['progress','进行中'],['complete','已完成'],['archived','历史课程']];
   return <><SpaceHeading eyebrow="MY COURSES" title="我的课程" action="发现课程" onAction={()=>onNavigate('/learning')}/>{courses.some(c=>c.archived)&&<p className="course-history-note">已下架课程的学习记录保留在“历史课程”中。</p>}
     {courses.length>0&&<CatalogControls label="我的课程筛选" options={filters.map(([value,label])=>({value,label,count:courses.filter(c=>value==='all'||state(c)===value).length}))} value={status} onChange={setStatus} query={query} onQueryChange={setQuery} searchLabel="搜索我的课程" placeholder="搜索课程、授课作者" resultLabel={`${visible.length} / ${courses.length} 门课程`} selected={[query&&{label:query,onRemove:()=>setQuery('')},status!=='all'&&{label:filters.find(([value])=>value===status)?.[1],onRemove:()=>setStatus('all')}].filter(Boolean)} onClear={()=>{setQuery('');setStatus('all');}}/>}

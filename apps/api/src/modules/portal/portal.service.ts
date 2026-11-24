@@ -220,6 +220,7 @@ export class PortalService {
           AND (
             c.title ILIKE ANY($1::text[]) OR COALESCE(c.summary, '') ILIKE ANY($1::text[]) OR
             COALESCE(c.category, '') ILIKE ANY($1::text[]) OR COALESCE(creator.display_name, '') ILIKE ANY($1::text[]) OR
+            COALESCE(c.catalog_json->>'teacherName', '') ILIKE ANY($1::text[]) OR
             EXISTS (
               SELECT 1 FROM course_tags search_relation
               JOIN tags search_tag ON search_tag.id = search_relation.tag_id
@@ -368,7 +369,7 @@ export class PortalService {
       title: row.title,
       summary: row.summary ?? "",
       category: row.category ?? "未分类",
-      author: (type === 'work' ? row.creators?.filter(name => typeof name === 'string' && name.trim()).join('、') : type === 'course' ? row.catalog_json?.authorLabel : null) || row.author || "作者待确认",
+      author: (type === 'work' ? row.creators?.filter(name => typeof name === 'string' && name.trim()).join('、') : type === 'course' ? (row.catalog_json?.teacherName || row.catalog_json?.authorLabel) : null) || row.author || "作者待确认",
       creators: type === 'work' ? row.creators ?? [] : undefined,
       directoryName: row.directory_name ?? null,
       methods: [...new Set([...(row.methods ?? []), ...(row.tags ?? []).filter((value) => ["UI 创作", "图案生成", "Vibe Coding", "UI设计", "图案设计"].includes(value)), ...(type === "course" && /coding|网页|代码/i.test(row.title) ? ["Vibe Coding"] : type === "course" && /纹样|图案/.test(row.title) ? ["图案生成"] : [])])],

@@ -62,6 +62,7 @@ const lessonSchema = z.object({
 
 export const createCourseSchema = z.object({
   title: z.string().trim().min(2).max(120),
+  teacherName: z.string().trim().max(200).optional(),
   summary: z.string().trim().max(2000).optional().default(""),
   category: z.string().trim().min(1).max(40),
   difficulty: z.enum(["beginner", "intermediate", "advanced"]).default("beginner"),

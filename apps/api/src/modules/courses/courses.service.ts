@@ -141,7 +141,8 @@ export class CoursesService {
     const clauses = ["c.status = 'published'"];
     if (filters.query) {
       values.push(`%${filters.query}%`);
-      clauses.push(`(c.title ILIKE $${values.length} OR COALESCE(c.summary, '') ILIKE $${values.length})`);
+      clauses.push(`(c.title ILIKE $${values.length} OR COALESCE(c.summary, '') ILIKE $${values.length}
+        OR COALESCE(c.catalog_json->>'teacherName', '') ILIKE $${values.length})`);
     }
     if (filters.category) {
       values.push(filters.category);
@@ -682,12 +683,13 @@ export class CoursesService {
       await client.query(`
         INSERT INTO courses (
           id, slug, title, summary, category, difficulty, cover_asset_key, cover_url,
-          is_featured, status, created_by, estimated_minutes
-        ) VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, 'draft', $9, $10)
+          is_featured, status, created_by, estimated_minutes, catalog_json
+        ) VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, 'draft', $9, $10, $11::jsonb)
       `, [
         courseId, input.title, input.summary, input.category, input.difficulty,
         input.coverAssetKey ?? null, input.coverUrl ?? null, input.isFeatured, actor.id,
         input.lessons.reduce((sum, lesson) => sum + lesson.estimatedMinutes, 0),
+        JSON.stringify(input.teacherName ? { teacherName: input.teacherName } : {}),
       ]);
       await this.replaceLessons(client, courseId, input.lessons, true);
     });
@@ -711,13 +713,17 @@ export class CoursesService {
       isFeatured: input.isFeatured ?? current.is_featured,
     };
     await this.database.transaction(async (client) => {
-      await client.query(`
+      const changed = await client.query(`
         UPDATE courses SET title = $2, summary = $3, category = $4, difficulty = $5,
           cover_asset_key = $6, cover_mime_type = CASE WHEN $6::text IS NULL THEN NULL ELSE cover_mime_type END,
           cover_url = $7, is_featured = $8, status = 'draft', rejection_note = NULL,
+          catalog_json = CASE WHEN $9::text IS NULL THEN catalog_json
+            WHEN $9 = '' THEN catalog_json - 'teacherName'
+            ELSE jsonb_set(catalog_json, '{teacherName}', to_jsonb($9::text)) END,
           version_number = version_number + 1, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1
-      `, [courseId, merged.title, merged.summary, merged.category, merged.difficulty, merged.coverAssetKey, merged.coverUrl, merged.isFeatured]);
+        WHERE id = $1 AND status IN ('draft', 'rejected')
+      `, [courseId, merged.title, merged.summary, merged.category, merged.difficulty, merged.coverAssetKey, merged.coverUrl, merged.isFeatured, input.teacherName ?? null]);
+      if (changed.rowCount === 0) throw new ConflictException("课程状态已变化，请刷新后重试");
       if (input.lessons) {
         await this.replaceLessons(client, courseId, input.lessons);
         await client.query(`
@@ -749,8 +755,8 @@ export class CoursesService {
 
   async listReviews(actor: Actor) {
     this.authService.requireAnyRole(actor, COURSE_REVIEW_ROLES);
-    const result = await this.database.query<ReviewRow>(`
-      SELECT r.id, r.course_id, c.title AS course_title, r.snapshot_version, r.status, r.note,
+    const result = await this.database.query<ReviewRow & {teacher_name: string | null}>(`
+      SELECT r.id, r.course_id, c.title AS course_title, c.catalog_json->>'teacherName' AS teacher_name, r.snapshot_version, r.status, r.note,
         submitter.display_name AS submitter_name, reviewer.display_name AS reviewer_name,
         r.submitted_at, r.decided_at
       FROM course_reviews r
@@ -763,6 +769,7 @@ export class CoursesService {
       id: row.id,
       courseId: row.course_id,
       courseTitle: row.course_title,
+      teacherName: row.teacher_name ?? "",
       snapshotVersion: row.snapshot_version,
       status: row.status,
       note: row.note ?? "",
@@ -861,6 +868,7 @@ export class CoursesService {
       catalog: row.catalog_json ?? null,
       availability: row.catalog_json?.availability ?? 'available',
       author: row.catalog_json?.authorLabel || row.creator_name || '',
+      teacherName: typeof row.catalog_json?.teacherName === 'string' ? row.catalog_json.teacherName : "",
       method: row.catalog_json?.method,
       tools: row.catalog_json?.tools,
       knowledgePoints: row.knowledge_points ?? [],

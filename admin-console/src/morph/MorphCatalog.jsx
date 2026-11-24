@@ -27,7 +27,7 @@ export function MorphCourseCard({course,onOpen,onCompose}) {
     <div className="course-body">
       <div className="classification"><span>{c.category}</span><span>难度：{morphCourseLevel(c)}</span></div>
       <h2><button className="title-button" onClick={open}>{c.title}</button></h2><p>{c.summary}</p>
-      <p className="course-teacher">老师：{c.author}{readiness&&<small className="course-readiness">{readiness}</small>}</p>
+      <p className="course-teacher">老师：{c.teacherName || c.author}{readiness&&<small className="course-readiness">{readiness}</small>}</p>
       {!soon&&<progress className={`progress${progress>=100?' complete':''}`} aria-label={`${c.title}学习进度`} aria-valuetext={`${state.label}，${progress}%`} max="100" value={progress}/>}
       <div className="small-meta"><span><Clock size={14}/> 耗时 {c.estimatedMinutes||0} 分钟{soon?' · 规划时长':''}</span>{!soon&&<span className="course-progress-value">{progress>0?`${progress}%`:'未开始'}</span>}</div>
       <div className="card-actions"><div className="buttons">{onCompose && !archived ? <><button className="button secondary" onClick={() => onCompose(c.id)}>组合我的课程</button><button className="button" onClick={open}>查看详情<ArrowUpRight size={15}/></button></> : <><button className="button secondary" onClick={open}>查看详情</button><button className="button" onClick={open}>{state.action}<ArrowUpRight size={15}/></button></>}</div></div>
@@ -37,7 +37,7 @@ export function MorphCourseCard({course,onOpen,onCompose}) {
 export function MorphCourseCatalog({courses,onOpen,onNavigate,embedded=false,accountId='current'}) {
   const [category,setCategory]=useScopedViewState(accountId+':catalog:category','全部'),[query,setQuery]=useScopedViewState(accountId+':catalog:query',''),[readiness,setReadiness]=useScopedViewState(accountId+':catalog:readiness','available');
   const decorated=useMemo(()=>courses.map(decorateCourse),[courses]), categories=[...new Set([...courseDirections,...decorated.map(c=>c.category).filter(Boolean)])];
-  const visible=decorated.filter(c=>(readiness==='all'||(readiness==='planned'?c.availability==='coming_soon':c.availability!=='coming_soon'))&&(category==='全部'||c.category===category)&&morphQueryMatches([c.title,c.summary,c.author,c.method,...c.tools],query));
+  const visible=decorated.filter(c=>(readiness==='all'||(readiness==='planned'?c.availability==='coming_soon':c.availability!=='coming_soon'))&&(category==='全部'||c.category===category)&&morphQueryMatches([c.title,c.summary,c.teacherName,c.author,c.method,...c.tools],query));
   const reset=()=>{setCategory('全部');setQuery('');};
   const selected = [
     query && {label:`搜索：${query}`,onRemove:()=>setQuery('')},

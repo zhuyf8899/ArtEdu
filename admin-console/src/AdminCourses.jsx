@@ -75,7 +75,7 @@ export function AdminCourses({ showToast, canManageContent = false, canReviewCou
         <div className="admin-course-filters" role="search" aria-label="管理课程筛选"><label>搜索课程<input aria-label="搜索管理课程" value={query} onChange={event=>setQuery(event.target.value)} placeholder="标题、编号或授课作者"/></label><label>内容状态<select aria-label="管理课程状态" value={filter} onChange={event=>setFilter(event.target.value)}>{ADMIN_COURSE_FILTERS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label>课程方向<select aria-label="管理课程方向" value={category} onChange={event=>setCategory(event.target.value)}><option value="all">全部方向</option>{categories.map(value=><option key={value}>{value}</option>)}</select></label><button onClick={()=>{setQuery('');setFilter('all');setCategory('all');}}>重置筛选</button></div>
         {filtered.map((course) => <div className="course-admin-row" key={course.id}>
           <div className="course-admin-icon"><BookOpenText size={22} weight="bold" /></div>
-          <div><span>{course.category} · {course.lessonCount} 个课时 · {course.estimatedMinutes} 分钟</span><strong>{course.title}</strong><small>课程作者：{course.catalog?.authorLabel || course.creatorName || "作者待确认"} · 版本 {course.versionNumber}</small></div>
+          <div><span>{course.category} · {course.lessonCount} 个课时 · {course.estimatedMinutes} 分钟</span><strong>{course.title}</strong><small>{course.teacherName ? "授课教师：" : "课程作者："}{course.teacherName || course.catalog?.authorLabel || course.creatorName || "作者待确认"} · 版本 {course.versionNumber}</small></div>
           <em className={`course-state course-state--${course.status}`}>{course.catalog?.bundleId&&course.status==='published'?(course.availability==='trial'?'试学 · 教研待审':'目录 · 筹备中'):statusNames[course.status] ?? course.status}</em>
           <div className="course-admin-actions">
             {course.catalog?.bundleId&&<a href={`/learning?course=${encodeURIComponent(course.id)}`} target="_blank" rel="noopener noreferrer">预览目录 / 试学讲义</a>}
@@ -92,7 +92,7 @@ export function AdminCourses({ showToast, canManageContent = false, canReviewCou
       {canReviewCourses && <article className="table-panel course-review-list" data-pending={reviews.some(item=>item.status==='pending')}>
         <div className="panel__heading course-admin-heading"><div><p>// PUBLISH REVIEW</p><h2>课程发布审核</h2></div><span>{reviews.filter((item) => item.status === "pending").length} 项待处理</span></div>
         {reviews.slice(0, 8).map((review) => <div className="course-review-row" key={review.id}>
-          <div><span><Clock size={13} /> {new Date(review.submittedAt).toLocaleString("zh-CN")}</span><strong>{review.courseTitle}</strong><small>{review.submitterName} · 版本 {review.snapshotVersion}</small></div>
+          <div><span><Clock size={13} /> {new Date(review.submittedAt).toLocaleString("zh-CN")}</span><strong>{review.courseTitle}</strong><small>{review.teacherName && `授课教师：${review.teacherName} · `}{review.submitterName} · 版本 {review.snapshotVersion}</small></div>
           {review.status === "pending" ? <div><button disabled={busy} onClick={() => run(() => decideCourseReview(review.id, { status: "rejected", note: "请补充课时说明后重新提交" }), "课程审核已驳回")}>驳回</button><button disabled={busy} className="approve" onClick={() => run(() => decideCourseReview(review.id, { status: "approved", note: "审核通过" }), "课程已审核发布")}><Check size={15} /> 发布</button></div> : <em className={`course-state course-state--${review.status === "approved" ? "published" : "rejected"}`}>{review.status === "approved" ? "已通过" : "已驳回"}</em>}
         </div>)}
         {!reviews.length && <div className="empty-state"><Check size={34} /><strong>暂无审核记录</strong><span>课程提交后会出现在这里。</span></div>}
@@ -172,6 +172,7 @@ function CourseEditor({ course, busy, onClose: closeEditor, onSave }) {
   }, [coverFile]);
   const [form, setForm] = useState({
     title: course.title ?? "", summary: course.summary ?? "", category: course.category ?? "",
+    teacherName: course.teacherName ?? "",
     difficulty: course.difficulty ?? "beginner", coverUrl: course.coverUrl ?? "",
     coverAssetKey: course.coverAssetKey ?? "", isFeatured: course.isFeatured ?? false,
     lessons: course.lessons?.length ? course.lessons : [emptyLesson()],
@@ -184,7 +185,7 @@ function CourseEditor({ course, busy, onClose: closeEditor, onSave }) {
   const totalMinutes = form.lessons.reduce((sum, lesson) => sum + (Number(lesson.estimatedMinutes) || 0), 0);
   const save = (event) => {
     event.preventDefault();
-    onSave({ title: form.title.trim(), summary: form.summary.trim(), category: form.category.trim(), difficulty: form.difficulty,
+    onSave({ title: form.title.trim(), teacherName: form.teacherName.trim(), summary: form.summary.trim(), category: form.category.trim(), difficulty: form.difficulty,
       coverUrl: form.coverUrl.trim() || null, coverAssetKey: form.coverAssetKey.trim() || null, isFeatured: form.isFeatured,
       lessons: form.lessons.map((lesson) => ({ ...lesson, title: lesson.title.trim(), summary: lesson.summary.trim(),
         estimatedMinutes: Number(lesson.estimatedMinutes), workflowId: lesson.workflowId?.trim() || null,
@@ -200,6 +201,7 @@ function CourseEditor({ course, busy, onClose: closeEditor, onSave }) {
       <div className="course-form-grid">
         <label>课程名称<input required minLength="2" maxLength="120" value={form.title} onChange={(event) => set("title", event.target.value)} /></label>
         <label>学科分类<input required maxLength="40" value={form.category} onChange={(event) => set("category", event.target.value)} /></label>
+        <label className="course-form-full">教师姓名／团队（选填）<input maxLength={200} value={form.teacherName} onChange={(event) => set("teacherName", event.target.value)} placeholder="填写授课教师或团队，多人可用逗号分隔" /></label>
         <label className="course-form-full">课程简介<textarea maxLength="2000" value={form.summary} onChange={(event) => set("summary", event.target.value)} /></label>
         <label>难度<select value={form.difficulty} onChange={(event) => set("difficulty", event.target.value)}><option value="beginner">入门</option><option value="intermediate">进阶</option><option value="advanced">高级</option></select></label>
         <label>封面图片链接（HTTPS）<input type="url" pattern="https://.*" maxLength="2000" value={form.coverUrl} onChange={(event) => set("coverUrl", event.target.value)} placeholder="https://example.com/cover.jpg" /></label>

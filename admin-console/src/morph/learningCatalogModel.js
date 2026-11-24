@@ -15,7 +15,7 @@ export function courseResources(legacy=[],assembled=[]){
 }
 export function filterCourseResources(resources,{availability='available',query='',direction='',stage=''}={}){
  const words=query.trim().toLocaleLowerCase();
- const scoped=resources.filter(r=>(availability==='all'||(availability==='planned'?r.planned:!r.planned))&&(!words||[r.title,r.summary,r.item.author,r.item.creatorName,r.item.authorName,r.direction,...(r.item.tools||[])].join(' ').toLocaleLowerCase().includes(words))&&(!stage||(stage==='completed'?r.progress===100:stage==='in_progress'?r.started&&r.progress<100:!r.started&&r.progress===0)));
+ const scoped=resources.filter(r=>(availability==='all'||(availability==='planned'?r.planned:!r.planned))&&(!words||[r.title,r.summary,r.item.teacherName,r.item.author,r.item.creatorName,r.item.authorName,r.direction,...(r.item.tools||[])].join(' ').toLocaleLowerCase().includes(words))&&(!stage||(stage==='completed'?r.progress===100:stage==='in_progress'?r.started&&r.progress<100:!r.started&&r.progress===0)));
  const facets={};for(const r of scoped)facets[r.direction]=(facets[r.direction]||0)+1;
  return {items:scoped.filter(r=>!direction||r.direction===direction),facets,total:scoped.length};
 }

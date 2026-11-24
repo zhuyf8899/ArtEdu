@@ -18,7 +18,15 @@ test("知识绑定去重并限制数量、长度、重复课时及越权字段",
   assert.deepEqual(workflowLearningSchema.parse({ tools: ["Figma", " Figma "] }), { knowledgePoints: [], tools: ["Figma"], abilityGoals: [] });
   assert.equal(workflowLearningSchema.safeParse({ mastery: 100 }).success, false);
 });
-import { createCourseSchema, lessonSubmissionSchema, updateCourseResourceMetadataSchema, updateProgressSchema, uploadCourseResourceMetadataSchema } from "./courses.contracts";
+import { createCourseSchema, lessonSubmissionSchema, updateCourseResourceMetadataSchema, updateCourseSchema, updateProgressSchema, uploadCourseResourceMetadataSchema } from "./courses.contracts";
+
+test("教师姓名可随课程草稿保存，旧请求可省略，空值可清除署名", () => {
+  const course = { title: "色彩课程", category: "设计基础" };
+  assert.equal(createCourseSchema.parse(course).teacherName, undefined);
+  assert.equal(createCourseSchema.parse({ ...course, teacherName: " 张老师、李老师 " }).teacherName, "张老师、李老师");
+  assert.deepEqual(updateCourseSchema.parse({ teacherName: " " }), { teacherName: "" });
+  assert.equal(updateCourseSchema.safeParse({ teacherName: "师".repeat(201) }).success, false);
+});
 
 test("课程课时支持分步学习、练习与可选作品提交门槛", () => {
   const parsed = createCourseSchema.parse({
