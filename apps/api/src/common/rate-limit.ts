@@ -4,12 +4,19 @@ interface Bucket { count: number; resetAt: number; }
 const buckets = new Map<string, Bucket>();
 const WINDOW_MS = 60_000;
 const MAX_BUCKETS = 5_000;
+const mediaRoutes = new Set([
+  "/api/works/:workId/assets/:assetId/download",
+  "/api/atomic/nodes/:id/assets/:assetId",
+]);
 
 /** Local safety valve; use gateway or Redis-backed rate limiting for multi-instance deployment. */
 export async function apiRateLimitHook(request: FastifyRequest, reply: FastifyReply) {
   const isWrite = !["GET", "HEAD", "OPTIONS"].includes(request.method);
-  const limit = isWrite ? 30 : 120;
-  const key = `${request.ip}:${isWrite ? "write" : "read"}`;
+  // A gallery and its video ranges should not consume the quota for page navigation.
+  const mediaRead = (request.method === "GET" || request.method === "HEAD") && mediaRoutes.has(request.routeOptions.url ?? "");
+  const bucketName = isWrite ? "write" : mediaRead ? "media" : "read";
+  const limit = isWrite ? 30 : mediaRead ? 600 : 120;
+  const key = `${request.ip}:${bucketName}`;
   const now = Date.now();
   for (const [bucketKey, value] of buckets) if (value.resetAt <= now) buckets.delete(bucketKey);
   const current = buckets.get(key);

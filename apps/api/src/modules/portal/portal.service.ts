@@ -325,7 +325,7 @@ export class PortalService {
           COUNT(*) OVER()::int AS match_count
         FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision
         JOIN users u ON u.id=n.owner_id
-        WHERE v.status='published'
+        WHERE n.archived_at IS NULL AND v.status='published'
           AND (v.payload->>'title' ILIKE ANY($1::text[]) OR v.payload->>'summary' ILIKE ANY($1::text[]) OR v.payload->>'knowledge' ILIKE ANY($1::text[]) OR v.payload->>'objective' ILIKE ANY($1::text[]))
           AND ($2::text IS NULL OR v.payload->>'direction'=$2 OR COALESCE(v.payload->'knowledge','[]'::jsonb) ? $2)
         ORDER BY v.created_at DESC,n.id LIMIT $3

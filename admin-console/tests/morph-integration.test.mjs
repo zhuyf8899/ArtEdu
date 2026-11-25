@@ -126,7 +126,11 @@ test('three catalogs share category controls, clear actions, counts, and program
 
 test('desktop tool grid and readable shared filters have focus and reduced-motion support',async()=>{
   const css=await readFile(new URL('../src/morph/catalog-controls.css',import.meta.url),'utf8');
-  assert.match(css,/@media \(max-width:1199px\)/);assert.match(css,/repeat\(2,minmax\(0,1fr\)\)!important/);
+  const layout=await readFile(new URL('../src/morph/integration.css',import.meta.url),'utf8');
+  assert.match(layout,/--catalog-columns:4/);
+  assert.match(layout,/@media\(max-width:1100px\)[^{]*\{[^}]*--catalog-columns:2/);
+  assert.match(layout,/@media\(max-width:768px\)[^{]*\{[^}]*--catalog-columns:1/);
+  assert.match(css,/grid-template-columns: repeat\(var\(--catalog-columns\),minmax\(0,1fr\)\)/);
   assert.match(css,/:focus-visible/);assert.match(css,/prefers-reduced-motion:reduce/);
   assert.match(css,/height: 44px/);assert.match(css,/min-height: 38px/);
   const card=await readFile(new URL('../src/morph/MorphToolCard.jsx',import.meta.url),'utf8');

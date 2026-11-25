@@ -1,21 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, Clock, Sparkle, ImageSquare, BookOpenText, Heart, BookmarkSimple } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, Clock, Sparkle, ImageSquare, BookOpenText, BookmarkSimple } from '@phosphor-icons/react';
 import { coverImageFor } from '../coverImages.js';
 import { decorateCourse, courseReadiness } from '../coursePresentation.js';
 import './content-catalog.css';
 import { mountAtomic } from './atomicEffect.js';
-import { mountNetwork } from './networkEffect.js';
 import { mountFloating } from './floatingEffect.js';
 import { morphCourseCover, morphQueryMatches, morphCourseLevel } from './morphPresentation.js';
 import { CatalogControls } from './CatalogControls.jsx';
 import { courseCardState, courseDirections } from './curriculumModel.js';
 import { courseProgress } from '../courseProgress.js';
+import { atomicRequest, getWork, toggleWorkReaction } from '../services/adminApi.js';
+import { atomicCover } from './atomicParticlesModel.js';
+import { withReturnTarget } from '../resourceContext.js';
+import { caseCollectionLabel } from '../communityCollections.js';
+import { atomicUrl } from '../atomicModel.js';
 import {useScopedViewState} from '../useScopedViewState.js';
-import {withReturnTarget} from '../resourceContext.js';
 
 export function MorphPageBanner({title,eyebrow,children}) {
   const root=useRef(null);
-  useEffect(()=>({ATOMIC_COURSES:mountAtomic,CASE_COMMUNITY:mountNetwork,SKILL_TOOLS:mountFloating}[eyebrow.replaceAll(' ','_')]??mountAtomic)(root.current),[eyebrow]);
+  useEffect(()=>({ATOMIC_COURSES:mountAtomic,CASE_COMMUNITY:mountAtomic,SKILL_TOOLS:mountFloating}[eyebrow.replaceAll(' ','_')]??mountAtomic)(root.current),[eyebrow]);
   return <header className="page-banner morph-page-banner" ref={root}><div className="container banner-copy"><div className="eyebrow">{eyebrow}</div><h1>{title}</h1></div>{children&&<div className="morph-banner-action">{children}</div>}<div className="banner-art" id="effect-stage"><canvas id="effect-canvas" aria-hidden="true"/></div></header>;
 }
 export function MorphCourseCard({course,onOpen,onCompose}) {
@@ -65,8 +68,116 @@ function MorphCourseConnections({courses,onOpen,onNavigate}) {
   </section>;
 }
 
-export function MorphCaseCard({work,onOpen}) {return <article className="case-card morph-case-card"><button className="case-cover" onClick={()=>onOpen(work)} aria-label={`查看 ${work.title}`}>{work.previewUrl?<img src={work.previewUrl} alt={work.title} loading="lazy"/>:<div className="morph-case-empty"><ImageSquare size={36}/><span>作品暂无封面</span></div>}<span className="case-category">{work.discipline||'艺术创作'}</span></button><div className="case-body"><small className="morph-case-author">{work.creators?.join('、')||work.author||'未署名'}</small><h2><button className="title-button" onClick={()=>onOpen(work)}>{work.title}</button></h2><p>{work.summary}</p><div className="chips">{[...new Set([...(work.methods??[]),...(work.tools??[])])].slice(0,4).map(t=><span key={t} className="chip">{t}</span>)}</div><div className="case-actions"><span className="metrics"><Heart size={15}/>{work.likeCount??0}<BookmarkSimple size={15}/>{work.favoriteCount??0}</span><button className="button secondary" onClick={()=>onOpen(work)}>查看案例 <ArrowUpRight size={15}/></button></div></div></article>;}
-export function MorphHomeRecommendations({data,onNavigate}) {
+export function MorphCaseCard({work,onOpen}) {
+  const [favorite,setFavorite]=useState(null);
+  const [saving,setSaving]=useState(false);
+  const [favoriteError,setFavoriteError]=useState('');
+  const liked=favorite?.favorited??work.favorited;
+  const toggleFavorite=async()=>{
+    setSaving(true);setFavoriteError('');
+    try {
+      await toggleWorkReaction(work.id,'favorite');
+      const updated=await getWork(encodeURIComponent(work.id));
+      setFavorite({favorited:updated.favorited,favoriteCount:updated.favoriteCount});
+    } catch(error) { setFavoriteError(error.message); }
+    finally {setSaving(false);}
+  };
+  return <article className="case-card morph-case-card">
+    <div className="morph-case-cover-wrap">
+      <button className="case-cover" onClick={()=>onOpen(work)} aria-label={`查看 ${work.title}`}>{work.previewUrl?<img src={work.previewUrl} alt={work.title} loading="lazy"/>:<div className="morph-case-empty"><ImageSquare size={36}/><span>作品暂无封面</span></div>}<span className="case-card-badges"><span className="case-category">{work.discipline||'艺术创作'}</span><span className="case-collection-tag" data-collection={work.collection}>{caseCollectionLabel(work)}</span></span></button>
+      <button className="morph-case-bookmark" type="button" aria-pressed={Boolean(liked)} aria-label={`${liked?'取消收藏':'收藏'} ${work.title}`} disabled={saving} onClick={toggleFavorite}><BookmarkSimple size={18} weight={liked?'fill':'regular'}/></button>
+    </div>
+    <div className="case-body">
+      <h2><button className="title-button" onClick={()=>onOpen(work)}>{work.title}</button></h2>
+      <p>{work.summary}</p>
+      <div className="chips">{[...new Set([...(work.methods??[]),...(work.tools??[])])].slice(0,4).map(t=><span key={t} className="chip">{t}</span>)}</div>
+      <div className="case-actions"><small className="morph-case-author">{work.creators?.join('、')||work.author||'未署名'}</small><button className="button" onClick={()=>onOpen(work)}>查看<span className="sr-only">案例</span></button></div>
+      {favoriteError&&<p role="alert">{favoriteError}</p>}
+    </div>
+  </article>;
+}
+
+const handoffHomeAtoms = [
+  {id:'morph-nov-teacher-metaphor',label:'节点课程 · 可视化方法',caption:'METAPHOR'},
+  {id:'morph-nov-teacher-vibe',label:'节点课程 · AI 协同创作',caption:'VIBE'},
+  {id:'morph-nov-zhang-media',label:'知识点',caption:'MEDIA COMPUTING'},
+];
+const handoffHomeCases = [
+  'morph-nov-case-qipao',
+  'work-763623bc-75e4-4e55-8920-94f00e1f7dd8',
+  'work-52815e54-8eb4-4f63-8d1d-9f57c6aee132',
+  'work-442627ce-0bc5-47c6-96ed-c80cd0015f4b',
+];
+
+function HomeNodeCard({item,onNavigate}) {
+  const {id,payload,revision,label,caption,author}=item;
+  const open=()=>onNavigate(withReturnTarget(atomicUrl(id,revision)));
+  return <article className="morph-home-node">
+    <div className="morph-home-node__art"><img src={atomicCover({...payload,id})} alt="" loading="lazy"/><span>{caption}</span></div>
+    <div className="morph-home-node__content">
+      <span className="morph-home-node__label">{label}</span>
+      <h3><button className="title-button" onClick={open}>{payload.title}</button></h3>
+      <p>{payload.summary}</p>
+      {author&&<small className="morph-home-node__author">{author}</small>}
+      <div className="morph-home-node__actions">
+        <button className="button secondary" onClick={()=>onNavigate('/curriculum?topic='+encodeURIComponent(payload.title))}>组合我的课程</button>
+        <button className="button" onClick={open}>查看详情</button>
+      </div>
+    </div>
+  </article>;
+}
+
+export function MorphHomeRecommendations({data,onNavigate,accountId}) {
   const strip=useRef(null);
-  return <div className="home-recommendations container"><section className="home-section"><header className="home-section-heading"><div><span className="eyebrow">LEARN IN SMALL STEPS</span><h2>从现在可学的课程开始</h2><p>用一段专注的时间，掌握一个能立即用于创作的设计方法。</p></div><div className="gallery-actions"><button className="gallery-arrow" aria-label="向前浏览课程" onClick={()=>strip.current?.scrollBy({left:-600,behavior:'smooth'})}><ArrowLeft size={18}/></button><button className="gallery-arrow" aria-label="向后浏览课程" onClick={()=>strip.current?.scrollBy({left:600,behavior:'smooth'})}><ArrowRight size={18}/></button><button className="morph-text-link" onClick={()=>onNavigate('/learning?library=courses')}>查看全部 <ArrowUpRight size={16}/></button></div></header>{data.courses.some(c=>c.availability!=='coming_soon')?<div className="home-course-strip" ref={strip} tabIndex={0} aria-label="原子课程，横向滚动">{data.courses.filter(c=>c.availability!=='coming_soon').map(c=><MorphCourseCard key={c.id} course={c} onOpen={id=>onNavigate(withReturnTarget('/learning?course='+encodeURIComponent(id)))} onCompose={id=>onNavigate(withReturnTarget('/curriculum?course='+encodeURIComponent(id)))}/>)}</div>:<p className="empty">暂无已发布课程</p>}</section><section className="home-section"><header className="home-section-heading"><div><span className="eyebrow">SELECTED WORKS</span><h2>精彩案例</h2><p>从真实创作中发现灵感，把值得学习的方法带回你的下一次设计。</p></div><button className="morph-text-link" onClick={()=>onNavigate('/community')}>查看全部 <ArrowUpRight size={16}/></button></header><div className="morph-home-cases">{data.works.slice(0,6).map(w=><MorphCaseCard key={w.id} work={w} onOpen={work=>onNavigate(withReturnTarget('/community?work='+encodeURIComponent(work.id)))}/>)}</div>{!data.works.length&&<p className="empty">暂无已发布案例</p>}</section></div>;
+  const [nodes,setNodes]=useState(null);
+  const [cases,setCases]=useState([]);
+  const [scrollEdges,setScrollEdges]=useState({previous:false,next:false});
+  useEffect(()=>{
+    let active=true;
+    setNodes(null);setCases([]);
+    const loadNodes=handoffHomeAtoms.map(async presentation=>{
+      const node=await atomicRequest('/nodes/'+presentation.id);
+      return {...node,...presentation,author:node.payload.teacherName||node.payload.source?.split(' · ')[1]};
+    });
+    Promise.allSettled(loadNodes).then(results=>{
+      if(active)setNodes(results.filter(result=>result.status==='fulfilled').map(result=>result.value));
+    });
+    Promise.allSettled(handoffHomeCases.map(id=>getWork(id))).then(results=>{
+      if(active)setCases(results.filter(result=>result.status==='fulfilled'&&result.value.status==='approved').map(result=>result.value));
+    });
+    return()=>{active=false;};
+  },[accountId]);
+  useEffect(()=>{
+    const gallery=strip.current;
+    if(!gallery)return;
+    const sync=()=>setScrollEdges({previous:gallery.scrollLeft>4,next:gallery.scrollLeft+gallery.clientWidth<gallery.scrollWidth-4});
+    const resize=new ResizeObserver(sync);
+    resize.observe(gallery);gallery.addEventListener('scroll',sync,{passive:true});sync();
+    return()=>{resize.disconnect();gallery.removeEventListener('scroll',sync);};
+  },[nodes,data.courses]);
+  const byId=new Map([...cases,...data.works.filter(work=>!cases.some(item=>item.id===work.id))].map(work=>[work.id,work]));
+  const featured=[...byId.values()].slice(0,4);
+  const available=data.courses.filter(course=>course.availability!=='coming_soon');
+  const move=direction=>{
+    const gallery=strip.current;
+    const first=gallery?.firstElementChild;
+    if(first)gallery.scrollBy({left:direction*(first.getBoundingClientRect().width+24),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  };
+  return <div className="home-recommendations container">
+    <section className="home-section">
+      <header className="home-section-heading">
+        <div><span className="eyebrow">LEARN IN SMALL STEPS</span><h2>从一门原子课程开始</h2><p>用一段专注的时间，掌握一个能立即用于创作的设计方法。</p></div>
+        <div className="gallery-actions"><button className="gallery-arrow" aria-label="向前浏览课程" disabled={!scrollEdges.previous} onClick={()=>move(-1)}><ArrowLeft size={18}/></button><button className="gallery-arrow" aria-label="向后浏览课程" disabled={!scrollEdges.next} onClick={()=>move(1)}><ArrowRight size={18}/></button><button className="morph-text-link" onClick={()=>onNavigate('/learning?library=atoms')}>查看全部</button></div>
+      </header>
+      {nodes===null?<p className="empty" role="status">正在加载原子课程…</p>:nodes.length||available.length?<div className="home-course-strip" ref={strip} tabIndex={0} aria-label="原子课程，横向滚动">
+        {nodes.map(item=><HomeNodeCard key={item.id} item={item} onNavigate={onNavigate}/>)}
+        {!nodes.length&&available.map(course=><MorphCourseCard key={course.id} course={course} onOpen={id=>onNavigate('/learning?course='+encodeURIComponent(id))}/>)}
+      </div>:<p className="empty">暂无已发布课程</p>}
+    </section>
+    <section className="home-section">
+      <header className="home-section-heading"><div><span className="eyebrow">SELECTED WORKS</span><h2>精彩案例</h2><p>从真实创作中发现灵感，把值得学习的方法带回你的下一次设计。</p></div><button className="morph-text-link" onClick={()=>onNavigate('/community')}>查看全部</button></header>
+      <div className="morph-home-cases">{featured.map(work=><MorphCaseCard key={work.id} work={work} onOpen={item=>onNavigate('/community?work='+encodeURIComponent(item.id))}/>)}</div>
+      {!featured.length&&<p className="empty">暂无已发布案例</p>}
+    </section>
+  </div>;
 }

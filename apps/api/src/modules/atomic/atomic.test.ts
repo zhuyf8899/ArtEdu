@@ -58,7 +58,24 @@ test('学生不能创建教学原子或课程，审核队列不向学生开放',
  const s=new AtomicService(db as any,auth);
  for(const kind of ['teaching','course']as const)await assert.rejects(s.create(student,{kind,payload:valid}),ForbiddenException);
  await assert.rejects(s.list(student,{view:'review',query:'',page:1}),ForbiddenException);
+ await assert.rejects(s.list(student,{view:'manage',query:'',page:1}),ForbiddenException);
  await assert.rejects(s.create(student,{kind:'reflection',payload:valid}),/关联原子/);
+});
+test('教学原子和完整课程直接发布，心得仍进入审核队列',async()=>{
+ for(const [kind,actor] of [['teaching',teacher],['course',{id:'admin',roles:['admin']}],['reflection',student]] as const){
+  const calls:{sql:string;values:unknown[]}[]=[];
+  const payload=kind==='course'?{title:'设计课程',summary:'从理解走向完整实践',steps:[{atomId:'atom',revision:1}]}:valid;
+  const db={transaction:async(fn:any)=>fn({query:async(sql:string,values:unknown[])=>{
+   calls.push({sql,values});
+   if(sql.startsWith('SELECT * FROM atomic_nodes'))return {rows:[{id:'node',kind,owner_id:actor.id}]};
+   if(sql.startsWith('SELECT * FROM atomic_versions'))return {rows:[{revision:1,status:'draft',payload}]};
+   return {rows:[{kind:'teaching',status:'published'}]};
+  }})};
+  const service=new AtomicService(db as any,auth);
+  assert.deepEqual(await service.submit(actor,'node',1),{status:kind==='reflection'?'pending_review':'published'});
+  assert.equal(calls.some(call=>call.sql.includes('SET published_revision')),kind!=='reflection');
+  assert.ok(calls.some(call=>call.values.includes(kind==='reflection'?'submit':'direct_publish')));
+ }
 });
 test('编辑/附件检查归属优先，禁止他人草稿上传和自审核',async()=>{
  const node={id:'atom',kind:'teaching',owner_id:'other',published_revision:null};

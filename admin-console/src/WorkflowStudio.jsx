@@ -12,11 +12,17 @@ import { faviconSourcesFor } from "./imageSources.js";
 import { MorphPageBanner } from './morph/MorphCatalog.jsx';
 import { morphQueryMatches, toolCategoryName } from './morph/morphPresentation.js';
 import { CatalogControls } from './morph/CatalogControls.jsx';
+import toolHandoffOrder from './morph/toolHandoffOrder.json';
 import { MorphToolCard } from './morph/MorphToolCard.jsx';
 import { ToolRecommendationDialog } from './morph/ToolRecommendationDialog.jsx';
 import { returnContext, withReturnTarget } from './resourceContext.js';
 import { useScopedViewState } from './useScopedViewState.js';
 
+const toolRank = new Map(toolHandoffOrder.map((name,index)=>[name,index]));
+const handoffToolCategories = ['AI 创作与生成','传统艺术与数字创作','智能体工作台','设计与协作','3D 与动态','实时与交互','灵感与资源','数据与研究'];
+function compareHandoffTools(a,b) {
+  return (toolRank.get(a.name) ?? Infinity) - (toolRank.get(b.name) ?? Infinity) || 0;
+}
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin.jsx").then(({ WorkflowAdmin: component }) => ({ default: component })));
 const WorkflowRunner = lazy(() => import("./WorkflowRunner.jsx").then(({ WorkflowRunner: component }) => ({ default: component })));
 
@@ -61,6 +67,7 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(false);
   const [openError, setOpenError] = useState("");
+  const [recommendOpen,setRecommendOpen]=useState(false);
   const opening = useRef(0);
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
@@ -151,11 +158,11 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
       <WorkflowAdmin showToast={onNotice} canPublish={canPublish} initialWorkflowId={initialEditId} onWorkflowNavigate={(id) => onNavigate(withReturnTarget(studioUrl({builder:true,edit:id}), context.to))} />
     </Suspense>
   </div>;
-  return <section className="workflow-catalog">
-    {variant === 'morph' && <SkillToolsBanner accountId={accountId} onNotice={onNotice}/>}
+  return <section className="workflow-catalog" id="workflow-catalog">
+    {variant === 'morph' && <MorphPageBanner title="专项技能工具" eyebrow="SKILL TOOLS"/>}
     <StudioReturnButton context={context} onNavigate={onNavigate}/>
     <div className={variant === 'morph' ? 'container morph-tool-catalog' : undefined}>
-    <ToolDirectory accountId={accountId} variant={variant} canManage={canManageToolDirectory} onNotice={onNotice} onNavigate={onNavigate} onOpenWorkflowBuilder={openBuilder} onReadyChange={setToolsReady} />
+    <ToolDirectory accountId={accountId} onRecommend={()=>setRecommendOpen(true)} variant={variant} canManage={canManageToolDirectory} onNotice={onNotice} onNavigate={onNavigate} onOpenWorkflowBuilder={openBuilder} onReadyChange={setToolsReady} />
     {/* 工具入口之后必须有节点工作流列表：之前这一块被工具目录挤掉了，学生根本点不进工作流。 */}
     <div className="workflow-catalog__list" id="workflow-catalog" ref={workflowCatalog}>
       <header className="workflow-catalog__toolbar">
@@ -190,17 +197,7 @@ function WorkflowStudioContent({ accountId, initialWorkflowId, initialRunId = ""
     </div>
   </section>;
 }
-
-function SkillToolsBanner({ accountId, onNotice }) {
-  const [recommendOpen, setRecommendOpen] = useState(false);
-  return <>
-    <MorphPageBanner title="专项技能工具" eyebrow="SKILL TOOLS">
-      <button className="button morph-recommend-trigger" onClick={() => setRecommendOpen(true)}>推荐一个工具<ArrowUpRight size={16}/></button>
-    </MorphPageBanner>
-    {recommendOpen && <ToolRecommendationDialog accountId={accountId} onClose={() => setRecommendOpen(false)} onNotice={onNotice}/>}
-  </>;
-}
-function ToolDirectory({ accountId, canManage, onNotice, onOpenWorkflowBuilder, variant, onNavigate, onReadyChange }) {
+function ToolDirectory({ accountId, onRecommend, canManage, onNotice, onOpenWorkflowBuilder, variant, onNavigate, onReadyChange }) {
  const {enabled:comfyEnabled}=useComfyFeature();
   const [links, setLinks] = useState([]);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -225,10 +222,16 @@ function ToolDirectory({ accountId, canManage, onNotice, onOpenWorkflowBuilder, 
     request().then((payload) => {setLinks((payload.items ?? []).map(tool=>({...tool,category:toolCategoryName(tool.category)})));setToolState('ready');}).catch((error) => {setToolState('error');setToolError(error.message);onNotice(error.message);});
   }, [canManage, onNotice]);
   useEffect(() => { load(); }, [load]);
-  const categories = useMemo(() => ["全部", ...new Set(links.filter((item) => item.status === "active").map((item) => item.category).filter(Boolean))], [links]);
+  const categories = useMemo(() => {
+    const active = new Set(links.filter(item=>item.status==='active').map(item=>item.category).filter(Boolean));
+    return ['全部',...(variant==='morph'?[...handoffToolCategories.filter(category=>active.delete(category)),...active]:active)];
+  },[links,variant]);
   // 皮影与其它工具同属一份清单：早前它单独占一张大卡，其余工具在下面另起一段；
   // 现在全部按同一行式呈现，管理员也能像别的工具一样编辑它。
-  const visibleLinks = useMemo(() => links.filter((item) => item.status === "active" && (category === "全部" || item.category === category) && morphQueryMatches([item.name,item.detail,item.category,...(item.catalog?.tags||[])],toolQuery)).filter(tool=>comfyEnabled===true||!(tool.id==='tool-directory-workflow'||/^\/(?:admin\/workflows|studio\?(?:.*&)?(?:builder|workflow|edit|run)=)/.test(tool.href))), [category, links, toolQuery, comfyEnabled]);
+  const visibleLinks = useMemo(() => {
+    const matching=links.filter((item) => item.status === "active" && (category==='全部'||item.category===category)&&morphQueryMatches([item.name,item.detail,item.category,...(item.catalog?.tags||[])],toolQuery)).filter(tool=>comfyEnabled===true||!(tool.id==='tool-directory-workflow'||/^\/(?:admin\/workflows|studio\?(?:.*&)?(?:builder|workflow|edit|run)=)/.test(tool.href)));
+    return variant==='morph'?matching.sort(compareHandoffTools):matching;
+  },[category,links,toolQuery,variant,comfyEnabled]);
   const openNew = () => { setEditingId(null); setForm(emptyToolForm()); setEditorOpen(true); };
   const edit = (item) => { setEditingId(item.id); setForm({ category: item.category, name: item.name, detail: item.detail, href: item.href, coverImageUrl: item.coverImageUrl || "", iconKey: item.iconKey, launchMode: item.launchMode, featured: item.featured, status: item.status }); setEditorOpen(true); };
   const submit = async (event) => {
@@ -237,13 +240,13 @@ function ToolDirectory({ accountId, canManage, onNotice, onOpenWorkflowBuilder, 
     catch (error) { onNotice(error.message); } finally { setSaving(false); }
   };
   return <section className="tool-directory" aria-label="设计工具">{variant !== 'morph' && <header className="tool-directory__header"><div className="tool-directory__page-copy"><p>ARTEDU · DESIGN TOOLS</p><div><h1>设计工具</h1></div><small>按创作阶段选择工具；外部网站会在新标签页打开。</small></div><div className="tool-directory__actions"><div className="tool-directory__view-switch" role="group" aria-label="切换工具浏览方式"><button type="button" className={viewMode === "grid" ? "is-active" : ""} aria-label="卡片浏览" aria-pressed={viewMode === "grid"} title="卡片浏览" onClick={() => setViewMode("grid")}><SquaresFour size={17} weight="bold" /></button><button type="button" className={viewMode === "list" ? "is-active" : ""} aria-label="列表浏览" aria-pressed={viewMode === "list"} title="列表浏览" onClick={() => setViewMode("list")}><ListBullets size={18} weight="bold" /></button></div>{canManage && <button className="outline-button tool-directory__manage" onClick={openNew}><Plus size={16} weight="bold" /> 添加工具</button>}</div></header>}{editorOpen && <form className="tool-directory__editor" onSubmit={submit}><label>栏目名称<input required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="例如：三维与动效" /></label><label>工具名称<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="例如：Blender" /></label><label>用途说明<input required value={form.detail} onChange={(event) => setForm({ ...form, detail: event.target.value })} placeholder="一句话说明使用场景" /></label><label>链接或站内路径<input required value={form.href} onChange={(event) => setForm({ ...form, href: event.target.value })} placeholder="https://… 或 /learning" /></label><label>背景图地址（可选）<input value={form.coverImageUrl} onChange={(event) => setForm({ ...form, coverImageUrl: event.target.value })} placeholder="/assets/… 或 https://…" /></label><label>图标<select value={form.iconKey} onChange={(event) => setForm({ ...form, iconKey: event.target.value })}>{Object.entries({ design: "设计", image: "图片", idea: "灵感", learning: "学习", ai: "AI", code: "开发", link: "通用" }).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>打开方式<select value={form.launchMode} onChange={(event) => setForm({ ...form, launchMode: event.target.value })}><option value="new_tab">新标签页</option><option value="same_tab">当前页</option></select></label><label className="tool-directory__check"><input type="checkbox" checked={form.featured} onChange={(event) => setForm({ ...form, featured: event.target.checked })} /> 首页推荐</label>{editingId && <label>状态<select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="active">展示</option><option value="archived">下架（保留记录）</option></select></label>}<button className="primary-button" disabled={saving}>{saving ? "正在保存…" : editingId ? "保存修改" : "保存并发布入口"}</button></form>}{variant === 'morph' && <CatalogControls label="工具筛选"
-      options={categories.map(item=>({value:item,label:item,count:links.filter(tool=>tool.status==='active'&&(item==='全部'||tool.category===item)).length}))}
-      value={category} onChange={setCategory} query={toolQuery} onQueryChange={setToolQuery} searchLabel="搜索技能工具" placeholder="搜索工具名称、用途…"
+      options={categories.map(item=>({value:item,label:item}))}
+      value={category} onChange={setCategory} query={toolQuery} onQueryChange={setToolQuery} searchLabel="搜索技能工具" placeholder="搜索专项技能工具…"
       loading={toolState==='loading'} resultLabel={`${visibleLinks.length} / ${links.filter(item=>item.status==='active').length} 个工具`}
       selected={[toolQuery&&{label:`搜索：${toolQuery}`,onRemove:()=>setToolQuery('')},category!=='全部'&&{label:category,onRemove:()=>setCategory('全部')}].filter(Boolean)}
-      onClear={()=>{setCategory('全部');setToolQuery('');}} actions={<div className="tool-directory__actions"><div className="tool-directory__view-switch" role="group" aria-label="切换工具浏览方式"><button type="button" className={viewMode === "grid" ? "is-active" : ""} aria-label="卡片浏览" aria-pressed={viewMode === "grid"} title="卡片浏览" onClick={() => setViewMode("grid")}><SquaresFour size={17} weight="bold" /></button><button type="button" className={viewMode === "list" ? "is-active" : ""} aria-label="列表浏览" aria-pressed={viewMode === "list"} title="列表浏览" onClick={() => setViewMode("list")}><ListBullets size={18} weight="bold" /></button></div>{canManage && <button className="outline-button tool-directory__manage" onClick={openNew}><Plus size={16} weight="bold" /> 添加工具</button>}</div>}
+      onClear={()=>{setCategory('全部');setToolQuery('');}} actions={<div className="tool-directory__actions"><button type="button" className="morph-text-link" onClick={onRecommend}>推荐一个工具</button><div className="tool-directory__view-switch" role="group" aria-label="切换工具浏览方式"><button type="button" className={viewMode === "grid" ? "is-active" : ""} aria-label="卡片浏览" aria-pressed={viewMode === "grid"} title="卡片浏览" onClick={() => setViewMode("grid")}><SquaresFour size={17} weight="bold" /></button><button type="button" className={viewMode === "list" ? "is-active" : ""} aria-label="列表浏览" aria-pressed={viewMode === "list"} title="列表浏览" onClick={() => setViewMode("list")}><ListBullets size={18} weight="bold" /></button></div>{canManage && <button className="outline-button tool-directory__manage" onClick={openNew}><Plus size={16} weight="bold" /> 添加工具</button>}</div>}
     />}{variant === 'morph' && toolState === 'error' && <div className="empty" role="alert"><p>{toolError}</p><button className="button secondary" onClick={load}>重新加载工具</button></div>}{variant !== 'morph' && <div className="tool-directory__toolbar" aria-label="工具分类"><span>按用途浏览</span><div>{categories.map((item) => <button type="button" className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><em>{visibleLinks.length} 个入口</em></div>}
-    <div className={`tool-directory__list tool-directory__list--${viewMode}`}>{visibleLinks.map((tool) => <ToolDirectoryCard variant={variant} key={tool.id} tool={tool} canManage={canManage} onEdit={edit} onNavigate={onNavigate} onOpenWorkflowBuilder={onOpenWorkflowBuilder} />)}</div>
+    <div className={`tool-directory__list tool-directory__list--${viewMode}`}>{visibleLinks.map((tool) => <ToolDirectoryCard accountId={accountId} variant={variant} key={tool.id} tool={tool} canManage={canManage} onEdit={edit} onNavigate={onNavigate} onOpenWorkflowBuilder={onOpenWorkflowBuilder} />)}</div>
 
     {variant === 'morph' && toolState === 'ready' && !visibleLinks.length && <div className="empty"><h2>没有匹配的工具</h2><p>试试其他名称或用途分类。</p><button className="button secondary" onClick={()=>{setCategory('全部');setToolQuery('');}}>清除工具筛选</button></div>}</section>;
 }
@@ -263,9 +266,9 @@ function ToolSiteIcon({ href, fallback, progressive = false }) {
   return <img className="tool-directory__favicon" src={sources[index]} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setIndex((value) => value + 1)} />;
 }
 
-function ToolDirectoryCard({ tool, canManage, onEdit, onOpenWorkflowBuilder, onNavigate, variant }) {
+function ToolDirectoryCard({ accountId, tool, canManage, onEdit, onOpenWorkflowBuilder, onNavigate, variant }) {
   const Icon = TOOL_ICONS[tool.iconKey] ?? LinkSimple;
-  if (variant === 'morph') return <MorphToolCard tool={tool} icon={<ToolSiteIcon progressive href={tool.href} fallback={<Icon size={26} weight="duotone"/>}/>} canManage={canManage} onEdit={onEdit} onNavigate={onNavigate} onOpenWorkflowBuilder={onOpenWorkflowBuilder}/>;
+  if (variant === 'morph') return <MorphToolCard accountId={accountId} tool={tool} icon={<ToolSiteIcon progressive href={tool.href} fallback={<Icon size={26} weight="duotone"/>}/>} canManage={canManage} onEdit={onEdit} onNavigate={onNavigate} onOpenWorkflowBuilder={onOpenWorkflowBuilder}/>;
   const external = tool.launchMode !== "same_tab";
   const cover = tool.coverImageUrl || ({ design: "/assets/learning/ai-design-foundations.jpg", image: "/assets/learning/traditional-patterns.jpg", idea: "/assets/learning/vibe-coding.jpg", learning: "/assets/learning/traditional-patterns.jpg", ai: "/assets/learning/ai-design-foundations.jpg", code: "/assets/learning/vibe-coding.jpg", link: "/assets/learning/ai-design-foundations.jpg" }[tool.iconKey] ?? "/assets/learning/ai-design-foundations.jpg");
   const content = <><span className="tool-directory__cover" style={{ backgroundImage: `url(${cover})` }} aria-hidden="true" /><span className="tool-directory__veil"><span className="tool-directory__icon" style={tool.coverImageUrl ? { backgroundImage: `url(${tool.coverImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>{!tool.coverImageUrl && <ToolSiteIcon href={tool.href} fallback={<Icon size={25} weight="duotone" />} />}</span><span className="tool-directory__copy"><small>{tool.category} · {tool.featured ? "推荐工具" : external ? "外部工具" : "平台功能"}</small><b>{tool.id === "tool-directory-workflow" ? "管理与新建工作流" : tool.name}</b><em>{tool.id === "tool-directory-workflow" ? "查看、编辑或新建节点工作流" : tool.detail}</em></span><span className="tool-directory__play"><span /></span></span></>;

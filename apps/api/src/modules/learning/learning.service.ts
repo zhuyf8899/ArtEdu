@@ -139,7 +139,7 @@ export class LearningService {
 
   async createTask(actor: Actor, input: CreateLearningTaskInput) {
     if(input.targetId&&input.taskType==='atom'){
-      const atom=await this.database.query("SELECT n.id FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=COALESCE($2,n.published_revision) WHERE n.id=$1 AND n.kind<>'course' AND v.status='published'",[input.targetId,input.targetRevision??null]);
+      const atom=await this.database.query("SELECT n.id FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=COALESCE($2,n.published_revision) WHERE n.id=$1 AND n.archived_at IS NULL AND n.kind<>'course' AND v.status='published'",[input.targetId,input.targetRevision??null]);
       if(!atom.rows.length)throw new BadRequestException('关联原子不存在或尚未发布');
     }
     const result = await this.database.query<LearningTaskRow>(`

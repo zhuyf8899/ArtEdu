@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PaintPilot">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6B46F6" />
+      <stop offset="1" stop-color="#4AA8FF" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#1A1B1D" />
+  <rect x="6" y="6" width="52" height="52" rx="10" fill="url(#bg)" />
+  <path
+    d="M16 44 L22 22 L28 36 L36 18 L42 28 L48 24"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="3"
+  />
+  <circle cx="46" cy="44" r="3" fill="#FFFFFF" />
+</svg>

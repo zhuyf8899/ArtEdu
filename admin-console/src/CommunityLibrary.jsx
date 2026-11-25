@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {createPortal} from 'react-dom';
 import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, ChatCircle, Flag, Heart, ImageSquare, MagnifyingGlass, PaperPlaneTilt, Plus, SpinnerGap, X } from "@phosphor-icons/react";
-import { addWorkComment, getMyWorks, getWork, getWorkflows, getWorks, reportComment, reportWork, submitWork, toggleWorkReaction, setWorkCollection } from "./services/adminApi.js";
+import { addWorkComment, getMyWorks, getWork, getWorkflows, getCommunityWorks, reportComment, reportWork, submitWork, toggleWorkReaction, setWorkCollection } from "./services/adminApi.js";
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { CaseStoryEditor } from "./CaseStoryEditor.jsx";
+import { caseReviewIssues } from './caseStory.js';
 import { CaseStoryView } from "./CaseStoryView.jsx";
 import { ImageLightbox } from "./ImageLightbox.jsx";
-import { CASE_COLLECTIONS, splitCommunityCollections } from "./communityCollections.js";
+import { CASE_COLLECTIONS, caseCollectionLabel } from "./communityCollections.js";
 import "./case-story.css";
 import { MorphPageBanner, MorphCaseCard } from './morph/MorphCatalog.jsx';
 import { CatalogControls } from './morph/CatalogControls.jsx';
@@ -15,13 +16,14 @@ import { returnContext, withReturnTarget } from './resourceContext.js';
 import { useScopedViewState } from './useScopedViewState.js';
 import { useDialogFocus } from './useDialogFocus.js';
 
-export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate, initialWorkId = '', variant = 'classic' }) {
+export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate, initialWorkId = '', openPublisher = false, variant = 'classic' }) {
   const { confirmAction } = useFeedback();
   const [works, setWorks] = useState([]);
   const [myWorks, setMyWorks] = useState([]);
   const [workflows, setWorkflows] = useState([]);
   const [selected, setSelected] = useState(null);
   const [editing, setEditing] = useState(undefined);
+  const [savedPreview, setSavedPreview] = useState(null);
   const [activeImage, setActiveImage] = useState(null);
   const [reportTarget, setReportTarget] = useState(null);
   const [comment, setComment] = useState("");
@@ -46,7 +48,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     if (showLoading) setCatalogLoading(true);
     setCatalogError("");
     try {
-      const data=await loadCommunityCatalog({catalog:getWorks,mine:getMyWorks,workflows:getWorkflows});
+      const data=await loadCommunityCatalog({catalog:getCommunityWorks,mine:getMyWorks,workflows:getWorkflows});
       if(requestId!==catalogRequest.current) return;
       setWorks(data.works); setMyWorks(data.myWorks); setWorkflows(data.workflows); setSupportError(data.supportError);
     } catch (error) { if(requestId===catalogRequest.current) {setCatalogError(error.message); throw error;} }
@@ -62,6 +64,19 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     getWork(encodeURIComponent(initialWorkId)).then(work => { if (active) setSelected(work); }).catch(error => { if (active) { setDetailError(error.message); onNotice(error.message); } }).finally(() => { if(active) setLoading(false); });
     return () => { active = false; };
   }, [initialWorkId, detailRetry]);
+  useEffect(()=>{ if(openPublisher&&!initialWorkId)setEditing(null); },[openPublisher,initialWorkId]);
+  useEffect(() => {
+    if (catalogLoading || initialWorkId || selected) return;
+    // Previously shared section links now open the same list.
+    const scrollToCatalog = () => {
+      if (['#featured-art-cases', '#community-cases', '#case-catalog'].includes(window.location.hash)) {
+        document.getElementById('case-catalog')?.scrollIntoView();
+      }
+    };
+    scrollToCatalog();
+    window.addEventListener('hashchange', scrollToCatalog);
+    return () => window.removeEventListener('hashchange', scrollToCatalog);
+  }, [catalogLoading, initialWorkId, selected]);
   const context = returnContext();
   const returnToCatalog = () => { setSelected(null); setActiveImage(null); setDetailError(''); onNavigate?.(context.to || '/community'); };
   // Refresh matching records only; a delayed interaction cannot reopen a different work.
@@ -77,6 +92,13 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
+  useEffect(() => {
+    if (!savedPreview) return;
+    // Let the closed editor remove its unsaved-changes guard before opening the draft.
+    if (onNavigate && savedPreview.id !== initialWorkId) void openWork(savedPreview);
+    else setSelected(savedPreview);
+    setSavedPreview(null);
+  }, [savedPreview]);
   const react = async reaction => {
     if(interactionBusy) return;
     const workId=selected.id; setInteractionBusy(true);
@@ -100,33 +122,68 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     } catch (error) { onNotice(error.message); }
   };
   const submit = async () => {
-    if (!await confirmAction({ title: "提交案例审核？", message: "请确认原作者及展示授权。审核通过后公开发布。", confirmLabel: "确认提交" })) return;
+    if (loading || reviewIssues.length) return;
+    const action = directPublish ? '发布案例' : '提交案例审核';
+    if (!await confirmAction({
+      title: action,
+      message: directPublish ? '确认后，案例将公开显示在案例社区。' : '请确认作品署名与展示授权。审核通过后，案例将公开显示。',
+      confirmLabel: directPublish ? '确认发布' : '确认提交',
+    })) return;
     setLoading(true);
-    try { setSelected(await submitWork(selected.id)); await refresh(); onNotice("已提交管理员审核，尚未公开发布"); }
+    try {
+      const result = await submitWork(selected.id);
+      syncWork(result);
+      onNotice(result.status === 'approved' ? '案例已发布' : '已提交管理员审核');
+    }
     catch (error) { onNotice(error.message); }
     finally { setLoading(false); }
   };
-  const editable = selected && myWorks.some(work => work.id === selected.id) && ["draft", "rejected"].includes(selected.status);
+  const directPublish = account.roles.some(role => ['teacher','admin'].includes(role));
+  const owned = selected?.authorId === account.id;
+  const previewing = owned && (['draft','rejected'].includes(selected.status) || directPublish && selected.status === 'pending');
+  const reviewIssues = previewing ? caseReviewIssues(selected) : [];
   const canCurate = account?.roles?.some(role => ["admin", "operator"].includes(role));
   const changeCollection = async collection => {
     if (collectionBusy || !selected || !canCurate) return;
     setCollectionBusy(true);
-    try { await setWorkCollection(selected.id, collection); setSelected(await getWork(selected.id)); await refresh(); onNotice(`已移至${CASE_COLLECTIONS[collection]}`); }
+    try { await setWorkCollection(selected.id, collection); setSelected(await getWork(selected.id)); await refresh(); onNotice(`案例标签已更新为${CASE_COLLECTIONS[collection]}`); }
     catch (error) { onNotice(error.message); }
     finally { setCollectionBusy(false); }
   };
-  const groupTags = [...new Set(works.flatMap(work => workLabelGroups(work)[activeGroup] ?? []))].sort((left, right) => left.localeCompare(right, "zh-CN"));
+  const groupTags = [...new Set(works.flatMap(work => workLabelGroups(work)[activeGroup] ?? []))].sort((left, right) => {
+    if(variant==='morph'&&activeGroup==='大类'){
+      const leftRank=handoffCaseCategories.indexOf(left),rightRank=handoffCaseCategories.indexOf(right);
+      const order=(leftRank<0?Infinity:leftRank)-(rightRank<0?Infinity:rightRank);
+      if(order)return order;
+    }
+    return left.localeCompare(right,'zh-CN');
+  });
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const visibleWorks = works.filter(work => {
     const labels = workLabels(work);
     const text = [work.title, work.summary, work.author, ...(work.creators ?? []), ...labels].filter(Boolean).join(" ").toLocaleLowerCase();
     return (!normalizedSearch || text.includes(normalizedSearch)) && (!activeTag || labels.includes(activeTag));
   });
-  const collections = splitCommunityCollections(visibleWorks);
-  const collectionTotals = splitCommunityCollections(works);
   const hasFilters = Boolean(search || activeTag);
   const clearFilters = () => { setSearch(""); setActiveTag(""); };
-  const editor = editing !== undefined && <CaseStoryEditor key={editing?.id ?? "new"} initial={editing} workflows={workflows} onNotice={onNotice} onClose={() => { setEditing(undefined); refresh().catch(error => onNotice(error.message)); }} onSaved={saved => { setEditing(undefined); if(onNavigate) void openWork(saved); else setSelected(saved); refresh().catch(error => onNotice(error.message)); onNotice("草稿已保存，尚未提交审核或发布"); }} />;
+  const submissions = myWorks.length > 0 && (
+    <details className="case-my-submissions">
+      <summary>我的投稿 <span>{myWorks.length}</span></summary>
+      <ul>{myWorks.map(work => <li key={work.id}>
+        <button type="button" onClick={() => openWork(work)}>
+          <strong>{work.title}</strong><span>{statusName(work.status)}</span><ArrowRight size={16} aria-hidden="true"/>
+        </button>
+      </li>)}</ul>
+    </details>
+  );
+  const editor = editing !== undefined && <CaseStoryEditor key={editing?.id ?? "new"} initial={editing} workflows={workflows} directPublish={directPublish}
+    onClose={() => { setEditing(undefined); if(openPublisher)onNavigate?.('/community'); refresh().catch(error => onNotice(error.message)); }}
+    onSaved={saved => {
+      setEditing(undefined);
+      setSavedPreview(saved);
+      refresh().catch(error => onNotice(error.message));
+      onNotice(saved.status === 'approved' ? '案例修改已保存' : `草稿已保存。预览后可${directPublish ? '直接发布' : '提交审核'}。`);
+    }}/>;
   if (initialWorkId && !selected) return <section className="resource-load-state" aria-busy={loading||!detailError}><strong>{detailError?'案例暂时无法打开':'正在打开案例…'}</strong>{detailError&&<><p role="alert">{detailError}</p><button onClick={()=>setDetailRetry(value=>value+1)}>重新加载案例</button></>}<button onClick={returnToCatalog}>{context.to?context.label:'返回案例社区'}</button></section>;
   if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载案例社区</strong></section>;
   if (catalogError && !works.length && !myWorks.length) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} /><strong>案例社区暂时无法加载</strong><p>{catalogError}</p><button onClick={() => refresh(true).catch(error => onNotice(error.message))}>重新加载</button></section>;
@@ -136,13 +193,20 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     return <><section className={`community-detail${exhibition ? " community-detail--exhibition" : ""}`}>
     <button className="learning-back" onClick={returnToCatalog}><ArrowLeft size={16} /> {context.to ? context.label : '返回案例社区'}</button>
     {supportError&&<p className="catalog-inline-warning" role="status">{supportError}。<button onClick={()=>refresh().catch(error=>onNotice(error.message))}>重新同步</button></p>}
+    {previewing && <section className="case-draft-actions" aria-label="案例草稿发布操作">
+      <div>
+        <strong>{selected.status === 'pending' ? '待审案例' : '草稿预览'}</strong>
+        {reviewIssues.length ? <ul>{reviewIssues.map(issue=><li key={issue}>{issue}</li>)}</ul> : <small>{directPublish ? '发布后，案例将显示在案例社区。' : '审核通过后，案例将显示在案例社区。'}</small>}
+      </div>
+      <button disabled={loading} onClick={() => setEditing(selected)}>{reviewIssues.length ? '继续填写' : '编辑案例'}</button>
+      <button disabled={loading || reviewIssues.length > 0} onClick={submit}>{directPublish ? '发布案例' : '提交管理员审核'}</button>
+    </section>}
     <div className="community-detail__hero">{selected.previewUrl ? <button className="case-image-button case-image-button--hero" onClick={() => setActiveImage({ url: selected.previewUrl, fileName: heroAsset?.file_name ?? selected.title, alt: selected.title })} aria-label={`查看并下载图片：${selected.title}`}><img src={selected.previewUrl} alt={selected.title} /></button> : <WorkVisualFallback work={selected} />}</div>
     <div className="community-detail__body">
       <header><div><span className="community-detail__category">{selected.discipline} · {exhibition ? "外部艺术案例" : statusName(selected.status)}</span>{exhibition && <p className="community-detail__artist">{selected.creators?.join("、") || selected.author}</p>}<h2>{selected.title}</h2>{!exhibition && <p>{selected.creators?.join("、") || selected.author} · {selected.tags?.map(tag => tag.name).join(" / ") || "未添加标签"}</p>}{exhibition && <div className="case-labels">{selected.tags?.map(tag => <span key={tag.id ?? tag.name}>{tag.name}</span>)}</div>}</div>
         {selected.status === "approved" && <div aria-busy={interactionBusy}><button aria-label="点赞案例" aria-pressed={selected.liked} disabled={interactionBusy} onClick={() => react("like")}><Heart weight={selected.liked ? "fill" : "bold"} /> {selected.likeCount}</button><button aria-label="收藏案例" aria-pressed={selected.favorited} disabled={interactionBusy} onClick={() => react("favorite")}><BookmarkSimple weight={selected.favorited ? "fill" : "bold"} /> {selected.favoriteCount}</button></div>}
       </header>
-      {canCurate && selected.status === "approved" && <div className="case-collection-control"><label>案例所属模块<select aria-label="案例所属模块" disabled={collectionBusy} value={selected.collection ?? "community"} onChange={event => changeCollection(event.target.value)}>{Object.entries(CASE_COLLECTIONS).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>{collectionBusy && <span role="status">正在保存…</span>}</div>}
-      {editable && <div className="case-draft-actions"><button disabled={loading} onClick={() => setEditing(selected)}>编辑草稿／关联步骤图片</button><button disabled={loading} onClick={submit}>提交管理员审核</button></div>}
+      {canCurate && selected.status === "approved" && <div className="case-collection-control"><label>案例归属标签<select aria-label="案例归属标签" disabled={collectionBusy} value={selected.collection ?? "community"} onChange={event => changeCollection(event.target.value)}>{Object.entries(CASE_COLLECTIONS).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>{collectionBusy && <span role="status">正在保存…</span>}</div>}
       {selected.status === "rejected" && selected.latestRejection?.reason && <section className="case-review-feedback"><strong>审核意见 · {formatReviewDate(selected.latestRejection.createdAt)}</strong><p>{selected.latestRejection.reason}</p><small>修改并保存后，可再次提交审核；历史审核记录会保留。</small></section>}
       {selected.reviewHistory?.length > 0 && <details className="case-review-history"><summary>查看审核历史（{selected.reviewHistory.length}）</summary>{selected.reviewHistory.map((event, index) => <article key={`${event.action}-${event.createdAt}-${index}`}><strong>{reviewActionName(event.action)}</strong><time>{formatReviewDate(event.createdAt)}</time>{event.reason && <p>{event.reason}</p>}</article>)}</details>}
       <p className="community-summary">{selected.summary}</p>
@@ -160,7 +224,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
   </section>{activeImage && <ImageViewer image={activeImage} assets={selected.assets} onChange={setActiveImage} onClose={() => setActiveImage(null)} />}{reportTarget && <ReportDialog target={reportTarget} onClose={() => setReportTarget(null)} onSubmit={submitReport} />}{editor}</>;
   }
   return <>
-    {variant === 'morph' && <MorphPageBanner title="案例社区" eyebrow="CASE COMMUNITY"><button type="button" className="button" onClick={()=>setEditing(null)}><Plus size={17}/> 新建案例草稿</button></MorphPageBanner>}
+    {variant === 'morph' && <MorphPageBanner title="案例社区" eyebrow="CASE COMMUNITY"/>}
     <div className={variant === 'morph' ? 'container morph-community-catalog' : undefined}>
     {(supportError||catalogError)&&<p className="catalog-inline-warning" role="status">{catalogError||supportError}。可重试同步，不影响已加载案例的浏览。<button onClick={()=>refresh().catch(error=>onNotice(error.message))}>重新同步</button></p>}
     {variant !== 'morph' && <section className="learning-library-intro community-page-intro" aria-labelledby="community-page-title">
@@ -169,15 +233,28 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
         <div className="learning-library-intro__title-row"><h1 id="community-page-title">案例社区</h1><span>{works.length} 个案例</span></div>
         <p>从精选艺术中获得灵感，在社区案例中交流创作方法。</p>
       </div>
-      <button type="button" className="community-create-draft" onClick={() => setEditing(null)}><Plus size={18} weight="bold" /> 新建案例草稿</button>
+      <button type="button" className="community-create-draft" onClick={() => setEditing(null)}><Plus size={18} weight="bold" /> 上传案例</button>
     </section>}
-    <nav className="community-module-links" aria-label="案例模块入口"><a href="#featured-art-cases">精选艺术案例<span>{collectionTotals["art-selection"].length}</span></a><a href="#community-cases">社区案例<span>{collectionTotals.community.length}</span></a></nav>
+    {variant !== 'morph' && submissions}
     {variant !== 'morph' && !!recommendations.length && <section className="community-recommendations"><header><div><small>// FOR YOU</small><h3>为你推荐</h3><p>{recommendations.personalized ? "根据你已点赞或收藏案例的方向排序" : "先从社区互动较高、较新的案例开始探索"}</p></div></header><div>{recommendations.items.map(work => <button key={work.id} disabled={loading} onClick={() => openWork(work)}>{work.previewUrl ? <img src={work.previewUrl} alt="" /> : <ImageSquare size={23} />}<span><strong>{work.title}</strong><small>{work.discipline} · {work.reason}</small></span><ArrowRight size={16} /></button>)}</div></section>}
-    {variant === 'morph' ? <CatalogControls key={activeGroup} label="案例筛选"
-      dimensions={<><span>分类维度</span><div role="group" aria-label="案例分类维度">{Object.keys(EMPTY_LABEL_GROUPS).map(group=><button type="button" key={group} aria-pressed={activeGroup===group} onClick={()=>{setActiveGroup(group);setActiveTag('');}}>{({大类:'作品领域',设计类:'设计方法',使用工具类:'创作工具',艺术类:'艺术方向'})[group]}</button>)}</div></>}
-      options={[{value:'',label:'全部',count:works.length},...groupTags.map(tag=>({value:tag,label:tag,count:works.filter(work=>(workLabelGroups(work)[activeGroup]??[]).includes(tag)).length}))]}
+    {variant === 'morph' ? <CatalogControls key={activeGroup} compact label="案例筛选"
+      extra={<>
+        <details className="morph-case-filter-dimensions">
+          <summary>{activeGroup === '大类' ? '其他分类方式' : caseGroupLabels[activeGroup]}</summary>
+          <div role="group" aria-label="案例分类维度">
+            {Object.entries(caseGroupLabels).map(([group, label]) => (
+              <button type="button" key={group} aria-pressed={activeGroup === group} onClick={() => { setActiveGroup(group); setActiveTag(''); }}>{label}</button>
+            ))}
+          </div>
+        </details>
+        <div className="morph-community-utilities">
+          <button type="button" className="button secondary" onClick={() => setEditing(null)}><Plus size={16}/>上传案例</button>
+          {submissions}
+        </div>
+      </>}
+      options={[{value:'',label:'全部'},...groupTags.map(tag=>({value:tag,label:tag}))]}
       value={activeTag} onChange={value=>setActiveTag(value===activeTag?'':value)} query={search} onQueryChange={setSearch}
-      searchLabel="搜索案例" placeholder="搜索案例、创作者、方法或工具"
+      searchLabel="搜索案例" placeholder="搜索案例、工具、提示词…"
       resultLabel={`${visibleWorks.length} / ${works.length} 个案例`} onClear={clearFilters}
       selected={[search&&{label:`搜索：${search}`,onRemove:()=>setSearch('')},activeTag&&{label:activeTag,onRemove:()=>setActiveTag('')}].filter(Boolean)}
     /> : <section className="community-discovery" aria-label="搜索和筛选案例">
@@ -187,21 +264,59 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
       <div className="community-results" aria-live="polite">{search || activeTag ? `找到 ${visibleWorks.length} 个案例` : `共 ${works.length} 个案例`}<span> · 封面、创作者与分类标签一目了然</span></div>
     </section>}
 
-    <CommunityCaseModule variant={variant} id="featured-art-cases" title="精选艺术案例" description="平台精选的艺术作品，探索 AI 与艺术的多种表达。" works={collections["art-selection"]} total={collectionTotals["art-selection"].length} loading={loading} onOpen={openWork} hasFilters={hasFilters} onClear={clearFilters} />
-    <CommunityCaseModule variant={variant} id="community-cases" title="社区案例" description="发现学习者与创作者的实践，交流成果与创作过程。" works={collections.community} total={collectionTotals.community.length} loading={loading} onOpen={openWork} hasFilters={hasFilters} onClear={clearFilters} />
+    <CommunityCaseCatalog
+      variant={variant}
+      works={visibleWorks}
+      loading={loading}
+      onOpen={openWork}
+      hasFilters={hasFilters}
+      onClear={clearFilters}
+    />
     </div>
     {editor}
   </>;
 }
-function CommunityCaseModule({ id, title, description, works, total, loading, onOpen, hasFilters, onClear, variant }) {
-  return <section id={id} className="community-case-module" aria-labelledby={`${id}-title`}>
-    <header className="community-case-module__heading"><div><h2 id={`${id}-title`}>{title}<span>{hasFilters ? `${works.length} / ${total}` : total}</span></h2><p>{description}</p></div></header>
-    {works.length ? variant === 'morph' ? <div className="morph-case-grid">{works.map(work=><MorphCaseCard key={work.id} work={work} onOpen={onOpen}/>)}</div> : <div className={`work-grid${id === "featured-art-cases" ? " work-grid--art-selection" : ""}`} data-single-card={works.length === 1}>{works.map(work => <article className="work-card" key={work.id}><div className="work-preview">{work.previewUrl ? <img src={work.previewUrl} alt={`${work.title}封面`} loading="lazy" /> : <WorkVisualFallback work={work} compact />}</div><div className="work-card__body"><small>{work.creators?.join("、") || work.author || "匿名创作者"}</small><h3>{work.title}</h3><div className="case-labels">{workLabels(work).slice(0, 4).map(label => <span key={label}>{label}</span>)}</div><div className="work-card__footer"><div className="work-card__stats"><span><Heart /> {work.likeCount ?? 0}</span><span><BookmarkSimple /> {work.favoriteCount ?? 0}</span></div><button disabled={loading} onClick={() => onOpen(work)}>查看案例 <ArrowRight size={16} /></button></div></div></article>)}</div> : <div className="community-empty"><MagnifyingGlass size={26} /><strong>{hasFilters ? "此模块暂无匹配案例" : `暂无${title}`}</strong><p>{hasFilters ? "试试其他关键词或分类标签。" : "案例发布后将在这里展示。"}</p>{hasFilters && <button onClick={onClear}>清除筛选条件</button>}</div>}
+function CommunityCaseCatalog({ variant, works, loading, onOpen, hasFilters, onClear }) {
+  return <section id="case-catalog" className="community-case-catalog" aria-label="案例列表">
+    {works.length ? (
+      variant === 'morph' ? (
+        <div className="morph-case-grid">
+          {works.map(work => <MorphCaseCard key={work.id} work={work} onOpen={onOpen}/>)}
+        </div>
+      ) : (
+        <div className="work-grid">
+          {works.map(work => <article className="work-card" key={work.id}>
+            <div className="work-preview">{work.previewUrl ? <img src={work.previewUrl} alt={`${work.title}封面`} loading="lazy"/> : <WorkVisualFallback work={work} compact/>}</div>
+            <div className="work-card__body">
+              <small>{work.creators?.join("、") || work.author || "匿名创作者"}</small>
+              <h3>{work.title}</h3>
+              <div className="case-labels">
+                <span className="case-collection-tag" data-collection={work.collection}>{caseCollectionLabel(work)}</span>
+                {workLabels(work).slice(0,4).map(label => <span key={label}>{label}</span>)}
+              </div>
+              <div className="work-card__footer">
+                <div className="work-card__stats"><span><Heart/> {work.likeCount ?? 0}</span><span><BookmarkSimple/> {work.favoriteCount ?? 0}</span></div>
+                <button disabled={loading} onClick={()=>onOpen(work)}>查看案例 <ArrowRight size={16}/></button>
+              </div>
+            </div>
+          </article>)}
+        </div>
+      )
+    ) : (
+      <div className="community-empty">
+        <MagnifyingGlass size={26}/>
+        <strong>{hasFilters ? "没有匹配的案例" : "暂无案例"}</strong>
+        <p>{hasFilters ? "试试其他关键词或分类标签。" : "案例发布后将在这里展示。"}</p>
+        {hasFilters && <button onClick={onClear}>清除筛选条件</button>}
+      </div>
+    )}
   </section>;
 }
 function statusName(status) { return { draft: "草稿", pending: "审核中", approved: "已发布", rejected: "已驳回", archived: "已归档" }[status] ?? status; }
-function reviewActionName(action) { return { submit: "提交审核", approve: "审核通过", reject: "驳回修改", archive: "移入回收站", restore: "恢复至草稿" }[action] ?? action; }
+function reviewActionName(action) { return { submit: "提交审核", approve: "审核通过", publish: "直接发布", reject: "驳回修改", archive: "移入回收站", restore: "恢复至草稿" }[action] ?? action; }
 function formatReviewDate(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "时间未知" : new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" }).format(date); }
+const handoffCaseCategories = ['服装与时尚','产品设计','品牌视觉','工艺与装置','信息设计','空间与景观','动画与影像'];
+const caseGroupLabels = { 大类: "作品领域", 设计类: "设计方法", 使用工具类: "创作工具", 艺术类: "艺术方向" };
 const EMPTY_LABEL_GROUPS = { 大类: [], 设计类: [], 使用工具类: [], 艺术类: [] };
 function workLabelGroups(work) { return { 大类: [work.discipline].filter(Boolean), 设计类: work.methods ?? [], 使用工具类: work.tools ?? [], 艺术类: (work.tags ?? []).map(tag => typeof tag === "string" ? tag : tag.name).filter(Boolean) }; }
 function workLabels(work) { return [...new Set(Object.values(workLabelGroups(work)).flat())]; }

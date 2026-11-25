@@ -15,6 +15,21 @@ import { StudioService } from "./studio.service";
 import { StudioController } from "./studio.controller";
 import { resolveByteRange } from "../../common/byte-range";
 
+test('附件保留中文文件名并移除路径与控制字符', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'artedu-upload-filename-'));
+  try {
+    const part = {
+      fieldname: 'file', filename: 'C:\\课程资料\\配色 课堂讲义\r\n.pdf',
+      mimetype: 'application/pdf', file: Readable.from([Buffer.from('%PDF-1.7\n')]),
+    };
+    const stored = await storePrivateUpload(part as any, root);
+    assert.equal(stored.fileName, '配色 课堂讲义__.pdf');
+    assert.match(stored.storageKey, /^[a-f0-9-]+$/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('上传已落库后 OCR 审计异常不得删除素材', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(),'artedu-ocr-commit-'));
   const oldRoot = process.env.UPLOAD_ROOT, oldEnabled = process.env.ENABLE_FILE_UPLOADS;
@@ -29,7 +44,7 @@ test('上传已落库后 OCR 审计异常不得删除素材', async () => {
   const service = new StudioService({query,transaction:async(fn:any)=>fn({query})} as any,{} as any);
   (service as any).autoModerateImageAsset = async()=>{throw new Error('audit unavailable');};
   try {
-    await assert.rejects(service.uploadWorkAsset({id:'user-a'} as any,'work-a',{file:async()=>({fieldname:'file',filename:'test.png',mimetype:'image/png',file:Readable.from([Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])])})} as any),/audit unavailable/);
+    await assert.rejects(service.uploadWorkAsset({id:'user-a',roles:['student']} as any,'work-a',{file:async()=>({fieldname:'file',filename:'test.png',mimetype:'image/png',file:Readable.from([Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])])})} as any),/audit unavailable/);
     assert.equal((await readFile(path.join(root,savedKey))).length,8);
   } finally {
     if(oldRoot===undefined)delete process.env.UPLOAD_ROOT;else process.env.UPLOAD_ROOT=oldRoot;

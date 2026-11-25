@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
+import { localPasswordSchema } from "../modules/auth/auth.contracts";
 import { hashLocalPassword } from "../modules/auth/password";
 import { withDatabase } from "./run-sql-file";
 
@@ -13,7 +14,8 @@ async function provision() {
   if (process.env.NODE_ENV === "production") throw new Error("Refusing to provision local passwords in production.");
   const userId = getRequired("ARTEDU_LOCAL_USER_ID");
   const password = getRequired("ARTEDU_LOCAL_USER_PASSWORD");
-  if (password.length < 12 || password.length > 128) throw new Error("ARTEDU_LOCAL_USER_PASSWORD must be 12-128 characters.");
+  const checkedPassword = localPasswordSchema.safeParse(password);
+  if (!checkedPassword.success) throw new Error(`ARTEDU_LOCAL_USER_PASSWORD: ${checkedPassword.error.issues[0].message}`);
   const passwordHash = await hashLocalPassword(password);
   await withDatabase(async (pool) => {
     const user = await pool.query<{ id: string; username: string }>("SELECT id,username FROM users WHERE id=$1", [userId]);
