@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="290" viewBox="0 0 180 290" fill="none">
+<title>科学可视化：从观测点到规律</title>
+<path d="M29 78V204H156" stroke="#ABA5FF" stroke-opacity=".6" stroke-width="1"/>
+<path d="M29 164H156M29 124H156M69 78V204M109 78V204M149 78V204" stroke="#ABA5FF" stroke-opacity=".16" stroke-width="1"/>
+<path d="M32 183C51 180 66 170 82 147S111 102 151 88" stroke="#A49DFF" stroke-width="3"/>
+<g fill="#A49DFF"><circle cx="42" cy="172" r="4"/><circle cx="59" cy="180" r="3"/><circle cx="72" cy="153" r="5"/><circle cx="89" cy="146" r="3"/><circle cx="108" cy="108" r="4"/><circle cx="139" cy="104" r="3"/></g>
+<circle cx="98" cy="124" r="7" fill="#D8F845"/><circle cx="148" cy="80" r="5" fill="#E8A489"/>
+<path d="M25 84 29 78 33 84M150 200 156 204 150 208" stroke="#ABA5FF" stroke-width="1"/>
+</svg>

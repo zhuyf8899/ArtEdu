@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from 'node:crypto';
 import { ADMIN_MANAGEMENT_ROLES, PLATFORM_ADMIN_ROLES, REVIEW_ROLES } from "../../common/constants";
 import { AuthService, type Actor } from "../auth/auth.service";
@@ -15,26 +15,29 @@ export class AdminService {
   ) {}
 
   async listManagedWorks(actor: Actor) {
-    this.authService.requireAnyRole(actor, ['admin', 'operator']);
+    this.authService.requireAnyRole(actor, ['admin', 'operator', 'teacher']);
     const result = await this.database.query(`
       SELECT w.id,w.title,w.status,w.discipline,COALESCE(w.story_json->>'collection','community') AS collection,
         u.display_name AS author,w.updated_at AS "updatedAt",COUNT(a.id)::int AS "assetCount"
       FROM works w JOIN users u ON u.id=w.author_id
       LEFT JOIN work_assets a ON a.work_id=w.id
+      WHERE $1::boolean OR w.author_id=$2
       GROUP BY w.id,u.display_name ORDER BY w.updated_at DESC
-    `);
+    `, [actor.roles.some(role => role === 'admin' || role === 'operator'), actor.id]);
     return { items: result.rows };
   }
 
   async changeContentLifecycle(actor: Actor, kind: string, id: string, input: { action: 'archive' | 'restore'; reason: string; expectedStatus: string }) {
     if (!['course','work'].includes(kind)) throw new BadRequestException('不支持的内容类型');
-    this.authService.requireAnyRole(actor, kind === 'course' ? ['admin'] : ['admin','operator']);
+    this.authService.requireAnyRole(actor, kind === 'course' ? ['admin'] : ['admin','operator','teacher']);
+    const ownOnly = kind === 'work' && !actor.roles.some(role => role === 'admin' || role === 'operator');
     // Only these fixed identifiers enter SQL. No user-provided table names.
     const table = kind === 'course' ? 'courses' : 'works';
     return this.database.transaction(async client => {
-      const current = await client.query<{ id: string; status: string }>(`SELECT id,status FROM ${table} WHERE id=$1 FOR UPDATE`, [id]);
+      const current = await client.query<{ id: string; status: string; author_id?: string }>(`SELECT id,status${ownOnly ? ',author_id' : ''} FROM ${table} WHERE id=$1 FOR UPDATE`, [id]);
       const content = current.rows[0];
       if (!content) throw new NotFoundException('内容不存在');
+      if (ownOnly && content.author_id !== actor.id) throw new ForbiddenException('只能管理自己提交的案例');
       if (content.status !== input.expectedStatus) throw new ConflictException('内容状态已改变，请刷新列表后重新操作');
       if (input.action === 'restore' && content.status !== 'archived') throw new ConflictException('只能恢复回收站中的内容');
       if (input.action === 'archive' && content.status === 'archived') throw new ConflictException('内容已在回收站中');

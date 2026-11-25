@@ -1,4 +1,4 @@
-export const atomicStatus={draft:'草稿',pending_review:'审核中',published:'已发布',rejected:'待修改'};
+export const atomicStatus={draft:'草稿',pending_review:'审核中',published:'已发布',rejected:'待修改',archived:'回收站'};
 export const atomicKinds={teaching:'教师教学',reflection:'学习心得',course:'完整课程'};
 export function atomicAuthoringActions(roles=[],view){return {canTeach:roles.some(role=>['teacher','admin'].includes(role)),canReflect:['learning','mine'].includes(view)};}
 export const canReviewAtomic=roles=>roles.some(role=>['teacher','admin','operator'].includes(role));

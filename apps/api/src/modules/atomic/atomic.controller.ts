@@ -5,7 +5,7 @@ import { AuthService } from '../auth/auth.service';
 import { parseAtomic as parseInput } from './atomic.contracts';
 import { resolveByteRange } from '../../common/byte-range';
 import { AtomicService } from './atomic.service';
-import { createAtomicSchema,saveAtomicSchema,atomicRevisionSchema,atomicDecisionSchema,atomicListSchema,atomicDetailSchema,atomicProgressSchema,atomicGradeSchema,atomicTaskSchema,atomicKnowledgeSchema } from './atomic.contracts';
+import { createAtomicSchema,saveAtomicSchema,atomicRevisionSchema,atomicDecisionSchema,atomicListSchema,atomicDetailSchema,atomicProgressSchema,atomicGradeSchema,atomicTaskSchema,atomicKnowledgeSchema,atomicLifecycleSchema } from './atomic.contracts';
 @Controller('atomic')
 export class AtomicController {
  constructor(private readonly atomic:AtomicService,private readonly auth:AuthService){}
@@ -21,6 +21,7 @@ export class AtomicController {
  @Get('nodes/:id')async detail(@Req()req:FastifyRequest,@Param('id')id:string,@Query()query:unknown){return this.atomic.detail(await this.auth.getActor(req),id,parseInput(atomicDetailSchema,query).revision);}
  @Put('nodes/:id')async save(@Req()req:FastifyRequest,@Param('id')id:string,@Body()body:unknown){return this.atomic.save(await this.auth.getActor(req),id,parseInput(saveAtomicSchema,body));}
  @Post('nodes/:id/submit')async submit(@Req()req:FastifyRequest,@Param('id')id:string,@Body()body:unknown){return this.atomic.submit(await this.auth.getActor(req),id,parseInput(atomicRevisionSchema,body).revision);}
+ @Post('nodes/:id/lifecycle')async lifecycle(@Req()req:FastifyRequest,@Param('id')id:string,@Body()body:unknown){return this.atomic.changeLifecycle(await this.auth.getActor(req),id,parseInput(atomicLifecycleSchema,body));}
  @Post('nodes/:id/decision')async decide(@Req()req:FastifyRequest,@Param('id')id:string,@Body()body:unknown){return this.atomic.decide(await this.auth.getActor(req),id,parseInput(atomicDecisionSchema,body));}
  @Put('nodes/:id/progress')async progress(@Req()req:FastifyRequest,@Param('id')id:string,@Body()body:unknown){return this.atomic.progress(await this.auth.getActor(req),id,parseInput(atomicProgressSchema,body));}
  @Post('nodes/:id/tasks')async task(@Req()req:FastifyRequest,@Param('id')id:string,@Body()body:unknown){return this.atomic.task(await this.auth.getActor(req),id,parseInput(atomicTaskSchema,body));}

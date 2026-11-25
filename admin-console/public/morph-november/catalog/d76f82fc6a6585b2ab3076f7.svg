@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 290" role="img" aria-labelledby="title desc">
+  <title id="title">可变形模块化织物设计</title>
+  <desc id="desc">由可变形织物单元与模块连接构成的抽象图形</desc>
+  <rect width="180" height="290" rx="18" fill="#f5f2ff"/>
+  <g fill="none" stroke="#171827" stroke-width="4" stroke-linejoin="round">
+    <path d="m32 68 39-25 28 30-36 31Z"/><path d="m99 73 39-25 18 42-37 21Z"/>
+    <path d="m63 104 36-31 20 38-31 35Z"/><path d="m29 145 34-41 25 42-30 38Z"/>
+    <path d="m88 146 31-35 31 33-29 41Z"/><path d="m58 184 30-38 33 39-31 40Z"/>
+  </g>
+  <path d="M32 68 99 73l39-25M63 104l56 7M29 145l59 1 62-2M58 184l63 1M90 225l31-40" fill="none" stroke="#8d72ef" stroke-width="3"/>
+  <circle cx="32" cy="68" r="8" fill="#5c86f3"/><circle cx="99" cy="73" r="9" fill="#a468e6"/>
+  <circle cx="63" cy="104" r="7" fill="#d7ff46"/><circle cx="119" cy="111" r="8" fill="#5c86f3"/>
+  <circle cx="88" cy="146" r="10" fill="#a468e6"/><circle cx="58" cy="184" r="8" fill="#171827"/>
+  <circle cx="121" cy="185" r="9" fill="#d7ff46"/><circle cx="90" cy="225" r="11" fill="#171827"/>
+</svg>

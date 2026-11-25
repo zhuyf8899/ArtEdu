@@ -59,7 +59,7 @@ export async function verifyBundle(root = bundleRoot) {
   return { manifest, imageCount, bytes };
 }
 
-async function installFile(source, target, expectedHash) {
+export async function installFile(source, target, expectedHash) {
   try {
     if (await digest(target) !== expectedHash) throw new Error(`Existing image differs: ${target}`);
     return false;

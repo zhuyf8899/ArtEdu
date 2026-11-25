@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 290" role="img" aria-labelledby="title desc">
+  <title id="title">智能体交互设计与实践</title>
+  <desc id="desc">由对话、智能体与交互路径构成的抽象图形</desc>
+  <rect width="180" height="290" rx="18" fill="#f5f2ff"/>
+  <path d="M37 78C37 56 55 38 77 38h26c22 0 40 18 40 40v24c0 22-18 40-40 40H90l-25 23 5-25C51 136 37 120 37 102Z" fill="#171827"/>
+  <circle cx="72" cy="90" r="8" fill="#8069f2"/>
+  <circle cx="90" cy="90" r="8" fill="#a56bea"/>
+  <circle cx="108" cy="90" r="8" fill="#5a87f4"/>
+  <path d="M43 207c25-36 51-28 69-8 13 14 24 10 31-8" fill="none" stroke="#171827" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="42" cy="208" r="15" fill="#5a87f4"/>
+  <circle cx="89" cy="185" r="15" fill="#8069f2"/>
+  <circle cx="141" cy="190" r="15" fill="#a56bea"/>
+  <path d="M90 142v28M65 223l-12 27M116 218l13 30" stroke="#171827" stroke-width="4" stroke-linecap="round"/>
+</svg>

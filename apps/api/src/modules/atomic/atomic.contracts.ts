@@ -6,8 +6,9 @@ const text=(max:number)=>z.string().trim().max(max);
 const id=z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/);
 const step=z.object({atomId:id,revision:z.number().int().positive(),context:text(1000).default(''),task:text(2000).default(''),required:z.boolean().default(true),prerequisites:z.array(id).max(50).default([])}).strict();
 const teacherFields={teacherName:text(200).optional(),teacherBio:text(2000).optional()};
-const common={title:text(120).min(2),summary:text(1000).min(5)};
-export const atomPayload=z.object({...common,...teacherFields,visual:z.enum(['color','type','grid']).optional(),direction:z.enum(['设计基础','设计方法','美术史','设计史','软件实操','人工智能基础']).optional(),objective:text(2000).min(5),content:text(50000).min(10),minutes:z.number().int().min(1).max(480),knowledge:z.array(text(80).min(1)).max(20),tools:z.array(text(80).min(1)).max(20).default([]),completion:z.enum(['read','practice']),exercise:text(4000).default(''),source:text(2000).default(''),assetIds:z.array(id).max(12).default([])}).strict().superRefine((v,c)=>{if(v.completion==='practice'&&v.exercise.length<5)c.addIssue({code:'custom',path:['exercise'],message:'练习原子需要明确任务'});});
+export const atomicDirections=['设计基础','设计方法','美术史','设计史','软件实操','人工智能基础','空间场景','工艺制作','人工智能','数据可视化','编程交互','视听叙事','社会议题'] as const;
+const common={coverUrl:z.string().regex(/^\/morph-november\/catalog\/[a-f0-9]{24}\.(svg|png|webp|jpg)$/).optional(),readiness:z.literal('outline').optional(),title:text(120).min(2),summary:text(1000).min(5)};
+export const atomPayload=z.object({...common,...teacherFields,visual:z.enum(['color','type','grid']).optional(),direction:z.enum(atomicDirections).optional(),objective:text(2000).min(5),content:text(50000).min(10),minutes:z.number().int().min(1).max(480),knowledge:z.array(text(80).min(1)).max(20),tools:z.array(text(80).min(1)).max(20).default([]),completion:z.enum(['read','practice']),exercise:text(4000).default(''),source:text(2000).default(''),assetIds:z.array(id).max(12).default([])}).strict().superRefine((v,c)=>{if(v.completion==='practice'&&v.exercise.length<5)c.addIssue({code:'custom',path:['exercise'],message:'练习原子需要明确任务'});});
 export const coursePayload=z.object({...common,...teacherFields,steps:z.array(step).min(1).max(50)}).strict().superRefine((v,c)=>{
  const seen=new Set<string>();for(const [index,s]of v.steps.entries()){
   if(seen.has(s.atomId))c.addIssue({code:'custom',path:['steps',index],message:'同一课程不能重复引用相同原子'});
@@ -23,7 +24,8 @@ export const atomicDecisionSchema=atomicRevisionSchema.extend({decision:z.enum([
 export const atomicProgressSchema=atomicRevisionSchema.extend({action:z.enum(['read','complete','submit']),submission:text(10000).default('')}).strict();
 export const atomicTaskSchema=atomicRevisionSchema.extend({atomId:id,submission:text(10000).min(10)}).strict();
 export const atomicGradeSchema=atomicRevisionSchema.extend({userId:id,atomId:id.optional(),expectedSubmissionVersion:z.number().int().positive(),decision:z.enum(['pass','revise']),note:text(2000).min(2)}).strict();
-export const atomicListSchema=z.object({view:z.enum(['atoms','courses','learning','mine','review']).default('atoms'),query:text(100).default(''),direction:z.enum(['','设计基础','设计方法','美术史','设计史','软件实操','人工智能基础','其他']).default(''),stage:z.enum(['','not_started','in_progress','completed']).default(''),page:z.coerce.number().int().min(1).max(10000).default(1)}).strict();
+export const atomicListSchema=z.object({view:z.enum(['atoms','courses','learning','mine','review','manage']).default('atoms'),query:text(100).default(''),direction:z.enum(['',...atomicDirections,'其他']).default(''),stage:z.enum(['','not_started','in_progress','completed']).default(''),page:z.coerce.number().int().min(1).max(10000).default(1)}).strict();
+export const atomicLifecycleSchema=atomicRevisionSchema.extend({action:z.enum(['archive','restore']),reason:text(500).min(2)}).strict();
 export const atomicDetailSchema=z.object({revision:z.coerce.number().int().positive().optional()}).strict();
 export type AtomPayload=z.infer<typeof atomPayload>;
 export type CoursePayload=z.infer<typeof coursePayload>;

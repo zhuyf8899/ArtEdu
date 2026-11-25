@@ -29,5 +29,5 @@ test('部分失败保留草稿与成功附件，重试不新建原子、不重�
 test('草稿保存失败不上传任何文件，编辑表单内有附件入口和失败保护',async()=>{
  await assert.rejects(saveAtomicAttachments({payload:{title:'原子'},entries:[{file:file('a.pdf')}],checkpoint:{saved:false},persist:async()=>{throw Error('保存失败');},upload:async()=>{assert.fail('must not upload');}}),/保存失败/);
  const src=await readFile(new URL('../src/AtomicLearningHub.jsx',import.meta.url),'utf8');
- for(const text of ['教学附件','选择原子教学附件','multiple accept={atomicAttachmentAccept}','保存草稿并上传附件','saveAtomicAttachments','onBusy(false)','disabled={busy}','正在保存草稿或上传附件'])assert.ok(src.includes(text),text);
+ for(const text of ['教学附件','选择原子教学附件','multiple accept={atomicAttachmentAccept}','保存并预览','个附件待上传','saveAtomicAttachments','onBusy(false)','disabled={busy}','正在保存草稿或上传附件'])assert.ok(src.includes(text),text);
 });

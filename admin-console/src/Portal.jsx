@@ -2,7 +2,7 @@ import { PageLoading } from "./PageLoading.jsx";
 /**
  * 【学生门户】提供 LocalLogin 登录界面和 UserPortal 门户布局，按 App 传入的 section 显示课程、创作、社区等页面。先找这两个导出函数，再按需追页面加载和事件处理，图标与样式细节可后读。
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowClockwise, ArrowRight, BookOpenText, Brain, CheckCircle, CirclesThreePlus,
   Compass, GraduationCap, GridFour, House, ImageSquare, Lightbulb,
@@ -75,7 +75,8 @@ export function LocalLogin({ onLogin, message = "" }) {
 
   return <div className="morph-v17 morph-login"><main className="test-login">
     <section className="test-login__intro">
-      <div className="test-login__brand"><strong>MORPH LAB</strong><small>AI + Design 实验室 · ArtEdu</small></div>
+      <div className="test-login__brand"><img className="morph-wordmark" src="/assets/morph-wordmark-dark.png" alt="MORPH 洛图" width="190" height="30" /></div>
+      <p className="eyebrow">// WELCOME</p>
       <h1>登录后进入<br />学习与创作空间。</h1>
       <details><summary>记录保存说明</summary><p>课程进度、学习笔记和已保存作品跟随账号保存。创作对话保存在当前浏览器，请导出需要保留的记录。</p></details>
     </section>
@@ -94,7 +95,7 @@ export function LocalLogin({ onLogin, message = "" }) {
   </main></div>;
 }
 
-export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", communityWorkId = "", curriculumTopic = "", learningLibrary = '', learningNodeId = '', learningNodeRevision = '', learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationHistoryOpen = false, creationStartNew = false, creationId = "", onNavigate = () => {} }) {
+export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "home", searchQuery = "", communityWorkId = "", communityPublish = false, curriculumTopic = "", learningLibrary = '', learningNodeId = '', learningNodeRevision = '', learningCourseId = "", learningLessonId = "", learningView = "", learningAtlas = "", learningAtlasCourse = "", studioWorkflowId = "", studioRunId = "", studioBuilder = false, studioEditId = "", creationHistoryOpen = false, creationStartNew = false, creationId = "", onNavigate = () => {} }) {
   const [data, setData] = useState(emptyPortalData);
   const [isLive, setIsLive] = useState(false);
   const [portalLoading, setPortalLoading] = useState(true);
@@ -103,12 +104,20 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const { notify } = useFeedback();
 
+  const loadCatalogs = coachOpen || ['home', 'curriculum', 'myLearning', 'search'].includes(section);
+  const pendingHome = useRef(null);
   const loadPortalData = useCallback(async () => {
+    const key = account.id + ':' + loadCatalogs;
+    if (pendingHome.current?.key === key) return;
+    const pending = { key };
+    pendingHome.current = pending;
     setPortalLoading(true);
     setPortalError("");
     try {
       // Home aggregation omits covers/authors. Use canonical catalogs shared with detail pages.
-      const [payload, health, courseCatalog, workCatalog] = await Promise.all([getPortalHome(), getApiHealth(), getCourses(), getWorks()]);
+      const catalogs = loadCatalogs ? [getCourses(), getWorks()] : [{ items: [] }, { items: [] }];
+      const [payload, health, courseCatalog, workCatalog] = await Promise.all([getPortalHome(), getApiHealth(), ...catalogs]);
+      if (pendingHome.current !== pending) return;
       setData({
         courses: courseCatalog.items ?? [],
         workflows: payload.workflows ?? [],
@@ -117,14 +126,18 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       });
       setIsLive(Boolean(health));
     } catch (error) {
+      if (pendingHome.current !== pending) return;
       setData(emptyPortalData);
       setIsLive(false);
       setPortalError(error.message || "首页数据加载失败");
       notify(error.message || "首页数据加载失败，请检查 API 服务", "error");
     } finally {
-      setPortalLoading(false);
+      if (pendingHome.current === pending) {
+        pendingHome.current = null;
+        setPortalLoading(false);
+      }
     }
-  }, [notify]);
+  }, [account.id, loadCatalogs, notify]);
 
   useEffect(() => { void loadPortalData(); }, [account.id, loadPortalData]);
 
@@ -231,8 +244,8 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
   }, [morph, section]);
 
   return <div className={`portal-shell${morph ? ' morph-v17' : ''}${standalone ? " portal-shell--standalone" : ""}${workbench ? " portal-shell--workbench" : ""}`} data-page={section === 'home' ? 'home' : section === 'courses' ? 'courses' : section === 'community' ? 'cases' : section === 'studio' ? 'tools' : section} data-section={section} data-standalone={standalone ? "true" : undefined} data-chrome={chromeFree ? "none" : undefined}>
-    {morph && section === 'home' && <MorphHero nav={morphNav}>{(homeMethod, onHomeMethodChange) => <AiCreationLauncher variant="morph" homeMethod={homeMethod} onHomeMethodChange={onHomeMethodChange} account={account} creation={data.creation} onNotice={showToast} onNavigate={onNavigate} onLaunch={id=>onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : '/create')} />}</MorphHero>}
-    {morph && section !== 'home' && morphNav}
+    {morph && morphNav}
+    {morph && section === 'home' && <MorphHero>{(homeMethod, onHomeMethodChange) => <AiCreationLauncher variant="morph" homeMethod={homeMethod} onHomeMethodChange={onHomeMethodChange} account={account} creation={data.creation} onNotice={showToast} onNavigate={onNavigate} onLaunch={id=>onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : '/create')} />}</MorphHero>}
     {!morph && !chromeFree && <header className="portal-topbar">
       <button className="portal-brand" onClick={() => navigateSection("home")}><span>A</span><strong>ArtEdu</strong></button>
       <nav className="portal-nav" aria-label="顶部主导航">{navItems.map(([id, label, Icon]) => <button key={id} data-section={id} className={section === id ? "is-active" : ""} onClick={() => navigateSection(id)}><Icon size={17} weight={section === id ? "fill" : "bold"} />{label}</button>)}</nav>
@@ -252,7 +265,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
       </header>}
       {section !== "home" && section !== "courses" && section !== "studio" && section !== "curriculum" && section !== "community" && section !== "myLearning" && section !== "search" && section !== "creation" && <section className="portal-heading"><div><p className="eyebrow">// {section.toUpperCase()}</p><h1>{pageTitle}</h1></div>{canEnterAdmin(account) && <button className="console-entry" onClick={onEnterAdmin}>进入管理工作台 <ArrowRight size={17} weight="bold" /></button>}</section>}
 
-      {morph && section === 'home' && <>{portalLoading ? <HomeDataState loading /> : portalError ? <HomeDataState error={portalError} onRetry={loadPortalData} /> : <MorphHomeRecommendations data={data} onNavigate={onNavigate} />}</>}
+      {morph && section === 'home' && <>{portalLoading ? <HomeDataState loading /> : portalError ? <HomeDataState error={portalError} onRetry={loadPortalData} /> : <MorphHomeRecommendations data={data} accountId={account.id} onNavigate={onNavigate} />}</>}
       {!morph && section === "home" && <>
         <AiCreationLauncher account={account} creation={data.creation} onNotice={showToast} onLaunch={(id) => onNavigate(id ? `/create?id=${encodeURIComponent(id)}` : "/create")} />
         {portalLoading && <HomeDataState loading />}
@@ -271,7 +284,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
 
         {section === "studio" && <WorkflowStudio accountId={account.id} variant={morph ? 'morph' : 'classic'} initialWorkflowId={studioWorkflowId} initialRunId={studioRunId} builderOpen={studioBuilder} initialEditId={studioEditId} onNavigate={onNavigate} onNotice={showToast} canManageToolDirectory={account.roles?.includes("admin")} canPublish={account.roles?.some((role) => ["admin", "teacher", "operator"].includes(role))} />}
 
-        {section === "community" && <CommunityLibrary variant={morph ? 'morph' : 'classic'} initialWorkId={communityWorkId} onNavigate={onNavigate} account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(withReturnTarget(`/studio?workflow=${encodeURIComponent(workflowId)}`))} />}
+        {section === "community" && <CommunityLibrary variant={morph ? 'morph' : 'classic'} initialWorkId={communityWorkId} openPublisher={communityPublish} onNavigate={onNavigate} account={account} onNotice={showToast} onOpenWorkflow={(workflowId) => onNavigate(withReturnTarget(`/studio?workflow=${encodeURIComponent(workflowId)}`))} />}
 
         {section === "myLearning" && <MyLearning variant={morph ? 'morph' : 'classic'} learningView={learningView} creation={data.creation} caseCatalog={data.works} account={account} learningAtlas={learningAtlas} learningAtlasCourse={learningAtlasCourse} onNavigate={onNavigate} onNotice={showToast} />}
 

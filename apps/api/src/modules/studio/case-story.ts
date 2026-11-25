@@ -16,7 +16,7 @@ export const caseStorySchema = z.object({
   // 平台策展信息；投稿写入契约排除此字段，旧案例默认归入社区。
   collection: z.enum(["community", "art-selection"]).default("community"),
   creators: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
-  tools: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
+  tools: z.array(z.string().trim().min(1).max(80)).max(40).default([]),
   methods: z.array(z.string().trim().min(1).max(60)).max(12).default([]),
   sourceName: z.string().trim().max(160).default(""),
   sourceUrl: sourceLinkSchema,
@@ -30,6 +30,8 @@ export const caseStorySchema = z.object({
   allowDocumentDownload: z.boolean().default(false),
   coverAssetId: z.string().trim().max(100).default(""),
   reflection: z.string().trim().max(4000).default(""),
+  blocks: z.array(z.union([z.object({text:z.string().max(4000)}).strict(), z.object({assetId:z.string().min(1).max(100)}).strict()])).max(250).optional(),
+  plates: z.array(z.object({title:z.string().max(160),assetIds:z.array(z.string().min(1).max(100)).max(200)}).strict()).max(50).optional(),
   steps: z.array(z.object({
     title: z.string().trim().min(1).max(160),
     description: z.string().trim().max(4000).default(""),

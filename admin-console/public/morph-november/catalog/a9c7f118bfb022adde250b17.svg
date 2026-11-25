@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 290" role="img" aria-labelledby="title desc">
+  <title id="title">智能体与时尚应用</title>
+  <desc id="desc">由服装轮廓、智能体节点与交互路径构成的抽象图形</desc>
+  <rect width="180" height="290" rx="18" fill="#f5f2ff"/>
+  <path d="m91 35 24 24 32 16-17 48-18-10v116H68V113l-18 10-17-48 32-16Z" fill="#171827"/>
+  <path d="M91 35v194M65 59l26 31 24-31M68 151h44M68 184h44" fill="none" stroke="#8d72ef" stroke-width="5"/>
+  <circle cx="33" cy="75" r="11" fill="#5c86f3"/>
+  <circle cx="147" cy="75" r="11" fill="#a468e6"/>
+  <circle cx="91" cy="90" r="13" fill="#d7ff46"/>
+  <path d="M33 75 91 90l56-15M91 90l-23 61m23-61 21 61" fill="none" stroke="#8d72ef" stroke-width="3"/>
+  <circle cx="68" cy="151" r="7" fill="#5c86f3"/>
+  <circle cx="112" cy="151" r="7" fill="#a468e6"/>
+</svg>

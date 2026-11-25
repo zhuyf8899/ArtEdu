@@ -1,16 +1,32 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
-import { caseUploadError, emptyStory, splitCaseLabels, safeCaseSourceUrl } from '../src/caseStory.js';
+import { caseReviewIssues, caseUploadError, emptyStory, splitCaseLabels, safeCaseSourceUrl } from '../src/caseStory.js';
 import { findCaseEditorialIssues } from '../src/caseEditorial.js';
 import { correctCaseCopy } from '../../scripts/case-copy-corrections.mjs';
-import { splitCommunityCollections } from '../src/communityCollections.js';
+import { caseCollectionLabel } from '../src/communityCollections.js';
 test('案例标签与权限默认值', () => {
   assert.deepEqual(splitCaseLabels('即梦，ChatGPT, 即梦'), ['即梦','ChatGPT']);
   assert.equal(emptyStory().allowDocumentDownload,false);
   assert.equal(emptyStory().authorization,'pending');
   assert.equal(emptyStory().displayStyle, 'case-study');
   assert.equal(emptyStory().originalUrl, '');
+});
+
+test('案例送审提示区分封面、来源和外部作品授权', () => {
+  const work = { title: '海报练习', summary: '研究色彩如何引导阅读。', assets: [{ asset_type: 'video' }], story: emptyStory() };
+  assert.equal(caseReviewIssues(work).length, 2);
+  work.story.origin = 'platform';
+  assert.deepEqual(caseReviewIssues(work, 1), []);
+  work.story.origin = 'collected';
+  assert.equal(caseReviewIssues(work, 1).length, 2);
+  work.story.creators = ['作者'];
+  work.story.authorization = 'confirmed';
+  work.story.authorizationNote = '作者同意在校内课程展示。';
+  work.story.editorialNote = '资料整理说明：由教师复核。';
+  assert.deepEqual(caseReviewIssues(work, 1), []);
+  work.summary = '资料整理说明：由教师复核。';
+  assert.match(caseReviewIssues(work, 1)[0], /调整公开文案/);
 });
 
 test('案例图片复用 body Portal 适屏查看器，图集缩略图不撑成长页面', async () => {
@@ -31,15 +47,15 @@ test('案例图片复用 body Portal 适屏查看器，图集缩略图不撑成�
   assert.doesNotMatch(css, /\.case-story--exhibition \.case-gallery img \{ max-height: none/);
 });
 
-test('案例分为精选和社区，旧案例、外部来源及热门标记不会自动变成精选', async () => {
+test('案例共用一个列表，只有明确设置过归属的作品显示精选标签', async () => {
   const works = [{id:'legacy',isFeatured:true},{id:'external',origin:'collected'},{id:'cvpr',collection:'art-selection'},{id:'posted',collection:'community'}];
-  const sections = splitCommunityCollections(works);
-  assert.deepEqual(sections['art-selection'].map(w=>w.id),['cvpr']);
-  assert.deepEqual(sections.community.map(w=>w.id),['legacy','external','posted']);
-  assert.equal(sections['art-selection'].length+sections.community.length,works.length);
+  assert.deepEqual(works.map(caseCollectionLabel),['社区案例','社区案例','精选艺术案例','社区案例']);
   const library = await readFile(new URL('../src/CommunityLibrary.jsx',import.meta.url),'utf8');
-  assert.match(library,/id="featured-art-cases" title="精选艺术案例"/);
-  assert.match(library,/id="community-cases" title="社区案例"/);
+  assert.match(library,/id="case-catalog"[^>]*aria-label="案例列表"/);
+  assert.doesNotMatch(library,/CommunityCaseModule|community-module-links/);
+  assert.match(library,/works=\{visibleWorks\}/);
+  const cards = await readFile(new URL('../src/morph/MorphCatalog.jsx',import.meta.url),'utf8');
+  assert.match(cards,/className="case-collection-tag"[^>]*>\{caseCollectionLabel\(work\)\}/);
   assert.match(library,/selected.status === "approved"/);
   assert.match(library,/setWorkCollection\(selected.id, collection\)/);
   const editor = await readFile(new URL('../src/CaseStoryEditor.jsx',import.meta.url),'utf8');
@@ -185,14 +201,14 @@ test('真实案例组件区分视频和文档，保留播放及下载权限且�
   } finally { await server.close(); }
 });
 
-test('案例社区页头仅保留新建草稿主操作，并沿用 AI 讲堂紧凑布局', async () => {
+test('案例社区页头只有上传主入口，个人投稿可在列表中找回', async () => {
   const library = await readFile(new URL('../src/CommunityLibrary.jsx',import.meta.url),'utf8');
   const portal = await readFile(new URL('../src/Portal.jsx',import.meta.url),'utf8');
   const css = await readFile(new URL('../src/styles.css',import.meta.url),'utf8');
   assert.match(library, /className="learning-library-intro community-page-intro"/);
   assert.match(library, /<h1 id="community-page-title">案例社区<\/h1>/);
-  assert.match(library, /className="community-create-draft"[^>]*>.*新建案例草稿/);
-  assert.doesNotMatch(library, /分享创作，也分享过程|我的案例与草稿/);
+  assert.match(library, /className="community-create-draft"[^>]*>.*上传案例/);
+  assert.match(library, /className="case-my-submissions">\s*<summary>我的投稿/);
   assert.match(portal, /section !== "community"/);
   assert.match(css, /\.community-page-intro \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/);
 });

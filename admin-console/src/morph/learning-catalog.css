@@ -1,7 +1,7 @@
 /* One learning entrance, using the supplied MORPH palette and original artwork. */
 .atomic-hub--particles .particles-banner.is-compact{height:154px}
 .atomic-hub--particles .particles-banner.is-compact .banner-copy{padding-top:24px}
-.atomic-hub--particles .particles-banner.is-compact h1{font-size:32px;line-height:44px;margin:4px 0}
+.atomic-hub--particles .particles-banner.is-compact h1{font-size:28px;line-height:40px;margin:4px 0}
 .atomic-hub--particles .learning-banner-subtitle{margin:5px 0 0;font-size:14px;color:#626780}
 .learning-navigation{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:6px;margin:0 0 20px;border:1px solid #dfdcef;background:#faf9ff;border-radius:14px;position:relative;z-index:12}
 .learning-navigation>nav,.learning-navigation-actions{display:flex;align-items:center;gap:6px}
@@ -29,22 +29,14 @@
 .learning-availability button{border:1px solid #ddd8ed;border-radius:10px;background:#faf9ff;color:#606581;padding:10px 16px;min-height:42px;font-size:14px;cursor:pointer}
 .learning-availability button[aria-pressed=true]{color:#fff;background:#171a2f;border-color:#171a2f}
 .learning-availability small{font-size:12px;margin-left:8px;opacity:.8}
-.learning-discovery{display:grid;grid-template-columns:minmax(0,3fr) minmax(230px,1fr);gap:20px;align-items:stretch}
-.learning-search{display:flex;align-items:center;gap:9px;padding:10px 14px;border:1px solid #ded9ed;border-radius:12px;color:#7a7e95;background:#fbfaff}
-.learning-search input{border:0;outline:0;background:transparent;color:#333950;font:inherit;font-size:14px;min-width:0;width:100%}
-.learning-results-line{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 20px;color:#626780;font-size:13px;min-height:36px}
-.learning-results-line>span{margin-right:auto}
-.learning-results-line label{display:flex;align-items:center;gap:9px}
-.learning-results-line select{font:inherit;color:#555b77;border:1px solid #dbd5eb;border-radius:9px;background:#faf9ff;padding:8px}
-.learning-results-line>button{display:inline-flex;align-items:center;justify-content:center;border:0;background:none;color:#6a57bd;padding:8px;border-radius:8px;font:inherit;cursor:pointer}
-.atomic-hub--strict .particles-filterbar--strict{grid-template-columns:minmax(0,3fr) minmax(230px,1fr);margin:22px 0 0;gap:20px}
+.atomic-hub--strict .particles-filterbar--strict{grid-template-columns:minmax(0,3fr) minmax(230px,1fr);margin:22px 0 0;gap:var(--catalog-gap,16px)}
 .atomic-hub--particles .particles-directions{border-radius:12px;align-content:center;gap:4px}
 .atomic-hub--particles .particles-directions button{font-size:13px;min-height:38px;padding:8px 12px;line-height:22px}
 .atomic-hub--strict .particles-reference-search>input{padding:13px 16px;font-size:14px}
-.unified-learning-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.unified-learning-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--catalog-gap,16px)}
 .learning-course-resource{min-width:0;position:relative}
 .learning-resource-label{position:absolute;top:19px;left:calc(180px + 22px);z-index:2;display:inline-flex;background:#f0ecfc;border-radius:5px;color:#6554ae;padding:3px 8px;font-size:11px;line-height:18px;pointer-events:none}
-.atomic-hub--particles .unified-learning-grid .morph-course-card,.atomic-hub--particles .particle-course-card{position:relative;display:grid;grid-template-columns:180px minmax(0,1fr);height:auto;min-height:354px;border:1px solid #fff;border-radius:18px;background:#fff;overflow:hidden;box-shadow:none}
+.atomic-hub--particles .unified-learning-grid .morph-course-card,.atomic-hub--particles .particle-course-card{position:relative;display:grid;grid-template-columns:180px minmax(0,1fr);height:auto;min-height:354px;border:1px solid #fff;border-radius:20px;background:#fff;overflow:hidden;box-shadow:none}
 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-cover,.atomic-hub--particles .particle-course-cover{position:relative;min-height:336px;width:auto;height:auto;overflow:hidden;background:#f2f0fa;border-radius:0}
 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-cover>img{width:180px;height:290px;object-fit:contain;position:absolute;top:10px;left:0;max-width:none;transform:none}
 .atomic-hub--particles .particle-course-cover>img{width:180px;height:290px;top:10px;left:0;object-fit:contain}
@@ -52,7 +44,7 @@
 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-body,.atomic-hub--particles .particle-course-info{padding:20px 22px;gap:10px;display:flex;flex-direction:column;min-width:0;width:100%;box-sizing:border-box;align-self:stretch;justify-self:stretch}
 .atomic-hub--particles .unified-learning-grid .course-body>:is(h2,p,.small-meta,.card-actions){padding-left:0;padding-right:0;min-width:0}
 .atomic-hub--particles .unified-learning-grid .morph-course-card .classification{padding:0 0 0 76px;font-size:12px;line-height:24px;min-width:0;flex-wrap:wrap}
-.atomic-hub--particles .unified-learning-grid .morph-course-card h2,.atomic-hub--particles .particle-course-info h3{font-size:20px;line-height:28px;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex-shrink:0}
+.atomic-hub--particles .unified-learning-grid .morph-course-card h2,.atomic-hub--particles .particle-course-info h3{font-size:17px;line-height:26px;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex-shrink:0}
 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-body>p:not(.course-teacher),.atomic-hub--particles .particle-course-info>p{font-size:14px;line-height:23px;color:#626780;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .atomic-hub--particles .unified-learning-grid .course-teacher{margin:0;font-size:12px;line-height:20px;color:#74758b}
 .atomic-hub--particles .unified-learning-grid .course-readiness{display:block;font-size:11px}
@@ -75,3 +67,12 @@
 .atomic-hub--particles :is(button,input,select):focus-visible{outline:2px solid #7865d6;outline-offset:3px}
 @media(max-width:1250px){.atomic-hub--particles .unified-learning-grid .morph-course-card,.atomic-hub--particles .particle-course-card{grid-template-columns:150px minmax(0,1fr)}.learning-resource-label{left:172px}.atomic-hub--particles .particle-course-cover>img,.atomic-hub--particles .unified-learning-grid .morph-course-card .course-cover>img{width:150px}.learning-navigation button{padding-inline:14px}}
 @media(max-width:1000px){.unified-learning-grid{grid-template-columns:1fr}.learning-discovery,.atomic-hub--strict .particles-filterbar--strict{grid-template-columns:1fr}.learning-navigation{flex-wrap:wrap}.learning-navigation-actions{margin-left:auto}.learning-network-panel>header{padding:18px}.learning-catalog-heading{align-items:flex-start;flex-wrap:wrap}}
+
+.morph-v17 .home-course-strip .particle-course-card {
+  flex: 0 0 calc((100% - 24px) / 2);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+@media (max-width: 1100px) {
+  .morph-v17 .home-course-strip .particle-course-card { flex-basis: 90%; }
+}
