@@ -68,6 +68,10 @@ export async function storePrivateUpload(
   videoMaxBytes = MAX_UPLOAD_BYTES,
 ): Promise<StoredUpload> {
   if (part.fieldname !== "file") throw new BadRequestException("只允许提交名为 file 的单个文件字段");
+  const aliases: Record<string, string> = { 'application/javascript': 'text/javascript', 'application/x-javascript': 'text/javascript', 'text/x-markdown': 'text/markdown' };
+  const extension = path.extname(part.filename ?? '').toLowerCase();
+  const textTypes: Record<string, string> = { '.txt': 'text/plain', '.md': 'text/markdown', '.csv': 'text/csv', '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript' };
+  const declared = part.mimetype === 'application/octet-stream' ? (textTypes[extension] ?? part.mimetype) : (aliases[part.mimetype] ?? part.mimetype);
   const maxBytes = ["video/mp4", "video/webm"].includes(part.mimetype) ? videoMaxBytes : MAX_UPLOAD_BYTES;
   const sizeError = () => new PayloadTooLargeException(`该类型文件不能超过 ${maxBytes / 1024 / 1024} MiB`);
   const uploadRoot = path.resolve(root);
@@ -98,9 +102,9 @@ export async function storePrivateUpload(
     let mimeType = detectUploadMimeType(header);
     if (!mimeType && bytes <= MAX_UPLOAD_BYTES) {
       const fileBytes = await readFile(temporaryPath);
-      mimeType = detectOfficeMimeType(fileBytes) ?? detectTextMimeType(part.mimetype, fileBytes);
+      mimeType = detectOfficeMimeType(fileBytes) ?? detectTextMimeType(declared, fileBytes);
     }
-    if (!mimeType || mimeType !== part.mimetype || !permittedMimeTypes.includes(mimeType)) {
+    if (!mimeType || mimeType !== declared || !permittedMimeTypes.includes(mimeType)) {
       throw new BadRequestException("文件内容与声明类型不一致，或类型不被允许");
     }
     await rename(temporaryPath, destinationPath);

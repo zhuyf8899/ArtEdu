@@ -1,4 +1,4 @@
-import { mountQuality, frameBudget } from './displayQuality.js';
+import { mountQuality } from './displayQuality.js';
 
 /* ============================================================
    原子课程背景：提取自用户提供的 codefield.js（无依赖 / 2D Canvas）
@@ -10,8 +10,7 @@ import { mountQuality, frameBudget } from './displayQuality.js';
    - prefers-reduced-motion：渲染一帧静态图案
    ============================================================ */
 export function mountAtomic(root) { return mountQuality(root, mountEffect); }
-function mountEffect(root, quality) {
-const reportFrame = frameBudget(quality);
+function mountEffect(root, quality, reportFrame) {
   'use strict';
 
   var canvas = root.querySelector('#effect-canvas');
@@ -204,12 +203,13 @@ const reportFrame = frameBudget(quality);
   function frame(now) {
     raf = null;
     if (!running) return;
-    if (lastTime !== null && now-lastTime < 1000/quality.fps-1) { raf = requestAnimationFrame(frame); return; }
-    var dt = lastTime === null ? 0 : Math.min((now - lastTime) / 1000, 0.04);
+    const interval = lastTime === null ? 0 : now-lastTime;
+    if (interval && interval < 1000/quality.fps-1) { raf = requestAnimationFrame(frame); return; }
+    var dt = Math.min(interval / 1000, 0.1);
     lastTime = now;
     // 保留原来的时间尺度：60fps 时约每帧 0.011。
     t += dt * 0.66;
-    const started = performance.now(); sweep(perFrame); reportFrame(performance.now()-started);
+    const started = performance.now(); sweep(perFrame); reportFrame(performance.now()-started,interval);
     raf = requestAnimationFrame(frame);
   }
 

@@ -10,7 +10,7 @@ import './atomic-learning.css';
 import { atomicAttachmentAccept,selectAtomicAttachments,saveAtomicAttachments } from './atomicAttachments.js';
 import { returnContext,withReturnTarget } from './resourceContext.js';
 import { AtomicKnowledgeBindings } from './AtomicKnowledgeBindings.jsx';
-import {AtomicParticlesHeader,AtomicCourseNetwork,AtomicDirectionFilters,AtomicParticleCard,AtomicCatalogTools} from './morph/AtomicParticles.jsx';
+import {AtomicParticlesHeader,AtomicDirectionFilters,AtomicParticleCard,AtomicCatalogTools} from './morph/AtomicParticles.jsx';
 import {HandoffSeriesView,handoffSeriesId} from './morph/HandoffSeriesView.jsx';
 import {LearningNavigation,LearningNetworkPanel} from './morph/AtomicParticles.jsx';
 import {UnifiedCourseCatalog} from './morph/UnifiedCourseCatalog.jsx';

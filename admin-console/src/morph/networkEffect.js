@@ -1,8 +1,7 @@
-import { mountQuality, frameBudget } from './displayQuality.js';
+import { mountQuality } from './displayQuality.js';
 
 export function mountNetwork(root) { return mountQuality(root, mountEffect); }
-function mountEffect(root, quality) {
-const reportFrame = frameBudget(quality);
+function mountEffect(root, quality, reportFrame) {
 const BG='#F2F1FA',P=[99,82,237],Y=[221,247,68],TAU=Math.PI*2;
 const SPEED=1.6,RANGE=160;
 const stage=root.querySelector('#effect-stage'),canvas=root.querySelector('#effect-canvas'),ctx=canvas.getContext('2d');
@@ -159,11 +158,18 @@ function resize(){
 const r=stage.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,quality.dpr);
 canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);draw();
 }
+if (!quality.fps) {
+  const observer=new ResizeObserver(resize);
+  observer.observe(stage);
+  resize();
+  return ()=>observer.disconnect();
+}
 function frame(now){
 raf=0;if(paused||!visible||document.hidden)return;
-if(last && now-last < 1000/quality.fps-1){raf=requestAnimationFrame(frame);return;}
-const dt=last?Math.min((now-last)/1000,.04):0;last=now;
-const started=performance.now();update(dt);draw();reportFrame(performance.now()-started);raf=requestAnimationFrame(frame);
+const interval=last?now-last:0;
+if(interval&&interval<1000/quality.fps-1){raf=requestAnimationFrame(frame);return;}
+const dt=Math.min(interval/1000,.1);last=now;
+const started=performance.now();update(dt);draw();reportFrame(performance.now()-started,interval);raf=requestAnimationFrame(frame);
 }
 function start(){last=0;if(!raf&&!paused&&!reduced.matches&&visible&&!document.hidden)raf=requestAnimationFrame(frame)}
 function stop(){cancelAnimationFrame(raf);raf=0;last=0}

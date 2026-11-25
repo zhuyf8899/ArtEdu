@@ -29,3 +29,4 @@
 .document-preview>audio{margin:24px auto;width:min(600px,90%)}
 .document-preview-dialog :is(button,a,select):focus-visible{outline:2px solid #6554e8;outline-offset:3px}
 .course-material__preview-button{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border:1px solid #ded8f6;border-radius:9px;background:#6554e8;color:#fff;font-size:14px;cursor:pointer}
+.document-preview__markdown{flex:1;min-height:0;padding:24px;overflow:auto;background:#fff;overflow-wrap:anywhere}

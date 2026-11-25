@@ -1,4 +1,4 @@
-import {createElement,useEffect,useRef,useState} from 'react';
+import {createElement,memo,useCallback,useEffect,useRef,useState} from 'react';
 import {ArrowUpRight,X} from '@phosphor-icons/react';
 import networkTemplate from './atomicReferenceNetwork.json';
 import {atomicRequest} from '../services/adminApi.js';
@@ -21,17 +21,38 @@ function ReferenceElement({node,onSelect,onNavigate,root=false}){
  }
  return createElement(node.tag,props,...node.children.map((child,index)=>typeof child==='string'?referenceText(child):<ReferenceElement node={child} key={index} onSelect={onSelect} onNavigate={onNavigate}/>));
 }
+const ReferenceIllustration = memo(function ReferenceIllustration({onSelect,onNavigate}){
+ return <ReferenceElement node={networkTemplate} root onSelect={onSelect} onNavigate={onNavigate}/>;
+});
 export function AtomicReferenceNetwork({accountId,serial,onNavigate}){
  const root=useRef(null),[topic,setTopic]=useState(''),[data,setData]=useState({items:[]}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
+ const [resourcesRequested,setResourcesRequested]=useState(false);
+ const selectTopic=useCallback(value=>{setTopic(value);setResourcesRequested(true);},[]);
  useEffect(()=>{
   const wrapper=root.current,network=wrapper.querySelector('.knowledge-network'),graph=wrapper.querySelector('.knowledge-graph');
   // Original source's sizeGraph algorithm. Scaling the whole coordinate system
   // preserves its handoff composition instead of changing the node topology.
-  const resize=()=>{const style=getComputedStyle(network),stacked=innerWidth<=1000,available=network.clientWidth-parseFloat(style.paddingLeft)*2-(stacked?0:parseFloat(style.gridTemplateColumns.split(' ')[0])+parseFloat(style.columnGap)),scale=Math.min(1,available/1204);graph.style.transform=`scale(${scale})`;graph.style.marginBottom=`${-500*(1-scale)}px`;if(!stacked)network.style.setProperty('height',Math.max(wrapper.closest('.learning-network-panel')?(network.querySelector('.network-intro')?.scrollHeight||500)+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom):400,500*scale+50)+'px','important');else network.style.removeProperty('height');};
-  const observer=new ResizeObserver(resize);observer.observe(network);resize();return()=>observer.disconnect();
+  const intro=network.querySelector('.network-intro');
+  let previousWidth,previousStacked,previousIntroHeight;
+  const resize=()=>{
+   const width=network.clientWidth,stacked=innerWidth<=1000,introHeight=stacked?0:intro?.scrollHeight;
+   if(width===previousWidth&&stacked===previousStacked&&introHeight===previousIntroHeight)return;
+   previousWidth=width;previousStacked=stacked;previousIntroHeight=introHeight;
+   const style=getComputedStyle(network),available=width-parseFloat(style.paddingLeft)*2-(stacked?0:parseFloat(style.gridTemplateColumns.split(' ')[0])+parseFloat(style.columnGap));
+   const scale=Math.max(0,Math.min(1,available/1204));
+   graph.style.transform=`scale(${scale})`;graph.style.marginBottom=`${-500*(1-scale)}px`;
+   if(!stacked)network.style.setProperty('height',Math.max(wrapper.closest('.learning-network-panel')?(introHeight||500)+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom):400,500*scale+50)+'px','important');
+   else network.style.removeProperty('height');
+  };
+  const observer=new ResizeObserver(resize);
+  observer.observe(network);
+  if(intro)observer.observe(intro);
+  window.addEventListener('resize',resize);
+  resize();
+  return()=>{observer.disconnect();window.removeEventListener('resize',resize);};
  },[]);
- useEffect(()=>{let active=true;setLoading(true);setError('');atomicRequest('/network').then(result=>{if(active)setData(result);}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[accountId,serial,attempt]);
- return <div className="atomic-reference-scope" ref={root}><ReferenceElement node={networkTemplate} root onSelect={setTopic} onNavigate={onNavigate}/>{topic&&<ReferenceTopicDialog topic={topic} data={data} loading={loading} error={error} onRetry={()=>setAttempt(v=>v+1)} onClose={()=>setTopic('')} onNavigate={onNavigate}/>}</div>;
+ useEffect(()=>{if(!resourcesRequested)return;let active=true;setLoading(true);setError('');atomicRequest('/network').then(result=>{if(active)setData(result);}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[accountId,serial,attempt,resourcesRequested]);
+ return <div className="atomic-reference-scope" ref={root}><ReferenceIllustration onSelect={selectTopic} onNavigate={onNavigate}/>{topic&&<ReferenceTopicDialog topic={topic} data={data} loading={loading} error={error} onRetry={()=>setAttempt(v=>v+1)} onClose={()=>setTopic('')} onNavigate={onNavigate}/>}</div>;
 }
 function ReferenceTopicDialog({topic,data,loading,error,onRetry,onClose,onNavigate}){
  const dialog=useRef(null),words=topic.replaceAll('\n','').split(/[、与\s/]+/).filter(word=>word.length>=2),matches=data.items.filter(item=>words.some(word=>(item.title||'').includes(word))),items=matches.length?matches:data.items.filter(item=>item.kind==='teaching').slice(0,6);

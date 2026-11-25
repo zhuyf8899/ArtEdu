@@ -12,6 +12,11 @@ import { courseCardState, courseDirections } from './curriculumModel.js';
 import { courseProgress } from '../courseProgress.js';
 import {useScopedViewState} from '../useScopedViewState.js';
 import {withReturnTarget} from '../resourceContext.js';
+import { atomicRequest } from '../services/adminApi.js';
+import { atomicUrl } from '../atomicModel.js';
+import { atomicCardState, atomicCover } from './atomicParticlesModel.js';
+import { MorphLink } from './MorphChrome.jsx';
+import './home-recommendations.css';
 
 export function MorphPageBanner({title,eyebrow,children}) {
   const root=useRef(null);
@@ -66,7 +71,98 @@ function MorphCourseConnections({courses,onOpen,onNavigate}) {
 }
 
 export function MorphCaseCard({work,onOpen}) {return <article className="case-card morph-case-card"><button className="case-cover" onClick={()=>onOpen(work)} aria-label={`查看 ${work.title}`}>{work.previewUrl?<img src={work.previewUrl} alt={work.title} loading="lazy"/>:<div className="morph-case-empty"><ImageSquare size={36}/><span>作品暂无封面</span></div>}<span className="case-category">{work.discipline||'艺术创作'}</span></button><div className="case-body"><small className="morph-case-author">{work.creators?.join('、')||work.author||'未署名'}</small><h2><button className="title-button" onClick={()=>onOpen(work)}>{work.title}</button></h2><p>{work.summary}</p><div className="chips">{[...new Set([...(work.methods??[]),...(work.tools??[])])].slice(0,4).map(t=><span key={t} className="chip">{t}</span>)}</div><div className="case-actions"><span className="metrics"><Heart size={15}/>{work.likeCount??0}<BookmarkSimple size={15}/>{work.favoriteCount??0}</span><button className="button secondary" onClick={()=>onOpen(work)}>查看案例 <ArrowUpRight size={15}/></button></div></div></article>;}
-export function MorphHomeRecommendations({data,onNavigate}) {
-  const strip=useRef(null);
-  return <div className="home-recommendations container"><section className="home-section"><header className="home-section-heading"><div><span className="eyebrow">LEARN IN SMALL STEPS</span><h2>从现在可学的课程开始</h2><p>用一段专注的时间，掌握一个能立即用于创作的设计方法。</p></div><div className="gallery-actions"><button className="gallery-arrow" aria-label="向前浏览课程" onClick={()=>strip.current?.scrollBy({left:-600,behavior:'smooth'})}><ArrowLeft size={18}/></button><button className="gallery-arrow" aria-label="向后浏览课程" onClick={()=>strip.current?.scrollBy({left:600,behavior:'smooth'})}><ArrowRight size={18}/></button><button className="morph-text-link" onClick={()=>onNavigate('/learning?library=courses')}>查看全部 <ArrowUpRight size={16}/></button></div></header>{data.courses.some(c=>c.availability!=='coming_soon')?<div className="home-course-strip" ref={strip} tabIndex={0} aria-label="原子课程，横向滚动">{data.courses.filter(c=>c.availability!=='coming_soon').map(c=><MorphCourseCard key={c.id} course={c} onOpen={id=>onNavigate(withReturnTarget('/learning?course='+encodeURIComponent(id)))} onCompose={id=>onNavigate(withReturnTarget('/curriculum?course='+encodeURIComponent(id)))}/>)}</div>:<p className="empty">暂无已发布课程</p>}</section><section className="home-section"><header className="home-section-heading"><div><span className="eyebrow">SELECTED WORKS</span><h2>精彩案例</h2><p>从真实创作中发现灵感，把值得学习的方法带回你的下一次设计。</p></div><button className="morph-text-link" onClick={()=>onNavigate('/community')}>查看全部 <ArrowUpRight size={16}/></button></header><div className="morph-home-cases">{data.works.slice(0,6).map(w=><MorphCaseCard key={w.id} work={w} onOpen={work=>onNavigate(withReturnTarget('/community?work='+encodeURIComponent(work.id)))}/>)}</div>{!data.works.length&&<p className="empty">暂无已发布案例</p>}</section></div>;
+export function MorphHomeRecommendations({ data, onNavigate }) {
+  const strip = useRef(null);
+  const [atoms, setAtoms] = useState([]);
+  const [loadState, setLoadState] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
+  const [scroll, setScroll] = useState({ back: false, forward: false });
+
+  useEffect(() => {
+    let active = true;
+    async function loadAtoms() {
+      const recommended = [];
+      let seen = 0;
+      try {
+        for (let page = 1; active && page <= 10000; page += 1) {
+          const { items, total } = await atomicRequest(`/catalog?view=atoms&page=${page}`);
+          recommended.push(...items.filter(item => item.kind === 'teaching' && item.status === 'published'));
+          seen += items.length;
+          if (recommended.length >= 8 || seen >= total || !items.length) break;
+        }
+        if (active) {
+          setAtoms(recommended.slice(0, 8));
+          setLoadState('ready');
+        }
+      } catch {
+        if (active) setLoadState('error');
+      }
+    }
+    void loadAtoms();
+    return () => { active = false; };
+  }, [attempt]);
+
+  useEffect(() => {
+    const rail = strip.current;
+    if (!rail) return;
+    const measure = () => setScroll({
+      back: rail.scrollLeft > 1,
+      forward: rail.scrollWidth - rail.clientWidth - rail.scrollLeft > 1,
+    });
+    const observer = new ResizeObserver(measure);
+    observer.observe(rail);
+    rail.addEventListener('scroll', measure, { passive: true });
+    measure();
+    return () => {
+      observer.disconnect();
+      rail.removeEventListener('scroll', measure);
+    };
+  }, [atoms]);
+
+  function browse(direction) {
+    const rail = strip.current;
+    rail?.scrollBy({ left: direction * rail.clientWidth });
+  }
+
+  return <div className="home-recommendations container">
+    <section className="home-section" aria-labelledby="home-atoms-title">
+      <header className="home-section-heading">
+        <div><h2 id="home-atoms-title">从一门原子课程开始</h2><p>用一段专注的时间，掌握一个能立即用于创作的设计方法。</p></div>
+        <div className="gallery-actions">
+          {atoms.length > 0 && <>
+            <button type="button" className="gallery-arrow" aria-label="向前浏览学习原子" disabled={!scroll.back} onClick={() => browse(-1)}><ArrowLeft size={18}/></button>
+            <button type="button" className="gallery-arrow" aria-label="向后浏览学习原子" disabled={!scroll.forward} onClick={() => browse(1)}><ArrowRight size={18}/></button>
+          </>}
+          <MorphLink className="morph-text-link" href="/learning?library=atoms" onNavigate={onNavigate} aria-label="查看全部学习原子">查看全部 <ArrowUpRight size={16}/></MorphLink>
+        </div>
+      </header>
+      {loadState === 'loading' && <p className="empty" role="status">正在加载学习原子…</p>}
+      {loadState === 'error' && <div className="empty" role="status">学习原子加载失败。 <button type="button" className="button secondary" onClick={() => { setLoadState('loading'); setAttempt(value => value + 1); }}>重试</button></div>}
+      {loadState === 'ready' && !atoms.length && <p className="empty">暂无已发布的教学原子</p>}
+      {atoms.length > 0 && <div className="home-atom-strip" ref={strip} tabIndex={0} role="region" aria-label="推荐学习原子，横向滚动">
+        {atoms.map(item => {
+          const { action } = atomicCardState(item);
+          return <article className="home-atom-card" key={`${item.id}@${item.revision}`}>
+            <img className="home-atom-cover" src={atomicCover(item)} alt="" loading="lazy"/>
+            <div className="home-atom-info">
+              <span className="home-atom-meta">{[item.direction, item.minutes > 0 ? `${item.minutes} 分钟` : ''].filter(Boolean).join(' · ')}</span>
+              <h3>{item.title}</h3>
+              <p>{item.summary}</p>
+              {(item.teacherName || item.author) && <small>{item.teacherName || item.author}</small>}
+              <MorphLink className="button home-atom-action" href={withReturnTarget(atomicUrl(item.id, item.revision))} onNavigate={onNavigate} aria-label={`${action}：${item.title}`}>
+                {action}<ArrowUpRight size={15}/>
+              </MorphLink>
+            </div>
+          </article>;
+        })}
+      </div>}
+    </section>
+    <section className="home-section" aria-labelledby="home-cases-title">
+      <header className="home-section-heading">
+        <div><h2 id="home-cases-title">精彩案例</h2><p>从真实创作中发现灵感，把值得学习的方法带回你的下一次设计。</p></div>
+        <MorphLink className="morph-text-link" href="/community" onNavigate={onNavigate} aria-label="查看全部案例">查看全部 <ArrowUpRight size={16}/></MorphLink>
+      </header>
+      {data.works.length > 0 ? <div className="morph-home-cases">{data.works.slice(0, 8).map(work => <MorphCaseCard key={work.id} work={work} onOpen={item => onNavigate(withReturnTarget('/community?work=' + encodeURIComponent(item.id)))}/>)}</div> : <p className="empty">暂无已发布案例</p>}
+    </section>
+  </div>;
 }

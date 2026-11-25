@@ -1,3 +1,4 @@
+import { LocalBridgeModule } from './modules/local-bridge/local-bridge.module';
 import {WorkflowFeatureGuard} from "./modules/studio/workflow-feature";
 import { ObjectStorageModule } from './modules/object-storage/object-storage.module';
 /**
@@ -25,7 +26,7 @@ import { AtomicModule } from "./modules/atomic/atomic.module";
 
 // @Module 是 NestJS 的模块说明；Nest 根据它自动创建并连接各服务的依赖。
 @Module({
-  imports: [ObjectStorageModule, DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, CreationStorageModule, GenerationModule, LearningModule, KnowledgeModule, PortalModule, RagModule, StudioModule, MorphModule, AtomicModule],
+  imports: [LocalBridgeModule, ObjectStorageModule, DatabaseModule, AuthModule, AdminModule, AgentModule, CoursesModule, CreationStorageModule, GenerationModule, LearningModule, KnowledgeModule, PortalModule, RagModule, StudioModule, MorphModule, AtomicModule],
   controllers: [HealthController],
   providers: [CloudCacheService, { provide: APP_GUARD, useClass: AuthenticationGuard }, {provide:APP_GUARD,useClass:WorkflowFeatureGuard}],
 })

@@ -4,6 +4,7 @@ import {lockPageScroll} from './pageScrollLock.js';
 import { ArrowClockwise, CaretLeft, CaretRight, DownloadSimple, X } from '@phosphor-icons/react';
 import { MAX_PREVIEW_BYTES, previewKind, readPreviewBlob, verifyOfficeArchive } from './documentPreview.js';
 import './document-preview.css';
+import { AiMarkdown } from './AiMarkdown.js';
 
 const officeShell = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob: data:; font-src blob: data:; connect-src 'none'; script-src 'none'; base-uri 'none'; form-action 'none'"><style>html,body{margin:0;min-height:100%;background:#efedf6;color:#17192f;font-family:Arial,'Microsoft YaHei',sans-serif}#pages{padding:20px;box-sizing:border-box;min-height:100vh}.docx-wrapper{background:transparent!important;padding:0!important}.docx-wrapper>section.docx{max-width:100%;box-sizing:border-box;margin:0 auto 20px!important;box-shadow:0 2px 16px #17192f12!important}img,svg{max-width:100%}a{pointer-events:none}*{box-sizing:border-box}</style></head><body><main id="pages"></main></body></html>`;
 
@@ -13,6 +14,7 @@ export function DocumentPreview({ blob, src, fileName = '', mimeType = '' }) {
   const [source, setSource] = useState(null), [attempt, setAttempt] = useState(0), [ready, setReady] = useState(0);
   const [state, setState] = useState({ loading: true, error: '', text: '', url: '', pages: 0, page: 0 });
   const kind = previewKind(fileName, source?.type || mimeType);
+  const isMarkdown = /\.md$/i.test(fileName) || (source?.type || mimeType).split(';')[0] === 'text/markdown';
   useEffect(() => {
     const abort = new AbortController(); let cancelled = false;
     setSource(null); setState({ loading: true, error: '', text: '', url: '', pages: 0, page: 0 });
@@ -91,7 +93,9 @@ export function DocumentPreview({ blob, src, fileName = '', mimeType = '' }) {
     {state.error && <div className="document-preview__status" role="alert"><strong>暂时无法预览</strong><p>{state.error}</p><button onClick={() => setAttempt(value => value + 1)}><ArrowClockwise size={16} />重新尝试</button></div>}
     {['docx','pptx'].includes(kind) && <iframe ref={frame} className={state.error ? 'is-hidden' : ''} title={`${fileName}正文`} sandbox="allow-same-origin" srcDoc={officeShell} onLoad={() => setReady(value => value + 1)} />}
     {!state.error && state.url && (kind === 'pdf' ? <iframe src={state.url} title={`${fileName} PDF 预览`} /> : kind === 'image' ? <img src={state.url} alt={fileName} /> : kind === 'video' ? <video controls src={state.url} /> : <audio controls src={state.url} />)}
-    {!state.error && kind === 'text' && !state.loading && <pre>{state.text}</pre>}
+    {!state.error && kind === 'text' && !state.loading && (isMarkdown
+      ? <div className="document-preview__markdown"><AiMarkdown>{state.text}</AiMarkdown></div>
+      : <pre>{state.text}</pre>)}
   </section>;
 }
 

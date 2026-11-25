@@ -1,13 +1,12 @@
-import { mountQuality, frameBudget } from './displayQuality.js';
+import { mountQuality } from './displayQuality.js';
 export function mountMorphCosmos(root) { return mountQuality(root, mountEffect); }
-function mountEffect(root, quality) {
-const reportFrame = frameBudget(quality);
+function mountEffect(root, quality, reportFrame) {
 const controller = new AbortController();
 const listen = (target, type, handler) => target.addEventListener(type, handler, {signal:controller.signal});
 const byId = id => root.querySelector('#' + id);
 const hero=root,canvas=byId('universe'),ctx=canvas.getContext('2d'),dust=byId('word-dust'),dc=dust.getContext('2d');
 if (!ctx || !dc) return;
-let W=0,H=0,dpr=1,particles=[],stars=[],raf=0,last=0,time=0,visible=true;
+let W=0,H=0,dpr=1,particles=[],linkNodes=[],stars=[],raf=0,last=0,time=0,visible=true;
 const paused = !quality.fps;
 const pointer={x:0,y:0},mouse={x:0,y:0};
 let seed=3862238;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};const mix=(a,b,t)=>a+(b-a)*t;const smooth=x=>x*x*(3-2*x);const TAU=Math.PI*2;
@@ -40,6 +39,7 @@ function populate(){seed=3862238;particles=[];stars=[];const count=Math.round((W
  const sortedX=[...particles].sort((a,b)=>a.gx-b.gx),sortedY=[...particles].sort((a,b)=>a.gy-b.gy);
  sortedX.forEach((p,i)=>p.nx=.015+.97*Math.pow((i+.5)/count,.69));
  sortedY.forEach((p,i)=>p.ny=.015+.97*((i+.5)/count));
+ linkNodes=particles.filter((_,i)=>i%20===0&&i%7!==0);
 }
 const words=[...root.querySelectorAll('.floating-words span')],vocabulary=['灵感的引力','无界的想象','思维的星系','创意的涌现','算法的诗意','感知的边界','智能共生','生成未来','设计的可能','艺术与科技','想象的轨迹','灵感生长','BEYOND FORM','CREATIVE GRAVITY','ART × AI','DESIGN FUTURES','GENERATIVE VISIONS','HUMAN × MACHINE','INFINITE IDEAS','POETIC COMPUTATION','PERCEPTION','IMAGINATION'];let wordMaps=[];
 function setupWords(){wordMaps=words.map((el,i)=>({el,angle:random()*TAU,r:.2+random()*.33,z:random()*.45-.22,offset:random()*16,period:10+random()*8,index:-1}));}
@@ -48,7 +48,7 @@ function drawWords(){for(let i=0;i<wordMaps.length;i++){const p=wordMaps[i],life
 function resize(){const r=hero.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,quality.dpr);for(const c of [canvas,dust]){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);}ctx.setTransform(dpr,0,0,dpr,0,0);dc.setTransform(dpr,0,0,dpr,0,0);hero.style.setProperty('--glow-scale',Math.min(W/1920,1));populate();setupWords();paint(0);}
 const readShape = () => root.dataset.visual === 'eye' ? 0 : 1;
 let shape=readShape(),shapeTarget=shape,rotationTime=0;
-function paint(dt){if(dt){const step=dt/2.8;shape+=Math.sign(shapeTarget-shape)*Math.min(Math.abs(shapeTarget-shape),step)}mouse.x=mix(mouse.x,pointer.x,.035);mouse.y=mix(mouse.y,pointer.y,.035);ctx.clearRect(0,0,W,H);ctx.globalCompositeOperation='lighter';
+function paint(dt){if(!W||!H)return;if(dt){const step=dt/2.8;shape+=Math.sign(shapeTarget-shape)*Math.min(Math.abs(shapeTarget-shape),step)}mouse.x=mix(mouse.x,pointer.x,.035);mouse.y=mix(mouse.y,pointer.y,.035);ctx.clearRect(0,0,W,H);ctx.globalCompositeOperation='lighter';
  for(const s of stars){const x=((s.x*W+Math.sin(time*.03+s.p)*14+mouse.x*s.z*16)%W+W)%W,y=s.y*H+Math.cos(time*.04+s.p)*7+mouse.y*s.z*10;ctx.fillStyle=`rgba(217,221,255,${(.13+.2*(.5+.5*Math.sin(time*.6+s.p)))*(1-s.z*.5)})`;ctx.fillRect(x,y,.45+s.size,.45+s.size);}
  const scale=W<700?W*1.35:W*.73,cx=W*(W<700?.57:.54),cy=H*(W<700?.385:.415);
  // Rotate a volumetric star field, then project it through a moving focal plane.
@@ -116,7 +116,7 @@ ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';drawLinks();drawWor
 
 function drawLinks(){
  dc.clearRect(0,0,W,H);const networkOpacity=smooth(Math.max(0,Math.min(1,(shape-.58)/.42)));if(!networkOpacity||!W)return;dc.lineWidth=.7;dc.globalCompositeOperation='lighter';
- const nodes=particles.filter((p,i)=>i%20===0&&i%7!==0),reach=Math.min(160,W*.105),cell=reach;
+ const nodes=linkNodes,reach=Math.min(160,W*.105),cell=reach;
  const grid=new Map();
  for(let i=0;i<nodes.length;i++){const p=nodes[i],key=Math.floor(p.px/cell)+','+Math.floor(p.py/cell);if(!grid.has(key))grid.set(key,[]);grid.get(key).push(i);}
  for(let i=0;i<nodes.length;i++){
@@ -134,7 +134,7 @@ function drawLinks(){
  }
  dc.globalCompositeOperation='source-over';
 }
-function tick(now){raf=0;if(last && now-last < 1000/quality.fps-1){raf=requestAnimationFrame(tick);return;}if(paused||document.hidden||!visible){last=0;return;}const dt=last?Math.min((now-last)/1000,.05):0;last=now;time+=dt;const started=performance.now();paint(dt);reportFrame(performance.now()-started);raf=requestAnimationFrame(tick);}
+function tick(now){raf=0;if(paused||document.hidden||!visible){last=0;return;}const interval=last?now-last:0;if(interval&&interval<1000/quality.fps-1){raf=requestAnimationFrame(tick);return;}const dt=Math.min(interval/1000,.1);last=now;time+=dt;const started=performance.now();paint(dt);reportFrame(performance.now()-started,interval);raf=requestAnimationFrame(tick);}
 function sync(){cancelAnimationFrame(raf);raf=0;last=0;if(!paused&&!document.hidden&&visible)raf=requestAnimationFrame(tick);}
 listen(hero,'pointermove',e=>{const r=hero.getBoundingClientRect();pointer.x=(e.clientX-r.left)/W-.5;pointer.y=(e.clientY-r.top)/H-.5;});listen(hero,'pointerleave',()=>{pointer.x=pointer.y=0});
 listen(document, 'visibilitychange', sync);
