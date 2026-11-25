@@ -207,13 +207,27 @@ function BulkQuotaDrawer({ count, onClose, onSave }) {
 
 function ReviewsPage({ reviews, selectedReview, onSelectReview, canManageContent, showToast, onChanged, actor, onLearningNavigate, atomicPending, onAtomicPending }) {
   const [mode,setMode] = useState('review');
+  const canEditContent = actor.roles.some(role=>['admin','teacher'].includes(role));
+  const switchMode = next => {
+    if (next === mode) return;
+    const resume = () => setMode(next);
+    if (window.dispatchEvent(new CustomEvent('artedu:before-navigate', { cancelable: true, detail: { resume } }))) resume();
+  };
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
   const visibleReviews = reviews.filter((item) => (filter === "all" || item.status === filter) && `${item.id}${item.title}${item.author}${item.department ?? ""}`.toLowerCase().includes(query.toLowerCase()));
   return <div className="page-content reviews-page">
     <section className="review-page-heading"><div><p>CONTENT MODERATION</p><h1>内容审核</h1><span>分开处理作品与学习内容，核对正文、附件、来源和学习关联。</span></div><span className="review-pending-count"><Clock size={18} />{atomicPending+reviews.filter(item => item.status === "pending").length} 项待处理</span></section>
-    <nav className="admin-content-mode" aria-label="内容审核与管理"><button aria-pressed={mode === 'review'} onClick={() => setMode('review')}>作品审核队列</button><button aria-pressed={mode === 'atomic'} onClick={() => setMode('atomic')}>原子 / 课程 / 心得审核 · {atomicPending}</button>{canManageContent&&<><button aria-pressed={mode === 'content'} onClick={() => setMode('content')}>案例管理 / 回收站</button><button aria-pressed={mode==='tools'} onClick={()=>setMode('tools')}>工具推荐审核</button></>}</nav>
-    {mode==='tools'?<ToolRecommendationReview showToast={showToast}/>:mode==='atomic'?<Suspense fallback={<p role="status">正在读取学习内容审核…</p>}><AtomicReviewPanel account={actor} onNavigate={onLearningNavigate} onReviewTotal={onAtomicPending} onReviewed={onChanged}/></Suspense>:mode === 'content' ? <AdminCaseManager showToast={showToast} onChanged={onChanged} /> : <section className="review-workspace"><div className="review-queue">
+    <nav className="admin-content-mode" aria-label="内容审核与管理">
+      <button aria-pressed={mode === 'review'} onClick={() => switchMode('review')}>作品审核队列</button>
+      <button aria-pressed={mode === 'atomic'} onClick={() => switchMode('atomic')}>学习内容审核 · {atomicPending}</button>
+      {canEditContent && <button aria-pressed={mode === 'manage'} onClick={() => switchMode('manage')}>原子与课程管理</button>}
+      {(canEditContent || canManageContent) && <button aria-pressed={mode === 'content'} onClick={() => switchMode('content')}>案例管理 / 回收站</button>}
+      {canManageContent && <button aria-pressed={mode === 'tools'} onClick={() => switchMode('tools')}>工具推荐审核</button>}
+    </nav>
+    {mode==='tools'?<ToolRecommendationReview showToast={showToast}/>:mode==='atomic'||mode==='manage'?
+      <Suspense fallback={<p role="status">正在读取学习内容…</p>}><AtomicReviewPanel key={mode} library={mode==='manage'?'manage':'review'} account={actor} onNavigate={onLearningNavigate} onReviewTotal={onAtomicPending} onReviewed={onChanged}/></Suspense>:
+      mode === 'content' ? <AdminCaseManager showToast={showToast} onChanged={onChanged} canEdit={canEditContent}/> : <section className="review-workspace"><div className="review-queue">
       <div className="review-queue-toolbar"><div className="review-tabs" aria-label="审核状态筛选">{[["pending", "待审核"], ["approved", "已通过"], ["rejected", "已驳回"], ["all", "全部"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} className={filter === value ? "is-active" : ""} onClick={() => setFilter(value)}>{label}<span>{value === "all" ? reviews.length : reviews.filter(item => item.status === value).length}</span></button>)}</div><label className="queue-search"><MagnifyingGlass size={18} /><input aria-label="搜索审核作品" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索标题、作者或投稿编号" /></label></div>
       <div className="review-queue-caption"><span>{visibleReviews.length} 件作品</span><span>点击作品，打开完整审核工作区</span></div>
       <div className="queue-items">{visibleReviews.map(item => { const image = item.assetLinks?.find(asset => asset.mimeType?.startsWith("image/")); return <button key={item.id} className={selectedReview?.id === item.id ? "is-active" : ""} onClick={() => onSelectReview(item, visibleReviews)}><div className="file-tile">{image ? <img src={image.url} alt="" loading="lazy" /> : <FileImage size={25} />}</div><div className="queue-item__main"><span>{item.kind} · {reviewDate(item.submittedAt)}</span><strong>{item.title}</strong><small>{item.author} / {item.department || "未填写院系"}</small></div><div className="queue-item__meta"><span className={`review-status is-${item.status}`}>{reviewStatusLabels[item.status]}</span><small>{item.status==='approved'?'发布已生效 · 历史检测见详情':item.machineStatus}</small>{item.status==='pending'&&item.editorialIssues?.length > 0 && <em className="is-warning">待核对 {item.editorialIssues.length} 项</em>}</div><CaretDown className="review-queue-arrow" size={18} /></button>; })}{visibleReviews.length === 0 && <div className="empty-state"><ShieldCheck size={32} /><strong>{query ? "没有匹配的作品" : filter === "pending" ? "暂无待审核作品" : "暂无此状态的作品"}</strong><span>{query ? "试试其他标题或作者，或清除搜索条件。" : "切换状态可查看已处理作品。"}</span>{query && <button type="button" onClick={() => setQuery("")}>清除搜索</button>}</div>}</div>

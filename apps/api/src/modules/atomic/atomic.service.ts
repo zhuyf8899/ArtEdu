@@ -12,7 +12,7 @@ import { DatabaseService } from '../database/database.service';
 import { storePrivateUpload,workAssetMimeTypes } from '../studio/private-upload';
 import { atomPayload,coursePayload,type AtomPayload,type CoursePayload } from './atomic.contracts';
 
-type Node={id:string;kind:'teaching'|'reflection'|'course';owner_id:string;parent_id:string|null;published_revision:number|null};
+type Node={id:string;kind:'teaching'|'reflection'|'course';owner_id:string;parent_id:string|null;published_revision:number|null;archived_at?:Date|null};
 type Version={revision:number;status:string;payload:any};
 type Queryable={query(text:string,values?:any[]):Promise<{rows:any[];rowCount:number|null}>};
 const reviewer=(a:Actor)=>a.roles.some(r=>['admin','operator'].includes(r));
@@ -36,7 +36,7 @@ export class AtomicService {
     await c.query("INSERT INTO atomic_nodes(id,kind,owner_id) VALUES($1,'teaching',$2)",[n.id,actor.id]);
     await c.query('INSERT INTO atomic_versions(node_id,revision,payload) VALUES($1,1,$2)',[n.id,JSON.stringify(payload)]);
     await c.query('INSERT INTO atomic_starter_sources(owner_id,lesson_id,node_id) VALUES($1,$2,$3)',[actor.id,lesson.id,n.id]);
-    await this.audit(c,actor,n,1,'prepare_starter',`来自试学课时 ${lesson.id}；需作者检查并提交另一位审核人员审核`);
+    await this.audit(c,actor,n,1,'prepare_starter',`来自试学课时 ${lesson.id}；由作者核对后发布`);
     items.push({id:n.id,created:true});
    }
    return {items,created:items.filter(item=>item.created).length};
@@ -47,13 +47,13 @@ export class AtomicService {
   const result=await this.db.query(`SELECT n.id,v.revision,jsonb_build_object('title',v.payload->'title','summary',v.payload->'summary','direction',v.payload->'direction','knowledge',v.payload->'knowledge','minutes',v.payload->'minutes','completion',v.payload->'completion') AS payload,p.stage,p.feedback,p.updated_at AS "updatedAt",n.published_revision AS "publishedRevision"
    FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id
    LEFT JOIN atomic_progress p ON p.node_id=n.id AND p.revision=v.revision AND p.user_id=$1
-   WHERE n.kind='teaching' AND v.status='published' AND (v.revision=n.published_revision OR p.user_id=$1)
+   WHERE n.kind='teaching' AND n.archived_at IS NULL AND v.status='published' AND (v.revision=n.published_revision OR p.user_id=$1)
    ORDER BY n.id,v.revision DESC`,[actor.id]);
   return {items:result.rows};
  }
  async bindKnowledge(actor:Actor,id:string,input:{revision:number;knowledgeNodeIds:string[]}){
   return this.db.transaction(async c=>{
-   const n=await this.node(c,id,true);this.owner(actor,n);
+   const n=await this.node(c,id,true);this.owner(actor,n);this.requireActive(n);
    this.auth.requireAnyRole(actor,['teacher','admin']);
    if(n.kind!=='teaching')throw new BadRequestException('仅教学原子可关联能力知识点');
    const version=await c.query('SELECT revision FROM atomic_versions WHERE node_id=$1 AND revision=$2',[id,input.revision]);
@@ -78,13 +78,14 @@ export class AtomicService {
   const node=await this.db.query("SELECT id,title,description,domain FROM knowledge_nodes WHERE id=$1 AND status='published'",[id]);
   if(!node.rows.length)throw new NotFoundException('知识点不存在或尚未发布');
   const [atoms,edges]=await Promise.all([
-   this.db.query(`SELECT n.id,b.revision,v.payload->>'title' AS title,v.payload->>'summary' AS summary,v.payload->'minutes' AS minutes,p.stage,p.feedback FROM atomic_knowledge_bindings b JOIN atomic_nodes n ON n.id=b.atom_id JOIN atomic_versions v ON v.node_id=b.atom_id AND v.revision=b.revision LEFT JOIN atomic_progress p ON p.node_id=b.atom_id AND p.revision=b.revision AND p.user_id=$2 WHERE b.knowledge_node_id=$1 AND v.status='published' AND (n.published_revision=b.revision OR p.user_id=$2) ORDER BY n.id,b.revision DESC`,[id,actor.id]),
+   this.db.query(`SELECT n.id,b.revision,v.payload->>'title' AS title,v.payload->>'summary' AS summary,v.payload->'minutes' AS minutes,p.stage,p.feedback FROM atomic_knowledge_bindings b JOIN atomic_nodes n ON n.id=b.atom_id JOIN atomic_versions v ON v.node_id=b.atom_id AND v.revision=b.revision LEFT JOIN atomic_progress p ON p.node_id=b.atom_id AND p.revision=b.revision AND p.user_id=$2 WHERE b.knowledge_node_id=$1 AND n.archived_at IS NULL AND v.status='published' AND (n.published_revision=b.revision OR p.user_id=$2) ORDER BY n.id,b.revision DESC`,[id,actor.id]),
    this.db.query(`SELECT e.from_node_id AS "fromNodeId",e.to_node_id AS "toNodeId",e.relation FROM knowledge_edges e JOIN knowledge_nodes a ON a.id=e.from_node_id JOIN knowledge_nodes b ON b.id=e.to_node_id WHERE (e.from_node_id=$1 OR e.to_node_id=$1) AND a.status='published' AND b.status='published'`,[id])
   ]);
   return {node:node.rows[0],atoms:atoms.rows,edges:edges.rows};
  }
  private async node(client:Queryable,id:string,lock=false):Promise<Node>{const r=await client.query('SELECT * FROM atomic_nodes WHERE id=$1'+(lock?' FOR UPDATE':''),[id]);if(!r.rows[0])throw new NotFoundException('学习内容不存在');return r.rows[0];}
  private owner(actor:Actor,n:Node){if(n.owner_id!==actor.id&&!actor.roles.includes('admin'))throw new ForbiddenException('只能编辑自己创建的学习内容');}
+ private requireActive(n:Node){if(n.archived_at)throw new NotFoundException('学习内容已移入回收站');}
  // Teachers moderate supplements to their own atoms, never unrelated private drafts.
  private async responsibleTeacher(client:Queryable,actor:Actor,n:Node){
   if(!actor.roles.includes('teacher')||n.kind!=='reflection'||!n.parent_id)return false;
@@ -97,8 +98,8 @@ export class AtomicService {
   if(n.kind==='course'){
    const p=parseInput(coursePayload,input);
    for(const s of [...p.steps].sort((a,b)=>a.atomId.localeCompare(b.atomId))){
-    const r=await client.query(`SELECT n.kind,v.status FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id WHERE n.id=$1 AND v.revision=$2 FOR SHARE OF n`,[s.atomId,s.revision]);
-    if(!r.rows[0]||r.rows[0].kind==='course'||r.rows[0].status!=='published')throw new BadRequestException('课程只能引用已审核发布的原子版本');
+    const r=await client.query(`SELECT n.kind,v.status FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id WHERE n.id=$1 AND n.archived_at IS NULL AND v.revision=$2 FOR SHARE OF n`,[s.atomId,s.revision]);
+    if(!r.rows[0]||r.rows[0].kind==='course'||r.rows[0].status!=='published')throw new BadRequestException('课程只能引用在库且已发布的原子版本');
    }return p;
   }
   const p=parseInput(atomPayload,input);
@@ -108,20 +109,23 @@ export class AtomicService {
  }
  async list(actor:Actor,input:{view:string;query:string;page:number;direction?:string;stage?:string}){
   if(input.view==='review')this.auth.requireAnyRole(actor,['admin','operator','teacher']);
+  if(input.view==='manage')this.auth.requireAnyRole(actor,['admin','teacher']);
   // One visibility scope powers rows, counts and facets. Filtering happens before pagination,
   // so the category badges never count another user's drafts or just the current page.
   const result=await this.db.query(`WITH visible AS (
-   SELECT n.id,n.kind,n.owner_id AS "ownerId",n.parent_id AS "parentId",n.published_revision AS "publishedRevision",u.display_name AS author,v.revision,v.status,p.stage,v.payload,
+   SELECT n.id,n.kind,n.owner_id AS "ownerId",n.parent_id AS "parentId",n.published_revision AS "publishedRevision",u.display_name AS author,v.revision,CASE WHEN n.archived_at IS NULL THEN v.status ELSE 'archived' END AS status,p.stage,v.payload,
    n.created_at,p.updated_at AS learned_at,
    (SELECT parent.payload->>'title' FROM atomic_versions parent WHERE parent.node_id=n.parent_id AND parent.revision=source.published_revision) AS "parentTitle"
-   FROM atomic_nodes n JOIN users u ON u.id=n.owner_id LEFT JOIN atomic_nodes source ON source.id=n.parent_id JOIN LATERAL(SELECT * FROM atomic_versions av WHERE av.node_id=n.id AND CASE WHEN $1='mine' OR $1='review' THEN TRUE ELSE av.revision=n.published_revision END ORDER BY av.revision DESC LIMIT 1)v ON TRUE
+   FROM atomic_nodes n JOIN users u ON u.id=n.owner_id LEFT JOIN atomic_nodes source ON source.id=n.parent_id JOIN LATERAL(SELECT * FROM atomic_versions av WHERE av.node_id=n.id AND CASE WHEN $1 IN ('mine','review','manage') THEN TRUE ELSE av.revision=n.published_revision END ORDER BY av.revision DESC LIMIT 1)v ON TRUE
    LEFT JOIN atomic_progress p ON p.node_id=n.id AND p.revision=v.revision AND p.user_id=$2
-   WHERE CASE WHEN $1='mine' THEN n.owner_id=$2 WHEN $1='review' THEN v.status='pending_review' AND n.owner_id<>$2 AND ($5 OR (n.kind='reflection' AND source.owner_id=$2)) WHEN $1='courses' THEN n.kind='course' WHEN $1='learning' THEN FALSE ELSE n.kind<>'course' END
+   WHERE ($1='manage' OR n.archived_at IS NULL)
+   AND CASE WHEN $1='manage' THEN n.kind IN ('teaching','course') AND (n.owner_id=$2 OR $8)
+    WHEN $1='mine' THEN n.owner_id=$2 WHEN $1='review' THEN v.status='pending_review' AND n.owner_id<>$2 AND ($5 OR (n.kind='reflection' AND source.owner_id=$2)) WHEN $1='courses' THEN n.kind='course' WHEN $1='learning' THEN FALSE ELSE n.kind<>'course' END
    UNION ALL
    SELECT n.id,n.kind,n.owner_id,n.parent_id,n.published_revision,u.display_name,v.revision,v.status,p.stage,v.payload,n.created_at,p.updated_at,
    (SELECT parent.payload->>'title' FROM atomic_nodes source JOIN atomic_versions parent ON parent.node_id=source.id AND parent.revision=source.published_revision WHERE source.id=n.parent_id)
    FROM atomic_progress p JOIN atomic_nodes n ON n.id=p.node_id JOIN atomic_versions v ON v.node_id=p.node_id AND v.revision=p.revision JOIN users u ON u.id=n.owner_id
-   WHERE $1='learning' AND p.user_id=$2 AND v.status='published'
+   WHERE $1='learning' AND p.user_id=$2 AND v.status='published' AND n.archived_at IS NULL
   ), searched AS (
    SELECT * FROM visible v WHERE
    (v.payload->>'title' ILIKE $3 OR v.payload->>'summary' ILIKE $3 OR v.payload->>'objective' ILIKE $3 OR v.payload->>'knowledge' ILIKE $3)
@@ -132,10 +136,11 @@ export class AtomicService {
    CASE WHEN v.kind='course' THEN course_progress.started>0 ELSE v.stage IS NOT NULL END AS started
    FROM searched v LEFT JOIN LATERAL (
     SELECT count(*) FILTER(WHERE COALESCE((s->>'required')::boolean,true))::int AS required,
-    count(*) FILTER(WHERE COALESCE((s->>'required')::boolean,true) AND av.status='published' AND ap.stage='completed' AND (COALESCE(s->>'task','')='' OR t.stage='completed'))::int AS completed,
+    count(*) FILTER(WHERE COALESCE((s->>'required')::boolean,true) AND av.status='published' AND an.archived_at IS NULL AND ap.stage='completed' AND (COALESCE(s->>'task','')='' OR t.stage='completed'))::int AS completed,
     count(*) FILTER(WHERE ap.stage IS NOT NULL OR t.stage IS NOT NULL)::int AS started
     FROM jsonb_array_elements(COALESCE(v.payload->'steps','[]')) s
     LEFT JOIN atomic_versions av ON av.node_id=s->>'atomId' AND av.revision=(s->>'revision')::int
+    LEFT JOIN atomic_nodes an ON an.id=av.node_id
     LEFT JOIN atomic_progress ap ON ap.node_id=av.node_id AND ap.revision=av.revision AND ap.user_id=$2
     LEFT JOIN atomic_task_submissions t ON t.course_id=v.id AND t.revision=v.revision AND t.atom_id=s->>'atomId' AND t.user_id=$2
    ) course_progress ON v.kind='course'
@@ -143,13 +148,13 @@ export class AtomicService {
    SELECT * FROM decorated WHERE ($6='' OR direction=$6) AND ($7='' OR CASE WHEN required>0 AND completed=required THEN 'completed' WHEN started THEN 'in_progress' ELSE 'not_started' END=$7)
   ), page_rows AS (
    SELECT id,kind,"ownerId","parentId","parentTitle","publishedRevision",author,revision,status,stage,direction,
-    payload->>'title' AS title,payload->>'summary' AS summary,payload->>'teacherName' AS "teacherName",payload->>'teacherBio' AS "teacherBio",payload->'knowledge' AS knowledge,payload->'tools' AS tools,payload->'minutes' AS minutes,payload->>'visual' AS visual,payload->>'completion' AS completion,
+    payload->>'coverUrl' AS "coverUrl",payload->>'readiness' AS readiness,payload->>'title' AS title,payload->>'summary' AS summary,payload->>'teacherName' AS "teacherName",payload->>'teacherBio' AS "teacherBio",payload->'knowledge' AS knowledge,payload->'tools' AS tools,payload->'minutes' AS minutes,payload->>'visual' AS visual,payload->>'completion' AS completion,
     jsonb_array_length(COALESCE(payload->'assetIds','[]')) AS "assetCount",completed,required,started
    FROM filtered ORDER BY CASE WHEN $1='learning' THEN learned_at END DESC,created_at DESC,id,revision DESC LIMIT 24 OFFSET $4
   ) SELECT COALESCE((SELECT jsonb_agg(row_to_json(page_rows)) FROM page_rows),'[]') AS items,
     (SELECT count(*)::int FROM filtered) AS total,
     COALESCE((SELECT jsonb_object_agg(direction,count) FROM (SELECT direction,count(*)::int AS count FROM decorated GROUP BY direction) f),'{}') AS facets`,
-   [input.view,actor.id,`%${input.query}%`,(input.page-1)*24,reviewer(actor),input.direction??'',input.stage??'']);
+   [input.view,actor.id,`%${input.query}%`,(input.page-1)*24,reviewer(actor),input.direction??'',input.stage??'',actor.roles.includes('admin')]);
   return {...result.rows[0],page:input.page};
  }
  async network(actor:Actor){
@@ -159,10 +164,10 @@ export class AtomicService {
    CASE WHEN n.kind='course' THEN (SELECT jsonb_agg(jsonb_build_object('atomId',s->>'atomId','revision',s->'revision','required',s->'required','prerequisites',s->'prerequisites')) FROM jsonb_array_elements(v.payload->'steps') s) ELSE '[]'::jsonb END AS steps,COUNT(*) OVER()::int AS total
    FROM atomic_nodes n JOIN users u ON u.id=n.owner_id JOIN atomic_versions v ON v.node_id=n.id
    LEFT JOIN atomic_progress p ON p.node_id=n.id AND p.revision=v.revision AND p.user_id=$1
-   WHERE v.status='published' AND (v.revision=n.published_revision OR EXISTS (
+   WHERE n.archived_at IS NULL AND v.status='published' AND (v.revision=n.published_revision OR EXISTS (
     SELECT 1 FROM atomic_nodes cn JOIN atomic_versions cv ON cv.node_id=cn.id AND cv.revision=cn.published_revision
     CROSS JOIN LATERAL jsonb_array_elements(cv.payload->'steps') s
-    WHERE cn.kind='course' AND cv.status='published' AND s->>'atomId'=n.id AND (s->>'revision')::int=v.revision
+    WHERE cn.kind='course' AND cn.archived_at IS NULL AND cv.status='published' AND s->>'atomId'=n.id AND (s->>'revision')::int=v.revision
    )) ORDER BY (n.kind='course') DESC,n.created_at DESC,n.id,v.revision DESC LIMIT 300`,[actor.id]);
   return {items:result.rows.map(({total,...row})=>row),total:result.rows[0]?.total??0};
  }
@@ -171,7 +176,7 @@ export class AtomicService {
   if(input.kind==='reflection'&&!input.parentId)throw new BadRequestException('学习心得需要关联原子');
   if(input.kind!=='reflection'&&input.parentId)throw new BadRequestException('此类内容不能设置心得父节点');
   return this.db.transaction(async c=>{
-   if(input.parentId){const p=await this.node(c,input.parentId);if(p.kind==='course'||!p.published_revision)throw new BadRequestException('请选择已发布的原子作为心得分支');}
+   if(input.parentId){const p=await this.node(c,input.parentId);this.requireActive(p);if(p.kind==='course'||!p.published_revision)throw new BadRequestException('请选择已发布的原子作为心得分支');}
    const n:Node={id:randomUUID(),kind:input.kind,owner_id:actor.id,parent_id:input.parentId??null,published_revision:null};
    const p=await this.payload(c,actor,n,input.payload);
    await c.query('INSERT INTO atomic_nodes(id,kind,owner_id,parent_id) VALUES($1,$2,$3,$4)',[n.id,n.kind,n.owner_id,n.parent_id]);
@@ -181,22 +186,42 @@ export class AtomicService {
  }
  async save(actor:Actor,id:string,input:{expectedRevision:number;payload?:unknown}){
   return this.db.transaction(async c=>{
-   const n=await this.node(c,id,true);this.owner(actor,n);const previous=await this.latest(c,id);
-   if(previous.revision!==input.expectedRevision||previous.status==='pending_review')throw new ConflictException('内容已变化或正在审核，请刷新；审核中不能修改');
+   const n=await this.node(c,id,true);this.owner(actor,n);this.requireActive(n);const previous=await this.latest(c,id);
+   if(n.kind!=='reflection'&&!educator(actor))throw new ForbiddenException('仅教师和管理员可以修改教学内容');
+   if(previous.revision!==input.expectedRevision||(previous.status==='pending_review'&&n.kind==='reflection'))throw new ConflictException('内容已变化或正在审核，请刷新');
    const p=await this.payload(c,actor,n,input.payload),revision=previous.revision+1;
    await c.query('INSERT INTO atomic_versions(node_id,revision,payload) VALUES($1,$2,$3)',[id,revision,JSON.stringify(p)]);await this.audit(c,actor,n,revision,'save');
+   if(n.kind==='teaching')await c.query('INSERT INTO atomic_knowledge_bindings(atom_id,revision,knowledge_node_id,created_by) SELECT atom_id,$2,knowledge_node_id,$3 FROM atomic_knowledge_bindings WHERE atom_id=$1 AND revision=$4',[id,revision,actor.id,previous.revision]);
    return {id,revision};
   });
  }
  async submit(actor:Actor,id:string,revision:number){return this.db.transaction(async c=>{
-  const n=await this.node(c,id,true);this.owner(actor,n);const v=await this.latest(c,id);
-  if(v.revision!==revision||v.status!=='draft')throw new ConflictException('只能提交当前草稿；退回内容请先编辑为新草稿版本');
+  const n=await this.node(c,id,true);this.owner(actor,n);this.requireActive(n);const v=await this.latest(c,id);
+  const direct=n.kind!=='reflection';
+  if(direct&&!educator(actor))throw new ForbiddenException('仅教师和管理员可以发布教学内容');
+  if(v.revision!==revision||!(v.status==='draft'||direct&&v.status==='pending_review'))throw new ConflictException('只能提交当前版本，请刷新；退回内容请先编辑为新草稿版本');
   await this.payload(c,actor,n,v.payload);
-  await c.query("UPDATE atomic_versions SET status='pending_review' WHERE node_id=$1 AND revision=$2",[id,revision]);await this.audit(c,actor,n,revision,'submit');return {status:'pending_review'};
+  const status=direct?'published':'pending_review';
+  await c.query('UPDATE atomic_versions SET status=$3 WHERE node_id=$1 AND revision=$2',[id,revision,status]);
+  if(direct)await c.query('UPDATE atomic_nodes SET published_revision=$2 WHERE id=$1',[id,revision]);
+  await this.audit(c,actor,n,revision,direct?'direct_publish':'submit');
+  return {status};
  });}
+ async changeLifecycle(actor:Actor,id:string,input:{revision:number;action:'archive'|'restore';reason:string}){
+  this.auth.requireAnyRole(actor,['admin','teacher']);
+  return this.db.transaction(async c=>{
+   const n=await this.node(c,id,true);this.owner(actor,n);
+   if(n.kind==='reflection')throw new BadRequestException('此入口仅管理教学原子和完整课程');
+   const previous=await this.latest(c,id),archive=input.action==='archive';
+   if(previous.revision!==input.revision||Boolean(n.archived_at)===archive)throw new ConflictException('内容状态已变化，请刷新列表');
+   await c.query('UPDATE atomic_nodes SET archived_at=CASE WHEN $2 THEN CURRENT_TIMESTAMP ELSE NULL END WHERE id=$1',[id,archive]);
+   await this.audit(c,actor,n,previous.revision,input.action,input.reason);
+   return {id,status:archive?'archived':previous.status};
+  });
+ }
  async decide(actor:Actor,id:string,input:{revision:number;decision:string;note:string}){
   this.auth.requireAnyRole(actor,['admin','operator','teacher']);return this.db.transaction(async c=>{
-   const n=await this.node(c,id,true);if(n.owner_id===actor.id)throw new ForbiddenException('不能审核自己的内容，请由另一位审核人员处理');
+   const n=await this.node(c,id,true);this.requireActive(n);if(n.owner_id===actor.id)throw new ForbiddenException('不能审核自己的内容，请由另一位审核人员处理');
    if(!reviewer(actor)&&!await this.responsibleTeacher(c,actor,n))throw new ForbiddenException('教师只能审核关联到自己原子的学习心得');
    const v=await this.latest(c,id);if(v.revision!==input.revision||v.status!=='pending_review')throw new ConflictException('审核状态已变化，请刷新');
    if(input.decision==='publish')await this.payload(c,actor,n,v.payload);
@@ -207,7 +232,7 @@ export class AtomicService {
   });
  }
  private async visible(actor:Actor,id:string,revision?:number){
-  const n=await this.node(this.db,id);const latest=await this.latest(this.db,id);
+  const n=await this.node(this.db,id);this.requireActive(n);const latest=await this.latest(this.db,id);
   const teacherReview=latest.status==='pending_review'&&await this.responsibleTeacher(this.db,actor,n);
   const selected=revision??((n.owner_id===actor.id||reviewer(actor)||teacherReview)?latest.revision:n.published_revision);
   const r=await this.db.query('SELECT * FROM atomic_versions WHERE node_id=$1 AND revision=$2',[id,selected]);const v=r.rows[0] as Version;
@@ -218,23 +243,25 @@ export class AtomicService {
   const {n,v}=await this.visible(actor,id,revision);
   const knowledge=await this.db.query('SELECT knowledge_node_id FROM atomic_knowledge_bindings WHERE atom_id=$1 AND revision=$2 ORDER BY knowledge_node_id',[id,v.revision]);
   const canReview=v.status==='pending_review'&&n.owner_id!==actor.id&&(reviewer(actor)||await this.responsibleTeacher(this.db,actor,n));
-  const parent=n.parent_id?await this.db.query(`SELECT v.payload->>'title' AS title FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision WHERE n.id=$1`,[n.parent_id]):null;
+  const parent=n.parent_id?await this.db.query(`SELECT v.payload->>'title' AS title FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision WHERE n.id=$1 AND n.archived_at IS NULL`,[n.parent_id]):null;
   const progress=await this.db.query('SELECT stage,submission,feedback,updated_at AS "updatedAt" FROM atomic_progress WHERE user_id=$1 AND node_id=$2 AND revision=$3',[actor.id,id,v.revision]);
   const assets=await this.db.query('SELECT id,file_name AS "fileName",mime_type AS "mimeType",size_bytes AS size FROM atomic_assets WHERE node_id=$1 AND id=ANY($2::text[])',[id,v.payload.assetIds??[]]);
-  const branches=await this.db.query(`SELECT n.id,v.payload->>'title' AS title,u.display_name AS author,n.published_revision AS revision FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision JOIN users u ON u.id=n.owner_id WHERE n.parent_id=$1 ORDER BY n.created_at DESC`,[id]);
-  const usedBy=await this.db.query(`SELECT n.id,v.payload->>'title' AS title,n.published_revision AS revision FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision WHERE n.kind='course' AND EXISTS(SELECT 1 FROM jsonb_array_elements(v.payload->'steps') s WHERE s->>'atomId'=$1)`,[id]);
+  const cases=await this.db.query(`SELECT w.id,w.title FROM atomic_case_links link JOIN works w ON w.id=link.work_id WHERE link.atom_id=$1 AND w.status='approved' ORDER BY w.title,w.id`,[id]);
+  const branches=await this.db.query(`SELECT n.id,v.payload->>'title' AS title,u.display_name AS author,n.published_revision AS revision FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision JOIN users u ON u.id=n.owner_id WHERE n.parent_id=$1 AND n.archived_at IS NULL ORDER BY n.created_at DESC`,[id]);
+  const usedBy=await this.db.query(`SELECT n.id,v.payload->>'title' AS title,n.published_revision AS revision FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision WHERE n.kind='course' AND n.archived_at IS NULL AND EXISTS(SELECT 1 FROM jsonb_array_elements(v.payload->'steps') s WHERE s->>'atomId'=$1)`,[id]);
   const history=await this.db.query("SELECT revision,payload->>'title' AS title FROM atomic_versions WHERE node_id=$1 AND status='published' ORDER BY revision DESC",[id]);
   const feedback=await this.db.query('SELECT action,note,created_at AS "createdAt" FROM atomic_audit WHERE node_id=$1 AND revision=$2 ORDER BY created_at DESC',[id,v.revision]);
   const steps=[];
   if(n.kind==='course')for(const s of (v.payload as CoursePayload).steps){
-   const r=await this.db.query(`SELECT v.payload->>'title' AS title,v.payload->>'summary' AS summary,v.payload->>'completion' AS completion,n.published_revision AS "latestRevision",p.stage,p.feedback FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=$2 LEFT JOIN atomic_progress p ON p.node_id=v.node_id AND p.revision=v.revision AND p.user_id=$3 WHERE n.id=$1 AND v.status='published'`,[s.atomId,s.revision,actor.id]);
+   const r=await this.db.query(`SELECT v.payload->>'title' AS title,v.payload->>'summary' AS summary,v.payload->>'completion' AS completion,n.published_revision AS "latestRevision",p.stage,p.feedback FROM atomic_nodes n JOIN atomic_versions v ON v.node_id=n.id AND v.revision=$2 LEFT JOIN atomic_progress p ON p.node_id=v.node_id AND p.revision=v.revision AND p.user_id=$3 WHERE n.id=$1 AND n.archived_at IS NULL AND v.status='published'`,[s.atomId,s.revision,actor.id]);
    const task=await this.db.query('SELECT stage,submission,feedback FROM atomic_task_submissions WHERE user_id=$1 AND course_id=$2 AND revision=$3 AND atom_id=$4',[actor.id,id,v.revision,s.atomId]);
    steps.push({...s,...r.rows[0],available:Boolean(r.rows[0]),taskProgress:task.rows[0]??null});
   }
-  return {id,kind:n.kind,ownerId:n.owner_id,parentId:n.parent_id,parentTitle:parent?.rows[0]?.title??'',canReview,knowledgeNodeIds:knowledge.rows.map(row=>row.knowledge_node_id),publishedRevision:n.published_revision,revision:v.revision,status:v.status,payload:v.payload,progress:progress.rows[0]??null,assets:assets.rows.map(a=>({...a,url:`/api/atomic/nodes/${id}/assets/${a.id}?revision=${v.revision}`})),branches:branches.rows,usedBy:usedBy.rows,versions:history.rows,feedback:feedback.rows.filter(x=>['publish','reject'].includes(x.action)),steps};
+  return {id,kind:n.kind,ownerId:n.owner_id,parentId:n.parent_id,parentTitle:parent?.rows[0]?.title??'',canReview,knowledgeNodeIds:knowledge.rows.map(row=>row.knowledge_node_id),publishedRevision:n.published_revision,revision:v.revision,status:v.status,payload:v.payload,progress:progress.rows[0]??null,assets:assets.rows.map(a=>({...a,url:`/api/atomic/nodes/${id}/assets/${a.id}?revision=${v.revision}`})),relatedWorks:cases.rows,branches:branches.rows,usedBy:usedBy.rows,versions:history.rows,feedback:feedback.rows.filter(x=>['publish','reject'].includes(x.action)),steps};
  }
  async progress(actor:Actor,id:string,input:{revision:number;action:string;submission:string}){return this.db.transaction(async c=>{
-  const n=await this.node(c,id,true),r=await c.query('SELECT * FROM atomic_versions WHERE node_id=$1 AND revision=$2',[id,input.revision]);const v:Version=r.rows[0];
+  const n=await this.node(c,id,true);this.requireActive(n);
+  const r=await c.query('SELECT * FROM atomic_versions WHERE node_id=$1 AND revision=$2',[id,input.revision]);const v:Version=r.rows[0];
   if(n.kind==='course'||v?.status!=='published')throw new BadRequestException('只能记录已发布原子的学习情况');
   if(input.action==='complete'&&v.payload.completion!=='read')throw new BadRequestException('练习需提交后由教师评价，不能自行通过');
   if(input.action==='submit'&&(v.payload.completion!=='practice'||input.submission.length<10))throw new BadRequestException('请提交至少十个字的练习说明');
@@ -243,11 +270,12 @@ export class AtomicService {
   return {ok:true};
  });}
  async task(actor:Actor,id:string,input:{revision:number;atomId:string;submission:string}){return this.db.transaction(async c=>{
-  const n=await this.node(c,id,true);
+  const n=await this.node(c,id,true);this.requireActive(n);
   if(n.kind!=='course')throw new BadRequestException('不存在此课程专属任务');
   const r=await c.query("SELECT payload FROM atomic_versions WHERE node_id=$1 AND revision=$2 AND status='published'",[id,input.revision]);
   const s=(r.rows[0]?.payload as CoursePayload)?.steps.find(x=>x.atomId===input.atomId);
   if(!s?.task)throw new BadRequestException('不存在此课程专属任务');
+  this.requireActive(await this.node(c,s.atomId,true));
   await c.query(`INSERT INTO atomic_task_submissions(user_id,course_id,revision,atom_id,submission,stage) VALUES($1,$2,$3,$4,$5,'submitted') ON CONFLICT(user_id,course_id,revision,atom_id) DO UPDATE SET submission=EXCLUDED.submission,stage='submitted',submission_version=atomic_task_submissions.submission_version+1,feedback='',reviewer_id=NULL,updated_at=CURRENT_TIMESTAMP WHERE atomic_task_submissions.stage<>'completed'`,[actor.id,id,input.revision,input.atomId,input.submission]);return {ok:true};
  });}
  async submissions(actor:Actor){
@@ -264,13 +292,14 @@ export class AtomicService {
   if(!r.rowCount)throw new ConflictException('练习状态已变化，请刷新');await this.audit(c,actor,n,input.revision,'grade',input.note);return {ok:true};
  });}
  async upload(actor:Actor,id:string,revision:number,request:FastifyRequest){
-  const n=await this.node(this.db,id);this.owner(actor,n);if(n.kind==='course')throw new BadRequestException('请将教学附件上传到原子');
+  const n=await this.node(this.db,id);this.owner(actor,n);this.requireActive(n);if(n.kind==='course')throw new BadRequestException('请将教学附件上传到原子');
+  if(n.kind==='teaching'&&!educator(actor))throw new ForbiddenException('仅教师和管理员可以修改教学内容');
   const v=await this.latest(this.db,id);if(v.revision!==revision||v.status!=='draft')throw new ConflictException('请先保存新草稿再上传附件');
   if(!getEnvironment().fileUploadsEnabled)throw new ForbiddenException('上传未启用');
   const part=await request.file({limits:{fileSize:courseUploadPolicy().videoBytes}});if(!part)throw new BadRequestException('请选择文件');
   const upload=await storePrivateUpload(part,getEnvironment().uploadRoot,workAssetMimeTypes,`atomic/${id}`,courseUploadPolicy().videoBytes);
   try{const result=await this.db.transaction(async c=>{
-   await this.node(c,id,true);const current=await this.latest(c,id);if(current.revision!==revision||current.status!=='draft')throw new ConflictException('草稿已变化，请刷新');
+   const locked=await this.node(c,id,true);this.requireActive(locked);const current=await this.latest(c,id);if(current.revision!==revision||current.status!=='draft')throw new ConflictException('草稿已变化，请刷新');
    const p=current.payload as AtomPayload;
    const existing=await c.query<{id:string;storage_key:string}>(
     'SELECT id,storage_key FROM atomic_assets WHERE node_id=$1 AND id=ANY($2::text[]) AND size_bytes=$3 AND sha256=$4',

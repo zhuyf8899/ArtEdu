@@ -8,7 +8,7 @@ import './atomic-reference-source.css';
 // This is the supplied curriculum design, not a generated arrangement of today's
 // records. Its original coordinates, artwork, curves and contributor captions are
 // kept together. Published learning content is resolved separately on interaction.
-const referenceText=value=>value.replace('AI辅助组合我的课程','组合学习路线').replace('教师、AI 与我，一起共创培养方案','连接知识原子，规划自己的学习路径');
+const referenceText=value=>value.replace('AI辅助组合我的课程','组合我的课程');
 function ReferenceElement({node,onSelect,onNavigate,root=false}){
  if(typeof node==='string')return referenceText(node);
  const props={...node.props};
@@ -24,11 +24,13 @@ function ReferenceElement({node,onSelect,onNavigate,root=false}){
 const ReferenceIllustration = memo(function ReferenceIllustration({onSelect,onNavigate}){
  return <ReferenceElement node={networkTemplate} root onSelect={onSelect} onNavigate={onNavigate}/>;
 });
-export function AtomicReferenceNetwork({accountId,serial,onNavigate}){
+export function AtomicReferenceNetwork({accountId,serial,onNavigate,edition='original'}){
+ const frame=useRef(null);
  const root=useRef(null),[topic,setTopic]=useState(''),[data,setData]=useState({items:[]}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
  const [resourcesRequested,setResourcesRequested]=useState(false);
  const selectTopic=useCallback(value=>{setTopic(value);setResourcesRequested(true);},[]);
  useEffect(()=>{
+  if(edition==='november')return;
   const wrapper=root.current,network=wrapper.querySelector('.knowledge-network'),graph=wrapper.querySelector('.knowledge-graph');
   // Original source's sizeGraph algorithm. Scaling the whole coordinate system
   // preserves its handoff composition instead of changing the node topology.
@@ -50,9 +52,22 @@ export function AtomicReferenceNetwork({accountId,serial,onNavigate}){
   window.addEventListener('resize',resize);
   resize();
   return()=>{observer.disconnect();window.removeEventListener('resize',resize);};
- },[]);
- useEffect(()=>{if(!resourcesRequested)return;let active=true;setLoading(true);setError('');atomicRequest('/network').then(result=>{if(active)setData(result);}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[accountId,serial,attempt,resourcesRequested]);
- return <div className="atomic-reference-scope" ref={root}><ReferenceIllustration onSelect={selectTopic} onNavigate={onNavigate}/>{topic&&<ReferenceTopicDialog topic={topic} data={data} loading={loading} error={error} onRetry={()=>setAttempt(v=>v+1)} onClose={()=>setTopic('')} onNavigate={onNavigate}/>}</div>;
+ },[edition]);
+ useEffect(()=>{if(edition!=='november'&&!resourcesRequested)return;let active=true;setLoading(true);setError('');atomicRequest('/network').then(result=>{if(active)setData(result);}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[accountId,serial,attempt,resourcesRequested,edition]);
+ useEffect(()=>{
+  if(edition!=='november')return;
+  const openNode=event=>{
+   if(event.source!==frame.current?.contentWindow || event.origin!=='null')return;
+   const {type,kind,id,title}=event.data??{};
+   if(type!=='atomic-page-open'||!['course','catalog','node'].includes(kind)||typeof id!=='string'||id.length>160)return;
+   const item=data.items.find(item=>item.revision===item.publishedRevision && (kind==='node'?item.id==='morph-nov-'+id:item.kind==='course'&&item.title===(title||id)));
+   if(item)onNavigate(atomicUrl(item.id,item.revision,item.kind==='course'?'courses':'atoms'));
+   else selectTopic(typeof title==='string'?title.slice(0,160):id);
+  };
+  window.addEventListener('message',openNode);
+  return()=>window.removeEventListener('message',openNode);
+ },[data,edition,onNavigate,selectTopic]);
+ return <div className="atomic-reference-scope" ref={root}>{edition==='november'?<div className="november-course-network"><ReferenceElement node={networkTemplate.children[0]} onSelect={selectTopic} onNavigate={onNavigate}/><iframe ref={frame} title="学院课程知识网络" src="/morph-november/knowledge-network/network-current/index.html" sandbox="allow-scripts" allowFullScreen/></div>:<ReferenceIllustration onSelect={selectTopic} onNavigate={onNavigate}/>}{topic&&<ReferenceTopicDialog topic={topic} data={data} loading={loading} error={error} onRetry={()=>setAttempt(v=>v+1)} onClose={()=>setTopic('')} onNavigate={onNavigate}/>}</div>;
 }
 function ReferenceTopicDialog({topic,data,loading,error,onRetry,onClose,onNavigate}){
  const dialog=useRef(null),words=topic.replaceAll('\n','').split(/[、与\s/]+/).filter(word=>word.length>=2),matches=data.items.filter(item=>words.some(word=>(item.title||'').includes(word))),items=matches.length?matches:data.items.filter(item=>item.kind==='teaching').slice(0,6);

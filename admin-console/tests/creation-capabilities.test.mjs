@@ -156,7 +156,7 @@ test("经典创作页独立成屏，MORPH 版本按交接设计保留公共导�
   assert.ok(portal.includes('const standalone = section === "creation"'), "对话页要单独标记");
   assert.ok(portal.includes("const chromeFree = standalone || workbench"));
   assert.ok(portal.includes('{!morph && !chromeFree && <header className="portal-topbar">'));
-  assert.ok(portal.includes("{morph && section !== 'home' && morphNav}"));
+  assert.ok(portal.includes('{morph && morphNav}'));
   assert.ok(!portal.includes("PortalArtRails"));
   assert.ok(portal.includes('["courses", "AI 讲堂", GraduationCap]'));
   assert.ok(portal.includes('["studio", "设计工具", Palette]'));

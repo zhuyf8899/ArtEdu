@@ -5,6 +5,7 @@ import {atomicKinds,atomicUrl} from '../atomicModel.js';
 import {atomicCardState,atomicCover,atomicDirections} from './atomicParticlesModel.js';
 import {mountNetwork} from './networkEffect.js';
 import {atomicContentLabel} from './learningCatalogModel.js';
+import {CatalogControls} from './CatalogControls.jsx';
 import './atomic-particles.css';
 import './learning-catalog.css';
 
@@ -19,11 +20,26 @@ export function LearningNavigation({view,navItems,onNavigate,onCreate,teacher,re
 }
 export function LearningNetworkPanel({accountId,serial,onNavigate}){
  const [expanded,setExpanded]=useState(false),[networkView,setNetworkView]=useState("knowledge");
- return <section className={'learning-network-panel'+(expanded?' is-expanded':'')} aria-label="课程知识网络"><header><div><span>CONNECTED LEARNING</span><h2>知识相连，学习有路</h2><p>探索课程结构，找到适合自己的学习方向。</p></div><button type="button" aria-expanded={expanded} aria-controls="learning-network-content" onClick={()=>setExpanded(v=>!v)}>{expanded?'收起课程网络':'展开课程网络'}<ArrowUpRight size={17}/></button></header><div id="learning-network-content" hidden={!expanded}>{expanded&&<><div className="learning-network-views" role="group" aria-label="课程网络展示"><button aria-pressed={networkView==='knowledge'} onClick={()=>setNetworkView('knowledge')}>知识节点网络</button><button aria-pressed={networkView==='reference'} onClick={()=>setNetworkView('reference')}>课程参考总览</button></div>{networkView==='knowledge'?<KnowledgeNetwork accountId={accountId} serial={serial} onNavigate={onNavigate} compact/>:<Suspense fallback={<p role="status">正在加载课程参考总览…</p>}><AtomicCourseNetwork accountId={accountId} serial={serial} onNavigate={onNavigate}/></Suspense>}</>}</div></section>;
+ return <section className={'learning-network-panel'+(expanded?' is-expanded':'')} aria-label="课程知识网络"><header><div><span>CONNECTED LEARNING</span><h2>知识相连，学习有路</h2><p>探索课程结构，找到适合自己的学习方向。</p></div><button type="button" aria-expanded={expanded} aria-controls="learning-network-content" onClick={()=>setExpanded(v=>!v)}>{expanded?'收起课程网络':'展开课程网络'}<ArrowUpRight size={17}/></button></header><div id="learning-network-content" hidden={!expanded}>{expanded&&<><div className="learning-network-views" role="group" aria-label="课程网络展示"><button aria-pressed={networkView==='knowledge'} onClick={()=>setNetworkView('knowledge')}>知识节点网络</button><button aria-pressed={networkView==='reference'} onClick={()=>setNetworkView('reference')}>课程参考总览</button><button aria-pressed={networkView==='original'} onClick={()=>setNetworkView('original')}>早期参考图</button></div>{networkView==='knowledge'?<KnowledgeNetwork accountId={accountId} serial={serial} onNavigate={onNavigate} compact/>:<Suspense fallback={<p role="status">正在加载课程参考总览…</p>}><AtomicCourseNetwork edition={networkView==='reference'?'november':'original'} accountId={accountId} serial={serial} onNavigate={onNavigate}/></Suspense>}</>}</div></section>;
 }
 
-export function AtomicCatalogTools({direction,facets,onDirection,query,onQuery,stage,onStage,navItems,onNavigate,onRefresh,onCreate,teacher,busy}){
- return <><div className="particles-filterbar particles-filterbar--strict"><AtomicDirectionFilters direction={direction} facets={facets} onChange={onDirection}/><div className="particles-reference-search"><input type="search" aria-label="搜索学习原子" placeholder="搜索原子、知识或学习目标" maxLength={100} value={query} onChange={e=>onQuery(e.target.value)}/></div></div><div className="learning-results-line"><span>独立学习，也可连接为课程</span><label>学习状态<select aria-label="筛选学习状态" value={stage} onChange={e=>onStage(e.target.value)}><option value="">全部状态</option><option value="not_started">未开始</option><option value="in_progress">学习中</option><option value="completed">已完成</option></select></label><button disabled={busy} onClick={onRefresh}>刷新列表</button></div></>;
+export function AtomicCatalogTools({direction,facets,onDirection,query,onQuery,stage,onStage,onRefresh,busy}){
+ const total=Object.values(facets).reduce((sum,count)=>sum+Number(count),0);
+ const directions=[...new Set([...atomicDirections.filter(value=>facets[value]>0),...Object.keys(facets)])];
+ return <CatalogControls
+   label="学习原子筛选"
+   options={[{value:'',label:'全部',count:total}, ...directions.map(value=>({value,label:value,count:facets[value]||0}))]}
+   value={direction}
+   onChange={onDirection}
+   query={query}
+   onQueryChange={onQuery}
+   queryMaxLength={100}
+   searchLabel="搜索学习原子"
+   placeholder="搜索原子、知识或学习目标"
+   resultLabel="独立学习，也可连接为课程"
+   loading={busy}
+   actions={<><label className="morph-catalog-stage">学习状态<select aria-label="筛选学习状态" value={stage} onChange={event=>onStage(event.target.value)}><option value="">全部状态</option><option value="not_started">未开始</option><option value="in_progress">学习中</option><option value="completed">已完成</option></select></label><button type="button" className="morph-catalog-refresh" disabled={busy} onClick={onRefresh}>刷新列表</button></>}
+ />;
 }
 
 export function AtomicParticlesHeader({compact=false}){

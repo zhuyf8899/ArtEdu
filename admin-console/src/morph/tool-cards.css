@@ -1,12 +1,13 @@
 /* Handoff anatomy. Explicit resets isolate compact logos and CTAs from classic tool styles. */
-.morph-v17 .morph-tool-card{position:relative;display:flex;flex-direction:column;gap:16px;min-width:0;min-height:370px;padding:24px;border:1px solid #fff;border-radius:20px;background:#ffffffd1;box-shadow:0 8px 32px -10px #44427712;transition:transform .2s,box-shadow .2s}
+.morph-v17 .morph-tool-card{position:relative;display:flex;flex-direction:column;gap:14px;min-width:0;min-height:340px;padding:20px;border:1px solid #fff;border-radius:20px;background:#ffffffd1;box-shadow:0 8px 32px -10px #44427712;transition:transform .2s,box-shadow .2s}
+.morph-tool-card__connections{font-size:13px;color:#5144ab}.morph-tool-card__connections summary{padding:8px 0;cursor:pointer}.morph-tool-card__connections[open]{max-height:230px;overflow:auto}.morph-tool-card__connections button{width:100%;margin-top:4px}.morph-tool-card__connections button{display:flex;align-items:center;justify-content:space-between;text-align:left;background:#faf9ff;border:0;border-radius:10px;padding:8px;color:#5144ab;font:inherit;font-size:12px}.morph-tool-card__connections svg{flex:none}
 .morph-v17 .morph-tool-card__head{display:flex;align-items:center;gap:12px;min-height:61px;padding:0}
 .morph-v17 .morph-tool-card__title{flex:1;min-width:0}
 .morph-v17 .morph-tool-card__icon{display:grid;place-items:center;flex:0 0 61px;width:61px;height:61px;border:1px solid #dddff0;border-radius:15px;background:#fff;color:#6554e8;overflow:hidden}
 .morph-v17 .morph-tool-card__icon>img{position:static;display:block;width:36px;height:36px;max-width:36px;max-height:36px;object-fit:contain;transform:none}
-.morph-v17 .morph-tool-card h2{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 4px;font-family:inherit;font-size:20px;line-height:28px;font-weight:650;letter-spacing:0;overflow-wrap:anywhere}
+.morph-v17 .morph-tool-card h2{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 4px;font-family:inherit;font-size:17px;line-height:26px;font-weight:650;letter-spacing:0;overflow-wrap:anywhere}
 .morph-v17 .morph-tool-card__title>p{margin:0;min-height:0;color:#606887;font-size:12px;line-height:18px;font-weight:400}
-.morph-v17 .morph-tool-card__featured{position:static;display:inline-block;padding:3px 5px;border-radius:4px;background:#171a2f;color:#d8f845;font:12px/18px ui-monospace,monospace}
+.morph-v17 .morph-tool-card__featured{position:static;display:inline-block;padding:3px 5px;border-radius:4px;background:#d8f845;color:#171a2f;font:12px/18px ui-monospace,monospace}
 .morph-v17 .morph-tool-card__category{align-self:flex-start;margin:12px 0;padding:4px 7px;border:1px solid #6554e833;border-radius:6px;background:#6554e80d;color:#6554e8;font-size:12px;line-height:18px}
 .morph-v17 .morph-tool-card__category--ai{color:#a73370;background:#fce6f0;border-color:#f2b8d4}
 .morph-v17 .morph-tool-card__category--three{color:#99601f;background:#fff0e2;border-color:#fad5b7}

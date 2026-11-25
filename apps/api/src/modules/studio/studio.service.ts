@@ -519,7 +519,7 @@ export class StudioService {
     const result = await this.database.query<WorkRow>(`${this.workSelect("$1")}
       WHERE ${where.join(" AND ")}
       GROUP BY w.id, author.display_name
-      ORDER BY w.is_featured DESC, w.featured_rank NULLS LAST, w.published_at DESC
+      ORDER BY w.is_featured DESC, w.featured_rank NULLS LAST, w.published_at DESC,w.id
       LIMIT $${values.length - 1} OFFSET $${values.length}
     `, values);
     return { items: result.rows.map(this.mapWork), page: query.page, pageSize: query.pageSize };
@@ -539,8 +539,8 @@ export class StudioService {
     `, [workId, actor.id, this.canReview(actor), actor.id]);
     if (!result.rows[0]) throw new NotFoundException("作品不存在");
     // 只有作者本人和审核角色能看到审核轨迹（驳回理由、审核历史）。
-    const [assets, tags, workflows, comments, reviewEvents] = await Promise.all([
-      this.database.query("SELECT id,file_name,mime_type,asset_type,external_url,alt_text,sort_order FROM work_assets WHERE work_id=$1 ORDER BY sort_order,created_at", [workId]),
+    const [assets, tags, workflows, comments, reviewEvents, relatedTools, relatedAtoms] = await Promise.all([
+      this.database.query("SELECT id,file_name,mime_type,asset_type,external_url,alt_text,sort_order,preview_text FROM work_assets WHERE work_id=$1 ORDER BY sort_order,created_at", [workId]),
       this.database.query("SELECT t.name,t.slug FROM tags t JOIN work_tags wt ON wt.tag_id=t.id WHERE wt.work_id=$1 ORDER BY t.name", [workId]),
       this.database.query("SELECT wf.id,wf.name,wf.category FROM workflows wf JOIN work_workflows ww ON ww.workflow_id=wf.id WHERE ww.work_id=$1", [workId]),
       this.database.query("SELECT c.id,c.content,c.created_at,u.display_name AS author FROM comments c JOIN users u ON u.id=c.author_id WHERE c.work_id=$1 AND c.status='published' ORDER BY c.created_at", [workId]),
@@ -550,11 +550,21 @@ export class StudioService {
           FROM audit_records ar
           LEFT JOIN users reviewer ON reviewer.id = ar.reviewer_id
           WHERE ar.target_type = 'work' AND ar.target_id = $1
-            AND ar.action IN ('submit', 'approve', 'reject')
+            AND ar.action IN ('submit', 'approve', 'reject', 'publish')
           ORDER BY ar.created_at DESC
           LIMIT 30
         `, [workId])
         : Promise.resolve({ rows: [] }),
+      this.database.query<{ id: string; name: string }>(
+        "SELECT id, name FROM tool_directory_links WHERE status = 'active' AND catalog_json->'relatedWorks' @> $1::jsonb ORDER BY name, id",
+        [JSON.stringify([{ id: workId }])],
+      ),
+      this.database.query<{ id: string; title: string }>(`
+        SELECT n.id, v.payload->>'title' AS title FROM atomic_case_links link
+        JOIN atomic_nodes n ON n.id=link.atom_id AND n.archived_at IS NULL
+        JOIN atomic_versions v ON v.node_id=n.id AND v.revision=n.published_revision AND v.status='published'
+        WHERE link.work_id=$1 ORDER BY title,n.id`, [workId]),
+
     ]);
     const privileged = result.rows[0].author_id === actor.id || this.canReview(actor);
     const story = caseStorySchema.parse(result.rows[0].story_json ?? {});
@@ -564,13 +574,13 @@ export class StudioService {
     }));
     const reviewHistory = reviewEvents.rows.map(event => ({ action: event.action, reason: event.reason ?? "", createdAt: event.created_at, reviewer: event.reviewer ?? "审核人员" }));
     const latestRejection = reviewHistory.find(event => event.action === "reject") ?? null;
-    return { ...this.mapWork(result.rows[0]), story: visibleCaseStory(story, privileged), assets: visibleAssets, tags: tags.rows, workflows: workflows.rows, comments: comments.rows, reviewHistory, latestRejection };
+    return { ...this.mapWork(result.rows[0]), story: visibleCaseStory(story, privileged), assets: visibleAssets, tags: tags.rows, workflows: workflows.rows, relatedTools: relatedTools.rows, relatedAtoms: relatedAtoms.rows, comments: comments.rows, reviewHistory, latestRejection };
   }
 
   async createWork(actor: Actor, input: WorkInput) {
     const id = `work-${randomUUID()}`;
     await this.database.transaction(async (client) => {
-      if (input.story?.coverAssetId || input.story?.steps.some(step => step.assetIds.length)) throw new BadRequestException("请先保存草稿并上传文件，再关联案例图片");
+      if (input.story?.coverAssetId || input.story?.steps.some(step => step.assetIds.length) || input.story?.blocks?.some(b => 'assetId' in b) || input.story?.plates?.some(p => p.assetIds.length)) throw new BadRequestException("请先保存草稿并上传文件，再关联案例图片");
       await client.query("INSERT INTO works (id,author_id,title,summary,discipline,status,story_json) VALUES ($1,$2,$3,$4,$5,'draft',$6::jsonb)", [id, actor.id, input.title, input.summary, input.discipline, JSON.stringify({ ...input.story, collection: "community" })]);
       await this.replaceWorkRelations(client, id, input);
     });
@@ -582,7 +592,10 @@ export class StudioService {
       const work = await client.query<{ title: string; summary: string; status: string; author_id: string; story_json: CaseStory }>("SELECT title,summary,status,author_id,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
       if (!work.rows[0]) throw new NotFoundException("作品不存在");
       if (work.rows[0].author_id !== actor.id) throw new ForbiddenException("只能提交自己的作品");
-      if (!["draft", "rejected"].includes(work.rows[0].status)) throw new ConflictException("当前作品不能重复提交");
+      const direct = actor.roles.some(role => role === "admin" || role === "teacher");
+      if (!["draft", "rejected"].includes(work.rows[0].status) && !(direct && work.rows[0].status === "pending")) {
+        throw new ConflictException("当前作品不能重复提交");
+      }
       try {
         const story = caseStorySchema.parse(work.rows[0].story_json ?? {});
         assertCasePublication(story);
@@ -593,8 +606,13 @@ export class StudioService {
       const assets = await client.query<{ image_count: number }>("SELECT COUNT(*)::int AS image_count FROM work_assets WHERE work_id=$1 AND asset_type='image'", [workId]);
       try { assertCaseCover(Number(assets.rows[0]?.image_count ?? 0)); }
       catch (error) { throw new BadRequestException((error as Error).message); }
-      await client.query("UPDATE works SET status='pending',published_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId]);
-      await client.query("INSERT INTO audit_records (id,target_type,target_id,reviewer_id,action,reason) VALUES ($1,'work',$2,$3,'submit',$4)", [`audit-${randomUUID()}`, workId, actor.id, "用户提交作品审核"]);
+      await client.query(`UPDATE works SET status=$2,
+        published_at=CASE WHEN $2='approved' THEN CURRENT_TIMESTAMP ELSE NULL END,
+        updated_at=CURRENT_TIMESTAMP WHERE id=$1`, [workId, direct ? "approved" : "pending"]);
+      if (direct) await client.query("UPDATE work_assets SET moderation_status='approved' WHERE work_id=$1", [workId]);
+      await client.query("INSERT INTO audit_records (id,target_type,target_id,reviewer_id,action,reason) VALUES ($1,'work',$2,$3,$4,$5)", [
+        `audit-${randomUUID()}`, workId, actor.id, direct ? "publish" : "submit", direct ? "教师或管理员直接发布案例" : "用户提交作品审核",
+      ]);
       return true;
     });
     if (!result) throw new ConflictException("提交失败");
@@ -606,16 +624,27 @@ export class StudioService {
       const result = await client.query("SELECT author_id,status,story_json FROM works WHERE id=$1 FOR UPDATE", [workId]);
       const work = result.rows[0];
       if (!work) throw new NotFoundException("作品不存在");
-      if (work.author_id !== actor.id) throw new ForbiddenException("只能编辑自己的草稿");
-      if (!["draft", "rejected"].includes(work.status)) throw new ConflictException("审核中或已发布案例不能直接修改");
+      this.requireEditableWork(actor, work);
       if (input.story) {
         const assets = await client.query("SELECT id,asset_type FROM work_assets WHERE work_id=$1", [workId]);
         const ids = new Set(assets.rows.filter(asset => asset.asset_type === "image").map(asset => asset.id));
-        const referenced = [input.story.coverAssetId, ...input.story.steps.flatMap(step => step.assetIds)].filter(Boolean);
+        const referenced = [input.story.coverAssetId, ...input.story.steps.flatMap(step => step.assetIds), ...(input.story.blocks ?? []).flatMap(b => 'assetId' in b ? [b.assetId] : []), ...(input.story.plates ?? []).flatMap(p => p.assetIds)].filter(Boolean);
         if (referenced.some(id => !ids.has(id))) throw new BadRequestException("封面与步骤只能引用本案例的图片");
       }
       // 作者更新内容不能修改或清掉由管理员维护的模块归属。
-      const storyForUpdate = input.story ? { ...input.story, collection: work.story_json?.collection ?? "community" } : null;
+      const storyForUpdate = input.story ? { ...input.story,
+        blocks: input.story.blocks ?? work.story_json?.blocks,
+        plates: input.story.plates ?? work.story_json?.plates,
+        collection: work.story_json?.collection ?? "community" } : null;
+      if (work.status === "approved") {
+        const previousStory = caseStorySchema.parse(work.story_json ?? {});
+        const story = caseStorySchema.parse(storyForUpdate ?? previousStory);
+        try {
+          // Legacy published cases may lack source metadata. Check any new source or rights changes.
+          if (previousStory.origin !== "unspecified" || story.origin !== "unspecified") assertCasePublication(story);
+          assertCaseEditorial({ title: input.title, summary: input.summary, story });
+        } catch (error) { throw new BadRequestException((error as Error).message); }
+      }
       await client.query("UPDATE works SET title=$2,summary=$3,discipline=$4,story_json=COALESCE($5::jsonb,story_json),updated_at=CURRENT_TIMESTAMP WHERE id=$1", [workId, input.title, input.summary, input.discipline, storyForUpdate ? JSON.stringify(storyForUpdate) : null]);
       await this.replaceWorkRelations(client, workId, input);
     });
@@ -628,32 +657,33 @@ export class StudioService {
     const current = await this.database.query<{ status: string; author_id: string; title: string }>("SELECT status,author_id,title FROM works WHERE id=$1", [workId]);
     const work = current.rows[0];
     if (!work) throw new NotFoundException("作品不存在");
-    if (work.author_id !== actor.id) throw new ForbiddenException("只能为自己的作品上传资源");
-    if (!["draft", "rejected"].includes(work.status)) throw new ConflictException("当前作品不能继续上传资源");
+    this.requireEditableWork(actor, work);
     const policy = caseUploadPolicy();
     const part = await request.file({ limits: { fileSize: policy.videoBytes } });
     if (!part) throw new BadRequestException("请选择一个文件");
-    const upload = await storePrivateUpload(part, environment.uploadRoot, workAssetMimeTypes, `users/${actor.id}/works/${workId}`, policy.videoBytes);
+    const upload = await storePrivateUpload(part, environment.uploadRoot, workAssetMimeTypes, `users/${work.author_id}/works/${workId}`, policy.videoBytes);
     let committed = false;
     try {
       const asset = await this.database.transaction(async (client) => {
         const locked = await client.query<{ status: string; author_id: string }>("SELECT status,author_id FROM works WHERE id=$1 FOR UPDATE", [workId]);
-        if (!locked.rows[0] || locked.rows[0].author_id !== actor.id || !["draft", "rejected"].includes(locked.rows[0].status)) throw new ConflictException("作品状态已变化，请刷新后重试");
+        if (!locked.rows[0] || locked.rows[0].author_id !== work.author_id || locked.rows[0].status !== work.status) throw new ConflictException("作品状态已变化，请刷新后重试");
+        this.requireEditableWork(actor, locked.rows[0]);
+        const moderationStatus = work.status === "approved" ? "approved" : "pending";
         // A lost response or cancellation may occur after commit. Retrying identical bytes
         // must reuse the asset, under the same work lock, instead of consuming another slot.
         const existing = await client.query("SELECT id,file_name,mime_type,file_size FROM work_assets WHERE work_id=$1 AND sha256=$2 LIMIT 1", [workId, upload.sha256]);
         if (existing.rows[0]) {
           const row = existing.rows[0];
-          return { id: row.id, fileName: row.file_name, mimeType: row.mime_type, sizeBytes: Number(row.file_size), status: "pending", reused: true };
+          return { id: row.id, fileName: row.file_name, mimeType: row.mime_type, sizeBytes: Number(row.file_size), status: moderationStatus, reused: true };
         }
         const count = await client.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM work_assets WHERE work_id=$1", [workId]);
         if (count.rows[0].count >= 10) throw new BadRequestException("每个作品最多上传 10 个文件");
         const id = `work-asset-${randomUUID()}`;
         await client.query(`
           INSERT INTO work_assets (id,work_id,file_name,mime_type,storage_key,external_url,file_size,sha256,asset_type,alt_text,sort_order,moderation_status)
-          VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,$8,$9,$10,'pending')
-        `, [id, workId, upload.fileName, upload.mimeType, upload.storageKey, upload.sizeBytes, upload.sha256, upload.assetType, work.title, count.rows[0].count]);
-        return { id, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes, status: "pending" };
+          VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,$8,$9,$10,$11)
+        `, [id, workId, upload.fileName, upload.mimeType, upload.storageKey, upload.sizeBytes, upload.sha256, upload.assetType, work.title, count.rows[0].count, moderationStatus]);
+        return { id, fileName: upload.fileName, mimeType: upload.mimeType, sizeBytes: upload.sizeBytes, status: moderationStatus };
       });
       committed = true;
       if ("reused" in asset) await import("node:fs/promises").then(({ rm }) => rm(path.join(environment.uploadRoot, upload.storageKey), { force: true }));
@@ -1237,6 +1267,14 @@ export class StudioService {
   }
 
   private canReview(actor: Actor) { return actor.roles.some((role) => ["admin", "operator", "teacher"].includes(role)); }
+  private requireEditableWork(actor: Actor, work: { author_id: string; status: string }) {
+    const admin = actor.roles.includes("admin");
+    const owned = work.author_id === actor.id;
+    if (!admin && !owned) throw new ForbiddenException("只能编辑自己提交的案例");
+    if (["draft", "rejected"].includes(work.status)) return;
+    if (["approved", "pending"].includes(work.status) && (admin || actor.roles.includes("teacher"))) return;
+    throw new ConflictException("当前案例状态不允许修改");
+  }
   private async requireApprovedWork(workId: string) { const result = await this.database.query("SELECT id FROM works WHERE id=$1 AND status='approved'", [workId]); if (!result.rowCount) throw new NotFoundException("已发布作品不存在"); }
   private slugify(value: string) { const ascii = value.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-").replace(/^-|-$/g, ""); return `${ascii || "tag"}-${randomUUID().slice(0, 8)}`; }
 }

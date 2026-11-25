@@ -1,14 +1,16 @@
 import { AtomicPortrait as ProfessionalPortrait } from './AtomicPortrait.jsx';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, ArrowClockwise, BookOpenText, BookmarkSimple, CalendarCheck, ChartPolar, Check, House, ImageSquare, NotePencil, Sparkle } from '@phosphor-icons/react';
 import { MorphCourseCard } from './MorphCatalog.jsx';
 import { CatalogControls } from './CatalogControls.jsx';
 import { dailyQuotaLabel, creationModeDescription } from './morphPresentation.js';
 import { isCollectedWork, spaceEvidence, spaceCourseForCard, spaceCourseStatus } from './mySpaceModel.js';
 import './my-space.css';
+import {getToolDirectoryLinks} from '../services/adminApi.js';
+import {hasToolBookmarks,isToolBookmarked} from './toolBookmarks.js';
 import { withReturnTarget } from '../resourceContext.js';
 
-const VIEWS=[['overview','空间总览',House],['portrait','我的专业画像',ChartPolar],['knowledge','知识网络',BookOpenText],['courses','我的课程',BookOpenText],['plan','学习计划',CalendarCheck],['notes','学习笔记',NotePencil],['works','我的作品',ImageSquare],['favorites','收藏案例',BookmarkSimple]];
+const VIEWS=[['overview','空间总览',House],['portrait','我的专业画像',ChartPolar],['knowledge','知识网络',BookOpenText],['courses','我的课程',BookOpenText],['plan','学习计划',CalendarCheck],['notes','学习笔记',NotePencil],['works','我的作品',ImageSquare],['favorites','收藏',BookmarkSimple]];
 const statusName=value=>({draft:'草稿',pending:'审核中',approved:'已发布',rejected:'待修改',archived:'已归档'}[value]||'作品记录');
 const courseForCard=spaceCourseForCard;
 
@@ -39,7 +41,7 @@ export function MorphMySpace({account,data,creation,view,onView,onNavigate,loadi
         {view==='portrait'&&<ProfessionalPortrait onTaskSaved={onTaskSaved} accountId={account.id} data={data} onNavigate={onNavigate} onView={onView}/>}
         {view==='courses'&&<><section className="morph-space-section"><SpaceHeading eyebrow="ATOMIC LEARNING" title="我的原子学习" action="查看独立学习记录 ↗" onAction={()=>onNavigate('/learning?library=learning')}/><p>新原子的阅读、练习和已完成版本单独记录；下面保留原有课程进度。</p></section><SpaceCourses courses={data.courses||[]} onNavigate={onNavigate}/></>}
         {view==='works'&&<SpaceWorks data={data} onNavigate={onNavigate} onRetry={onRetry}/>}
-        {view==='favorites'&&<><SpaceHeading eyebrow="COLLECTIONS" title="收藏案例"/><WorkRecords items={data.favorites||[]} favorite onNavigate={onNavigate}/></>}
+        {view==='favorites'&&<><SpaceHeading eyebrow="COLLECTIONS" title="收藏案例"/><WorkRecords items={data.favorites||[]} favorite onNavigate={onNavigate}/><SavedTools accountId={account.id} onNavigate={onNavigate}/></>}
         {['knowledge','plan','notes'].includes(view)&&<div className="morph-space-manager">{children}</div>}
       </>}
     </div>
@@ -65,4 +67,24 @@ function SpaceWorks({data,onNavigate,onRetry}) {
   const [kind,setKind]=useState('all');
   const items=(data.works||[]).filter(work=>kind==='all'||(kind==='collected'?isCollectedWork(work):!isCollectedWork(work)));
   return <><SpaceHeading eyebrow="MY CREATIONS" title="我的作品与案例" action="开始创作" onAction={()=>onNavigate('/create')}/><div className="morph-space-work-filters" role="group" aria-label="作品来源筛选">{[['all','全部记录'],['original','我的创作'],['collected','我整理的案例']].map(([id,label])=><button type="button" key={id} aria-pressed={kind===id} onClick={()=>setKind(id)}>{label}</button>)}</div><WorkRecords items={items} error={data.workLoadError} onRetry={onRetry} onNavigate={onNavigate}/></>;
+}
+
+
+function SavedTools({accountId,onNavigate}) {
+  const [tools,setTools]=useState([]);
+  const [error,setError]=useState('');
+  const [loading,setLoading]=useState(false);
+  useEffect(()=>{
+    if(!hasToolBookmarks(accountId))return;
+    let active=true;
+    setLoading(true);
+    getToolDirectoryLinks().then(({items})=>{
+      if(active)setTools(items.filter(tool=>tool.status==='active'&&isToolBookmarked(accountId,tool.id)));
+    }).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});
+    return()=>{active=false;};
+  },[accountId]);
+  return <section className="morph-space-section">
+    <SpaceHeading eyebrow="SAVED TOOLS" title="收藏工具"/>
+    {loading?<p role="status">正在加载收藏工具…</p>:error?<p role="alert">{error}</p>:tools.length?<ul>{tools.map(tool=><li key={tool.id}><button className="morph-text-link" onClick={()=>onNavigate('/studio?toolQuery='+encodeURIComponent(tool.name))}>{tool.name}<ArrowRight size={14}/></button></li>)}</ul>:<p>当前浏览器暂无收藏工具。</p>}
+  </section>;
 }

@@ -1,0 +1,206 @@
+*{box-sizing:border-box}body{margin:0;font-family:"Microsoft YaHei",sans-serif;background:#eceaf7;color:#35334b;overflow:hidden}header{position:absolute;top:8px;left:14px;right:14px;height:30px;display:flex;align-items:center;gap:8px;font-size:10px;z-index:50}header span{flex:1;color:#8c85a2}header i{display:inline-block;width:18px;border-top:2px solid #a39cb9;vertical-align:middle;margin-right:4px}header em{color:#8e73c0;font-size:18px;margin-left:12px}button{font:inherit;cursor:pointer}header button{border:1px solid #dcd5e9;border-radius:7px;background:#fff9;padding:5px 9px;color:#746687}main{position:absolute;inset:42px 8px 42px}svg,#items,#labels{position:absolute;width:100%;height:100%;inset:0}svg{overflow:visible;pointer-events:none}.edge{fill:none;stroke:#aea5c7;stroke-width:1;opacity:.30;transition:opacity .16s}.similar{stroke:#9774c2;stroke-width:2;stroke-dasharray:5 5;opacity:.55}.edge.active{opacity:.85;stroke-width:2}.edge.faint{opacity:.025}.item{position:absolute;transform:translate(-50%,-50%);transition:opacity .15s;z-index:3}.course{background:#242437;color:#fff;border:0;border-radius:9px;width:125px;min-height:42px;padding:7px 9px;font-size:11px;line-height:1.45;text-align:left;box-shadow:0 4px 12px #33334512}.course small{display:block;font-size:9px;color:#c6bfd6;margin-top:3px}.node{width:11px;height:11px;border:1.5px solid #b3a4d0;background:white;border-radius:50%;padding:0;box-shadow:0 0 0 3px #eceaf780}.node.related{width:15px;height:15px;border-color:#8770b0}.node .text{display:none}.node.featured,.node:hover,.node:focus-visible,.node.reveal{width:137px;height:auto;min-height:45px;border-radius:8px;padding:7px 9px;text-align:left;z-index:25;font-size:11px;line-height:1.4;background:#fff;box-shadow:0 5px 16px #40355b16}.node.featured .text,.node:hover .text,.node:focus-visible .text,.node.reveal .text{display:block}.node small{display:block;font-size:9px;color:#8c829d;margin-top:4px}.item.dim{opacity:.14}.item:hover,.item:focus-visible{opacity:1;outline:2px solid #a996d1;outline-offset:3px;z-index:30}.group-label{position:absolute;transform:translate(-50%,-50%);font-size:10px;color:#a99dbb;pointer-events:none;white-space:nowrap}footer{position:absolute;bottom:8px;left:16px;right:16px;min-height:24px;font-size:10px;line-height:1.5;color:#82768f}body:fullscreen{background:#eceaf7}@media(max-width:650px){.course{width:78px;font-size:9px;padding:5px;min-height:32px}.course small{font-size:8px}.node.featured{width:92px;font-size:9px}.node:hover,.node:focus-visible{width:130px}header{font-size:9px}.group-label{font-size:8px}footer{font-size:9px}}
+/* Restore the original hierarchy: dark courses, white nodes, compact labels and dots. */
+.course.major{width:155px;font-size:12px;min-height:55px}.course.compact{width:112px;min-height:26px;padding:6px 8px;font-size:10px}.course.compact small{display:none}.course.dot{width:8px;height:8px;min-height:0;border-radius:50%;padding:0;box-shadow:none}.course.dot .text{display:none}
+.node.compact{width:115px;max-width:125px;height:auto;min-height:24px;padding:5px 7px;border-radius:6px;font-size:10px;text-align:center}.node.compact .text{display:block}.node.compact .title{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.node.compact small{display:none}
+.item small img{width:18px;height:18px;object-fit:cover;border-radius:50%;vertical-align:middle;margin-right:5px}.item small{line-height:20px}
+.node.featured{width:143px;font-size:11px;min-height:53px}.course:hover,.course:focus-visible,.course.reveal{width:155px;height:auto;min-height:55px;border-radius:9px;padding:8px 10px;font-size:12px}.course:hover .text,.course:focus-visible .text,.course.reveal .text{display:block}.course:hover small,.course:focus-visible small,.course.reveal small{display:block}
+.node.compact:hover,.node.compact:focus-visible,.node.reveal{width:155px;max-width:none;min-height:55px}.node.compact:hover .title,.node.compact:focus-visible .title,.node.reveal .title{white-space:normal}.node.compact:hover small,.node.compact:focus-visible small,.node.reveal small{display:block}
+.group-label{opacity:.55}.course.major{background:#202135}.node.dot{width:9px;height:9px}.node.dot.related{width:13px;height:13px}.node.dot:hover,.node.dot:focus-visible,.node.dot.reveal{width:150px;height:auto}
+
+/* Keep each named contributor visible at least once in the overview. */
+.course.compact small{display:block;font-size:9px;line-height:15px;margin-top:3px}
+.node.compact.credited small{display:block;font-size:9px;line-height:18px;margin-top:3px}
+.node.compact.credited{width:130px;max-width:130px}
+
+.item small:empty{display:none!important}
+
+.node.featured.ren-small,.node.ren-small:hover,.node.ren-small.reveal,.node.ren-small:focus-visible{width:116px;min-height:0;padding:5px 7px;font-size:10px;line-height:1.4}
+.node.ren-small small{font-size:9px;line-height:13px;margin-top:3px}
+.edge.recommendation{pointer-events:stroke;stroke:#9784bc;stroke-width:1.3;stroke-dasharray:4 5;opacity:.35}
+.edge.recommendation.faint{opacity:.025}.edge.recommendation.active{opacity:.9;stroke-width:2}
+
+/* Strong weight contrast, based on distinct actual + recommended course links. */
+.edge,.edge.recommendation{stroke:var(--edge-color);stroke-width:var(--edge-width);opacity:var(--edge-opacity);vector-effect:non-scaling-stroke;stroke-linecap:round}
+.edge.recommendation{stroke-dasharray:3 8}
+.edge.active,.edge.recommendation.active{stroke-width:var(--edge-width);opacity:.98}
+.edge.faint,.edge.recommendation.faint{opacity:.025}
+.node.dot:not(:hover):not(:focus-visible):not(.reveal){width:var(--dot-size);height:var(--dot-size)}
+.node.featured:not(.ren-small):not(:hover):not(.reveal){width:var(--card-size)}
+.node.compact:not(.credited):not(:hover):not(.reveal){width:calc(var(--card-size) - 20px);max-width:150px}
+
+/* Recommendations remain fine dashed lines, including hover and selection. */
+.edge.recommendation,.edge.recommendation.active{stroke-width:1;stroke-dasharray:5 6;stroke-linecap:round}
+
+/* Full title and original credits on the expanded card, without a tooltip. */
+.item .hover-credit{display:none!important}
+.item.reveal{transform:translate(calc(-50% + var(--hover-x,0px)),calc(-50% + var(--hover-y,0px)));z-index:45;width:190px;max-width:calc(100vw - 32px);height:auto;min-height:54px;padding:9px 11px;border-radius:9px;text-align:left}
+.item.reveal .text,.item.reveal .title{display:block;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}
+.item.reveal .overview-credit{display:none!important}
+.item.reveal .hover-credit{display:block!important;white-space:normal;line-height:1.6}
+.node.featured.ren-small.reveal{width:190px}
+.item.reveal{width:190px!important;max-width:calc(100vw - 32px)!important}
+
+/* Expanded cards share one alignment and contributor row. */
+.item.reveal,.item.reveal .text,.item.reveal .title{text-align:left!important}
+.item.reveal .hover-credit{display:flex!important;align-items:center;justify-content:flex-start;gap:7px;text-align:left!important;margin-top:7px}
+.item.reveal .hover-credit:empty{display:none!important}
+.item.reveal .hover-credit img,.initial-avatar{width:24px;height:24px;flex:0 0 24px;border-radius:50%;object-fit:cover;margin:0}
+.initial-avatar{display:inline-flex;align-items:center;justify-content:center;background:#e8e2f2;color:#695b83;font-size:11px}
+
+/* All network card titles use the same alignment in every display state. */
+.item,.item .text,.item .title{text-align:left!important}
+
+
+/* Official event portrait: focus the avatar on the speaker. */
+img[src$="jinyiyi.png"]{object-fit:cover;object-view-box:inset(8% 30% 60% 30%)}
+
+/* Original submitted child topics: a quieter third scale around their parent. */
+#subnodes{position:absolute;inset:0;pointer-events:none}
+.subnode{position:absolute;width:5px;height:5px;padding:0;border:1px solid #b0a8c8;border-radius:50%;background:#fdfcff;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;z-index:2}
+.subnode::before{content:"";position:absolute;inset:-3px;border-radius:50%}
+.subedge{fill:none;stroke:#ada4c4;stroke-width:.65;opacity:.32;pointer-events:none}
+.subnode.dim,.subedge.dim{opacity:.08}
+.subcard{display:none;position:absolute;left:-85px;bottom:12px;width:170px;box-sizing:border-box;padding:11px 12px;border:1px solid #9483b9;border-radius:10px;background:#fff;box-shadow:0 4px 18px #33234d16;text-align:left;transform:translate(var(--shift-x,0px),var(--shift-y,0px));color:#24212d;font:12px/1.5 Arial,sans-serif}
+.subnode.show{z-index:30;background:#8f7cb7}
+.subnode.show .subcard{display:block}
+.subcard strong{display:block;font-weight:500;font-size:12px;margin:4px 0 8px}
+.subparent{display:block;color:#8a8495;font-size:10px}
+.subcard small{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:10px;color:#736b81}
+.subcard img,.subcard .initial-avatar{width:22px;height:22px;border-radius:50%;object-fit:cover}
+
+.subcard{left:50%;top:50%;bottom:auto;transform:translate(calc(-50% + var(--shift-x,0px)),calc(-50% + var(--shift-y,0px)))}
+
+.subnode.branch-active{border-color:#8d79b0;background:#fff;opacity:1}
+.subedge.branch-active{stroke:#9c89b9;opacity:.7}
+
+header{justify-content:flex-end}
+
+.overview-credit .overview-person{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;white-space:nowrap;margin-right:5px}
+.overview-credit .overview-person:last-child{margin-right:0}
+.item .overview-person img,.item .overview-person .initial-avatar{width:18px;height:18px;flex:0 0 18px;object-fit:cover;border-radius:50%;margin:0;font-size:9px}
+
+/* Fullscreen gets a modestly larger reading scale; overview keeps its density. */
+:root:fullscreen .course.major{width:180px;min-height:64px;padding:10px 12px}
+:root:fullscreen .course.compact{width:130px;padding:8px 10px}
+:root:fullscreen .course.dot{width:11px;height:11px}
+:root:fullscreen .node.featured:not(.ren-small):not(:hover):not(.reveal){width:calc(var(--card-size) * 1.16);min-height:60px;padding:9px 11px}
+:root:fullscreen .node.compact:not(.credited):not(:hover):not(.reveal){width:calc((var(--card-size) - 20px) * 1.16);max-width:174px;padding:7px 9px}
+:root:fullscreen .node.compact.credited{width:151px;max-width:151px;padding:7px 9px}
+:root:fullscreen .node.dot:not(:hover):not(:focus-visible):not(.reveal){width:calc(var(--dot-size) * 1.25);height:calc(var(--dot-size) * 1.25)}
+:root:fullscreen .node.ren-small:not(.dot):not(.reveal){width:135px;padding:7px 9px}
+:root:fullscreen .item.reveal{width:220px!important;font-size:13px;padding:11px 13px}
+:root:fullscreen .overview-person img,:root:fullscreen .overview-person .initial-avatar{width:21px;height:21px;flex-basis:21px}
+:root:fullscreen .course{font-size:12px}
+:root:fullscreen .course.major{font-size:13px}
+:root:fullscreen .course.compact{font-size:11px}
+:root:fullscreen .node.featured{font-size:12px}
+:root:fullscreen .node.compact{font-size:11px}
+:root:fullscreen .item small{font-size:10px}
+:root:fullscreen .subnode{width:7px;height:7px}
+:root:fullscreen header button{font-size:12px;padding:7px 12px}
+
+/* The embedded homepage uses quieter, smaller solid points; fullscreen keeps the current hierarchy. */
+:root:not(:fullscreen) #items .node.dot:not(:hover):not(:focus-visible):not(.reveal){width:5px;height:5px;border:0;background:var(--dot-color,#8067bd);box-shadow:none}
+:root:not(:fullscreen) #items .node.dot.related:not(:hover):not(:focus-visible):not(.reveal){width:7px;height:7px}
+:root:not(:fullscreen) #items .course.dot:not(:hover):not(:focus-visible):not(.reveal){width:5px;height:5px;border:0;background:#242437;box-shadow:none}
+:root:not(:fullscreen) .subnode{width:4px;height:4px;border:0;background:#c1b6d9;box-shadow:none}
+:root:not(:fullscreen) .subnode:not(.branch-active):not(.show):not(.dim){opacity:.42}
+:root:not(:fullscreen) .subedge:not(.branch-active):not(.dim){opacity:.045}
+:root:not(:fullscreen) .subedge.dim{opacity:.015}
+:root:not(:fullscreen) .subnode.branch-active{opacity:1;background:#8f7cb7}
+:root:not(:fullscreen) .subedge.branch-active{opacity:.72}
+:root:not(:fullscreen) #items .node[data-title="科学可视化"].credited:not(:hover):not(:focus-visible):not(.reveal){width:max-content;min-width:104px;max-width:116px;padding-left:7px;padding-right:7px}
+
+/* A few collision-checked labels accompany a hovered course. */
+#items .node.dot.course-preview:not(.reveal){width:128px;height:auto;min-height:28px;padding:6px 8px;border-radius:7px;background:#fff;z-index:12;font-size:10px;line-height:1.45;box-shadow:0 3px 10px #40355b12}
+#items .item.course-preview,#items .item.collaborative-preview{opacity:1!important;background:#fff!important;color:#24212d!important;border-color:#b4a2d2!important}
+#items .course-preview .text{display:block}
+#items .course-preview .title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+#items .course-preview small{display:none!important}
+:root:fullscreen #items .node.dot.course-preview:not(.reveal){width:150px;padding:7px 10px;font-size:12px;min-height:32px}
+
+:root:fullscreen .course.dot.reveal{height:auto;min-height:70px}
+
+
+/* A collapsed course's fixed dot height must never survive expansion. */
+#items .course.dot:is(:hover,:focus-visible,.reveal){height:auto!important;min-height:70px!important;padding:11px 13px!important}
+#items .course.reveal .text{display:flex;flex-direction:column;align-items:stretch}
+#items .course.reveal .hover-credit{flex-shrink:0;min-height:24px;margin-top:8px;padding-bottom:2px}
+
+/* Compact homepage previews remain legible while leaving room for neighbors. */
+:root:not(:fullscreen) #items .node.dot.course-preview:not(.reveal){width:108px;padding:5px 7px;font-size:10px;min-height:26px}
+
+/* Other contributors remain visible when their parent course is hovered. */
+#items .node.collaborative-preview:not(.reveal){width:158px!important;height:auto!important;min-height:48px;padding:7px 9px;border-radius:8px;background:#fff;z-index:13}
+#items .collaborative-preview .overview-credit{display:none!important}
+#items .collaborative-preview .hover-credit{display:flex!important;align-items:center;flex-wrap:wrap;gap:4px;margin-top:5px;font-size:10px}
+#items .collaborative-preview .hover-credit img,#items .collaborative-preview .initial-avatar{width:20px;height:20px;flex-basis:20px}
+
+#items .item.preview-covered{visibility:hidden;pointer-events:none}
+
+/* Peripheral course inventory: compact title only, full credits on hover. */
+#items .course.catalog-course.compact:not(.reveal):not(:hover):not(:focus-visible){width:90px;min-height:0;padding:4px 6px;font-size:9px;line-height:1.4}
+#items .catalog-course:not(.reveal) .overview-credit{display:none!important}
+#items .catalog-course.compact:not(.reveal) .title{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#items .course.catalog-course.dot:not(.reveal):not(:hover):not(:focus-visible){width:6px;height:6px}
+
+#items .course.catalog-full-title.compact:not(.reveal):not(:hover):not(:focus-visible){width:125px}
+#items .catalog-full-title.compact:not(.reveal) .title{white-space:normal;overflow:visible;text-overflow:clip}
+/* Compact labels follow their text; expanded cards retain room for credits. */
+#items .course.catalog-full-title.compact:not(.reveal):not(:hover):not(:focus-visible){width:max-content;max-width:180px}
+#items .node.compact:not(.credited):not(.reveal):not(:hover):not(.collaborative-preview){width:max-content;max-width:150px}
+:root:fullscreen #items .node.compact:not(.credited):not(.reveal):not(:hover):not(.collaborative-preview){width:max-content;max-width:174px}
+/* Short titles need only enough room for their contributor row. */
+#items .node:is([data-id="mengke-01"],[data-id="teacher-diary"]):not(.reveal):not(:hover):not(:focus-visible){width:92px;max-width:92px}
+:root:fullscreen #items .node:is([data-id="mengke-01"],[data-id="teacher-diary"]):not(.reveal):not(:hover):not(:focus-visible){width:106px;max-width:106px}
+img[src$="/mengke.jpg"]{object-fit:cover;object-position:50% 22%}
+.department-badge{display:block;width:fit-content;margin-top:5px;padding:2px 5px;border-radius:4px;background:#eeebf8;color:#71648f;font-size:8px;font-weight:400;line-height:1.35;white-space:normal}
+.course .department-badge{background:#ffffff1a;color:#e2dbef}
+:root:fullscreen .department-badge{font-size:9px}
+/* Affiliation follows the contributor name, with a clear purple accent. */
+.department-badge,.course .department-badge{display:inline;width:auto;margin:0 0 0 5px;padding:0;border-radius:0;background:none;color:#7950d3;font-size:inherit;font-weight:500;line-height:inherit;white-space:normal}
+.course .department-badge{color:#c4a5ff}
+:root:fullscreen .department-badge{font-size:inherit}
+#items .node:is([data-id="zhang-media"],[data-id="zhaoxiaoguang-10"],[data-id="mengke-01"]) .person-name{white-space:normal}
+/* Keep name and affiliation together in a purple tag. */
+.department-badge,.course .department-badge{display:inline-block;margin:0 0 0 5px;padding:2px 5px;border-radius:4px;background:#e5dbfa;color:#6940b8;font-size:8px;font-weight:500;line-height:1.3;white-space:nowrap;vertical-align:middle}
+:root:fullscreen .department-badge{font-size:9px}
+#items .node:is([data-id="zhang-media"],[data-id="zhaoxiaoguang-10"],[data-id="mengke-01"]) .person-name{white-space:nowrap}
+#items .item.reveal .hover-credit>span{white-space:nowrap}
+#items .node[data-id="mengke-01"]:not(.reveal){width:132px!important;max-width:none!important}
+#items .node[data-id="zhang-media"]:not(.reveal){width:154px!important;max-width:none!important}
+#items .node[data-id="zhaoxiaoguang-10"]:not(.reveal){width:188px!important;max-width:none!important}
+:root:fullscreen #items .node[data-id="mengke-01"]:not(.reveal){width:145px!important}
+:root:fullscreen #items .node[data-id="zhang-media"]:not(.reveal){width:168px!important}
+:root:fullscreen #items .node[data-id="zhaoxiaoguang-10"]:not(.reveal){width:206px!important}
+#items .item[data-id="zhaoxiaoguang-10"].reveal{width:225px!important}
+/* Tighter representative cards, without truncating course titles. */
+#items .node[data-id="zhang-media"]:not(.reveal):not(:hover){width:134px!important;max-width:none!important}
+:root:fullscreen #items .node[data-id="zhang-media"]:not(.reveal):not(:hover){width:148px!important}
+#items .course[data-title="创意图形编程"]:not(.reveal):not(:hover){width:116px;min-height:49px}
+:root:fullscreen #items .course[data-title="创意图形编程"]:not(.reveal):not(:hover){width:132px}
+#items .course[data-title="数智AI时代的场景设计"]:not(.reveal):not(:hover){width:max-content;min-width:140px;max-width:none}
+#items .course[data-title="数智AI时代的场景设计"] .title{white-space:nowrap!important}
+/* Fabio affiliation and single-line Li Yingjun titles. */
+:root:not(:fullscreen) #items .node[data-id="teacher-science"]:not(.reveal):not(:hover){width:132px!important;max-width:none!important}
+:root:fullscreen #items .node[data-id="teacher-science"]:not(.reveal):not(:hover){width:162px!important;max-width:none!important}
+#items .node[data-id="teacher-science"] .person-name{white-space:nowrap}
+#items .course[data-title="服饰文化与跨媒介时尚设计"]:not(.reveal):not(:hover){width:max-content;min-width:155px;max-width:none}
+#items .course[data-title="服饰文化与跨媒介时尚设计"] .title,#items .node[data-id^="liyingjun-node-"] .title{white-space:nowrap!important}
+#items .node[data-id^="liyingjun-node-"]:not(.dot):not(.reveal):not(:hover){width:max-content!important;max-width:none!important}
+#items .node[data-id^="liyingjun-node-"].reveal,#items .course[data-title="服饰文化与跨媒介时尚设计"].reveal{width:max-content!important;min-width:190px}
+#items .course[data-title="设计伦理：议题、历史与案例"]:not(.reveal):not(:hover){width:162px;min-height:48px}
+#items .course[data-title="设计伦理：议题、历史与案例"] .title{white-space:nowrap!important}
+img[src$="/jiaoyang.jpeg"]{object-fit:cover;object-position:50% 0%}
+#items .node[data-id="jiaoyang-root"]:not(.reveal){width:185px!important;max-width:none!important}
+#items .node[data-id="zhaoxiaoguang-root"]:not(.reveal){width:188px!important;max-width:none!important}
+#items .node[data-id="mengke-root"]:not(.reveal){width:132px!important;max-width:none!important}
+
+/* Short, single-contributor details should not expand to the same footprint as complex cards. */
+:root:not(:fullscreen) #items .item.short-detail.reveal{width:166px!important;min-height:48px!important;padding:8px 10px!important}
+#items .node[data-id$="-root"] .person-name{white-space:nowrap}
+
+/* Match the course roadmap surface. */
+html,body,body:fullscreen{background:#eceaf7}
+
+header #full{border:0;box-shadow:0 2px 8px #2924420a}

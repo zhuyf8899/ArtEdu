@@ -128,3 +128,262 @@ html:has(.portal-shell.morph-v17) { scrollbar-color: #a094ed transparent; }
     mask-image: linear-gradient(90deg, transparent 35%, #000 80%), linear-gradient(transparent, #000 14% 72%, transparent);
   }
 }
+
+/* Shared MORPH treatments from the November handoff. */
+.portal-shell.morph-v17 {
+  --morph-page-width: 80%;
+  --morph-control-radius: 10px;
+  --morph-glass: rgba(255, 255, 255, .5);
+  --morph-control-shadow: 0 2px 8px rgba(36, 32, 71, .065);
+  --morph-title-size: 28px;
+}
+.morph-v17 .site-nav.morph-nav,
+.morph-v17 .cosmos .site-nav.morph-nav {
+  background: #191b35;
+}
+.morph-v17 .morph-nav .brand,
+.morph-v17 .unified-footer .footer-brand {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+.morph-v17 .morph-nav .brand img.morph-wordmark,
+.morph-v17 .unified-footer .morph-wordmark {
+  display: block;
+  width: 190px;
+  height: auto;
+  max-height: 32px;
+  object-fit: contain;
+}
+.morph-v17 .unified-footer .morph-wordmark { width: 170px; max-height: 28px; }
+.morph-v17 :is(.container, .my-learning-page) {
+  width: var(--morph-page-width);
+  max-width: 1536px;
+}
+.morph-v17 :is(.morph-page-banner, .particles-banner) .banner-copy h1 {
+  font-size: var(--morph-title-size);
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+.morph-v17 :is(.morph-account, .morph-nav, .unified-footer, .learning-navigation)
+  :is(button, a):focus-visible {
+  outline: 2px solid #a89aff;
+  outline-offset: 3px;
+}
+.morph-v17 :is(.button, .atomic-button, .morph-tool-card__launch, .account.account-trigger) {
+  border-radius: var(--morph-control-radius);
+}
+@media (max-width: 1600px) {
+  .portal-shell.morph-v17 { --morph-page-width: 88%; }
+}
+@media (max-width: 1180px) {
+  .portal-shell.morph-v17 { --morph-page-width: 92%; }
+}
+@media (max-width: 1100px) {
+  .morph-v17 .morph-nav .brand img.morph-wordmark { width: 156px; }
+}
+@media (max-width: 780px) {
+  .portal-shell.morph-v17 {
+    --morph-page-width: calc(100% - 32px);
+    --morph-title-size: 24px;
+  }
+}
+
+.morph-v17 .test-login__brand .morph-wordmark {
+  display: block;
+  width: 190px;
+  max-width: 100%;
+  height: auto;
+}
+.morph-v17 .local-login-form :is(input, button) { border-radius: 10px; }
+.morph-v17 .local-login-form :is(input, button):focus-visible {
+  outline: 2px solid #6554e8;
+  outline-offset: 3px;
+}
+
+/* Directory and home layouts from the November 19 screenshots. */
+.morph-v17 :is(.morph-page-banner, .atomic-hub--particles .particles-banner.is-compact) {
+  height: 166px;
+}
+.morph-v17 :is(.morph-page-banner, .atomic-hub--particles .particles-banner.is-compact) .banner-copy {
+  width: var(--morph-page-width);
+  padding-top: 36px;
+}
+.morph-v17 .particles-banner .learning-banner-subtitle { display: none; }
+.morph-v17 .morph-page-banner :is(.banner-art, canvas) { width: 100%; height: 100%; }
+.morph-v17 .morph-page-banner .banner-art { inset: 0; opacity: .8; }
+.morph-v17[data-page="cases"] .morph-page-banner,
+.morph-v17[data-page="tools"] .morph-page-banner { overflow: visible; isolation: auto; }
+.morph-v17:is([data-page="cases"], [data-page="tools"]) .morph-page-banner .banner-art {
+  top: 0; left: 8%; width: 92%; height: 320px;
+  mask-image: linear-gradient(to bottom, #000 54%, transparent);
+  pointer-events: none;
+}
+.morph-v17 :is(.morph-community-catalog, .morph-tool-catalog) { position: relative; z-index: 1; }
+.morph-v17 .morph-community-catalog { padding-top: 0; }
+
+.morph-v17 .morph-nav .nav-left { gap: 26px; }
+.morph-v17 .morph-nav-utilities { display: flex; align-items: center; gap: 8px; }
+.morph-v17 .morph-nav-utilities a {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 32px; padding: 6px 9px; border-radius: 9px; color: #f6f5ff;
+  font-size: 13px; font-weight: 600; line-height: 20px; text-decoration: none; white-space: nowrap;
+}
+.morph-v17 .morph-nav-utilities a:hover,
+.morph-v17 .morph-nav-utilities a[aria-current="page"] { background: #ffffff1c; }
+.morph-v17 .morph-nav-utilities .morph-nav-publish { background: var(--purple); }
+.morph-v17 .morph-nav-utilities .morph-nav-publish:hover { background: #5142cb; }
+.morph-v17 .morph-account .morph-nav-search { width: 100%; margin-bottom: 10px; color: var(--ink); background: #eeedf6; }
+.morph-v17 .morph-account .morph-nav-search :is(input, button),
+.morph-v17 .morph-account .morph-nav-search input::placeholder { color: var(--ink); }
+@media (min-width: 1001px) {
+  .portal-shell.morph-v17 { padding-top: 56px; }
+  .morph-v17 .site-nav.morph-nav { position: fixed; inset: 0 0 auto; z-index: 100; }
+}
+@media (max-width: 1000px) {
+  .morph-v17 .morph-nav-right { gap: 8px; }
+  .morph-v17 .morph-nav-utilities { gap: 4px; }
+  .morph-v17 .morph-nav-utilities a { padding-inline: 5px; font-size: 12px; }
+}
+@media (max-width: 780px) {
+  .morph-v17 .site-nav.morph-nav .nav-left { gap: 8px; min-width: 0; }
+  .morph-v17 .site-nav.morph-nav .nav-links { display: flex; }
+  .morph-v17 .morph-nav-utilities a { min-height: 28px; }
+  .morph-v17 .morph-nav-utilities a svg { width: 13px; }
+}
+
+.morph-v17 .learning-network-panel--featured {
+  margin: 0 0 24px; border: 0; border-radius: 25px;
+  background: #ffffff70; box-shadow: 0 12px 35px #2420470c;
+}
+.morph-v17 .learning-network-panel--featured .atomic-reference-scope { margin: 0; }
+.november-course-network {
+  display: grid; grid-template-columns: minmax(195px, 258px) minmax(0, 1fr);
+  align-items: center; gap: clamp(16px, 2vw, 24px); padding: clamp(18px, 2vw, 24px);
+}
+.november-course-network > .network-intro {
+  width: 100% !important; height: auto !important; min-width: 0;
+}
+.november-course-network .network-intro > :is(div,a) { max-width: 100%; }
+.november-course-network .network-intro > a {
+  background: #6554e8 !important; color: #fff !important;
+}
+.november-course-network .network-intro > a p { color: inherit !important; }
+.november-course-network iframe {
+  display: block; width: 100%; height: clamp(390px, 27vw, 500px); border: 0; border-radius: 14px; background: #eceaf7;
+}
+@media (max-width: 1000px) {
+  .november-course-network { grid-template-columns: minmax(0, 1fr); }
+  .november-course-network .network-intro > [data-name^="共创课程插画"] { display: none !important; }
+}
+
+.morph-v17 .morph-community-utilities {
+  display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; margin: 0 0 0 auto;
+}
+.morph-v17 .morph-community-utilities .case-my-submissions {
+  position: relative; width: auto; padding: 0; margin: 0; border: 0; background: transparent;
+  font-size: 13px;
+}
+.morph-v17 .morph-community-utilities .case-my-submissions summary {
+  cursor: pointer; color: #565074; padding: 6px 10px;
+}
+.morph-v17 .morph-community-utilities .case-my-submissions[open] ul {
+  right: 0; top: 100%; position: absolute; min-width: min(350px, 80vw);
+  max-height: 50vh; overflow: auto; background: #faf9ff; padding: 10px;
+  box-shadow: var(--morph-control-shadow); border-radius: 10px; z-index: 4;
+}
+.morph-v17 .morph-case-filter-dimensions { position: relative; font-size: 12px; color: var(--muted); }
+.morph-v17 .morph-case-filter-dimensions summary { cursor: pointer; }
+.morph-v17 .morph-case-filter-dimensions[open] > div {
+  position: absolute; top: 100%; left: 0; z-index: 5; display: flex; flex-wrap: wrap;
+  gap: 6px; min-width: min(345px, 80vw); padding: 10px; border-radius: 10px;
+  box-shadow: var(--morph-control-shadow); background: #faf9ff;
+}
+.morph-v17 .morph-case-filter-dimensions button {
+  border: 0; border-radius: 8px; background: transparent; color: var(--ink); padding: 6px 9px; font-size: 12px;
+}
+.morph-v17 .morph-case-filter-dimensions button[aria-pressed="true"] { background: #eeebff; color: #5142a4; }
+.morph-v17 .morph-community-catalog .morph-discovery__extra { margin-top: 8px; align-items: center; }
+.morph-v17 .morph-case-cover-wrap { position: relative; }
+.morph-v17 .morph-case-bookmark,
+.morph-v17 .morph-tool-bookmark {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
+  border: 0; border-radius: 6px; background: #30365275; color: #fff;
+}
+.morph-v17 :is(.morph-case-bookmark, .morph-tool-bookmark)[aria-pressed="true"] { background: #6554e8; }
+.morph-v17 .morph-case-card .case-actions .button { background: #6554e8; color: white; border-color: transparent; }
+.morph-v17 .morph-case-card .case-actions .morph-case-author { min-width: 0; }
+
+.morph-v17 .morph-tool-catalog .tool-directory__list--grid {
+  grid-template-columns: repeat(var(--catalog-columns), minmax(0, 1fr)) !important;
+  gap: var(--catalog-gap) !important;
+}
+.morph-v17 .morph-tool-catalog .morph-tool-card { gap: 9px; min-height: 270px; padding: 17px; }
+.morph-v17 .morph-tool-card__head { min-height: 43px; padding-right: 25px; }
+.morph-v17 .morph-tool-card__icon { flex: 0 0 43px; width: 43px; height: 43px; border: 0; border-radius: 10px; }
+.morph-v17 .morph-tool-card__category { margin: 0; border: 0; }
+.morph-v17 .morph-tool-card__description { margin: 0; min-height: auto; line-height: 1.75; }
+.morph-v17 .morph-tool-card__labels { margin: 0; }
+.morph-v17 .morph-tool-card__labels > span { border: 0; background: #f2f0fa; }
+.morph-v17 .morph-tool-card__footer { padding-top: 7px; border: 0; }
+.morph-v17 .morph-tool-detail-trigger { border: 0; border-radius: 9px; background: #f7f5fe; color: #5142c0; min-height: 36px; padding: 6px 9px; }
+.morph-v17 .morph-tool-card .morph-tool-card__footer .morph-tool-card__launch { background: #6554e8; color: #fff; border: 0; }
+.morph-v17 .morph-tool-detail {
+  max-width: min(580px, calc(100% - 32px)); width: 100%; padding: 24px;
+  border: 0; border-radius: 16px; background: #faf9ff; color: #171a2f;
+}
+.morph-v17 .morph-tool-detail::backdrop { background: #171a2f92; }
+.morph-v17 .morph-tool-detail > header { display: flex; align-items: center; justify-content: space-between; }
+.morph-v17 .morph-tool-detail > header button { display: grid; place-items: center; padding: 6px; border: 0; border-radius: 8px; background: #eeebff; }
+.morph-v17 .morph-tool-detail__host { font-size: 13px; color: var(--muted); }
+.morph-v17 .morph-tool-save-error { margin: 0; font-size: 12px; color: #9c2353; }
+
+.morph-v17 .portal-main--home > .route-transition { width: 100%; }
+.portal-shell.morph-v17 .home-recommendations.container { width: var(--morph-page-width); max-width: 1536px; }
+.morph-v17 .home-recommendations .home-section { margin: 0; }
+.morph-v17 .home-recommendations .home-course-strip {
+  display: flex; gap: 24px; padding: 4px 4px 16px; scrollbar-width: thin;
+  scrollbar-color: #9081ce transparent;
+}
+.morph-v17 .morph-home-node {
+  flex: 0 0 34%; display: grid; grid-template-columns: 26% minmax(0, 1fr); min-width: 345px;
+  min-height: 275px; overflow: hidden; scroll-snap-align: start;
+  background: #fff; border-radius: 20px; box-shadow: 0 6px 22px #2420470b;
+}
+.morph-v17 .morph-home-node__art {
+  display: flex; align-items: center; justify-content: center; position: relative;
+  min-width: 0; background: #e4e1f2; border-radius: 14px;
+}
+.morph-v17 .morph-home-node__art img { width: 100%; height: 72%; object-fit: contain; }
+.morph-v17 .morph-home-node__art span { position: absolute; bottom: 15px; inset-inline: 10px; font-size: 10px; color: #606887; }
+.morph-v17 .morph-home-node__content { display: flex; flex-direction: column; min-width: 0; padding: 18px 20px; }
+.morph-v17 .morph-home-node__content h3 { margin: 6px 0; color: var(--ink); font-size: 17px; }
+.morph-v17 .morph-home-node__content p { margin: 0 0 8px; color: #5f647b; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.morph-v17 .morph-home-node__label { font-size: 12px; color: #5645c8; }
+.morph-v17 .morph-home-node__author { color: var(--muted); }
+.morph-v17 .morph-home-node__actions { margin-top: auto; padding-top: 14px; display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.morph-v17 .morph-home-node__actions .button { padding: 6px 10px; min-height: 36px; border: 0; background: #6554e8; color: #fff; }
+.morph-v17 .morph-home-node__actions .button.secondary { background: #f5f3fc; color: #5c4bd8; }
+.morph-v17 .home-recommendations .morph-home-cases {
+  grid-template-columns: repeat(var(--catalog-columns), minmax(0, 1fr)); gap: 24px;
+}
+@media (max-width: 780px) {
+  .morph-v17 .morph-home-node { flex-basis: 90%; min-width: 0; }
+  .morph-v17 .morph-home-node__content { padding: 14px; }
+}
+
+
+.morph-v17 .morph-case-card .case-card-badges {
+  position: absolute; top: 12px; left: 12px; right: 48px;
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 5px;
+}
+.morph-v17 .morph-case-card .case-card-badges .case-category { position: static; }
+.morph-v17 .morph-case-card .case-collection-tag {
+  padding: 3px 6px; border-radius: 5px; background: #f7f7fc; color: #3e455e;
+  font-size: 11px; line-height: 1.4; font-weight: 650;
+}
+.morph-v17 .morph-case-card .case-collection-tag[data-collection="art-selection"] {
+  background: #eee8ff; color: #4935a4;
+}

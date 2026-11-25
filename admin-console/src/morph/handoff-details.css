@@ -1,17 +1,5 @@
 /* Six handoff corrections. Scoped so classic pages and the admin console are untouched. */
 .morph-v17 .morph-discovery--compact{padding:0;border:0;background:transparent;box-shadow:none;margin-bottom:24px}
-.morph-v17 .morph-discovery--compact .morph-discovery__main{grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:stretch}
-.morph-v17 .morph-discovery--compact .morph-category-list{padding:3px;background:#ffffff55;border:1px solid #fff5;border-radius:16px}
-.morph-v17 .morph-discovery--compact .morph-category{padding:8px 12px;min-height:38px;background:transparent;font-weight:400}
-.morph-v17 .morph-discovery--compact .morph-category[aria-pressed=true]{background:var(--ink);color:#fff}
-.morph-v17 .morph-discovery--compact .morph-category__dot{background:#374151}
-.morph-v17 .morph-discovery--compact .morph-category:nth-child(3) .morph-category__dot{background:#6c63ff}
-.morph-v17 .morph-discovery--compact .morph-category:nth-child(4) .morph-category__dot{background:#e0447c}
-.morph-v17 .morph-discovery--compact .morph-category:nth-child(5) .morph-category__dot{background:#e07a1f}
-.morph-v17 .morph-discovery--compact .morph-category:nth-child(6) .morph-category__dot{background:#0e9e8e}
-.morph-v17 .morph-discovery--compact .morph-category:nth-child(7) .morph-category__dot{background:#0284c7}
-.morph-v17 .morph-discovery--compact .morph-catalog-search{height:auto;min-height:40px;background:#ffffffb8}
-.morph-v17 .morph-discovery--compact .morph-discovery__bottom:not(.sr-only){padding-top:12px;margin-top:12px}
 .morph-v17 .course-card.morph-course-card .course-cover>.status{top:15px;left:15px;padding:8px 12px;background:var(--ink);color:white;border:0;border-radius:8px;font-size:12px;line-height:18px;height:auto;min-height:0;max-width:calc(100% - 30px)}
 .morph-v17 .course-card.morph-course-card .course-cover>.status.done{background:var(--lime);color:var(--ink)}
 .morph-v17 .course-card.morph-course-card .course-cover>.status.new{background:white;color:var(--muted)}
@@ -66,7 +54,7 @@
 .morph-v17 .morph-tool-recommendation h2{margin:0 0 16px;font-size:24px;line-height:32px}
 .morph-v17 .morph-tool-recommendation .button{background:var(--ink);border-color:var(--ink);color:#fff}
 .morph-v17 :is(.morph-curriculum,.morph-tool-recommendation) :is(button,input,textarea):focus-visible{outline:2px solid var(--purple);outline-offset:3px}
-@media(max-width:1199px){.morph-v17 .morph-discovery--compact .morph-discovery__main{grid-template-columns:1fr}.morph-v17 .morph-curriculum .curriculum-conversation{box-sizing:border-box}}
+@media(max-width:1199px){.morph-v17 .morph-curriculum .curriculum-conversation{box-sizing:border-box}}
 .morph-v17 .morph-catalog .atom-connections{backdrop-filter:blur(28px)!important;-webkit-backdrop-filter:blur(28px)!important}
 .morph-v17 .morph-catalog .atom-connections .eyebrow{font-weight:400}
 .morph-v17 .curriculum-entry .button{font-weight:400}

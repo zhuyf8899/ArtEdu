@@ -3,7 +3,7 @@ import {courseProgress} from '../courseProgress.js';
 import {atomicCardState} from './atomicParticlesModel.js';
 
 export function atomicContentLabel(item){
- if(item.id?.startsWith('morph-handoff-'))return '知识大纲';
+ if(item.readiness==='outline'||item.payload?.readiness==='outline'||item.id?.startsWith('morph-handoff-'))return '知识大纲';
  return item.kind==='reflection'?'学习心得':item.kind==='course'?'原子组合课程':'教学原子';
 }
 // Keep different resources and their real progress separate, even when names match.
