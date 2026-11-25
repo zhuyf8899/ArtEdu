@@ -19,6 +19,7 @@ export function LearningNavigation({view,navItems,onNavigate,onCreate,teacher,re
 }
 export function LearningNetworkPanel({accountId,serial,onNavigate,initiallyExpanded=false}){
  const [expanded,setExpanded]=useState(false),[networkView,setNetworkView]=useState("knowledge");
+ if(initiallyExpanded)return <section className="learning-network-panel learning-network-panel--featured" aria-label="课程知识网络"><AtomicCourseNetwork edition="november" accountId={accountId} serial={serial} onNavigate={onNavigate}/></section>;
  return <section className={'learning-network-panel'+(expanded?' is-expanded':'')} aria-label="课程知识网络"><header><div><span>CONNECTED LEARNING</span><h2>知识相连，学习有路</h2><p>探索课程结构，找到适合自己的学习方向。</p></div><button type="button" aria-expanded={expanded} aria-controls="learning-network-content" onClick={()=>setExpanded(v=>!v)}>{expanded?'收起课程网络':'展开课程网络'}<ArrowUpRight size={17}/></button></header><div id="learning-network-content" hidden={!expanded}>{expanded&&<><div className="learning-network-views" role="group" aria-label="课程网络展示"><button aria-pressed={networkView==='knowledge'} onClick={()=>setNetworkView('knowledge')}>知识节点网络</button><button aria-pressed={networkView==='reference'} onClick={()=>setNetworkView('reference')}>课程参考总览</button></div>{networkView==='knowledge'?<KnowledgeNetwork accountId={accountId} serial={serial} onNavigate={onNavigate} compact/>:<AtomicCourseNetwork accountId={accountId} serial={serial} onNavigate={onNavigate}/>}</>}</div></section>;
 }
 
