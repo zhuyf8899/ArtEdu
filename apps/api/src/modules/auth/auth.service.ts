@@ -94,8 +94,8 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + environment.localSessionDays * 24 * 60 * 60 * 1000);
     await this.database.transaction(async (client) => {
       await client.query(
-        "DELETE FROM auth_sessions WHERE expires_at <= CURRENT_TIMESTAMP OR last_seen_at <= CURRENT_TIMESTAMP - ($2 * INTERVAL '1 hour') OR user_id = $1",
-        [user.id, environment.localSessionIdleHours],
+        "DELETE FROM auth_sessions WHERE expires_at <= CURRENT_TIMESTAMP OR last_seen_at <= CURRENT_TIMESTAMP - ($1 * INTERVAL '1 hour')",
+        [environment.localSessionIdleHours],
       );
       await client.query(`
         INSERT INTO auth_sessions (id,user_id,token_hash,expires_at)

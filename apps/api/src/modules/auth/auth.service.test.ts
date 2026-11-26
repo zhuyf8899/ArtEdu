@@ -47,6 +47,35 @@ test("八字符密码可以走完普通教师的哈希校验和登录", async ()
   }
 });
 
+test("同一账号再次登录保留已有会话，退出仅清除当前会话", async () => {
+  const previous = process.env.ENABLE_LOCAL_AUTH;
+  process.env.ENABLE_LOCAL_AUTH = "true";
+  try {
+    const username = "teacher-test-" + randomUUID();
+    const password = "Q7v*Wg9f";
+    const user = { id: randomUUID(), username, display_name: "验收教师", status: "active", roles: ["teacher"], password_hash: await hashLocalPassword(password) };
+    const sessions = new Set<string>();
+    const query = async (sql: string, params: unknown[] = []) => {
+      if (sql.includes("FROM user_identities")) return { rows: [user] };
+      if (sql.includes("DELETE FROM auth_sessions") && sql.includes("user_id")) throw new Error("登录清除了其他设备的会话");
+      if (sql.includes("INSERT INTO auth_sessions")) sessions.add(params[2] as string);
+      if (sql.includes("DELETE FROM auth_sessions WHERE token_hash")) sessions.delete(params[0] as string);
+      return { rows: [] };
+    };
+    const service = new AuthService({ query, transaction: async (callback: (client: { query: typeof query }) => Promise<void>) => callback({ query }) } as never);
+    const input = localLoginSchema.parse({ username, password });
+    const first = await service.loginLocal(input, "198.51.100.1");
+    const second = await service.loginLocal(input, "198.51.100.2");
+    assert.equal(sessions.size, 2);
+    await service.logout({ headers: { cookie: `artedu_session=${second.token}` } } as never);
+    assert.equal(sessions.size, 1);
+    assert.ok(first.token !== second.token);
+  } finally {
+    if (previous === undefined) delete process.env.ENABLE_LOCAL_AUTH;
+    else process.env.ENABLE_LOCAL_AUTH = previous;
+  }
+});
+
 test("本地登录按 IP、账号与组合限制连续失败", async () => {
   const previous = process.env.ENABLE_LOCAL_AUTH;
   process.env.ENABLE_LOCAL_AUTH = "true";
