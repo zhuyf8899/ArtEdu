@@ -1,3 +1,4 @@
+import { workImagePreview } from './workImagePreview';
 import { requiredNodes, activeEdge, matchesCondition, assertControlParameters } from './workflow-control';
 import {cacheExpired} from '../cloud-cache/cache-policy';
 import { assertTextNodeParameters, textProcessingTypes } from './workflow-text-nodes';
@@ -506,23 +507,45 @@ export class StudioService {
 
   async listWorks(actor: Actor, query: CatalogQuery) {
     const values: unknown[] = [actor.id];
-    const where = ["w.status = 'approved'"];
+    const where = ["w.status = 'approved'", "$1::text IS NOT NULL"];
     if (query.query) {
       values.push(`%${query.query}%`);
-      where.push(`(w.title ILIKE $${values.length} OR w.summary ILIKE $${values.length})`);
+      where.push(`(w.title ILIKE $${values.length} OR w.summary ILIKE $${values.length}
+        OR author.display_name ILIKE $${values.length} OR w.story_json->>'creators' ILIKE $${values.length}
+        OR w.story_json->>'tools' ILIKE $${values.length} OR w.story_json->>'methods' ILIKE $${values.length}
+        OR EXISTS (SELECT 1 FROM work_tags wt JOIN tags t ON t.id=wt.tag_id WHERE wt.work_id=w.id AND t.name ILIKE $${values.length}))`);
     }
     if (query.discipline) {
       values.push(query.discipline);
       where.push(`w.discipline = $${values.length}`);
     }
-    values.push(query.pageSize, (query.page - 1) * query.pageSize);
-    const result = await this.database.query<WorkRow>(`${this.workSelect("$1")}
-      WHERE ${where.join(" AND ")}
-      GROUP BY w.id, author.display_name
-      ORDER BY w.is_featured DESC, w.featured_rank NULLS LAST, w.published_at DESC,w.id
-      LIMIT $${values.length - 1} OFFSET $${values.length}
-    `, values);
-    return { items: result.rows.map(this.mapWork), page: query.page, pageSize: query.pageSize };
+    if (query.category) {
+      values.push(query.category);
+      where.push(`(w.discipline = $${values.length}
+        OR COALESCE(w.story_json->'tools','[]'::jsonb) ? $${values.length}
+        OR COALESCE(w.story_json->'methods','[]'::jsonb) ? $${values.length}
+        OR EXISTS (SELECT 1 FROM work_tags wt JOIN tags t ON t.id=wt.tag_id WHERE wt.work_id=w.id AND t.name=$${values.length}))`);
+    }
+    const [result, count, facets] = await Promise.all([
+      this.database.query<WorkRow>(`${this.workSelect("$1")}
+        WHERE ${where.join(" AND ")} GROUP BY w.id, author.display_name
+        ORDER BY w.is_featured DESC, w.featured_rank NULLS LAST, w.published_at DESC,w.id
+        LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+        [...values, query.pageSize, (query.page - 1) * query.pageSize]),
+      this.database.query<{total: number}>(`SELECT count(*)::int AS total FROM works w
+        JOIN users author ON author.id=w.author_id WHERE ${where.join(" AND ")}`, values),
+      query.page === 1 ? this.database.query<{group_name: string; label: string}>(`
+        SELECT DISTINCT '大类' AS group_name, discipline AS label FROM works WHERE status='approved'
+        UNION SELECT DISTINCT '使用工具类', jsonb_array_elements_text(COALESCE(story_json->'tools','[]'::jsonb)) FROM works WHERE status='approved'
+        UNION SELECT DISTINCT '设计类', jsonb_array_elements_text(COALESCE(story_json->'methods','[]'::jsonb)) FROM works WHERE status='approved'
+        UNION SELECT DISTINCT '艺术类', t.name FROM work_tags wt JOIN tags t ON t.id=wt.tag_id JOIN works w ON w.id=wt.work_id WHERE w.status='approved'
+      `) : Promise.resolve({rows: []}),
+    ]);
+    const labelGroups: Record<string, string[]> = {};
+    for (const row of facets.rows) if (row.label) (labelGroups[row.group_name] ??= []).push(row.label);
+    const total = count.rows[0].total;
+    return { items: result.rows.map(this.mapWork), page: query.page, pageSize: query.pageSize,
+      total, hasMore: query.page * query.pageSize < total, ...(query.page === 1 ? {labelGroups} : {}) };
   }
 
   async listMyWorks(actor: Actor) {
@@ -696,7 +719,7 @@ export class StudioService {
     }
   }
 
-  async openWorkAsset(actor: Actor, workId: string, assetId: string, request: { range?: string; head?: boolean; ifRange?: string } = {}) {
+  async openWorkAsset(actor: Actor, workId: string, assetId: string, request: { range?: string; head?: boolean; ifRange?: string; preview?: boolean } = {}) {
     const result = await this.database.query<{ storage_key: string; file_name: string; mime_type: string; status: string; author_id: string; moderation_status: string; asset_type: string; story_json: Partial<CaseStory> }>(`
       SELECT asset.storage_key,asset.file_name,asset.mime_type,asset.asset_type,asset.moderation_status,work.status,work.author_id,work.story_json
       FROM work_assets asset JOIN works work ON work.id=asset.work_id
@@ -709,7 +732,13 @@ export class StudioService {
     if (!canRead) throw new ForbiddenException("无权访问该文件");
     if (asset.asset_type === "document" && asset.author_id !== actor.id && !canReview && !asset.story_json?.allowDocumentDownload) throw new ForbiddenException("作者未开放原件下载");
     const storageKey = asset.storage_key;
-    const filePath = await resolveWorkAssetPath(getEnvironment().uploadRoot, storageKey, asset.author_id, workId);
+    let filePath = await resolveWorkAssetPath(getEnvironment().uploadRoot, storageKey, asset.author_id, workId);
+    if (request.preview && asset.asset_type === 'image') {
+      try {
+        filePath = await workImagePreview(filePath, getEnvironment().uploadRoot);
+        asset.mime_type = 'image/webp';
+      } catch { /* Unsupported or oversized images keep their authorized original. */ }
+    }
     // Authorize and validate the owner/work path before exposing even the file size.
     const size = (await stat(filePath)).size;
     // No validator is advertised: If-Range must fall back to a full response.

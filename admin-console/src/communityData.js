@@ -8,6 +8,7 @@ export async function loadCommunityCatalog({ catalog, mine, workflows }) {
   if(authFailure) throw authFailure.reason;
   return {
     works: published.value.items ?? [],
+    catalog: published.value,
     myWorks: drafts.status === 'fulfilled' ? drafts.value.items ?? [] : [],
     workflows: paths.status === 'fulfilled' ? paths.value.items ?? [] : [],
     supportError: [drafts.status === 'rejected' && '我的草稿暂时无法同步', paths.status === 'rejected' && '关联工作流暂时无法同步'].filter(Boolean).join('；'),

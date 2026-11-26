@@ -10,7 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { createAgentRun, executeAgentRun, executeAgentRunStream, getAgentRun, getApiHealth, getPortalHome, getCourses, getWorks, runGenerationJob } from "./services/adminApi.js";
 import { AiCreationLauncher } from "./AiCreationConsole.jsx";
-import { AiCreationWorkspace } from "./CreationWorkspace.jsx";
+const AiCreationWorkspace = lazy(() => import("./CreationWorkspace.jsx").then(module => ({default:module.AiCreationWorkspace})));
 import { useFeedback } from "./FeedbackCenter.jsx";
 import { canEnterAdmin } from "./testAccounts.js";
 import { MorphNav, MorphHero, MorphFooter } from './morph/MorphChrome.jsx';
@@ -278,7 +278,7 @@ export function UserPortal({ account, onSwitchAccount, onEnterAdmin, section = "
         {data.workflows.length ? <section className="workflow-grid">{data.workflows.slice(0, 3).map((workflow) => <article className="workflow-card" key={workflow.id}><WorkflowGlyph entryType={workflow.entryType} /><span>{workflow.category}</span><h3>{workflow.name}</h3><p>{workflow.description}</p><button onClick={() => onNavigate(`/studio?workflow=${encodeURIComponent(workflow.id)}`)}>打开此工作流 <ArrowRight size={16} weight="bold" /></button></article>)}</section> : !portalLoading && !portalError && <HomeDataState title="暂无已发布工作流" text="教师发布工作流后，会在这里展示推荐创作路径。" action="进入设计工具" onRetry={() => navigateSection("studio")} />}
       </>}
 
-      <Suspense fallback={<section className="portal-empty"><p>正在加载页面…</p></section>}>
+      <Suspense fallback={<PageLoading label="正在加载页面…" />}>
         {section === "courses" && <AtomicLearningHub account={account} library={learningLibrary || (learningCourseId ? 'legacy' : '')} nodeId={learningNodeId} revision={learningNodeRevision} legacyCourseId={learningCourseId} onNavigate={onNavigate} legacy={<LearningLibrary accountId={account.id} variant={morph ? 'morph' : 'classic'} initialCourseId={learningCourseId} initialLessonId={learningLessonId} onCourseChange={syncCourse} onNavigate={onNavigate} onNotice={showToast} />} />}
         {section === 'curriculum' && <CurriculumComposer courses={data.courses} topic={curriculumTopic} courseId={learningCourseId} nodeId={learningNodeId} revision={learningNodeRevision} loading={portalLoading} error={portalError} onRetry={loadPortalData} onNavigate={onNavigate} onNotice={showToast}/>}
 

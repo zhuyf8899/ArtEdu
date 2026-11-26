@@ -1,0 +1,5 @@
+.case-cover-image{position:absolute;inset:0;display:block;background:#eeedf7;overflow:hidden}
+.case-cover-image>img{opacity:0;transition:opacity .15s ease}
+.case-cover-image>img.is-ready{opacity:1}
+.case-cover-image__loading,.case-cover-image__error{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#6b6682;font:13px system-ui,sans-serif}
+.community-load-more{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:28px}

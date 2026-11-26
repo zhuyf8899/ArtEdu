@@ -37,6 +37,14 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
   const [catalogError, setCatalogError] = useState("");
   const [supportError, setSupportError] = useState('');
   const catalogRequest = useRef(0);
+  const nextRequest = useRef(false);
+  const loadedFilter = useRef(null);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [catalogHasMore, setCatalogHasMore] = useState(false);
+  const [labelGroups, setLabelGroups] = useState({});
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pageError, setPageError] = useState('');
   const [search, setSearch] = useScopedViewState(account.id+":community:search","");
   const [activeTag, setActiveTag] = useScopedViewState(account.id+":community:tag","");
   const [activeGroup, setActiveGroup] = useScopedViewState(account.id+":community:group","大类");
@@ -45,16 +53,41 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
   const recommendations = useMemo(() => recommendWorks(works), [works]);
   const refresh = async (showLoading = false) => {
     const requestId=++catalogRequest.current;
-    if (showLoading) setCatalogLoading(true);
+    setCatalogLoading(true);
     setCatalogError("");
+    nextRequest.current = false;
+    setLoadingMore(false);
+    setPageError('');
     try {
-      const data=await loadCommunityCatalog({catalog:getCommunityWorks,mine:getMyWorks,workflows:getWorkflows});
+      const data=await loadCommunityCatalog({catalog:()=>getCommunityWorks({query:search.trim(),category:activeTag}),mine:async()=>({items:myWorks}),workflows:async()=>({items:workflows})});
       if(requestId!==catalogRequest.current) return;
+      loadedFilter.current = JSON.stringify([search.trim(), activeTag]);
+      setCatalogPage(1); setCatalogTotal(data.catalog.total ?? data.works.length);
+      setCatalogHasMore(Boolean(data.catalog.hasMore)); setLabelGroups(data.catalog.labelGroups ?? {});
       setWorks(data.works); setMyWorks(data.myWorks); setWorkflows(data.workflows); setSupportError(data.supportError);
     } catch (error) { if(requestId===catalogRequest.current) {setCatalogError(error.message); throw error;} }
     finally { if(requestId===catalogRequest.current) setCatalogLoading(false); }
   };
-  useEffect(() => { refresh(true).catch(error => onNotice(error.message)); return()=>{catalogRequest.current++;}; }, []);
+  useEffect(() => {
+    catalogRequest.current++;
+    nextRequest.current = false;
+    setCatalogLoading(!initialWorkId);
+    if (initialWorkId) return;
+    const timer = setTimeout(() => refresh(true).catch(error => onNotice(error.message)), 250);
+    return () => { clearTimeout(timer); catalogRequest.current++; };
+  }, [search, activeTag, initialWorkId]);
+  const loadNextPage = async () => {
+    if (nextRequest.current || catalogLoading || catalogError || !catalogHasMore || loadedFilter.current !== JSON.stringify([search.trim(), activeTag])) return;
+    const requestId = catalogRequest.current;
+    nextRequest.current = true; setLoadingMore(true); setPageError('');
+    try {
+      const result = await getCommunityWorks({query:search.trim(),category:activeTag,page:catalogPage+1});
+      if (requestId !== catalogRequest.current) return;
+      setWorks(current => [...new Map([...current,...result.items].map(work=>[work.id,work])).values()]);
+      setCatalogPage(result.page); setCatalogTotal(result.total); setCatalogHasMore(result.hasMore);
+    } catch (error) { if (requestId === catalogRequest.current) setPageError(error.message); }
+    finally { if (requestId === catalogRequest.current) {nextRequest.current=false;setLoadingMore(false);} }
+  };
   useEffect(() => {
     // 分享同一社区页面的作品链接；仅请求指定作品，权限仍由 API 检查。
     setSelected(null); setActiveImage(null); setReportTarget(null); setComment(''); setDetailError('');
@@ -65,6 +98,12 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     return () => { active = false; };
   }, [initialWorkId, detailRetry]);
   useEffect(()=>{ if(openPublisher&&!initialWorkId)setEditing(null); },[openPublisher,initialWorkId]);
+  useEffect(() => {
+    if (editing === undefined || workflows.length) return;
+    let active = true;
+    getWorkflows().then(result => { if (active) setWorkflows(result.items ?? []); }).catch(error => { if (active) onNotice(error.message); });
+    return () => { active = false; };
+  }, [editing]);
   useEffect(() => {
     if (catalogLoading || initialWorkId || selected) return;
     // Previously shared section links now open the same list.
@@ -77,6 +116,11 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     window.addEventListener('hashchange', scrollToCatalog);
     return () => window.removeEventListener('hashchange', scrollToCatalog);
   }, [catalogLoading, initialWorkId, selected]);
+  useEffect(() => {
+    let active = true;
+    getMyWorks().then(result => { if(active)setMyWorks(result.items ?? []); }).catch(error => {if(active)setSupportError(error.message);});
+    return () => {active=false;};
+  }, [account.id, editing]);
   const context = returnContext();
   const returnToCatalog = () => { setSelected(null); setActiveImage(null); setDetailError(''); onNavigate?.(context.to || '/community'); };
   // Refresh matching records only; a delayed interaction cannot reopen a different work.
@@ -150,7 +194,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     catch (error) { onNotice(error.message); }
     finally { setCollectionBusy(false); }
   };
-  const groupTags = [...new Set(works.flatMap(work => workLabelGroups(work)[activeGroup] ?? []))].sort((left, right) => {
+  const groupTags = [...new Set(labelGroups[activeGroup] ?? works.flatMap(work => workLabelGroups(work)[activeGroup] ?? []))].sort((left, right) => {
     if(variant==='morph'&&activeGroup==='大类'){
       const leftRank=handoffCaseCategories.indexOf(left),rightRank=handoffCaseCategories.indexOf(right);
       const order=(leftRank<0?Infinity:leftRank)-(rightRank<0?Infinity:rightRank);
@@ -158,12 +202,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     }
     return left.localeCompare(right,'zh-CN');
   });
-  const normalizedSearch = search.trim().toLocaleLowerCase();
-  const visibleWorks = works.filter(work => {
-    const labels = workLabels(work);
-    const text = [work.title, work.summary, work.author, ...(work.creators ?? []), ...labels].filter(Boolean).join(" ").toLocaleLowerCase();
-    return (!normalizedSearch || text.includes(normalizedSearch)) && (!activeTag || labels.includes(activeTag));
-  });
+  const visibleWorks = works;
   const hasFilters = Boolean(search || activeTag);
   const clearFilters = () => { setSearch(""); setActiveTag(""); };
   const submissions = myWorks.length > 0 && (
@@ -185,7 +224,7 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
       onNotice(saved.status === 'approved' ? '案例修改已保存' : `草稿已保存。预览后可${directPublish ? '直接发布' : '提交审核'}。`);
     }}/>;
   if (initialWorkId && !selected) return <section className="resource-load-state" aria-busy={loading||!detailError}><strong>{detailError?'案例暂时无法打开':'正在打开案例…'}</strong>{detailError&&<><p role="alert">{detailError}</p><button onClick={()=>setDetailRetry(value=>value+1)}>重新加载案例</button></>}<button onClick={returnToCatalog}>{context.to?context.label:'返回案例社区'}</button></section>;
-  if (catalogLoading) return <section className="resource-load-state" aria-busy="true"><SpinnerGap size={32} className="spin" /><strong>正在加载案例社区</strong></section>;
+  if (catalogLoading && !works.length && !selected && !initialWorkId) return <section className="resource-load-state" aria-busy="true"><span className="page-loading__spinner" aria-hidden="true" /><strong>正在加载案例社区</strong></section>;
   if (catalogError && !works.length && !myWorks.length) return <section className="resource-load-state resource-load-state--error"><ArrowClockwise size={31} /><strong>案例社区暂时无法加载</strong><p>{catalogError}</p><button onClick={() => refresh(true).catch(error => onNotice(error.message))}>重新加载</button></section>;
   if (selected) {
     const exhibition = selected.story?.origin === "collected" && selected.story?.displayStyle === "exhibition";
@@ -255,19 +294,23 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
       options={[{value:'',label:'全部'},...groupTags.map(tag=>({value:tag,label:tag}))]}
       value={activeTag} onChange={value=>setActiveTag(value===activeTag?'':value)} query={search} onQueryChange={setSearch}
       searchLabel="搜索案例" placeholder="搜索案例、工具、提示词…"
-      resultLabel={`${visibleWorks.length} / ${works.length} 个案例`} onClear={clearFilters}
+      resultLabel={`已加载 ${visibleWorks.length} / ${catalogTotal} 个案例`} onClear={clearFilters}
       selected={[search&&{label:`搜索：${search}`,onRemove:()=>setSearch('')},activeTag&&{label:activeTag,onRemove:()=>setActiveTag('')}].filter(Boolean)}
     /> : <section className="community-discovery" aria-label="搜索和筛选案例">
       <label className="community-search"><MagnifyingGlass size={19} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索案例名称、创作者、方法或工具" aria-label="搜索案例" />{search && <button onClick={() => setSearch("")} aria-label="清除搜索"><X size={17} /></button>}</label>
       <div className="community-filter-row"><span>分类</span><div className="community-filter-tabs" role="tablist" aria-label="案例标签大类">{Object.keys(EMPTY_LABEL_GROUPS).map(group => <button key={group} role="tab" aria-selected={activeGroup === group} className={activeGroup === group ? "is-active" : ""} onClick={() => { setActiveGroup(group); setActiveTag(""); }}>{group}</button>)}</div></div>
       <div className="community-filter-row community-filter-row--tags"><span>{activeGroup}标签</span><div className="community-filter-chips" aria-label={`${activeGroup}分类标签`}><button className={!activeTag ? "is-active" : ""} aria-pressed={!activeTag} onClick={() => setActiveTag("")}>全部</button>{groupTags.map(tag => <button key={tag} className={activeTag === tag ? "is-active" : ""} aria-pressed={activeTag === tag} onClick={() => setActiveTag(activeTag === tag ? "" : tag)}>{tag}</button>)}{!groupTags.length && <small className="community-no-tags">此类暂无标签</small>}</div></div>
-      <div className="community-results" aria-live="polite">{search || activeTag ? `找到 ${visibleWorks.length} 个案例` : `共 ${works.length} 个案例`}<span> · 封面、创作者与分类标签一目了然</span></div>
+      <div className="community-results" aria-live="polite">{search || activeTag ? `找到 ${catalogTotal} 个案例` : `共 ${catalogTotal} 个案例`}<span> · 封面、创作者与分类标签一目了然</span></div>
     </section>}
 
     <CommunityCaseCatalog
       variant={variant}
       works={visibleWorks}
-      loading={loading}
+      loading={loading || catalogLoading}
+      hasMore={catalogHasMore}
+      loadingMore={loadingMore || catalogLoading}
+      pageError={pageError}
+      onLoadMore={loadNextPage}
       onOpen={openWork}
       hasFilters={hasFilters}
       onClear={clearFilters}
@@ -276,7 +319,16 @@ export function CommunityLibrary({ account, onNotice, onOpenWorkflow, onNavigate
     {editor}
   </>;
 }
-function CommunityCaseCatalog({ variant, works, loading, onOpen, hasFilters, onClear }) {
+function CommunityCaseCatalog({ variant, works, loading, onOpen, hasFilters, onClear, hasMore, loadingMore, pageError, onLoadMore }) {
+  const sentinel = useRef(null);
+  useEffect(() => {
+    if (!hasMore || loadingMore || pageError || !sentinel.current || !('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) onLoadMore();
+    }, {rootMargin:'200px'});
+    observer.observe(sentinel.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, pageError, onLoadMore]);
   return <section id="case-catalog" className="community-case-catalog" aria-label="案例列表">
     {works.length ? (
       variant === 'morph' ? (
@@ -286,7 +338,7 @@ function CommunityCaseCatalog({ variant, works, loading, onOpen, hasFilters, onC
       ) : (
         <div className="work-grid">
           {works.map(work => <article className="work-card" key={work.id}>
-            <div className="work-preview">{work.previewUrl ? <img src={work.previewUrl} alt={`${work.title}封面`} loading="lazy"/> : <WorkVisualFallback work={work} compact/>}</div>
+            <div className="work-preview">{work.previewUrl ? <img src={work.previewUrl} alt={`${work.title}封面`} loading="lazy" decoding="async"/> : <WorkVisualFallback work={work} compact/>}</div>
             <div className="work-card__body">
               <small>{work.creators?.join("、") || work.author || "匿名创作者"}</small>
               <h3>{work.title}</h3>
@@ -310,6 +362,10 @@ function CommunityCaseCatalog({ variant, works, loading, onOpen, hasFilters, onC
         {hasFilters && <button onClick={onClear}>清除筛选条件</button>}
       </div>
     )}
+    {hasMore && <div ref={sentinel} className="community-load-more" aria-live="polite">
+      {pageError && <p role="alert">下一批案例加载失败。{pageError}</p>}
+      <button type="button" className="button secondary" disabled={loadingMore} onClick={onLoadMore}>{loadingMore?<><span className="page-loading__spinner" aria-hidden="true"/>正在加载…</>:pageError?'重试加载':'加载更多案例'}</button>
+    </div>}
   </section>;
 }
 function statusName(status) { return { draft: "草稿", pending: "审核中", approved: "已发布", rejected: "已驳回", archived: "已归档" }[status] ?? status; }

@@ -1,3 +1,4 @@
+import { CaseCoverImage } from '../CaseCoverImage.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Clock, Sparkle, ImageSquare, BookOpenText, BookmarkSimple } from '@phosphor-icons/react';
 import { coverImageFor } from '../coverImages.js';
@@ -84,7 +85,7 @@ export function MorphCaseCard({work,onOpen}) {
   };
   return <article className="case-card morph-case-card">
     <div className="morph-case-cover-wrap">
-      <button className="case-cover" onClick={()=>onOpen(work)} aria-label={`查看 ${work.title}`}>{work.previewUrl?<img src={work.previewUrl} alt={work.title} loading="lazy"/>:<div className="morph-case-empty"><ImageSquare size={36}/><span>作品暂无封面</span></div>}<span className="case-card-badges"><span className="case-category">{work.discipline||'艺术创作'}</span><span className="case-collection-tag" data-collection={work.collection}>{caseCollectionLabel(work)}</span></span></button>
+      <button className="case-cover" onClick={()=>onOpen(work)} aria-label={`查看 ${work.title}`}>{work.previewUrl?<CaseCoverImage src={work.previewUrl} alt={work.title}/>:<div className="morph-case-empty"><ImageSquare size={36}/><span>作品暂无封面</span></div>}<span className="case-card-badges"><span className="case-category">{work.discipline||'艺术创作'}</span><span className="case-collection-tag" data-collection={work.collection}>{caseCollectionLabel(work)}</span></span></button>
       <button className="morph-case-bookmark" type="button" aria-pressed={Boolean(liked)} aria-label={`${liked?'取消收藏':'收藏'} ${work.title}`} disabled={saving} onClick={toggleFavorite}><BookmarkSimple size={18} weight={liked?'fill':'regular'}/></button>
     </div>
     <div className="case-body">

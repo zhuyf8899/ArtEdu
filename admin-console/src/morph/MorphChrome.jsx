@@ -33,7 +33,7 @@ export function MorphNav({ account, section, creation, onNavigate, onSwitchAccou
   const [quality,setQuality] = useState(getQualityMode);
   const remaining = dailyQuotaLabel(creation?.quota);
   return <nav className="site-nav morph-nav" aria-label="主导航">
-    <div className="nav-left"><MorphLink className="brand" href="/" onNavigate={onNavigate}><img className="morph-wordmark" src="/assets/morph-wordmark-dark.png" alt="MORPH 洛图" width="190" height="32" /></MorphLink><div className="nav-links">{items.map(([id,label,href])=><MorphLink key={id} className={section===id?'active':''} aria-current={section===id?'page':undefined} href={href} onNavigate={onNavigate}>{label}</MorphLink>)}</div></div>
+    <div className="nav-left"><MorphLink className="brand" href="/" onNavigate={onNavigate}><img className="morph-wordmark" src="/assets/morph-wordmark-dark.png" alt="MORPH 洛图" fetchPriority="high" decoding="async" width="190" height="32" /></MorphLink><div className="nav-links">{items.map(([id,label,href])=><MorphLink key={id} className={section===id?'active':''} aria-current={section===id?'page':undefined} href={href} onNavigate={onNavigate}>{label}</MorphLink>)}</div></div>
     <div className="morph-nav-right">
       <div className="morph-nav-utilities">
         <MorphLink href="/create" onNavigate={onNavigate} aria-current={section==='creation'?'page':undefined}><ChatCircle size={17}/>对话空间</MorphLink>

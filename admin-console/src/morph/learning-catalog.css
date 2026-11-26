@@ -40,6 +40,20 @@
 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-cover,.atomic-hub--particles .particle-course-cover{position:relative;min-height:336px;width:auto;height:auto;overflow:hidden;background:#f2f0fa;border-radius:0}
 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-cover>img{width:180px;height:290px;object-fit:contain;position:absolute;top:10px;left:0;max-width:none;transform:none}
 .atomic-hub--particles .particle-course-cover>img{width:180px;height:290px;top:10px;left:0;object-fit:contain}
+.morph-v17 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-cover>img,
+.morph-v17 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-cover:has(img[src$=".jpg"])>img {
+  object-fit: cover !important;
+}
+.morph-v17 .atomic-hub--particles .particle-course-cover>img,
+.morph-v17 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-cover>img {
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  object-fit: cover;
+  object-position: center;
+  transform: none;
+}
 .atomic-hub--particles .particle-course-cover>small{top:auto;bottom:18px;left:16px;font-size:11px;color:#676782}
 .atomic-hub--particles .unified-learning-grid .morph-course-card .course-body,.atomic-hub--particles .particle-course-info{padding:20px 22px;gap:10px;display:flex;flex-direction:column;min-width:0;width:100%;box-sizing:border-box;align-self:stretch;justify-self:stretch}
 .atomic-hub--particles .unified-learning-grid .course-body>:is(h2,p,.small-meta,.card-actions){padding-left:0;padding-right:0;min-width:0}

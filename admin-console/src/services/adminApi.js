@@ -264,13 +264,11 @@ export const getWorks = (query = "", page = 1, pageSize = 20) => {
   return request('/works?' + params);
 };
 
-export async function getCommunityWorks() {
-  const items = new Map();
-  for (let page = 1; ; page++) {
-    const result = await getWorks('',page,50);
-    for (const work of result.items) items.set(work.id,work);
-    if (result.items.length < 50) return {items:[...items.values()]};
-  }
+export function getCommunityWorks({ query = '', category = '', page = 1, pageSize = 24 } = {}) {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (query) params.set('query', query);
+  if (category) params.set('category', category);
+  return request('/works?' + params);
 }
 export const getMyWorks = () => request("/me/works");
 export const getWork = (workId) => request(`/works/${workId}`);

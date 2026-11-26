@@ -218,9 +218,12 @@ body.morph-platform .case-story .case-attachment__actions a{gap:6px;padding:0 14
 body.morph-platform .case-story .case-attachment__actions a:hover{background:#f0ecfc;border-color:#c9c0ef}
 body.morph-platform .case-story .case-attachment__actions a:focus-visible{outline:2px solid #7761d0;outline-offset:3px}
 /* CVPR-inspired editorial flow: artwork, artist/title, statement, film, gallery, provenance. */
-body.morph-platform .community-detail .community-detail__hero{height:auto;display:block}
-body.morph-platform .community-detail .case-image-button--hero{height:auto}
-body.morph-platform .community-detail .case-image-button--hero img{height:auto;max-height:min(54dvh,500px);object-fit:contain}
+/* Consistent preview frames; the image viewer provides the complete original. */
+body.morph-platform .community-detail .community-detail__hero{height:clamp(220px,42dvh,420px);display:block;overflow:hidden}
+body.morph-platform .community-detail .case-image-button--hero{height:100%;width:100%;overflow:hidden}
+body.morph-platform .community-detail .case-image-button--hero img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;object-position:center}
+body.morph-platform .morph-v17 .work-card .work-preview{width:100%;aspect-ratio:16/10;height:auto;min-height:0;padding:0;overflow:hidden}
+body.morph-platform .morph-v17 .work-card .work-preview img{display:block;width:100%;height:100%;min-width:0;min-height:0;object-fit:cover;object-position:center}
 body.morph-platform .community-detail .community-detail__body{padding:32px 40px 40px}
 body.morph-platform .community-detail .community-detail__category{display:inline-flex;padding:5px 10px;border-radius:999px;background:#f2effb;color:#7761b4;font-size:12px;font-weight:600}
 body.morph-platform .community-detail--exhibition .community-detail__body>header .community-detail__artist{margin:20px 0 4px;color:#171a2f;font-size:24px;font-weight:650;line-height:1.35}

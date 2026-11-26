@@ -157,6 +157,7 @@ export class StudioController {
   @Get("works/:workId/assets/:assetId/download")
   async downloadWorkAsset(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("workId") workId: string, @Param("assetId") assetId: string) {
     const asset = await this.studio.openWorkAsset(await this.auth.getActor(request), workId, assetId, {
+      preview: (request.query as {preview?: string})?.preview === "1",
       range: request.headers.range, head: request.method === "HEAD", ifRange: request.headers["if-range"] ? "present" : undefined,
     });
     const encodedName = encodeURIComponent(asset.fileName).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
